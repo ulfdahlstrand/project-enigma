@@ -19,6 +19,20 @@ services:
       retries: 5
       start_period: 10s
 
+  migrate:
+    image: ghcr.io/amacneil/dbmate:2
+    command: ["--wait", "up"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    volumes:
+      - ../packages/database/migrations:/db/migrations
+    networks:
+      - cv-tool-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
   backend:
     build:
       context: ..
@@ -39,26 +53,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
-    restart: unless-stopped
-    env_file:
-      - ../.env
-    environment:
-      FRONTEND_PORT: ${FRONTEND_PORT}
-      VITE_BACKEND_URL: http://backend:${BACKEND_PORT}
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-    volumes:
-      - ../apps/frontend:/app/apps/frontend
-      - /app/apps/frontend/node_modules
-    networks:
-      - cv-tool-network
-    depends_on:
-      - backend
+  # frontend: # TODO: uncomment when frontend app is set up
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile.frontend
+  #   restart: unless-stopped
+  #   env_file:
+  #     - ../.env
+  #   environment:
+  #     FRONTEND_PORT: ${FRONTEND_PORT}
+  #     VITE_BACKEND_URL: http://backend:${BACKEND_PORT}
+  #   ports:
+  #     - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+  #   volumes:
+  #     - ../apps/frontend:/app/apps/frontend
+  #     - /app/apps/frontend/node_modules
+  #   networks:
+  #     - cv-tool-network
+  #   depends_on:
+  #     - backend
 
 volumes:
   postgres_data:
