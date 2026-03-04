@@ -54,11 +54,11 @@
       "agent": "developer",
       "timestamp": "2026-03-04T21:30:00Z",
       "action": "pr_updated",
-      "summary": "Added three missing files to branch task/10-docker-compose-local-dev (PR #20): docker/Dockerfile.frontend (dev-only Node.js 20 Alpine, installs workspace deps, runs npm run dev --host 0.0.0.0 for hot-reload, source bind-mounted at runtime), docker/Dockerfile.backend (dev-only Node.js 20 Alpine, installs workspace deps, runs npm run dev, source bind-mounted at runtime), and .gitignore (excludes .env, node_modules/, dist/, .turbo/, TS build info, and editor artefacts). All 15 acceptance criteria are now satisfied. docker/docker-compose.yml, .env.example, and README.md were already correct on the branch."
+      "summary": "Added missing files to branch task/10-docker-compose-local-dev and updated PR #20. Created docker/Dockerfile.frontend (dev-only Node.js 20 Alpine, runs npm run dev --host 0.0.0.0), docker/Dockerfile.backend (dev-only Node.js 20 Alpine, runs npm run dev), and .gitignore (ignores .env, node_modules/, dist/, .turbo/, TS build info, editor artefacts). docker/docker-compose.yml, .env.example, and README.md were already correct on the branch. All 15 acceptance criteria are now satisfied."
     }
   ],
   "decisions": {
-    "approach": "docker/docker-compose.yml, .env.example, and README.md were already correct on the branch (postgres service name, bind-mounts, named volume, user-defined network, Local Development section all present). The missing pieces were docker/Dockerfile.frontend, docker/Dockerfile.backend, and .gitignore, which were created in this update pass.",
+    "approach": "docker/docker-compose.yml, .env.example, and README.md were already correct on the branch (postgres service name, bind-mounts, named volume, user-defined network, Local Development section). The missing pieces were docker/Dockerfile.frontend, docker/Dockerfile.backend, and .gitignore — all three added in the updated commit.",
     "files_to_touch": [
       "docker/docker-compose.yml",
       "docker/Dockerfile.frontend",
@@ -69,8 +69,8 @@
     ],
     "risks": [
       "apps/frontend and apps/backend directories do not yet exist (Task #1 dependency). Bind-mount volumes in docker-compose.yml will fail until those directories are created by the monorepo setup task.",
-      "node_modules anonymous volumes in the compose file prevent the host bind-mount from shadowing container-installed packages — standard pattern, but developers must run 'docker compose build' after package.json changes rather than relying on host 'npm install'.",
-      "Package manifests (package.json, package-lock.json, workspace package.json files) are copied into the Docker image at build time. If these files do not yet exist (pre-Task #1), the image build will fail. This is expected and acceptable — the Docker setup is a prerequisite for a working monorepo, not a standalone deliverable."
+      "node_modules anonymous volumes in docker-compose.yml prevent the host bind-mount from shadowing container-installed packages. Developers must run 'docker compose build' after package.json changes rather than running npm install on the host.",
+      "Package manifests (package.json, package-lock.json, workspace package.json files) are COPYed at image build time so npm install runs during the build. If those files do not yet exist (pre-Task #1), the image build will fail — expected until the monorepo scaffold is in place."
     ]
   }
 }
