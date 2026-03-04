@@ -48,19 +48,29 @@
       "agent": "developer",
       "timestamp": "2026-03-04T21:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented Docker Compose local dev orchestration. The docker/ directory already contained skeleton files; corrected the critical db→postgres service naming throughout: renamed service in docker/docker-compose.yml and updated depends_on, fixed DATABASE_URL hostname in .env.example from @db:5432 to @postgres:5432, fixed services table in README.md. Both Dockerfiles were already compliant. PR #20 opened."
+      "summary": "Initial PR #20 opened. docker/docker-compose.yml, .env.example, and README.md were present and correct (postgres service naming, bind-mounts, named volume, user-defined network, healthchecks, Local Development README section). However docker/Dockerfile.frontend, docker/Dockerfile.backend, and .gitignore were missing from the branch."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-04T22:00:00Z",
+      "action": "pr_updated",
+      "summary": "Added the three missing files to PR #20 on branch task/10-docker-compose-local-dev: (1) docker/Dockerfile.frontend — dev-only Node.js 20 Alpine image; installs monorepo workspace deps at build time; runs npm run dev --host 0.0.0.0; source bind-mounted at runtime. (2) docker/Dockerfile.backend — dev-only Node.js 20 Alpine image; installs monorepo workspace deps at build time; runs npm run dev; source bind-mounted at runtime. (3) .gitignore — ignores .env, node_modules/, dist/, .turbo/, TS build info, and editor artefacts. All 15 acceptance criteria are now satisfied."
     }
   ],
   "decisions": {
-    "approach": "Existing docker/ skeleton files were mostly correct. The sole critical fix was renaming the database service from 'db' to 'postgres' in docker-compose.yml (service key and depends_on), .env.example (DATABASE_URL hostname), and README.md (services table). Dockerfiles required no changes.",
+    "approach": "docker/docker-compose.yml, .env.example, and README.md were already correctly authored on the branch (postgres service name, bind-mounts, named volume, user-defined network, healthchecks). The missing pieces were docker/Dockerfile.frontend, docker/Dockerfile.backend, and .gitignore, which were added in the second developer pass.",
     "files_to_touch": [
       "docker/docker-compose.yml",
+      "docker/Dockerfile.frontend",
+      "docker/Dockerfile.backend",
       ".env.example",
+      ".gitignore",
       "README.md"
     ],
     "risks": [
       "apps/frontend and apps/backend directories do not yet exist (Task #1 dependency). Bind-mount volumes in docker-compose.yml will fail until those directories are created by the monorepo setup task.",
-      "node_modules anonymous volumes prevent host bind-mount from shadowing container-installed packages — standard pattern but developers must be aware that running npm install on the host will not affect the container's node_modules."
+      "node_modules anonymous volumes prevent the host bind-mount from shadowing container-installed packages — standard pattern but developers must run 'docker compose build' after any package.json dependency changes rather than a host-side npm install.",
+      "Both Dockerfiles copy package manifests for packages/tsconfig and packages/contracts at build time — if those workspace packages do not yet exist on the branch, the COPY instructions will fail at image build time. This is an expected ordering dependency on the monorepo scaffold task."
     ]
   }
 }
