@@ -1,0 +1,49 @@
+{
+  "issue_number": 17,
+  "title": "[TASK] Set up Docker Compose for local development orchestration",
+  "parent_feature": 4,
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2025-06-05T00:00:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with architecture.md and ADR-004. File locations (docker/docker-compose.yml, docker/Dockerfile.frontend, docker/Dockerfile.backend) match the canonical folder structure. Service definitions (frontend, backend, db) align with the architecture overview. Environment variable naming follows SCREAMING_SNAKE_CASE convention. .env.example placement at repo root matches the environment configuration pattern. Dev-only Dockerfiles respect the local-development-only constraint. Volume mounts reference correct monorepo paths (apps/frontend, apps/backend). Only backend connects to PostgreSQL, preserving the access pattern rule."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-04T19:24:35Z",
+      "action": "closed_as_duplicate",
+      "summary": "Requirements Specialist marked this issue as a duplicate of #10. Canonical task with full conversation history is #10. All sign-off activity to continue on #10."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-04T19:25:00Z",
+      "action": "duplicate_acknowledged",
+      "summary": "Tester acknowledged duplicate status. No testability review performed on #17. All acceptance criteria review activity is on canonical task issue #10. No further action on this issue."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-04T20:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented Docker Compose local development orchestration. Created docker/docker-compose.yml (3 services: frontend, backend, db), docker/Dockerfile.frontend, docker/Dockerfile.backend, .env.example at repo root, .gitignore, and README.md with Local Development section. PR #18 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Created all Docker infrastructure files as specified by AC #1-15. Used postgres:16 official image for db service with pg_isready healthcheck. Backend depends on db with service_healthy condition to prevent premature startup. Anonymous volume overrides prevent host node_modules from clobbering container-installed ones. curl installed in both Dockerfiles to enable AC #7 connectivity verification. All sensitive values sourced exclusively from .env — no hardcoded credentials anywhere.",
+    "files_to_touch": [
+      "docker/docker-compose.yml",
+      "docker/Dockerfile.frontend",
+      "docker/Dockerfile.backend",
+      ".env.example",
+      ".gitignore",
+      "README.md",
+      "tasks/17.json"
+    ],
+    "risks": [
+      "apps/frontend and apps/backend directories must exist (Feature #1 monorepo task) before docker compose up is fully functional — bind-mounts will create empty directories otherwise.",
+      "Root workspace package.json, turbo.json, and tsconfig.json must exist before Docker images can be built successfully — provided by the monorepo setup task.",
+      "The db service name is consistently 'db' throughout all 15 ACs in issue #17; DATABASE_URL in .env.example uses hostname 'db' accordingly. Note: issue #10's Architect suggested renaming to 'postgres', but issue #17 consistently uses 'db' in the finalized ACs and was the assigned implementation task."
+    ]
+  }
+}
