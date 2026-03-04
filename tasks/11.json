@@ -32,22 +32,22 @@
       "agent": "developer",
       "timestamp": "2026-03-05T03:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented PostgreSQL migration foundation using dbmate. Created packages/database (@cv-tool/database) with migration script creating test_entries table and seed row. Added migrate service to docker/docker-compose.yml using ghcr.io/amacneil/dbmate:2 that auto-runs on stack start. Added POSTGRES_PORT to .env.example. Recorded ADR-005 in docs/tech-decisions.md. PR #23 opened on branch task/11-db-migrations-setup."
+      "summary": "Implemented PostgreSQL migration setup using dbmate. Added packages/database workspace (@cv-tool/database) with migration script creating test_entries table (id, name, note) with one seed row. Added migrate init-container service to docker/docker-compose.yml using ghcr.io/amacneil/dbmate:2; backend now depends_on migrate with service_completed_successfully. Recorded ADR-005 in docs/tech-decisions.md. PR #23 opened."
     }
   ],
   "decisions": {
-    "approach": "Use dbmate (ghcr.io/amacneil/dbmate:2) as a dedicated Docker Compose service for running plain SQL migrations automatically on stack startup. packages/database/ is a schema-only workspace with no npm runtime dependencies.",
+    "approach": "Plain-SQL migration tool (dbmate) running as a dedicated Docker Compose init-container service. Chosen over Node-based tools (prisma, node-pg-migrate) to keep packages/database/ free of runtime dependencies. Uses existing DATABASE_URL environment variable.",
     "files_to_touch": [
       "packages/database/package.json",
       "packages/database/migrations/20260304000000_create_test_entries.sql",
       "docker/docker-compose.yml",
-      ".env.example",
       "docs/tech-decisions.md"
     ],
     "risks": [
-      "The migrate service uses restart: on-failure — if the migration itself fails (e.g. bad SQL), it will retry until Docker's backoff limit. The backend's service_completed_successfully condition prevents it from starting until migrations exit 0.",
-      "docker compose down -v destroys the schema_migrations tracking table along with all data, causing all migrations to re-apply on next up — this is expected/correct for development.",
-      "packages/database/ is covered by the root packages/* workspace glob, so no explicit workspaces entry is needed in root package.json — but this is implicit and worth noting."
+      "The migrate service uses restart: on-failure — if DATABASE_URL is misconfigured it will retry indefinitely. Users must ensure .env is correctly populated from .env.example.",
+      "dbmate creates a schema_migrations tracking table in the database automatically. This is expected and idempotent but should be noted for future introspection.",
+      "Rollback (dbmate down) is a manual operation — not wired into any automated flow. Out of scope per task definition.",
+      "The migrate service exits after completion. On docker compose restart it re-runs but dbmate up is idempotent so already-applied migrations are skipped safely."
     ]
   }
 }
