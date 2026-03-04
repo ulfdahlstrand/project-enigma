@@ -48,19 +48,19 @@
       "agent": "developer",
       "timestamp": "2026-03-04T21:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented Docker Compose local dev orchestration. Renamed service db->postgres in docker/docker-compose.yml (and depends_on reference), fixed DATABASE_URL hostname in .env.example, and corrected README services table. Dockerfiles were already compliant. PR #20 opened."
+      "summary": "Implemented Docker Compose local dev orchestration. Corrected service name db → postgres in docker/docker-compose.yml (service definition and depends_on), .env.example (DATABASE_URL hostname), and README.md (services table). Both Dockerfiles were already compliant. PR #20 opened."
     }
   ],
   "decisions": {
-    "approach": "Existing docker/ skeleton files were mostly correct. The sole critical deviation was the database service being named 'db' instead of 'postgres' throughout docker-compose.yml, .env.example, and README.md. Corrected all three files. Dockerfiles required no changes.",
+    "approach": "Existing docker/ skeleton files required only naming corrections (db → postgres) to reach full AC compliance. No structural changes to Dockerfiles were needed.",
     "files_to_touch": [
       "docker/docker-compose.yml",
       ".env.example",
       "README.md"
     ],
     "risks": [
-      "The apps/frontend and apps/backend directories referenced in bind-mount volumes do not yet exist (awaiting Task #1 monorepo setup). docker compose up will fail with a volume mount error until those directories are created.",
-      "Anonymous node_modules volumes prevent host bind-mounts from shadowing container-installed modules — this is intentional but means npm install must be re-run inside the container if package.json changes."
+      "Bind-mount volumes (../apps/frontend, ../apps/backend) will cause docker compose up to fail until the apps/ directory structure from Task #1 (monorepo setup) is merged.",
+      "Anonymous node_modules volumes prevent host bind-mount from shadowing container-installed packages — this is intentional but developers must be aware that npm install inside the container is the source of truth for dependencies."
     ]
   }
 }
