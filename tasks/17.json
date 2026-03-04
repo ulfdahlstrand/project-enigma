@@ -1,0 +1,49 @@
+{
+  "issue_number": 17,
+  "title": "[TASK] Set up Docker Compose for local development orchestration",
+  "parent_feature": 4,
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2025-06-05T00:00:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with architecture.md and ADR-004. File locations (docker/docker-compose.yml, docker/Dockerfile.frontend, docker/Dockerfile.backend) match the canonical folder structure. Service definitions (frontend, backend, db) align with the architecture overview. Environment variable naming follows SCREAMING_SNAKE_CASE convention. .env.example placement at repo root matches the environment configuration pattern. Dev-only Dockerfiles respect the local-development-only constraint. Volume mounts reference correct monorepo paths (apps/frontend, apps/backend). Only backend connects to PostgreSQL, preserving the access pattern rule."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-04T19:24:35Z",
+      "action": "closed_as_duplicate",
+      "summary": "Requirements Specialist marked this issue as a duplicate of #10. Canonical task with full conversation history is #10. All sign-off activity to continue on #10."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-04T19:25:00Z",
+      "action": "duplicate_acknowledged",
+      "summary": "Tester acknowledged duplicate status. No testability review performed on #17. All acceptance criteria review activity is on canonical task issue #10. No further action on this issue."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-04T19:30:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented Docker Compose local development orchestration. Created docker/docker-compose.yml (3 services: frontend, backend, db; user-defined network cv-tool-network; named volume postgres_data; bind-mounts for hot-reload; db healthcheck; backend depends_on db healthy). Created docker/Dockerfile.frontend and docker/Dockerfile.backend (development-only, node:20-alpine, no multi-stage/production build, curl installed for connectivity verification). Created .env.example at repo root with all 6 required keys (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, BACKEND_PORT, FRONTEND_PORT, DATABASE_URL). Created .gitignore ensuring .env is excluded. Created README.md with Local Development section (clone -> copy .env.example -> docker compose up from docker/). No hardcoded secrets in any tracked file. PR #18 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Created docker/docker-compose.yml with three services (frontend, backend, db) connected via a user-defined bridge network. PostgreSQL data persisted via named volume. Bind-mounts for apps/frontend and apps/backend enable hot-reload. node_modules anonymous volume override prevents host bind-mount from shadowing container-installed dependencies. db healthcheck with pg_isready ensures backend only starts once PostgreSQL is ready. curl installed in both Dockerfiles for in-container connectivity verification (AC #7). All sensitive values sourced from .env via env_file directive — no hardcoded secrets.",
+    "files_to_touch": [
+      "docker/docker-compose.yml",
+      "docker/Dockerfile.frontend",
+      "docker/Dockerfile.backend",
+      ".env.example",
+      ".gitignore",
+      "README.md",
+      "tasks/17.json"
+    ],
+    "risks": [
+      "apps/frontend and apps/backend directories must exist (from monorepo setup task) before docker compose up is fully functional — bind-mounts will create empty directories otherwise.",
+      "Dockerfiles COPY root package.json, turbo.json, tsconfig.json, and workspace package.json files at build time — these must exist (from monorepo setup task) before images can be built.",
+      "Issue #17 ACs consistently use 'db' as the service name. Issue #10's Architect review requested 'postgres' as the service name. Implemented as 'db' per issue #17's ACs since that is the assigned task. This may need reconciliation with issue #10."
+    ]
+  }
+}
