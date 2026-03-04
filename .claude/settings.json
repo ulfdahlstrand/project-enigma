@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm view zod version)",
+      "Bash(npm install)",
+      "Bash(npx tsc --noEmit)"
+    ]
+  }
+}

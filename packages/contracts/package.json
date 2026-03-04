@@ -20,7 +20,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@orpc/contract": "^0.29.0",
-    "zod": "^3.23.8"
+    "@orpc/contract": "^1.13.6",
+    "zod": "^4.3.6"
   }
 }

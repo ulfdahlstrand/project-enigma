@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@cv-tool/contracts": "*",
-    "@orpc/server": "^0.29.0",
-    "zod": "^3.23.8"
+    "@orpc/openapi": "^1.13.6",
+    "@orpc/server": "^1.13.6",
+    "@orpc/zod": "^1.13.6",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@cv-tool/tsconfig": "*",
