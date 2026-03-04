@@ -53,7 +53,7 @@ The `@cv-tool/` scope is **not** registered on the public npm registry. All pack
 - Cross-workspace imports use the scoped name: `import type { AppRouter } from "@cv-tool/contracts"`.
 - No workspace name can collide with a public npm package because the scope is private and unregistered.
 - Future packages must follow the same `@cv-tool/<folder-name>` pattern.
-- The scope applies to both `apps/*` and `packages/*` — there is no distinction in naming by workspace type.
+- The scope applies to both `apps/*` and `packages/*` — there is no distinction in naming by namespace type.
 
 ---
 
@@ -130,5 +130,41 @@ The canonical monorepo layout is:
 - The structure is extensible: additional packages (e.g. `packages/ui/`, `packages/db/`) follow the same pattern without ambiguity.
 - Any deviation from this structure requires a new ADR and an update to `architecture.md`.
 - The `apps/` vs `packages/` distinction is meaningful and must be respected: apps are deployed/run; packages are libraries consumed by apps.
+
+---
+
+## ADR-005 — 2026-03-04 — dbmate as the Database Migration Tool
+
+**Status:** Accepted
+
+**Context:**
+The CV Creation Tool requires a repeatable, version-controlled schema migration mechanism for PostgreSQL. Several options were evaluated:
+
+- **dbmate** — standalone binary, plain SQL files, Docker-native, no Node.js runtime dependency
+- **node-pg-migrate** — Node.js-coupled, requires npm dependencies in the database package
+- **Prisma Migrate** — ORM-coupled, pulls in a significant dependency tree, not appropriate for a schema-only package
+- **Raw PostgreSQL init scripts** (`/docker-entrypoint-initdb.d/`) — only run on first container init (empty data directory), not re-runnable, no migration state tracking
+
+The `packages/database/` workspace is intended to be a schema-only package containing migration scripts and no application code. Coupling it to a Node.js migration tool would introduce a runtime dependency that does not belong in a schema-only package, and would leak the tool's npm dependencies into the workspace graph.
+
+**Decision:**
+Use **dbmate** (v2, via the official `ghcr.io/amacneil/dbmate:2` Docker image) as the migration tool. Migrations are defined as plain `.sql` files under `packages/database/migrations/` using dbmate's `-- migrate:up` / `-- migrate:down` section convention.
+
+Migrations are applied automatically on `docker compose up` via a dedicated `migrate` service in `docker/docker-compose.yml`. This service:
+- Uses the `ghcr.io/amacneil/dbmate:2` image directly — no npm dependencies, no TypeScript compilation
+- Reads `DATABASE_URL` from the environment (the same variable used by the backend)
+- Mounts `../packages/database/migrations` as `/db/migrations` (dbmate's default migrations directory)
+- Runs `dbmate --no-dump-schema up` to apply all pending migrations
+- Declares `depends_on: db: condition: service_healthy` to ensure PostgreSQL is ready before migrating
+- The `backend` service declares `depends_on: migrate: condition: service_completed_successfully` so the application never starts against an un-migrated schema
+
+**Consequences:**
+- Migration files are plain SQL — readable by any developer without knowledge of a specific ORM or tool API.
+- `packages/database/` has **no npm runtime dependencies** — it is a schema-only package as intended.
+- dbmate tracks applied migrations in a `schema_migrations` table in PostgreSQL, preventing double-application.
+- The `--no-dump-schema` flag suppresses dbmate's default `schema.sql` dump file, keeping the repository clean.
+- Adding a new migration requires creating a new timestamped `.sql` file in `packages/database/migrations/` — no tool-specific commands needed beyond `dbmate new <name>` (optional convenience).
+- Rolling back requires `dbmate down` (manual step) — not automated, which is appropriate for a local development setup.
+- If the project later needs a Node.js-integrated ORM (e.g. for type-safe query building), that tool's dependencies belong in `apps/backend/`, not in `packages/database/`.
 
 ---
