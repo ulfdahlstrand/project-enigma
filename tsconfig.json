@@ -1,0 +1,8 @@
+{
+  "extends": "@cv-tool/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": false,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules"]
+}

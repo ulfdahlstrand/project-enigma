@@ -1,0 +1,25 @@
+{
+  "name": "@cv-tool/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --import tsx/esm src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cv-tool/contracts": "*",
+    "@orpc/openapi": "^1.13.6",
+    "@orpc/server": "^1.13.6",
+    "@orpc/zod": "^1.13.6",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cv-tool/tsconfig": "*",
+    "@types/node": "^20.12.7",
+    "tsx": "^4.7.3",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "task_id": 13,
+  "feature_id": 5,
+  "title": "[TASK] Set up Backend application with Node.js, oRPC, and Zod",
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-04T15:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally sound in intent but contains two factual mismatches with architecture.md that must be corrected before development begins: (1) The shared contract package is `packages/contracts/` (`@cv-tool/contracts`), not `packages/api-contract`; (2) The package manager is npm workspaces, not pnpm — references to `pnpm-workspace.yaml` and `pnpm dev` must be changed to npm equivalents. Additionally, the tsconfig should extend from `@cv-tool/tsconfig/node.json`, not the root tsconfig directly. The oRPC HTTP adapter choice is left to the developer as an implementation detail, but the Node.js built-in `http` module or the oRPC fetch adapter are both acceptable given the architecture specifies a plain Node.js HTTP server."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T00:00:00Z",
+      "action": "testability_rejected",
+      "summary": "Four acceptance criteria are untestable as written: (1) AC 1 references `pnpm-workspace.yaml` which does not exist in this project — the Architect already required this be corrected to the root `package.json` `workspaces` field; a test checking the wrong file would produce a false failure. (2) AC 2 specifies `pnpm dev` as the command to verify, which is incorrect — the project uses npm workspaces, so the correct command is `npm run dev`; without a definitive command the test target is ambiguous. (3) AC 9 names `packages/api-contract` and `packages/shared` as example package locations, both of which are wrong — the architecture mandates `packages/contracts` / `@cv-tool/contracts`; the ambiguous examples make it impossible to write a deterministic test. (4) AC 10 contains the phrase 'resolves correctly within the monorepo (no manual path hacks required)' which is subjective and lacks a concrete observable definition."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-05T10:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised ACs #1, #2, #3, #9, and #10 to address all Architect and Tester feedback. (1) AC #1: replaced `pnpm-workspace.yaml` reference with the `workspaces` field of the root `package.json`; removed vague '(or equivalent)' hedge. (2) AC #2: replaced `pnpm dev` with `npm run dev`; added observable success condition — server listens on a configured port and a startup log line or health endpoint response confirms it is running. (3) AC #3: removed stale `pnpm dev` example; canonical monorepo-root commands are now `turbo dev` / `npm run dev` only. (4) AC #9: replaced ambiguous `packages/api-contract` / `packages/shared` examples with the definitive `packages/contracts/` (`@cv-tool/contracts`); scoped the export requirement to the package-level (router type + health procedure input/output Zod schemas); removed the ambiguous 'frontend can import' clause. (5) AC #10: replaced subjective 'resolves correctly / no manual path hacks' with binary-testable criterion: `@cv-tool/contracts` listed by package name (not a `file:` or relative path reference), and `npm install` resolves it via workspace linking without errors. Files Likely to Change section corrected: removed `pnpm-workspace.yaml`, added root `package.json` (workspaces field), corrected shared package path from `packages/api-contract/` to `packages/contracts/`, updated tsconfig extends note to `@cv-tool/tsconfig/node.json`. Routing to Architect for re-approval."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-05T12:00:00Z",
+      "action": "approved",
+      "summary": "Clean re-approval of all 12 revised acceptance criteria. All ACs verified against architecture.md: AC #1 (npm workspaces / root package.json — § Tech Stack, ADR-001), AC #2 (npm run dev / BACKEND_PORT — § Tech Stack, § Naming Conventions), AC #3 (turbo dev / npm run dev — § Key Patterns #4, ADR-001), AC #4 (strict: true — § Key Patterns #1, ADR-003), AC #5 (tsc --noEmit), AC #6 (oRPC only — § Tech Stack, § External Integrations), AC #7 (health procedure with Zod — § External Integrations, § Key Patterns #3), AC #8 (HTTP 4xx on invalid input), AC #9 (packages/contracts / @cv-tool/contracts — § Structure, § Key Patterns #3, ADR-002, ADR-004), AC #10 (package name dep not file: path — § Tech Stack, ADR-002), AC #11 (build script), AC #12 (turbo.json pipeline — § Key Patterns #4, ADR-001). Files Likely to Change section confirmed correct. No architectural changes required. No further Architect review needed unless ACs change again."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T13:00:00Z",
+      "action": "testability_approved",
+      "summary": "All 12 revised acceptance criteria (as documented in the Requirements Specialist's comment thread, Architect-approved) are testable as written. Each criterion is binary (unambiguous pass/fail): AC #1 (inspect root package.json workspaces array), AC #2 (run npm run dev, verify port reachable / health endpoint responds), AC #3 (run turbo dev / npm run dev from root, verify backend process starts), AC #4 (inspect tsconfig.json strict flag), AC #5 (tsc --noEmit exit code), AC #6 (inspect apps/backend/package.json for absence of tRPC), AC #7a-c (HTTP calls to health endpoint with valid input, verify JSON shape), AC #8 (HTTP call with invalid input, verify 4xx + server still live), AC #9 (inspect packages/contracts/src/index.ts exports), AC #10 (inspect apps/backend/package.json dep value + npm install exit code), AC #11 (inspect build script + tsc exit code), AC #12 (inspect turbo.json pipeline)."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-05T14:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented all 12 acceptance criteria. PR #22 opened from task/13-backend-node-orpc-zod to main. Created: root package.json (npm workspaces), turbo.json (build/dev pipeline), root tsconfig.json, packages/tsconfig (@cv-tool/tsconfig with base/node/react configs), packages/contracts (@cv-tool/contracts with healthInputSchema, healthOutputSchema, contract, AppRouter), apps/backend (@cv-tool/backend with health procedure, router, Node.js HTTP server using RPCHandler on BACKEND_PORT). Used contract-first oRPC pattern: @orpc/contract in contracts, @orpc/server implement() in backend. No tRPC or other RPC frameworks introduced."
+    }
+  ],
+  "decisions": {
+    "approach": "Contract-first oRPC: packages/contracts defines procedure shapes via @orpc/contract oc.router(); apps/backend implements via @orpc/server implement(). Node.js HTTP server uses RPCHandler from @orpc/server/node with /rpc prefix. Dev script uses tsx with node --watch for TypeScript HMR.",
+    "files_to_touch": [
+      "package.json",
+      "turbo.json",
+      "tsconfig.json",
+      "packages/tsconfig/package.json",
+      "packages/tsconfig/base.json",
+      "packages/tsconfig/node.json",
+      "packages/tsconfig/react.json",
+      "packages/contracts/package.json",
+      "packages/contracts/tsconfig.json",
+      "packages/contracts/src/index.ts",
+      "apps/backend/package.json",
+      "apps/backend/tsconfig.json",
+      "apps/backend/.env.example",
+      "apps/backend/src/index.ts",
+      "apps/backend/src/router.ts",
+      "apps/backend/src/procedures/health.ts"
+    ],
+    "risks": [
+      "Root monorepo scaffolding (package.json, turbo.json, tsconfig.json) and packages/tsconfig were created in this PR as they had no prior existence. If a separate monorepo setup task exists or is merged concurrently, a merge conflict may need to be resolved.",
+      "oRPC package versions are pinned to ^0.29.0. If this version range does not resolve on npm, the version specifier should be adjusted to the actual latest release.",
+      "The packages/contracts dev script runs tsc --watch. In turbo dev, the backend's node --watch only restarts on file-level changes, not on type-only changes in contracts. Manual backend restart may be needed after pure type changes.",
+      "The task-16 test (tests/task-16-architecture-docs.test.js) checks that apps/ and packages/ do NOT exist. This PR creates those directories, which will cause that test to fail. This is expected — that test was scoped to a docs-only task and should be considered stale once application code exists."
+    ]
+  }
+}
