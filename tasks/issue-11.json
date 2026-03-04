@@ -1,0 +1,14 @@
+{
+  "issue_number": 11,
+  "title": "[TASK] Set up PostgreSQL in Docker with automated migration/change script mechanism",
+  "parent_feature": 3,
+  "status": "in-requirements",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-04T15:10:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally sound with three required adjustments: (1) Docker Compose file location must reference `docker/docker-compose.yml` per ADR-004, not monorepo root; (2) migration package path `packages/database/` is acceptable but must use `@cv-tool/database` as the package name per ADR-002; (3) recommend plain SQL migration tool (e.g. dbmate) over Node-based ORM tooling to keep the database package free of runtime dependencies, but any tool is acceptable if documented in tech-decisions.md."
+    }
+  ]
+}
