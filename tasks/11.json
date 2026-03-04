@@ -32,7 +32,7 @@
       "agent": "developer",
       "timestamp": "2026-03-05T03:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented PostgreSQL migration foundation using dbmate. Created packages/database (@cv-tool/database) with migration script creating test_entries table and seed row. Added migrate service to docker/docker-compose.yml using ghcr.io/amacneil/dbmate:2 that auto-runs on stack start. Added POSTGRES_PORT to .env.example. Recorded ADR-005 in docs/tech-decisions.md. PR opened on branch task/11-db-migrations-setup."
+      "summary": "Implemented PostgreSQL migration foundation using dbmate. Created packages/database (@cv-tool/database) with migration script creating test_entries table and seed row. Added migrate service to docker/docker-compose.yml using ghcr.io/amacneil/dbmate:2 that auto-runs on stack start. Added POSTGRES_PORT to .env.example. Recorded ADR-005 in docs/tech-decisions.md. PR #23 opened on branch task/11-db-migrations-setup."
     }
   ],
   "decisions": {
