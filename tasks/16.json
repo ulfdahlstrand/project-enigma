@@ -13,7 +13,8 @@
     "risks": [
       "Future packages added to the monorepo must be reviewed against the naming conventions defined here to avoid scope drift.",
       "The migration tooling choice for PostgreSQL is deferred to the database task (#3) and will be recorded as a separate ADR in tech-decisions.md at that time.",
-      "The `packages/contracts/` workspace is defined as a planned workspace — it will be created during Feature #5 or #8 implementation. Its presence in the folder structure ensures downstream tasks know where to put shared types."
+      "The `packages/contracts/` workspace is defined as a planned workspace — it will be created during Feature #5 or #8 implementation. Its presence in the folder structure ensures downstream tasks know where to put shared types.",
+      "Branch `task/16-foundational-architecture-docs` has no history in common with `main` — this is a persistent environment-level git issue. A human operator must open the PR manually or rebase the branch before it can be merged."
     ]
   },
   "conversation_log": [
@@ -21,7 +22,7 @@
       "agent": "developer",
       "timestamp": "2026-03-04T18:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented foundational architecture documentation. Populated docs/architecture.md with all six required sections (Overview, Tech Stack, Folder/Module Structure, Naming Conventions, Key Patterns, External Integrations) and docs/tech-decisions.md with four ADRs (ADR-001: Turborepo, ADR-002: @cv-tool/ scoped naming, ADR-003: TypeScript-only + strict mode, ADR-004: folder structure). All three Architect notes incorporated: packages/contracts/ in folder structure, strict: true in Key Patterns, @cv-tool/ scope confirmed for all workspaces (apps and packages). No application code written. PR #<number> opened."
+      "summary": "Implemented foundational architecture documentation. Populated docs/architecture.md with all six required sections (Overview, Tech Stack, Folder/Module Structure, Naming Conventions, Key Patterns, External Integrations) and docs/tech-decisions.md with four ADRs (ADR-001: Turborepo, ADR-002: @cv-tool/ scoped naming, ADR-003: TypeScript-only + strict mode, ADR-004: folder structure). All three Architect notes incorporated: packages/contracts/ in folder structure, strict: true in Key Patterns, @cv-tool/ scope confirmed for all workspaces (apps and packages). No application code written. PR could not be opened automatically due to git history issue — human operator must open PR from task/16-foundational-architecture-docs to main."
     }
   ]
 }
