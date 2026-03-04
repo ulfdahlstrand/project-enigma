@@ -1,0 +1,26 @@
+# ============================================================
+# Dockerfile.backend — Development stage only
+# No production-optimised build stage is included.
+# ============================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install curl so the compose healthcheck can reach the API.
+RUN apk add --no-cache curl
+
+# Copy package manifests needed for workspace install.
+# The full source is provided via bind-mount at runtime.
+COPY package.json package-lock.json* turbo.json ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/contracts/package.json ./packages/contracts/
+
+# Install all workspace dependencies.
+RUN npm install
+
+WORKDIR /app/apps/backend
+
+EXPOSE ${BACKEND_PORT:-3001}
+
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,29 @@
+# ============================================================
+# Dockerfile.frontend — Development stage only
+# No production-optimised build stage is included.
+# ============================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies from the monorepo root so workspace
+# resolution works correctly.  The actual source tree is
+# bind-mounted at runtime (see docker-compose.yml volumes),
+# so this layer just ensures the base tooling is present.
+RUN apk add --no-cache curl
+
+# Copy package manifests needed for workspace install.
+# The full source is provided via bind-mount at runtime.
+COPY package.json package-lock.json* turbo.json ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/contracts/package.json ./packages/contracts/
+
+# Install all workspace dependencies.
+RUN npm install
+
+WORKDIR /app/apps/frontend
+
+EXPOSE ${FRONTEND_PORT:-5173}
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
