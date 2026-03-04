@@ -3,19 +3,196 @@
 > Maintained by the Architect Agent. All changes require a dedicated architectural task.
 
 ## Overview
-<!-- High-level description of the system -->
+
+The **CV Creation Tool** is a web-based application that allows consultants at a consultancy company to efficiently manage, tailor, and export their CVs for specific client assignments. The system is structured as a Turborepo monorepo containing a React single-page application (frontend), a Node.js API server (backend), and a PostgreSQL database — all orchestrated locally via Docker Compose.
+
+### Major Components
+
+| Component | Location | Responsibility |
+|-----------|----------|----------------|
+| **Frontend** | `apps/frontend/` | React SPA — routing, data fetching, UI rendering, internationalisation |
+| **Backend** | `apps/backend/` | Node.js oRPC server — business logic, input validation, database access |
+| **Database** | Docker (PostgreSQL) | Persistent data storage; managed via migration scripts |
+| **Contracts** | `packages/contracts/` | Shared oRPC router types and Zod schemas consumed by both frontend and backend |
+| **TS Config** | `packages/tsconfig/` | Shared TypeScript configuration extended by all workspaces |
+
+---
 
 ## Tech Stack
-<!-- Languages, frameworks, key libraries -->
+
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Language | **TypeScript** | All workspaces — no plain JS permitted. Strict mode enabled everywhere. |
+| Monorepo | **Turborepo** | Task pipeline orchestration and remote caching |
+| Package manager | **npm workspaces** | Root-level workspace management |
+| Frontend framework | **React** | Component-based UI |
+| Frontend routing | **TanStack Router** | File-based routing with route codegen |
+| Frontend data-fetching | **TanStack Query** | Server-state management and caching |
+| Frontend i18n | **i18n** (e.g. `react-i18next`) | All user-facing strings must be translated |
+| API layer | **oRPC** ([orpc.dev](https://orpc.dev/docs/openapi/getting-started)) | End-to-end typed RPC between frontend and backend; also exposes an OpenAPI spec |
+| Backend runtime | **Node.js** | HTTP server hosting the oRPC handler |
+| Input validation | **Zod** | Schema definitions shared via `packages/contracts/`; used for oRPC procedure inputs/outputs |
+| Database | **PostgreSQL** | Relational database; run in Docker for local development |
+| Local orchestration | **Docker Compose** | Starts frontend dev server, backend, and PostgreSQL with a single command |
+
+---
 
 ## Structure
-<!-- Folder/module breakdown and responsibilities -->
+
+The canonical monorepo layout is:
+
+```
+/
+├── apps/
+│   ├── frontend/          # @cv-tool/frontend — React SPA
+│   └── backend/           # @cv-tool/backend  — Node.js oRPC server
+├── packages/
+│   ├── tsconfig/          # @cv-tool/tsconfig  — Shared TypeScript base configs
+│   └── contracts/         # @cv-tool/contracts — Shared oRPC router types & Zod schemas
+├── docker/
+│   ├── Dockerfile.frontend
+│   ├── Dockerfile.backend
+│   └── docker-compose.yml
+├── docs/
+│   ├── architecture.md    # This file
+│   ├── tech-decisions.md  # ADR log
+│   └── agents/            # Agent system prompts
+├── turbo.json             # Turborepo pipeline configuration
+├── package.json           # Root workspace config (npm workspaces)
+└── tsconfig.json          # Root TS config — extends packages/tsconfig base
+```
+
+### Directory Responsibilities
+
+- **`apps/frontend/`** — All React application code: components, pages, routes, hooks, and i18n configuration. Consumes types from `@cv-tool/contracts`.
+- **`apps/backend/`** — oRPC router definitions, procedure implementations, database access layer, and HTTP server entry point. Consumes schemas from `@cv-tool/contracts`.
+- **`packages/tsconfig/`** — Exports named TypeScript `tsconfig` base files (e.g. `base.json`, `react.json`, `node.json`) that workspaces extend. No runtime code.
+- **`packages/contracts/`** — The single source of truth for the oRPC router type and all Zod input/output schemas. Imported by both `apps/frontend/` and `apps/backend/`. No business logic — types and schemas only.
+- **`docker/`** — All Docker-related files. `docker-compose.yml` defines services for `frontend`, `backend`, and `postgres`.
+- **`docs/`** — Architecture documentation and ADRs. Not consumed by application code.
+
+---
+
+## Naming Conventions
+
+### Workspace Package Names
+
+The `@cv-tool/` npm scope is used as the `name` field in **every** workspace `package.json` — both `apps/*` and `packages/*`:
+
+| Workspace path | Package name |
+|---------------|--------------|
+| `apps/frontend/` | `@cv-tool/frontend` |
+| `apps/backend/` | `@cv-tool/backend` |
+| `packages/tsconfig/` | `@cv-tool/tsconfig` |
+| `packages/contracts/` | `@cv-tool/contracts` |
+
+> **Rule:** No workspace `name` may match a name that exists on the public npm registry. The `@cv-tool/` scope is private and unregistered, satisfying this constraint.
+
+### File and Folder Naming
+
+- **Folders:** `kebab-case` (e.g. `src/route-handlers/`, `src/shared-types/`)
+- **TypeScript files:** `kebab-case` for modules/utilities (e.g. `user-router.ts`); `PascalCase` for React component files (e.g. `UserCard.tsx`)
+- **React components:** `PascalCase` named exports (e.g. `export function UserCard()`)
+- **oRPC procedures:** `camelCase` names (e.g. `getUser`, `listResumes`)
+- **Zod schemas:** `camelCase` with a `Schema` suffix (e.g. `getUserInputSchema`)
+- **Environment variables:** `SCREAMING_SNAKE_CASE` with a service prefix (e.g. `BACKEND_PORT`, `POSTGRES_PASSWORD`)
+
+---
 
 ## Key Patterns
-<!-- Coding patterns all agents and developers must follow -->
+
+### 1. TypeScript Everywhere — Strict Mode Required
+
+All workspaces are TypeScript. Plain JavaScript files (`.js`, `.cjs`, `.mjs`) are **not permitted** in any workspace source directory. The root `tsconfig.json` and each workspace `tsconfig.json` must extend from `@cv-tool/tsconfig` and must **not** override `strict: true`.
+
+Required `compilerOptions` in the shared base:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
+```
+
+### 2. Shared Configuration via `packages/` Workspaces
+
+Configuration that is used by more than one workspace belongs in a `packages/` workspace, not duplicated per-app. This applies to TypeScript configs (`@cv-tool/tsconfig`) and oRPC/Zod schemas (`@cv-tool/contracts`).
+
+### 3. Shared Type Contracts via `packages/contracts/`
+
+The oRPC router type and all Zod schemas for procedure inputs and outputs live **exclusively** in `@cv-tool/contracts`. The backend implements the router; the frontend imports the router type to create a type-safe client. Neither app defines its own copy of a shared schema.
+
+```
+@cv-tool/contracts  ←── imported by ──→  @cv-tool/frontend
+                    ←── imported by ──→  @cv-tool/backend
+```
+
+### 4. Turborepo Pipeline
+
+`turbo.json` defines the task pipeline. The canonical pipeline:
+
+```json
+{
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    }
+  }
+}
+```
+
+Key rule: `build` must declare `"dependsOn": ["^build"]` so that `@cv-tool/contracts` is always built before any app that consumes it.
+
+### 5. No Cross-App Direct Imports
+
+`apps/frontend/` must **never** import directly from `apps/backend/` (or vice versa). All shared code lives in `packages/`. Cross-app sharing is done only through shared packages.
+
+### 6. Environment Configuration
+
+Each app reads configuration from environment variables. No hardcoded hostnames, ports, or credentials in source code. A `.env.example` file is maintained at each app root and at the repo root for Docker Compose variables.
+
+### 7. Docker Compose as the Local Development Entrypoint
+
+Running `docker compose up` (from `docker/`) must start the full local stack:
+- PostgreSQL database
+- Backend API server
+- Frontend dev server (with hot module reload)
+
+No local service should require manual startup outside of Docker Compose for standard development.
+
+---
 
 ## External Integrations
-<!-- APIs, services, databases -->
+
+### PostgreSQL
+
+- **Role:** Primary data store for all application data.
+- **Deployment:** Runs as a Docker container (`postgres:16` image or later) managed by Docker Compose.
+- **Connection:** Backend connects via a `DATABASE_URL` environment variable (standard PostgreSQL connection string).
+- **Migrations:** Database schema changes are applied via migration scripts that run on container startup (or via a dedicated migration command). The specific migration tool is recorded in `tech-decisions.md`.
+- **Access pattern:** Only the backend may connect to PostgreSQL. The frontend never accesses the database directly.
+
+### oRPC (API Layer)
+
+- **Role:** Provides end-to-end type-safe RPC between the frontend and backend, and automatically generates an OpenAPI specification.
+- **Library:** [orpc.dev](https://orpc.dev/docs/openapi/getting-started) — **not** tRPC.
+- **Pattern:** Procedure definitions (input/output schemas) live in `@cv-tool/contracts`. The backend registers procedure handlers. The frontend uses the oRPC client with the imported router type for full type inference — no code generation step required for the API client.
+- **Transport:** HTTP (JSON). The backend exposes a single HTTP endpoint that the oRPC client calls.
+
+---
 
 ## Decision Log
+
 See [tech-decisions.md](./tech-decisions.md)
