@@ -48,19 +48,19 @@
       "agent": "developer",
       "timestamp": "2026-03-04T21:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented Docker Compose local dev orchestration. Corrected db→postgres service name in docker/docker-compose.yml (service definition and depends_on), DATABASE_URL hostname in .env.example, and services table in README.md. Both Dockerfiles were already fully compliant. PR #20 opened."
+      "summary": "Implemented Docker Compose local dev orchestration. Renamed service db->postgres in docker/docker-compose.yml (and depends_on reference), fixed DATABASE_URL hostname in .env.example, and corrected README services table. Dockerfiles were already compliant. PR #20 opened."
     }
   ],
   "decisions": {
-    "approach": "Existing docker/ skeleton files were mostly correct. The sole critical deviation was the database service being named 'db' everywhere instead of 'postgres' as required by architecture.md and the final approved ACs. Fixed in docker-compose.yml (service name + depends_on), .env.example (DATABASE_URL hostname + comment), and README.md (services table).",
+    "approach": "Existing docker/ skeleton files were mostly correct. The sole critical deviation was the database service being named 'db' instead of 'postgres' throughout docker-compose.yml, .env.example, and README.md. Corrected all three files. Dockerfiles required no changes.",
     "files_to_touch": [
       "docker/docker-compose.yml",
       ".env.example",
       "README.md"
     ],
     "risks": [
-      "The bind-mount volumes (../apps/frontend, ../apps/backend) will cause docker compose up to fail until Task #1 (monorepo directory structure) is merged — this is an expected dependency, not a bug in this task's implementation.",
-      "The anonymous node_modules volumes prevent host bind-mounts from shadowing container-installed modules, which is correct behaviour but means npm install must be re-run inside the container if package.json changes (standard Docker dev container pattern)."
+      "The apps/frontend and apps/backend directories referenced in bind-mount volumes do not yet exist (awaiting Task #1 monorepo setup). docker compose up will fail with a volume mount error until those directories are created.",
+      "Anonymous node_modules volumes prevent host bind-mounts from shadowing container-installed modules — this is intentional but means npm install must be re-run inside the container if package.json changes."
     ]
   }
 }
