@@ -48,19 +48,19 @@
       "agent": "developer",
       "timestamp": "2026-03-04T21:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented Docker Compose local dev orchestration. Corrected service name db → postgres in docker/docker-compose.yml (service definition and depends_on), .env.example (DATABASE_URL hostname), and README.md (services table). Both Dockerfiles were already compliant. PR #20 opened."
+      "summary": "Implemented Docker Compose local dev orchestration. The docker/ directory already contained skeleton files; corrected the critical db→postgres service naming throughout: renamed service in docker/docker-compose.yml and updated depends_on, fixed DATABASE_URL hostname in .env.example from @db:5432 to @postgres:5432, fixed services table in README.md. Both Dockerfiles were already compliant. PR #20 opened."
     }
   ],
   "decisions": {
-    "approach": "Existing docker/ skeleton files required only naming corrections (db → postgres) to reach full AC compliance. No structural changes to Dockerfiles were needed.",
+    "approach": "Existing docker/ skeleton files were mostly correct. The sole critical fix was renaming the database service from 'db' to 'postgres' in docker-compose.yml (service key and depends_on), .env.example (DATABASE_URL hostname), and README.md (services table). Dockerfiles required no changes.",
     "files_to_touch": [
       "docker/docker-compose.yml",
       ".env.example",
       "README.md"
     ],
     "risks": [
-      "Bind-mount volumes (../apps/frontend, ../apps/backend) will cause docker compose up to fail until the apps/ directory structure from Task #1 (monorepo setup) is merged.",
-      "Anonymous node_modules volumes prevent host bind-mount from shadowing container-installed packages — this is intentional but developers must be aware that npm install inside the container is the source of truth for dependencies."
+      "apps/frontend and apps/backend directories do not yet exist (Task #1 dependency). Bind-mount volumes in docker-compose.yml will fail until those directories are created by the monorepo setup task.",
+      "node_modules anonymous volumes prevent host bind-mount from shadowing container-installed packages — standard pattern but developers must be aware that running npm install on the host will not affect the container's node_modules."
     ]
   }
 }
