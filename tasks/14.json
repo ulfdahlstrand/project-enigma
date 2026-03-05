@@ -33,6 +33,12 @@
       "timestamp": "2026-03-05T11:45:00Z",
       "action": "pr_opened",
       "summary": "Implemented full end-to-end test page. PR #27 opened. Changes: (1) packages/contracts/src/index.ts — added listTestEntriesInputSchema, testEntrySchema, listTestEntriesOutputSchema, and listTestEntries procedure to contract. (2) apps/backend/src/db/test-entries.ts — new lazy-singleton postgres DB client and queryTestEntries() function. (3) apps/backend/src/procedures/list-test-entries.ts — new listTestEntriesHandler. (4) apps/backend/src/router.ts — registered listTestEntriesHandler. (5) apps/backend/package.json — added postgres@^3.4.5 dependency. (6) apps/frontend/src/orpc-client.ts — switched from RPCLink to OpenAPILink to correctly communicate with OpenAPIHandler backend. (7) apps/frontend/src/routes/test.tsx — new /test route with loading/error/data states, useQuery, useTranslation. (8) apps/frontend/src/route-tree.gen.ts — registered /test route. (9) apps/frontend/src/i18n/locales/en.json and fr.json — added test.* translation keys. (10) apps/frontend/package.json — added @orpc/openapi-client dependency. (11) docker/docker-compose.yml — enabled frontend service, fixed VITE_API_URL, added backend healthcheck, proper startup ordering. (12) scripts/smoke-test.sh — AC9 smoke-test script."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-05T14:00:00Z",
+      "action": "pr_verified",
+      "summary": "Resumed session and verified all implementation files are correctly committed on branch task/14-e2e-test-page. PR #27 confirmed open with all acceptance criteria addressed. No additional changes required — implementation was complete from the prior session."
     }
   ],
   "decisions": {
@@ -50,15 +56,14 @@
       "apps/frontend/src/i18n/locales/fr.json",
       "apps/frontend/package.json",
       "docker/docker-compose.yml",
-      "scripts/smoke-test.sh",
-      "package-lock.json"
+      "scripts/smoke-test.sh"
     ],
     "risks": [
-      "routeTree.gen.ts is committed (not gitignored) — updated it directly; making it gitignored is a separate cleanup task",
-      "postgres package not yet installed in node_modules — npm install required after checkout",
+      "routeTree.gen.ts is committed (not gitignored) — the root .gitignore does not exclude it; making it gitignored is a separate cleanup task (architecture Key Pattern #8)",
+      "postgres package must be installed after checkout — npm install required",
       "OpenAPILink transport switch is a breaking change for any code relying on RPCLink behaviour (health procedure still works since both transports are JSON-based, but the URL path scheme changes)",
-      "VITE_API_URL in Docker Compose was previously VITE_BACKEND_URL in the commented template — fixed, but existing .env files may need review",
-      "Frontend VITE_API_URL in Docker Compose uses http://localhost:${BACKEND_PORT} — in a browser context running inside Docker, this resolves to the host machine. Browser-to-backend communication through Docker port mappings should work correctly for dev."
+      "VITE_API_URL in Docker Compose uses http://localhost:${BACKEND_PORT} — in a browser context running inside Docker, this resolves to the host machine. Browser-to-backend communication through Docker port mappings should work correctly for dev.",
+      "Locale file path discrepancy: task AC3 references apps/frontend/src/locales/en/common.json but the actual infrastructure (established by a prior task) uses apps/frontend/src/i18n/locales/en.json — implementation follows the existing structure"
     ]
   }
 }
