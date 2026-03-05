@@ -33,6 +33,12 @@
       "timestamp": "2026-03-05T16:30:00Z",
       "action": "pr_opened",
       "summary": "Implemented BaseLayout, Header, and Footer components with MUI primitives and react-i18next integration. Updated __root.tsx to use BaseLayout as the root route component. Added header.appName and footer.copyright translation keys to i18n/locales/en.json and fr.json. Created locales/en/common.json per AC8 and architecture.md. PR #38 opened. Note: locales/en/common.json is not currently loaded by i18n.ts (which uses i18n/locales/en.json) — flagged in PR for follow-up alignment."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T18:14:00Z",
+      "action": "tests_failed",
+      "summary": "39/40 tests pass. 11 of 12 acceptance criteria verified. AC11 (npm run typecheck exits with code 0) fails due to 3 pre-existing TypeScript errors in src/orpc-client.ts (TS2344) and src/routes/test.tsx (TS2349, TS7006). These errors are entirely unrelated to the task's deliverables (BaseLayout, Header, Footer, __root.tsx, locales/en/common.json). None of the new layout component files contain type errors. The typecheck failure is a pre-existing project-level issue. Flagging for developer attention to resolve the upstream TypeScript errors in orpc-client.ts and test.tsx so AC11 can pass."
     }
   ],
   "decisions": {
