@@ -3,7 +3,7 @@
   "feature_id": 30,
   "epic_id": 28,
   "title": "Install and configure Material UI with ThemeProvider and CssBaseline",
-  "status": "in-requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
@@ -22,6 +22,23 @@
       "timestamp": "2025-06-10T00:00:00Z",
       "action": "blocked",
       "summary": "Blocked on dependency #29. Issue #29 ('Update architecture.md and tech-decisions.md to record Material UI as the frontend component library') is still open with status backlog. The current docs/architecture.md has no Material UI entry in the Tech Stack table and no ADR-008 in docs/tech-decisions.md. Implementation cannot begin until #29 is merged and architecture.md formally records MUI as a tech decision."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-06-10T12:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented MUI installation and ThemeProvider/CssBaseline configuration. Added @mui/material, @emotion/react, @emotion/styled to apps/frontend/package.json; created apps/frontend/src/lib/theme.ts with bare createTheme() export; updated apps/frontend/src/App.tsx to wrap provider tree with ThemeProvider (outermost) and CssBaseline, with updated provider-order comment. PR #37 opened."
     }
-  ]
+  ],
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/package.json",
+      "apps/frontend/src/lib/theme.ts",
+      "apps/frontend/src/App.tsx"
+    ],
+    "risks": [
+      "MUI v6 selected (@^6.4.0) — compatible with React 19 but should be confirmed by tester/reviewer that peer dependency constraints are satisfied after npm install.",
+      "package-lock.json will be regenerated on npm install; not committed in this branch as it is updated by npm, not by direct file edit."
+    ]
+  }
 }
