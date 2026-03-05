@@ -28,6 +28,12 @@
       "timestamp": "2025-06-10T12:00:00Z",
       "action": "pr_opened",
       "summary": "Implemented MUI installation and ThemeProvider/CssBaseline configuration. Added @mui/material, @emotion/react, @emotion/styled to apps/frontend/package.json; created apps/frontend/src/lib/theme.ts with bare createTheme() export; updated apps/frontend/src/App.tsx to wrap provider tree with ThemeProvider (outermost) and CssBaseline, with updated provider-order comment. PR #37 opened."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-10T16:45:00Z",
+      "action": "tests_passed",
+      "summary": "All 33 tests passing across 10 acceptance criteria. Test file: apps/frontend/src/lib/theme.test.ts. Vitest run completed in 75ms. ACs 1-5 and 8-10 verified via file inspection/grep in test suite (33/33 pass). ACs 6-7 (typecheck/build) have pre-existing failures in orpc-client.ts and routes/test.tsx that exist identically on main — confirmed by stashing branch changes and re-running; these errors are not introduced by this task and are outside its scope. No .css files introduced, no 'any'/@ts-ignore/@ts-expect-error in changed files, theme.ts contains only bare createTheme() with no overrides."
     }
   ],
   "decisions": {
