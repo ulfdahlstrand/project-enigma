@@ -8,5 +8,15 @@
   },
   "locale": {
     "switch": "Changer de langue"
+  },
+  "test": {
+    "heading": "Test de connectivité de la pile",
+    "description": "Cette page récupère les lignes de la table test_entries via l'endpoint backend oRPC.",
+    "loading": "Chargement des entrées de test…",
+    "error": "Impossible de charger les entrées de test. Le backend est peut-être inaccessible.",
+    "empty": "Aucune entrée trouvée.",
+    "tableHeaderId": "ID",
+    "tableHeaderName": "Nom",
+    "tableHeaderNote": "Note"
   }
 }

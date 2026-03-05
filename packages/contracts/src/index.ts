@@ -15,6 +15,29 @@ export const healthOutputSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Test entries procedure — Zod schemas
+//
+// These schemas back the `listTestEntries` procedure, which queries the
+// `test_entries` table created by the initial migration. They exist solely
+// to validate the full end-to-end stack (database → oRPC → TanStack Query →
+// React route) and carry no CV-specific business logic.
+// ---------------------------------------------------------------------------
+
+export const listTestEntriesInputSchema = z.object({});
+
+export const testEntrySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  note: z.string(),
+});
+
+export const listTestEntriesOutputSchema = z.object({
+  entries: z.array(testEntrySchema),
+});
+
+export type TestEntry = z.infer<typeof testEntrySchema>;
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -24,6 +47,9 @@ export const healthOutputSchema = z.object({
 
 export const contract = oc.router({
   health: oc.input(healthInputSchema).output(healthOutputSchema),
+  listTestEntries: oc
+    .input(listTestEntriesInputSchema)
+    .output(listTestEntriesOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
