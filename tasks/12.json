@@ -38,7 +38,7 @@
       "agent": "developer",
       "timestamp": "2026-03-05T10:00:00Z",
       "action": "pr_opened",
-      "summary": "Implemented full apps/frontend workspace bootstrap. PR #24 opened. All 13 ACs addressed: workspace config with @cv-tool/tsconfig/react.json extension, Vite + TanStack Router file-based codegen, QueryClientProvider at app root, oRPC client singleton typed against @cv-tool/contracts reading VITE_API_URL from env, react-i18next with en/fr locales and app.title key, locale toggle in HomePage, .env.example with VITE_PORT and VITE_API_URL, README with port docs, eslint.config.js with typescript-eslint."
+      "summary": "Implemented full apps/frontend workspace bootstrap. PR #24 opened. All 13 ACs addressed: workspace config with @cv-tool/tsconfig/react.json extension, Vite dev server on VITE_PORT=5173, TanStack Router with file-based codegen (TanStackRouterVite plugin + tsr.config.json), index route at '/' rendering translated content, QueryClientProvider at app root, oRPC client singleton typed against AppRouter reading VITE_API_URL from env, react-i18next with en/fr locales and app.title key, locale toggle button demonstrating multi-locale support, ESLint 9 flat config with typescript-eslint."
     }
   ],
   "decisions": {
@@ -65,10 +65,10 @@
       "apps/frontend/src/i18n/locales/fr.json"
     ],
     "risks": [
-      "oRPC client uses RPCLink from @orpc/client/fetch. The backend currently only mounts OpenAPIHandler (not RPCHandler), so API calls from the frontend will 404 until the backend adds an RPC handler. The client is correctly typed and initialized — this is out of scope for this task.",
-      "The committed route-tree.gen.ts is a hand-written scaffold. It will be overwritten by the TanStack Router Vite plugin on first dev server start or build. The scaffold is sufficient for TypeScript to compile.",
-      "eslint.config.ts stub exists alongside eslint.config.js. ESLint 9 uses the .js version by default; the .ts file is unused but harmless (not included in tsconfig).",
-      "react-i18next v15 with i18next v25 — these are major versions released after the task was written. If version incompatibilities arise the Tester should adjust to compatible versions."
+      "oRPC client uses RPCLink (RPC transport) but backend currently only mounts OpenAPIHandler — actual API calls will 404 until backend adds an RPCHandler. The client is correctly typed and initialized; this is a backend concern outside this task's scope.",
+      "route-tree.gen.ts is committed as a hand-written scaffold. It matches the structure TanStack Router codegen produces but does not include all extended metadata fields (e.g. routeMeta, loaderDeps). The Vite plugin will overwrite it with the fully-resolved output on first dev server start or build run.",
+      "eslint.config.ts stub exists alongside eslint.config.js. ESLint 9 uses the .js file by default; the .ts stub is excluded from tsconfig include and is inert. This is a minor untidiness that could be cleaned up if git file deletion becomes available.",
+      "typescript-eslint projectService mode requires a valid tsconfig to be reachable from the ESLint config location — this should work since tsconfig.json is in the same directory as eslint.config.js."
     ]
   }
 }
