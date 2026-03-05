@@ -208,3 +208,28 @@ Key aspects:
 - Both libraries are actively maintained and have strong TypeScript support, reducing the risk of type regression.
 
 ---
+
+## ADR-008 — 2026-03-05 — Material UI as the Frontend Component Library
+
+**Status:** Accepted
+
+**Context:**
+The CV Creation Tool frontend needs a component library to provide consistent, pre-built UI primitives for layout, navigation, and typography. Without a shared component library, each feature would need to build and style UI elements from scratch, leading to visual inconsistency, duplicated effort, and ad-hoc CSS. The application requires components for layout shells (AppBar, Drawer), form controls (for future CV editing), and typography — all with built-in accessibility and theming support. Options considered: Material UI (mature, comprehensive, excellent TypeScript support, built-in theming), Chakra UI (similar approach but smaller ecosystem), Radix + custom styles (too much custom work for this project's scope), and no library (unacceptable maintenance burden).
+
+**Decision:**
+Use **Material UI** (latest version, `@mui/material`) as the sole frontend component and UI library for `@cv-tool/frontend`. MUI is paired with **Emotion** (`@emotion/react`, `@emotion/styled`) as its styling engine.
+
+Key aspects of the decision:
+1. **MUI is the sole component/UI library.** No other component libraries (e.g. Chakra, Ant Design) may be introduced alongside MUI. Custom HTML elements should only be used when MUI does not provide an appropriate component.
+2. **`ThemeProvider` and `CssBaseline` are mandatory wrappers.** They must be rendered at the application root (in `App.tsx` or `__root.tsx`), wrapping or sitting alongside the existing provider chain (`QueryClientProvider` → `RouterProvider`). `CssBaseline` normalises browser styles globally.
+3. **The `sx` prop is the primary styling mechanism.** All component styling should use MUI's `sx` prop or the theme object. Raw CSS files (`.css`, `.scss`, etc.) and inline `style` objects are **not permitted** where MUI's `sx` prop or theme covers the need. This ensures styling remains within MUI's theme-aware system.
+4. **MUI components are the standard primitives.** Layout uses `Box`, `Stack`, `Container`; navigation uses `AppBar`, `Toolbar`, `Drawer`, `List`; text uses `Typography`. Developers should reach for MUI components before creating custom equivalents.
+5. **Theme configuration lives in `apps/frontend/src/lib/theme.ts`**, following the existing pattern for library/config files (`i18n.ts`, `orpc-client.ts`). The theme uses `createTheme()` with MUI defaults — custom branding, colours, and typography are out of scope for the initial setup.
+
+**Consequences:**
+- All frontend UI work builds on MUI components, ensuring visual and behavioural consistency across the application.
+- The `@mui/material`, `@emotion/react`, and `@emotion/styled` packages must be listed as dependencies of `@cv-tool/frontend`.
+- No `.css` or `.scss` files should be added to the frontend source directory for component styling. The `sx` prop and theme handle all styling needs.
+- Future UI features (forms, dialogs, data tables) should use MUI components rather than introducing additional libraries.
+- MUI's TypeScript typings provide compile-time safety for component props, including `sx` prop values.
+- The Emotion dependency is an implementation detail of MUI and should not be used directly for styling outside of MUI's API (i.e. no standalone `styled()` calls unless wrapping MUI components).

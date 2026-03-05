@@ -1,0 +1,26 @@
+{
+  "issue_number": 35,
+  "title": "[TASK] Build NavigationMenu component with TanStack Router links and i18n labels",
+  "parent_feature": 32,
+  "status": "in-requirements",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2025-01-24T00:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally consistent. File location (apps/frontend/src/components/layout/NavigationMenu.tsx), naming conventions (PascalCase .tsx file, PascalCase named export, kebab-case folders), technology choices (MUI primitives, TanStack Router <Link>, react-i18next useTranslation), styling approach (MUI sx prop only), and i18n pattern all align with architecture.md. Note: the canonical structure in architecture.md does not yet list a components/ directory under apps/frontend/src/; this is an additive, non-conflicting addition. architecture.md should be updated to reflect the components/layout/ directory once the layout components (from #31 and this task) land — this should be tracked as part of an architectural update task if not already covered."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-11T00:00:00Z",
+      "action": "testability_approved",
+      "summary": "All 9 acceptance criteria are testable as written. Each criterion is binary and specific. Criteria 1, 6, 7, 8, 9 are verifiable by static file inspection. Criteria 3, 4, 5 are verifiable by Vitest + React Testing Library unit tests. Criterion 2 is verifiable by running tsc --noEmit and checking exit code. No vague, subjective, or immeasurable criteria found."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-06-11T00:01:00Z",
+      "action": "blocked",
+      "summary": "Blocked by unmerged dependencies. Task #31 (BaseLayout) has not been implemented — apps/frontend/src/components/layout/BaseLayout.tsx does not exist. Task #33 (MUI installation) has not been completed — @mui/material, @emotion/react, and @emotion/styled are absent from apps/frontend/package.json. Both blockers must be resolved before implementation of NavigationMenu can proceed."
+    }
+  ]
+}
