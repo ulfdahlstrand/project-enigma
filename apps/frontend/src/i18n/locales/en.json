@@ -8,5 +8,15 @@
   },
   "locale": {
     "switch": "Switch language"
+  },
+  "test": {
+    "heading": "Stack Connectivity Test",
+    "description": "This page fetches rows from the test_entries database table via the oRPC backend endpoint.",
+    "loading": "Loading test entries…",
+    "error": "Failed to load test entries. The backend may be unreachable.",
+    "empty": "No entries found.",
+    "tableHeaderId": "ID",
+    "tableHeaderName": "Name",
+    "tableHeaderNote": "Note"
   }
 }

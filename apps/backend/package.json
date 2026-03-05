@@ -14,6 +14,7 @@
     "@orpc/openapi": "^1.13.6",
     "@orpc/server": "^1.13.6",
     "@orpc/zod": "^1.13.6",
+    "postgres": "^3.4.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

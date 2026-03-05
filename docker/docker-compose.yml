@@ -55,26 +55,37 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:${BACKEND_PORT}/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
-  # frontend: # TODO: uncomment when frontend app is set up
-  #   build:
-  #     context: ..
-  #     dockerfile: docker/Dockerfile.frontend
-  #   restart: unless-stopped
-  #   env_file:
-  #     - ../.env
-  #   environment:
-  #     FRONTEND_PORT: ${FRONTEND_PORT}
-  #     VITE_BACKEND_URL: http://backend:${BACKEND_PORT}
-  #   ports:
-  #     - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-  #   volumes:
-  #     - ../apps/frontend:/app/apps/frontend
-  #     - /app/apps/frontend/node_modules
-  #   networks:
-  #     - cv-tool-network
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      VITE_API_URL: http://localhost:${BACKEND_PORT}
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    volumes:
+      - ../apps/frontend:/app/apps/frontend
+      - /app/apps/frontend/node_modules
+    networks:
+      - cv-tool-network
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
