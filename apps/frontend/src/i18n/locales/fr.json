@@ -18,5 +18,11 @@
     "tableHeaderId": "ID",
     "tableHeaderName": "Nom",
     "tableHeaderNote": "Note"
+  },
+  "header": {
+    "appName": "CV Tool"
+  },
+  "footer": {
+    "copyright": "© CV Tool. Tous droits réservés."
   }
 }

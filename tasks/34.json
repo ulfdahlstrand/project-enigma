@@ -2,7 +2,7 @@
   "issue_number": 34,
   "title": "[TASK] Implement BaseLayout, Header, and Footer components with i18n and __root.tsx integration",
   "parent_feature": 31,
-  "status": "ready_for_development",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
@@ -27,6 +27,33 @@
       "timestamp": "2026-03-05T15:45:00Z",
       "action": "blocked",
       "summary": "Re-checked on follow-up invocation. Dependencies #29 and #30 are still open with status:backlog. apps/frontend/package.json still does not contain @mui/material, @emotion/react, or @emotion/styled. architecture.md still does not document MUI or the components/layout/ directory convention. Task cannot proceed until both dependencies are completed and merged."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-05T16:30:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented BaseLayout, Header, and Footer components with MUI primitives and react-i18next integration. Updated __root.tsx to use BaseLayout as the root route component. Added header.appName and footer.copyright translation keys to i18n/locales/en.json and fr.json. Created locales/en/common.json per AC8 and architecture.md. PR #38 opened. Note: locales/en/common.json is not currently loaded by i18n.ts (which uses i18n/locales/en.json) — flagged in PR for follow-up alignment."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T18:14:00Z",
+      "action": "tests_failed",
+      "summary": "39/40 tests pass. 11 of 12 acceptance criteria verified. AC11 (npm run typecheck exits with code 0) fails due to 3 pre-existing TypeScript errors in src/orpc-client.ts (TS2344) and src/routes/test.tsx (TS2349, TS7006). These errors are entirely unrelated to the task's deliverables (BaseLayout, Header, Footer, __root.tsx, locales/en/common.json). None of the new layout component files contain type errors. The typecheck failure is a pre-existing project-level issue. Flagging for developer attention to resolve the upstream TypeScript errors in orpc-client.ts and test.tsx so AC11 can pass."
     }
-  ]
+  ],
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/components/layout/BaseLayout.tsx",
+      "apps/frontend/src/components/layout/Header.tsx",
+      "apps/frontend/src/components/layout/Footer.tsx",
+      "apps/frontend/src/routes/__root.tsx",
+      "apps/frontend/src/i18n/locales/en.json",
+      "apps/frontend/src/i18n/locales/fr.json",
+      "apps/frontend/src/locales/en/common.json"
+    ],
+    "risks": [
+      "locales/en/common.json is created per AC8 and architecture.md, but is not loaded by the current i18n.ts configuration (which loads from i18n/locales/en.json). The components correctly use useTranslation() which resolves via the loaded namespace. A follow-up task should align i18n file paths with the architecture.md canonical structure.",
+      "BaseLayout renders <Outlet /> directly from @tanstack/react-router inside a <Box component='main'> wrapper, meaning any future route that renders a full-bleed element will need to account for the extra Box wrapper."
+    ]
+  }
 }
