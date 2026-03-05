@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "CV Tool"
+  },
+  "home": {
+    "heading": "Bienvenue dans CV Tool",
+    "description": "Gerez, adaptez et exportez vos CV pour des missions clients specifiques."
+  },
+  "locale": {
+    "switch": "Changer de langue"
+  }
+}
