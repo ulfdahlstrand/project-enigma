@@ -1,0 +1,27 @@
+{
+  "issue_number": 29,
+  "title": "Update architecture.md and tech-decisions.md to record Material UI as the frontend component library",
+  "type": "task",
+  "status": "done",
+  "parent_issue": 28,
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2025-01-20T00:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally sound. Documentation-only changes that correctly precede implementation. Approved with notes: (1) The new ADR must be numbered ADR-008 following the existing sequence in tech-decisions.md. (2) The components/ directory addition in the Structure section should include a brief responsibility note consistent with the existing 'Directory Responsibilities' subsection. (3) The MUI pattern added to Key Patterns should be numbered sequentially (Pattern #9) following the existing convention."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-01-20T00:01:00Z",
+      "action": "testability_approved",
+      "summary": "All acceptance criteria are testable as written. Each criterion maps to a specific, observable, binary-verifiable change in one of two documentation files: (1) ADR-008 present in tech-decisions.md with specified content (sole UI library, ThemeProvider/CssBaseline wrappers, sx prop as primary styling, MUI for layout/nav/typography). (2) Tech Stack table row in architecture.md with exact text 'Frontend component library | Material UI | ThemeProvider + CssBaseline at app root; sx prop for styling'. (3) Key Pattern #9 in architecture.md forbidding raw CSS/inline styles where sx/theme applies. (4) components/ directory entry in the Structure section of architecture.md. (5) Directory Responsibilities entry for components/ in architecture.md. (6) No application code changes — verifiable by confirming only docs/ files are modified."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-06-18T00:00:00Z",
+      "action": "completed",
+      "summary": "Task executed by Architect. Changes made: (1) Added ADR-008 to docs/tech-decisions.md — records Material UI as the sole frontend component library with Emotion styling engine, ThemeProvider + CssBaseline wrappers, sx prop as primary styling, theme config in apps/frontend/src/lib/theme.ts. (2) Updated docs/architecture.md — added 'Frontend component library | Material UI' row to Tech Stack table, added components/layout/ directory and theme.ts to Structure section, added Directory Responsibilities entries for components/ and components/layout/, added Key Pattern #9 (Material UI as the Sole Styling and Component System)."
+    }
+  ]
+}
