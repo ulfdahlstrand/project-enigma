@@ -2,7 +2,7 @@
   "issue_number": 35,
   "title": "[TASK] Build NavigationMenu component with TanStack Router links and i18n labels",
   "parent_feature": 32,
-  "status": "in-requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
@@ -21,6 +21,23 @@
       "timestamp": "2025-06-11T00:01:00Z",
       "action": "blocked",
       "summary": "Blocked by unmerged dependencies. Task #31 (BaseLayout) has not been implemented — apps/frontend/src/components/layout/BaseLayout.tsx does not exist. Task #33 (MUI installation) has not been completed — @mui/material, @emotion/react, and @emotion/styled are absent from apps/frontend/package.json. Both blockers must be resolved before implementation of NavigationMenu can proceed."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-06-11T12:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented NavigationMenu component with MUI List/ListItemButton primitives, TanStack Router <Link> via component prop, and react-i18next labels. Added nav.home and nav.test keys to common.json. Integrated <NavigationMenu /> into BaseLayout in a flex-row layout alongside <Outlet />. PR #39 opened."
     }
-  ]
+  ],
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/components/layout/NavigationMenu.tsx",
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/components/layout/BaseLayout.tsx"
+    ],
+    "risks": [
+      "The component={Link} polymorphic prop on MUI ListItemButton may surface TypeScript generic constraint warnings with certain MUI/TanStack Router version combinations. If tsc --noEmit flags this, the fallback is to nest <Link> as a child of ListItemButton instead.",
+      "Active-link highlighting is out of scope; the nav renders identically regardless of current route."
+    ]
+  }
 }
