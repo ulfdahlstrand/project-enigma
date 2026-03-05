@@ -53,7 +53,7 @@ The `@cv-tool/` scope is **not** registered on the public npm registry. All pack
 - Cross-workspace imports use the scoped name: `import type { AppRouter } from "@cv-tool/contracts"`.
 - No workspace name can collide with a public npm package because the scope is private and unregistered.
 - Future packages must follow the same `@cv-tool/<folder-name>` pattern.
-- The scope applies to both `apps/*` and `packages/*` — there is no distinction in naming by namespace type.
+- The scope applies to both `apps/*` and `packages/*` — there is no distinction in naming by workspace type.
 
 ---
 
@@ -133,38 +133,78 @@ The canonical monorepo layout is:
 
 ---
 
-## ADR-005 — 2026-03-04 — dbmate as the Database Migration Tool
+## ADR-005 — 2026-03-04 — oRPC as the RPC Framework
 
 **Status:** Accepted
 
 **Context:**
-The CV Creation Tool requires a repeatable, version-controlled schema migration mechanism for PostgreSQL. Several options were evaluated:
-
-- **dbmate** — standalone binary, plain SQL files, Docker-native, no Node.js runtime dependency
-- **node-pg-migrate** — Node.js-coupled, requires npm dependencies in the database package
-- **Prisma Migrate** — ORM-coupled, pulls in a significant dependency tree, not appropriate for a schema-only package
-- **Raw PostgreSQL init scripts** (`/docker-entrypoint-initdb.d/`) — only run on first container init (empty data directory), not re-runnable, no migration state tracking
-
-The `packages/database/` workspace is intended to be a schema-only package containing migration scripts and no application code. Coupling it to a Node.js migration tool would introduce a runtime dependency that does not belong in a schema-only package, and would leak the tool's npm dependencies into the workspace graph.
+The CV Creation Tool requires a typed communication layer between the React frontend and the Node.js backend. The key requirements are: (1) end-to-end type safety without manual type duplication, (2) input/output validation at the boundary, (3) the ability to generate an OpenAPI specification for potential future consumers, and (4) compatibility with Zod for schema definitions. Several options exist: REST with manual types, GraphQL (heavy for this use case), tRPC (popular but no native OpenAPI), and oRPC (end-to-end typed with native OpenAPI support).
 
 **Decision:**
-Use **dbmate** (v2, via the official `ghcr.io/amacneil/dbmate:2` Docker image) as the migration tool. Migrations are defined as plain `.sql` files under `packages/database/migrations/` using dbmate's `-- migrate:up` / `-- migrate:down` section convention.
+Use **oRPC** ([orpc.dev](https://orpc.dev/docs/openapi/getting-started)) as the sole API communication layer between the frontend and backend. oRPC is **not** tRPC — it is a distinct library with different APIs and built-in OpenAPI specification generation.
 
-Migrations are applied automatically on `docker compose up` via a dedicated `migrate` service in `docker/docker-compose.yml`. This service:
-- Uses the `ghcr.io/amacneil/dbmate:2` image directly — no npm dependencies, no TypeScript compilation
-- Reads `DATABASE_URL` from the environment (the same variable used by the backend)
-- Mounts `../packages/database/migrations` as `/db/migrations` (dbmate's default migrations directory)
-- Runs `dbmate --no-dump-schema up` to apply all pending migrations
-- Declares `depends_on: db: condition: service_healthy` to ensure PostgreSQL is ready before migrating
-- The `backend` service declares `depends_on: migrate: condition: service_completed_successfully` so the application never starts against an un-migrated schema
+Key aspects of the decision:
+1. **oRPC is the only API layer.** No REST endpoints, no GraphQL — all frontend-to-backend communication goes through oRPC procedures.
+2. **Zod schemas define all procedure inputs and outputs.** These schemas live in `@cv-tool/contracts` and are shared by both apps.
+3. **The backend implements the oRPC router.** Procedure handlers are registered in `apps/backend/`.
+4. **The frontend imports the router type from `@cv-tool/contracts`** to create a fully type-safe oRPC client — no code generation step required.
+5. **Transport is HTTP (JSON).** The backend exposes a single HTTP endpoint that the oRPC handler processes.
 
 **Consequences:**
-- Migration files are plain SQL — readable by any developer without knowledge of a specific ORM or tool API.
-- `packages/database/` has **no npm runtime dependencies** — it is a schema-only package as intended.
-- dbmate tracks applied migrations in a `schema_migrations` table in PostgreSQL, preventing double-application.
-- The `--no-dump-schema` flag suppresses dbmate's default `schema.sql` dump file, keeping the repository clean.
-- Adding a new migration requires creating a new timestamped `.sql` file in `packages/database/migrations/` — no tool-specific commands needed beyond `dbmate new <name>` (optional convenience).
-- Rolling back requires `dbmate down` (manual step) — not automated, which is appropriate for a local development setup.
-- If the project later needs a Node.js-integrated ORM (e.g. for type-safe query building), that tool's dependencies belong in `apps/backend/`, not in `packages/database/`.
+- Adding a new procedure requires: (1) defining the Zod input/output schemas in `@cv-tool/contracts`, (2) implementing the handler in `apps/backend/`, (3) calling the procedure from `apps/frontend/` — type errors surface immediately if any step is inconsistent.
+- An OpenAPI specification is automatically generated, which can be used for documentation or future non-TypeScript clients.
+- The team must use oRPC's API surface, not tRPC's. Documentation at [orpc.dev](https://orpc.dev) is the reference.
+- `@cv-tool/contracts` becomes a critical dependency: both apps must rebuild when contract schemas change (enforced by Turborepo's `"dependsOn": ["^build"]`).
+
+---
+
+## ADR-006 — 2026-03-04 — PostgreSQL as the Primary Database
+
+**Status:** Accepted
+
+**Context:**
+The CV Creation Tool needs a persistent data store for consultant profiles, CV data, and related metadata. The data is inherently relational (consultants have many CVs, CVs have many sections, etc.), and the application requires transactional consistency for updates. Options considered: PostgreSQL (mature relational DB, strong ecosystem), SQLite (too limited for concurrent access in a containerised setup), MySQL/MariaDB (viable but less featureful than PostgreSQL for JSON and advanced types), and NoSQL options like MongoDB (unnecessary complexity for a relational domain).
+
+**Decision:**
+Use **PostgreSQL** (version 16 or later) as the sole persistent data store for the application.
+
+Key aspects:
+1. **Local development:** PostgreSQL runs as a Docker container managed by Docker Compose (`postgres:16` image or later).
+2. **Connection:** The backend connects via a `DATABASE_URL` environment variable containing a standard PostgreSQL connection string.
+3. **Access pattern:** Only `apps/backend/` connects to the database. The frontend **never** accesses PostgreSQL directly — all data access is mediated through oRPC procedures.
+4. **Migrations:** Database schema changes are managed via migration scripts. Scripts use a timestamp-prefixed naming convention (`YYYYMMDDHHMMSS_description.sql`) to guarantee deterministic ordering. The specific migration tool/runner is to be decided in the database feature task (#3) and recorded as a separate ADR.
+5. **No ORM mandate:** The choice of database client (raw SQL, query builder like Kysely, or a lightweight ORM) is deferred to the backend/database feature tasks. The architectural constraint is that the client must support TypeScript and parameterised queries (no string concatenation for SQL).
+
+**Consequences:**
+- PostgreSQL must be running (via Docker Compose) for the backend to function locally.
+- The `DATABASE_URL` environment variable must be configured in Docker Compose and in `.env.example` files.
+- Schema changes require a new migration file — no manual `ALTER TABLE` against the running database.
+- The migration tool decision is a downstream dependency; until it is made, migration scripts can be plain `.sql` files run in order.
+- Future production deployment will need a managed PostgreSQL instance (out of scope for Epic #2).
+
+---
+
+## ADR-007 — 2026-03-04 — TanStack Router and TanStack Query as the Frontend Data Layer
+
+**Status:** Accepted
+
+**Context:**
+The frontend needs two capabilities: (1) client-side routing with type-safe route parameters and code splitting, and (2) server-state management for fetching, caching, and synchronising data from the backend. For routing, options include React Router (widely used but limited type safety), TanStack Router (file-based routing with full TypeScript codegen), and Next.js (full framework — too opinionated for this SPA). For data fetching, options include raw `fetch`/`useEffect` (error-prone), SWR (lightweight), and TanStack Query (feature-rich, widely adopted, excellent TypeScript support).
+
+**Decision:**
+Use **TanStack Router** for client-side routing and **TanStack Query** for server-state management in `apps/frontend/`.
+
+Key aspects:
+1. **TanStack Router** is configured with **file-based routing and route codegen**. Route files in a designated directory are automatically discovered and a typed route tree is generated. This provides compile-time validation of route paths, search params, and route context.
+2. **TanStack Query** manages all server-state: data fetching, caching, background re-fetching, and mutation lifecycle. The oRPC client is invoked within TanStack Query's `queryFn` / `mutationFn`.
+3. **No direct `fetch` calls.** All backend communication in the frontend goes through TanStack Query hooks that use the oRPC client internally. This ensures consistent caching, loading states, and error handling.
+4. **Integration pattern:** Route loaders (TanStack Router) may pre-fetch data via TanStack Query's `prefetchQuery` to enable data loading before component render.
+
+**Consequences:**
+- Route definitions are generated files — developers add a route file in the designated folder and the codegen produces the typed route tree. Generated files should be committed or regenerated on build (to be decided by the frontend feature task).
+- TanStack Query's `QueryClient` must be configured at the application root and provided via context.
+- All data-fetching logic is co-located with query key definitions, making cache invalidation explicit and traceable.
+- The combination of oRPC types + TanStack Query provides end-to-end type safety from database schema → Zod schema → oRPC procedure → query hook → component props.
+- Both libraries are actively maintained and have strong TypeScript support, reducing the risk of type regression.
 
 ---

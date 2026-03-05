@@ -1,0 +1,56 @@
+{
+  "issue_number": 25,
+  "title": "[TASK] Set up frontend application (React, TanStack Router, TanStack Query, oRPC client, i18n)",
+  "parent_feature": 8,
+  "status": "in_requirements",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-05T09:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally consistent with architecture.md. Approved with three clarifications: (1) Vite is confirmed as the bundler for apps/frontend — record as ADR; (2) routeTree.gen.ts should be gitignored and generated during dev/build, not committed; (3) oRPC client packages must be compatible with @orpc/contract ^1.13.6 and zod ^4.3.6 already used in @cv-tool/contracts. No architectural changes required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T08:17:17Z",
+      "action": "testability_rejected",
+      "summary": "31 of 34 criteria are testable. Three criteria require revision: (7) 'renders without runtime errors when the dev server is running' — browser-observable only, no E2E tooling in scope; (12) 'Navigating to / in a browser displays...' — requires live browser/dev server, excluded by out-of-scope; (27) 'The rendered page in a browser displays the translated string value' — same browser-runtime issue. Suggested rewrites provided for all three. Routed back to Requirements."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-05T08:18:00Z",
+      "action": "testability_rejected",
+      "summary": "Re-review after re-invocation. Issue body has not been updated — criteria 7, 12, and 27 remain unchanged from the original untestable wording. No revisions have been applied. Routing back to Requirements again for the required edits."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-05T10:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised 5 acceptance criteria flagged by Tester across two rejection rounds. Changes: (AC 7) Replaced 'renders without runtime errors when dev server is running' with a static check — build exit code 0 and tsc --noEmit passing, noting that runtime correctness is structurally guaranteed by criteria 5 and 31. (AC 12) Replaced 'Navigating to / in a browser displays...' with a verifiable static check — the generated route tree must include an entry for the / route confirming index route registration. (AC 27) Replaced 'rendered page in a browser displays the translated string value' with a static file inspection check — the translation key referenced by useTranslation must exist in the namespace JSON file with a non-empty string value. (AC 28) Replaced 'terminal output confirms it is listening on a port' (running-process observation) with a static check — the dev script value in package.json must include a Vite command, verifiable by reading the file. (AC 29) Replaced 'turbo run dev starts the dev server successfully' (running-process observation) with a dry-run check — turbo run build --filter=@cv-tool/frontend --dry=json must exit 0 and list the package, confirming Turborepo filter resolution. Also added 'Live browser or dev-server process verification' to the Out of Scope section to make the verification boundary explicit. All previous Architect and Tester approvals are invalidated by these changes — restarting sign-off from Architect."
+    }
+  ],
+  "decisions": {
+    "approach": "Scaffold apps/frontend as a React SPA with Vite, TanStack Router (file-based codegen, routeTree.gen.ts gitignored), TanStack Query, oRPC typed client against @cv-tool/contracts AppRouter, and react-i18next — all verified via static file checks, tsc --noEmit, and turbo build.",
+    "files_to_touch": [
+      "apps/frontend/package.json",
+      "apps/frontend/tsconfig.json",
+      "apps/frontend/vite.config.ts",
+      "apps/frontend/index.html",
+      "apps/frontend/.env.example",
+      "apps/frontend/.gitignore",
+      "apps/frontend/src/main.tsx",
+      "apps/frontend/src/routes/__root.tsx",
+      "apps/frontend/src/routes/index.tsx",
+      "apps/frontend/src/lib/orpc-client.ts",
+      "apps/frontend/src/lib/i18n.ts",
+      "apps/frontend/src/locales/en/common.json",
+      "turbo.json",
+      "package.json"
+    ],
+    "risks": [
+      "routeTree.gen.ts must be generated before tsc/Vite processes it during build — build script ordering must account for this",
+      "@orpc/client version must be compatible with @orpc/contract ^1.13.6 already used in @cv-tool/contracts",
+      "VITE_ prefix required for env vars exposed to client code — VITE_API_URL must be used consistently"
+    ]
+  }
+}
