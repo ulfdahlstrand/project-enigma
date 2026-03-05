@@ -1,0 +1,26 @@
+{
+  "issue_number": 34,
+  "title": "[TASK] Implement BaseLayout, Header, and Footer components with i18n and __root.tsx integration",
+  "parent_feature": 31,
+  "status": "ready_for_development",
+  "conversation_log": [
+    {
+      "agent": "architect",
+      "timestamp": "2025-01-27T00:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task is architecturally sound and consistent with the planned architecture. File paths (apps/frontend/src/components/layout/*.tsx) follow the PascalCase component file + kebab-case folder conventions. Integration into __root.tsx aligns with ADR-007 (TanStack Router). The i18n approach (useTranslation hooks, keys in locales/en/common.json) matches the existing react-i18next pattern. The sx-prop-only styling rule and MUI primitive usage are appropriate for the planned MUI adoption. Notes: (1) Dependencies #29 and #30 are both still in backlog — this task MUST NOT begin implementation until both are completed and merged, since architecture.md does not yet document the components/layout/ directory convention or MUI as the component library. (2) The locales/en/common.json file does not currently exist; the task or its dependency chain must ensure the file and directory exist before adding keys. (3) The Outlet import in BaseLayout.tsx must come from @tanstack/react-router, not re-exported from another module, per the no-cross-app-imports rule (Pattern #5)."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-01-27T00:01:00Z",
+      "action": "testability_approved",
+      "summary": "All 12 acceptance criteria are testable as written. Each criterion is binary (unambiguous pass/fail), specific (defines exact observable artifacts), measurable (file contents, command exit codes), and scoped to this task's deliverables. AC1-3: file existence + named export grep. AC4-6: static JSX element inspection. AC7: static inspection of __root.tsx. AC8: read JSON + cross-reference key names in component source. AC9: static inspection for absence of bare string literals. AC10: static inspection for absence of style prop and .css imports. AC11: run npm run typecheck, check exit code 0. AC12: file path + export signature inspection."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-05T15:00:00Z",
+      "action": "blocked",
+      "summary": "Cannot proceed. Dependencies #29 (architecture docs update for MUI) and #30 (MUI installation + ThemeProvider) are both still open with status:backlog. Confirmed by: (1) issue states show open/backlog, (2) apps/frontend/package.json does not contain @mui/material, @emotion/react, or @emotion/styled. Implementation will resume once both are merged."
+    }
+  ]
+}
