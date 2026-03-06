@@ -24,7 +24,7 @@
       "agent": "tester",
       "timestamp": "2026-03-06T09:28:00Z",
       "action": "tests_failed",
-      "summary": "13/16 tests passed (5/7 acceptance criteria verified); AC1 entirely unimplemented — 3 tests failing. routes/index.tsx does not import Typography from @mui/material, does not render a <Typography> JSX element, and does not use t() inside a Typography element. The PR diff shows these changes were intended but they are absent from the branch. AC2 passes trivially (no Typography exists). AC3 passes ('welcome' key present and non-empty in src/locales/en/common.json). AC4 passes (tsc --noEmit exits 0). AC5 passes (npm run lint exits 0). AC6 passes trivially (no Typography exists). AC7 passes (grep finds 'welcome' in all common.json files). All 3 failures are AC1 sub-criteria and represent a missing core implementation."
+      "summary": "3 of 7 acceptance criteria failed (10 of 13 individual tests passing). AC1 is entirely unimplemented — routes/index.tsx does not import Typography from @mui/material, does not render a <Typography> JSX element, and does not call t() with a 'welcome' key. The PR made changes to index.tsx (removed the language selector button) but never added the <Typography> welcome element. Passing: AC2 (no hardcoded welcome strings), AC3 ('welcome' key present and non-empty in src/locales/en/common.json), AC4 (tsc --noEmit exits 0), AC5 (npm run lint exits 0), AC6 (no inline style or className on Typography — trivially true since no Typography element exists), AC7 (grep finds 'welcome' in all common.json files). Failing: AC1 (3 sub-tests) — the core requirement of the task is missing from routes/index.tsx."
     }
   ],
   "decisions": {

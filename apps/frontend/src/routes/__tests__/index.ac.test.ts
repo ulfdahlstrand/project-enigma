@@ -2,13 +2,13 @@
  * Acceptance-criteria tests for Task #45
  * "Add internationalised welcome text to main page route"
  *
- * These tests cover all 7 acceptance criteria using static file inspection.
- * No runtime rendering is required — the criteria are verifiable by source
- * analysis and by running toolchain commands.
+ * These tests cover all 7 acceptance criteria using static file inspection
+ * and toolchain command execution.
  */
 
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, resolve } from "path";
+import { execSync } from "child_process";
 import { describe, it, expect } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import { describe, it, expect } from "vitest";
 
 // __dirname in Vitest resolves to the real on-disk directory of this file:
 //   apps/frontend/src/routes/__tests__/
-// From there, climb 4 levels to reach apps/frontend/
+// Climbing 3 levels reaches apps/frontend/
 const FRONTEND_ROOT = resolve(__dirname, "../../..");
 const ROUTES_INDEX = resolve(FRONTEND_ROOT, "src/routes/index.tsx");
 const LOCALES_DIR = resolve(FRONTEND_ROOT, "src/locales");
@@ -123,6 +123,58 @@ describe("AC3 — 'welcome' key present and non-empty in every locale common.jso
 });
 
 // ---------------------------------------------------------------------------
+// AC4 — `npx tsc --noEmit` exits with code 0 (no TypeScript errors)
+// ---------------------------------------------------------------------------
+describe("AC4 — TypeScript compilation exits with code 0", () => {
+  it("npx tsc --noEmit from apps/frontend/ exits with code 0", () => {
+    let exitCode = 0;
+    let output = "";
+    try {
+      output = execSync("npx tsc --noEmit --project tsconfig.json", {
+        cwd: FRONTEND_ROOT,
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (err: unknown) {
+      exitCode = (err as { status?: number }).status ?? 1;
+      output =
+        ((err as { stdout?: string }).stdout ?? "") +
+        ((err as { stderr?: string }).stderr ?? "");
+    }
+    if (exitCode !== 0) {
+      console.error("tsc --noEmit output:\n", output);
+    }
+    expect(exitCode).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC5 — `npm run lint` exits with code 0 (no lint errors)
+// ---------------------------------------------------------------------------
+describe("AC5 — Lint exits with code 0", () => {
+  it("npm run lint from apps/frontend/ exits with code 0", () => {
+    let exitCode = 0;
+    let output = "";
+    try {
+      output = execSync("npm run lint", {
+        cwd: FRONTEND_ROOT,
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (err: unknown) {
+      exitCode = (err as { status?: number }).status ?? 1;
+      output =
+        ((err as { stdout?: string }).stdout ?? "") +
+        ((err as { stderr?: string }).stderr ?? "");
+    }
+    if (exitCode !== 0) {
+      console.error("npm run lint output:\n", output);
+    }
+    expect(exitCode).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // AC6 — <Typography> must not use inline style prop or raw CSS className
 // ---------------------------------------------------------------------------
 describe("AC6 — Typography does not use inline style prop or raw CSS className", () => {
@@ -151,7 +203,7 @@ describe("AC6 — Typography does not use inline style prop or raw CSS className
 describe("AC7 — grep: 'welcome' key found in every common.json under src/locales/", () => {
   const commonJsonFiles = findFiles(LOCALES_DIR, "common.json");
 
-  it("every common.json file under src/locales/ contains the string \"welcome\"", () => {
+  it('every common.json file under src/locales/ contains the string "welcome"', () => {
     expect(commonJsonFiles.length).toBeGreaterThan(0);
     for (const filePath of commonJsonFiles) {
       const raw = readFileSync(filePath, "utf-8");
