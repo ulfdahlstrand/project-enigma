@@ -2,6 +2,7 @@
   "app": {
     "title": "CV Tool"
   },
+  "welcome": "Welcome to CV Tool",
   "home": {
     "heading": "Welcome to CV Tool",
     "description": "Manage, tailor, and export your CVs for specific client assignments."
