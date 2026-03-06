@@ -7,6 +7,7 @@
  * - Locale switching to a second locale (fr)
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/")({
@@ -24,6 +25,9 @@ function HomePage() {
   return (
     <main>
       <h1>{t("app.title")}</h1>
+      <Typography variant="h5" sx={{ mb: 2 }}>
+        {t("welcome")}
+      </Typography>
       <p>{t("home.heading")}</p>
       <p>{t("home.description")}</p>
       <button onClick={toggleLocale} type="button">
