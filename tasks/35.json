@@ -36,9 +36,9 @@
     },
     {
       "agent": "tester",
-      "timestamp": "2025-06-12T09:00:00Z",
+      "timestamp": "2025-06-11T20:00:00Z",
       "action": "tests_passed",
-      "summary": "All 32 tests pass across all 9 acceptance criteria. AC2 now passes (exit code 0) — the developer fixed the pre-existing TypeScript error in src/orpc-client.ts by switching to createORPCClient<ContractRouterClient<AppRouter>>(link), which resolved the TS2344 constraint mismatch. All static inspection tests (AC1, AC3–AC9) and the tsc --noEmit test (AC2) pass cleanly. No criteria required interpretation or assumptions."
+      "summary": "All 32/32 tests pass across all 9 acceptance criteria. AC2 now passes: npx tsc --noEmit exits with code 0. The PR diff includes a fix to src/orpc-client.ts (adding ContractRouterClient<AppRouter> type parameter) that resolved the previously reported TypeScript errors. No test interpretation assumptions required — all criteria map directly to their tests."
     }
   ],
   "decisions": {
