@@ -33,6 +33,12 @@
       "timestamp": "2025-06-11T18:35:00Z",
       "action": "tests_failed",
       "summary": "31/32 tests pass across AC1, AC3–AC9. AC2 fails: npx tsc --noEmit exits with code 2. However the 3 TypeScript errors are all pre-existing in src/orpc-client.ts and src/routes/test.tsx — files not touched by this PR's diff. None of the errors originate in NavigationMenu.tsx or the updated BaseLayout.tsx. The failures are: TS2344 in orpc-client.ts (ContractProcedure/NestedClient constraint mismatch), TS2349 and TS7006 in test.tsx (non-callable ContractProcedure and missing type annotation). These pre-existed before Task #35 work began and are unrelated to the NavigationMenu implementation. Flagging to developer for clarification on whether AC2 should be evaluated against pre-existing baseline or strictly as written."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-12T09:00:00Z",
+      "action": "tests_passed",
+      "summary": "All 32 tests pass across all 9 acceptance criteria. AC2 now passes (exit code 0) — the developer fixed the pre-existing TypeScript error in src/orpc-client.ts by switching to createORPCClient<ContractRouterClient<AppRouter>>(link), which resolved the TS2344 constraint mismatch. All static inspection tests (AC1, AC3–AC9) and the tsc --noEmit test (AC2) pass cleanly. No criteria required interpretation or assumptions."
     }
   ],
   "decisions": {
