@@ -27,6 +27,7 @@ The **CV Creation Tool** is a web-based application that allows consultants at a
 | Package manager | **npm workspaces** | Root-level workspace management |
 | Frontend framework | **React** | Component-based UI |
 | Frontend component library | **Material UI** | `ThemeProvider` + `CssBaseline` at app root; `sx` prop for styling. See ADR-008. |
+| Frontend flag icons | **`country-flag-icons`** | Tree-shakeable SVG flag components. Import from `country-flag-icons/react/3x2`. See ADR-009. |
 | Frontend bundler | **Vite** | ESM-based dev server with HMR; Rollup-based production builds. Config in `apps/frontend/vite.config.ts`. See ADR-006. |
 | Frontend routing | **TanStack Router** | File-based routing with route codegen via `@tanstack/router-plugin/vite`. Generated `routeTree.gen.ts` is gitignored. |
 | Frontend data-fetching | **TanStack Query** | Server-state management and caching |
@@ -210,6 +211,18 @@ All frontend UI components must be built using **Material UI** (`@mui/material`)
 - Standalone Emotion `styled()` calls outside of MUI's component API
 
 The MUI theme is configured in `apps/frontend/src/lib/theme.ts` via `createTheme()` and provided to the component tree via `ThemeProvider` at the application root. `CssBaseline` must be rendered within the `ThemeProvider` to normalise browser styles globally. See ADR-008.
+
+### 10. Flag Icons via `country-flag-icons`
+
+Country flag icons in the frontend are provided by the **`country-flag-icons`** package. This is an **asset library** (SVG flag icons), not a component library — ADR-008 (MUI as sole component library) remains intact.
+
+Usage constraints:
+- Import flag components from `country-flag-icons/react/3x2` (landscape aspect ratio) or `country-flag-icons/react/1x1` (square). Prefer `3x2` unless design requires square icons.
+- Flags are identified by **ISO 3166-1 alpha-2** country codes (e.g. `GB`, `SE`, `DE`). Example: `import GB from 'country-flag-icons/react/3x2/GB'`.
+- The **locale-to-country-code mapping** (e.g. `en` → `GB`, `sv` → `SE`) is the responsibility of the consuming component (e.g. the language selector). It is not provided by the library.
+- Flag components render as inline SVGs. Size them using MUI's `sx` prop on a wrapping `Box` or by passing `width`/`height` props directly to the SVG component.
+- **No other flag or country-icon library** may be introduced without a new ADR.
+- `country-flag-icons` must be listed as a dependency of `@cv-tool/frontend` only — it is not needed by the backend or shared packages.
 
 ---
 

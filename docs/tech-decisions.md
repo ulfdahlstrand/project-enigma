@@ -233,3 +233,33 @@ Key aspects of the decision:
 - Future UI features (forms, dialogs, data tables) should use MUI components rather than introducing additional libraries.
 - MUI's TypeScript typings provide compile-time safety for component props, including `sx` prop values.
 - The Emotion dependency is an implementation detail of MUI and should not be used directly for styling outside of MUI's API (i.e. no standalone `styled()` calls unless wrapping MUI components).
+
+---
+
+## ADR-009 — 2026-03-06 — `country-flag-icons` as the Flag Icon Library
+
+**Status:** Accepted
+
+**Context:**
+Epic #40 (Internationalisation — Language Selector) requires displaying country flag icons alongside language options in the language selector UI. The current architecture does not include any approved flag or icon asset library. ADR-008 established Material UI as the sole **component** library, but a flag icon library is a supplementary **asset** library (SVG flag icons) and does not compete with MUI's component role. Two candidates were evaluated:
+- **`flagpack-core` + `flagpack-react`** — requires two packages; the React wrapper provides components but has a smaller community and less frequent updates.
+- **`country-flag-icons`** — single package; provides framework-agnostic SVG files and dedicated React component exports with built-in TypeScript type definitions; tree-shakeable so only imported flags are included in the bundle; actively maintained with broad flag coverage.
+
+**Decision:**
+Use **`country-flag-icons`** as the sole flag icon library for `@cv-tool/frontend`.
+
+Key aspects:
+1. **Single dependency.** Only the `country-flag-icons` npm package is needed — no wrapper or companion package required.
+2. **React SVG components.** Flags are imported as React components from `country-flag-icons/react/3x2` (landscape 3:2 aspect ratio) or `country-flag-icons/react/1x1` (square). The `3x2` variant is preferred unless design requires square icons.
+3. **Tree-shakeable.** Each flag is a separate module. Only the flags that are explicitly imported are included in the production bundle, keeping the bundle size minimal.
+4. **TypeScript types included.** The package ships with built-in TypeScript type definitions — no `@types/` package needed.
+5. **ISO 3166-1 alpha-2 codes.** Flags are identified by standard two-letter country codes (e.g. `GB`, `SE`, `DE`). The mapping from locale codes (e.g. `en`, `sv`) to country codes is **not** provided by the library and must be implemented by the consuming component (e.g. the language selector).
+6. **MUI compatibility.** Flag components render as inline `<svg>` elements and can be placed inside any MUI component (`MenuItem`, `ListItemIcon`, `IconButton`, etc.). Sizing is controlled via `width`/`height` props on the SVG or via MUI's `sx` prop on a wrapping `Box`.
+7. **Exclusivity.** No other flag or country-icon library may be introduced without a new ADR. This is an asset library, not a component library — ADR-008 (MUI as sole component library) remains intact.
+8. **Frontend only.** `country-flag-icons` must be listed as a dependency of `@cv-tool/frontend` only. It is not needed by `@cv-tool/backend` or any shared package.
+
+**Consequences:**
+- Developers can import flags directly: `import GB from 'country-flag-icons/react/3x2/GB'` and render them as React components inside MUI layouts.
+- The language selector component must maintain a locale-to-country-code mapping (e.g. `{ en: 'GB', sv: 'SE', de: 'DE' }`).
+- Bundle impact is minimal: only the SVGs for the supported languages are included (currently English/Swedish, potentially more as languages are added).
+- If the project later needs a different set of icons (e.g. general-purpose icons beyond flags), that would require a separate ADR — this decision covers flag icons only.
