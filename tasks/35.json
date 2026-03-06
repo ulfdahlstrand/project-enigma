@@ -39,6 +39,12 @@
       "timestamp": "2025-06-11T20:00:00Z",
       "action": "tests_passed",
       "summary": "All 32/32 tests pass across all 9 acceptance criteria. AC2 now passes: npx tsc --noEmit exits with code 0. The PR diff includes a fix to src/orpc-client.ts (adding ContractRouterClient<AppRouter> type parameter) that resolved the previously reported TypeScript errors. No test interpretation assumptions required — all criteria map directly to their tests."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-12T10:00:00Z",
+      "action": "tests_passed",
+      "summary": "Re-run confirmation: all 32/32 tests pass across all 9 acceptance criteria on branch task/35-navigation-menu-component. AC1: 2/2 — file exists, named export confirmed. AC2: 1/1 — npx tsc --noEmit exits code 0 (1454ms). AC3: 6/6 — List imported, ListItemButton imported, <List renders, exactly 2 ListItemButton occurrences, route '/' present, route '/test' present. AC4: 4/4 — Link imported from @tanstack/react-router, component={Link} prop used, no <a href> elements present. AC5: 5/5 — useTranslation('common') called, t('nav.home') and t('nav.test') used, both keys present with non-empty values in common.json. AC6: 4/4 — common.json exists, nav object has ≥2 keys, nav.home and nav.test both non-empty strings. AC7: 2/2 — BaseLayout imports NavigationMenu, renders <NavigationMenu />. AC8: 5/5 — no inline style={{}}, no .css imports in either file, no .css files in layout directory. AC9: 3/3 — .tsx extension, PascalCase filename, PascalCase named export, no default export. No interpretation or assumptions required."
     }
   ],
   "decisions": {
