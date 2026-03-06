@@ -42,9 +42,9 @@
     },
     {
       "agent": "tester",
-      "timestamp": "2025-06-12T10:00:00Z",
+      "timestamp": "2025-06-12T08:53:30Z",
       "action": "tests_passed",
-      "summary": "Re-run confirmation: all 32/32 tests pass across all 9 acceptance criteria on branch task/35-navigation-menu-component. AC1: 2/2 — file exists, named export confirmed. AC2: 1/1 — npx tsc --noEmit exits code 0 (1454ms). AC3: 6/6 — List imported, ListItemButton imported, <List renders, exactly 2 ListItemButton occurrences, route '/' present, route '/test' present. AC4: 4/4 — Link imported from @tanstack/react-router, component={Link} prop used, no <a href> elements present. AC5: 5/5 — useTranslation('common') called, t('nav.home') and t('nav.test') used, both keys present with non-empty values in common.json. AC6: 4/4 — common.json exists, nav object has ≥2 keys, nav.home and nav.test both non-empty strings. AC7: 2/2 — BaseLayout imports NavigationMenu, renders <NavigationMenu />. AC8: 5/5 — no inline style={{}}, no .css imports in either file, no .css files in layout directory. AC9: 3/3 — .tsx extension, PascalCase filename, PascalCase named export, no default export. No interpretation or assumptions required."
+      "summary": "Independent re-run confirms all 32/32 tests pass across all 9 acceptance criteria. Tests executed via: npx vitest run src/components/layout/__tests__/task-35-acceptance.test.ts --reporter=verbose on branch task/35-navigation-menu-component. AC1: NavigationMenu.tsx exists with PascalCase named export (2 tests). AC2: tsc --noEmit exits 0 (1 test). AC3: MUI List with exactly two ListItemButton elements for / and /test (6 tests). AC4: TanStack Router <Link> used, no hard-coded <a href> attributes (4 tests). AC5: useTranslation('common') used, t('nav.home') and t('nav.test') match common.json values (5 tests). AC6: common.json contains nav object with at least 2 keys (4 tests). AC7: BaseLayout imports and renders <NavigationMenu /> (2 tests). AC8: No CSS files, no inline style objects (5 tests). AC9: .tsx extension, PascalCase filename, PascalCase named export, no default export (3 tests). No interpretation assumptions required — all criteria map directly to tests."
     }
   ],
   "decisions": {
