@@ -15,6 +15,7 @@
  * application will not crash on startup.
  */
 import { createORPCClient } from "@orpc/client";
+import type { ContractRouterClient } from "@orpc/contract";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { contract, type AppRouter } from "@cv-tool/contracts";
 
@@ -24,4 +25,4 @@ const link = new OpenAPILink(contract, {
   url: apiUrl,
 });
 
-export const orpc = createORPCClient<AppRouter>(link);
+export const orpc = createORPCClient<ContractRouterClient<AppRouter>>(link);
