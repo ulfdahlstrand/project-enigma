@@ -4,10 +4,8 @@
  * This is the placeholder home page. It demonstrates:
  * - TanStack Router file-based routing
  * - react-i18next translation (app.title key)
- * - Locale switching to a second locale (fr)
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/")({
@@ -15,24 +13,13 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const { t, i18n } = useTranslation();
-
-  const toggleLocale = () => {
-    const next = i18n.language.startsWith("fr") ? "en" : "fr";
-    void i18n.changeLanguage(next);
-  };
+  const { t } = useTranslation();
 
   return (
     <main>
       <h1>{t("app.title")}</h1>
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        {t("welcome")}
-      </Typography>
       <p>{t("home.heading")}</p>
       <p>{t("home.description")}</p>
-      <button onClick={toggleLocale} type="button">
-        {t("locale.switch")} ({i18n.language === "fr" ? "EN" : "FR"})
-      </button>
     </main>
   );
 }
