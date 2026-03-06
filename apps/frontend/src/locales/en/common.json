@@ -4,5 +4,9 @@
   },
   "footer": {
     "copyright": "© CV Tool. All rights reserved."
+  },
+  "nav": {
+    "home": "Home",
+    "test": "Test"
   }
 }

@@ -2,7 +2,7 @@
   "issue_number": 35,
   "title": "[TASK] Build NavigationMenu component with TanStack Router links and i18n labels",
   "parent_feature": 32,
-  "status": "in-requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
@@ -21,6 +21,41 @@
       "timestamp": "2025-06-11T00:01:00Z",
       "action": "blocked",
       "summary": "Blocked by unmerged dependencies. Task #31 (BaseLayout) has not been implemented — apps/frontend/src/components/layout/BaseLayout.tsx does not exist. Task #33 (MUI installation) has not been completed — @mui/material, @emotion/react, and @emotion/styled are absent from apps/frontend/package.json. Both blockers must be resolved before implementation of NavigationMenu can proceed."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-06-11T12:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented NavigationMenu component with MUI List/ListItemButton primitives, TanStack Router <Link> via component prop, and react-i18next labels. Added nav.home and nav.test keys to common.json. Integrated <NavigationMenu /> into BaseLayout in a flex-row layout alongside <Outlet />. PR #39 opened."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-11T18:35:00Z",
+      "action": "tests_failed",
+      "summary": "31/32 tests pass across AC1, AC3–AC9. AC2 fails: npx tsc --noEmit exits with code 2. However the 3 TypeScript errors are all pre-existing in src/orpc-client.ts and src/routes/test.tsx — files not touched by this PR's diff. None of the errors originate in NavigationMenu.tsx or the updated BaseLayout.tsx. The failures are: TS2344 in orpc-client.ts (ContractProcedure/NestedClient constraint mismatch), TS2349 and TS7006 in test.tsx (non-callable ContractProcedure and missing type annotation). These pre-existed before Task #35 work began and are unrelated to the NavigationMenu implementation. Flagging to developer for clarification on whether AC2 should be evaluated against pre-existing baseline or strictly as written."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-11T20:00:00Z",
+      "action": "tests_passed",
+      "summary": "All 32/32 tests pass across all 9 acceptance criteria. AC2 now passes: npx tsc --noEmit exits with code 0. The PR diff includes a fix to src/orpc-client.ts (adding ContractRouterClient<AppRouter> type parameter) that resolved the previously reported TypeScript errors. No test interpretation assumptions required — all criteria map directly to their tests."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-06-12T08:53:30Z",
+      "action": "tests_passed",
+      "summary": "Independent re-run confirms all 32/32 tests pass across all 9 acceptance criteria. Tests executed via: npx vitest run src/components/layout/__tests__/task-35-acceptance.test.ts --reporter=verbose on branch task/35-navigation-menu-component. AC1: NavigationMenu.tsx exists with PascalCase named export (2 tests). AC2: tsc --noEmit exits 0 (1 test). AC3: MUI List with exactly two ListItemButton elements for / and /test (6 tests). AC4: TanStack Router <Link> used, no hard-coded <a href> attributes (4 tests). AC5: useTranslation('common') used, t('nav.home') and t('nav.test') match common.json values (5 tests). AC6: common.json contains nav object with at least 2 keys (4 tests). AC7: BaseLayout imports and renders <NavigationMenu /> (2 tests). AC8: No CSS files, no inline style objects (5 tests). AC9: .tsx extension, PascalCase filename, PascalCase named export, no default export (3 tests). No interpretation assumptions required — all criteria map directly to tests."
     }
-  ]
+  ],
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/components/layout/NavigationMenu.tsx",
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/components/layout/BaseLayout.tsx"
+    ],
+    "risks": [
+      "The component={Link} polymorphic prop on MUI ListItemButton may surface TypeScript generic constraint warnings with certain MUI/TanStack Router version combinations. If tsc --noEmit flags this, the fallback is to nest <Link> as a child of ListItemButton instead.",
+      "Active-link highlighting is out of scope; the nav renders identically regardless of current route."
+    ]
+  }
 }
