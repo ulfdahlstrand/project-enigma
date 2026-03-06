@@ -263,3 +263,37 @@ Key aspects:
 - The language selector component must maintain a locale-to-country-code mapping (e.g. `{ en: 'GB', sv: 'SE', de: 'DE' }`).
 - Bundle impact is minimal: only the SVGs for the supported languages are included (currently English/Swedish, potentially more as languages are added).
 - If the project later needs a different set of icons (e.g. general-purpose icons beyond flags), that would require a separate ADR — this decision covers flag icons only.
+
+---
+
+## ADR-010 — 2026-03-07 — Split Architecture Documentation into Domain Sub-Documents
+
+**Status:** Accepted
+
+**Context:**
+The monolithic `docs/architecture.md` file had grown to approximately 400 lines, covering every domain (frontend, backend, database, infrastructure, testing) in a single document. Every agent interaction that needed architectural context had to read the entire file, consuming a large number of tokens even when only one domain was relevant. As the project grows and more decisions are recorded, this problem compounds. The architecture documentation needed to be restructured so that agents and contributors can read only the domain-specific sections they need.
+
+**Decision:**
+Split `docs/architecture.md` into a concise **index file** plus **five domain-specific sub-documents** under `docs/arch/`:
+
+| File | Domain | Content moved from `architecture.md` |
+|------|--------|--------------------------------------|
+| `docs/arch/frontend.md` | UI, components, styling, routing, data-fetching, i18n | Material UI rules, flag icons, TanStack Router/Query patterns, react-i18next, frontend directory structure |
+| `docs/arch/backend.md` | Server, API, services, shared contracts | oRPC API layer rules, shared type contracts, database access patterns, backend directory structure |
+| `docs/arch/data-model.md` | Database, schema, migrations | PostgreSQL setup, migration conventions, database client constraints |
+| `docs/arch/testing.md` | Test framework, file conventions, coverage | Placeholder — decisions pending |
+| `docs/arch/infrastructure.md` | Docker, Turborepo pipeline, CI/CD, environments, deployment | Docker Compose setup, Turborepo pipeline config, environment variable conventions |
+
+The restructured `architecture.md` retains:
+- High-level system overview and major components table
+- Tech stack summary table
+- Monorepo structure diagram
+- **Cross-cutting conventions** that span multiple domains (naming conventions, TypeScript strict mode, no cross-app imports, shared config pattern, gitignore rules)
+- A sub-document index table linking to all `docs/arch/` files
+
+**Consequences:**
+- Agents reading architecture context for a specific domain load only the relevant sub-document (~50–100 lines) instead of the full monolithic file (~400 lines), significantly reducing token usage per prompt.
+- The index file (`architecture.md`) remains the entry point and contains the sub-document table so agents can identify which file to read.
+- New architectural domains that emerge in the future get their own sub-document under `docs/arch/`, registered in the index table.
+- All existing ADRs (001–009) remain in `tech-decisions.md` unchanged. Sub-documents reference ADRs by number (e.g. "See ADR-008") rather than duplicating decision rationale.
+- Only the Architect Agent may write to files under `docs/arch/` or to `docs/architecture.md`.
