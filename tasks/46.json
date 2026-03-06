@@ -29,7 +29,8 @@
       "apps/frontend/src/routes/index.tsx"
     ],
     "risks": [
-      "LanguageSelector.tsx is a new file (did not exist before). Acceptance criterion 7 refers to 'unmodified compared to before this task' — since the file is newly created, git diff will show additions rather than 'no changes'. The spirit of criterion 7 (not altering the selector's internal logic) is fully satisfied; this edge case should be noted for the Tester."
+      "LanguageSelector.tsx is a new file (did not exist before this task). Acceptance criterion 7 refers to 'unmodified compared to before this task' — since the file is newly created, git diff will show additions rather than 'no changes'. The spirit of criterion 7 (not altering the selector's internal logic) is fully satisfied; this edge case is noted for the Tester.",
+      "Git environment has a persistent branch/working-directory mismatch in this agent session — all commits have been landing on arch/50-restructure-docs. The PR for task #46 targets that branch. The arch/50 task owner should be notified to ensure these changes are not inadvertently overwritten."
     ]
   }
 }
