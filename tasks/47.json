@@ -1,0 +1,45 @@
+{
+  "issue_number": 47,
+  "title": "Add flag icons to the language selector component",
+  "type": "task",
+  "status": "in_review",
+  "parent_feature": 43,
+  "conversation_log": [
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-06T08:18:41Z",
+      "action": "testability_approved",
+      "summary": "All 9 acceptance criteria are testable as written. AC7 and AC8 revisions resolved prior rejection."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-07T10:00:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with current architecture. country-flag-icons approved in ADR-009 and documented in docs/arch/frontend.md. Component location (apps/frontend/src/components/language-selector/) follows kebab-case directory + PascalCase file convention. All ACs enforce existing rules: sx prop styling (ADR-008), MUI wrappers, TypeScript strict mode (ADR-003), react-i18next usage, and frontend-only dependency scope (ADR-009 rule #8). No architectural changes required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-08T00:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-review confirms all 9 acceptance criteria remain testable as written. AC1: npm ls / package.json check. AC2: file existence + named export. AC3: static analysis for dedicated mapping file and import. AC4: render/snapshot test for flag icon per language option. AC5: string search for style={{ and css/scss imports. AC6: tsc --noEmit exit code. AC7: prop contract check + callback invocation test + useTranslation render test. AC8: mapping keys vs locales directory listing comparison test. AC9: static analysis for MUI wrapper containment. No criteria are vague, subjective, or immeasurable. Labels unchanged (agent:developer is correct)."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-06-14T12:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented LanguageSelector component with country-flag-icons flag rendering, locale-flag-map.ts mapping file, MUI Select/MenuItem/Box wrappers, sx-only styling, and react-i18next integration. PR #53 opened."
+    }
+  ],
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/package.json",
+      "apps/frontend/src/components/language-selector/LanguageSelector.tsx",
+      "apps/frontend/src/components/language-selector/locale-flag-map.ts"
+    ],
+    "risks": [
+      "flagComponents static map must be manually updated alongside localeFlagMap when new locales are added — there is no compile-time enforcement of parity between the two maps",
+      "country-flag-icons SVG components do not accept MUI sx prop directly; they are wrapped in MUI Box components for sx-based sizing — the SVG width/height props are set as plain React props to match",
+      "Locale JSON files (en/common.json) were not updated (out of scope); languageSelector.* i18n keys are not present — tests must mock translations"
+    ]
+  }
+}

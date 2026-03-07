@@ -19,6 +19,7 @@
     "@orpc/openapi-client": "^1.13.6",
     "@tanstack/react-query": "^5.80.7",
     "@tanstack/react-router": "^1.121.5",
+    "country-flag-icons": "^1.5.13",
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.0.5",
     "react": "^19.1.0",
