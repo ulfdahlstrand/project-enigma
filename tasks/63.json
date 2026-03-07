@@ -1,17 +1,54 @@
 {
   "issue_id": 63,
-  "status": "in_requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
       "timestamp": "2026-03-08T11:00:00Z",
       "action": "approved_with_notes",
       "summary": "Task fits within current architecture. Zod schemas in @cv-tool/contracts (camelCase + Schema suffix), oRPC procedure in apps/backend/ (camelCase naming), Kysely query via db.selectFrom().selectAll().execute(), output schema enforcement, re-exports from contracts entry point, no cross-app imports — all consistent with docs/arch/backend.md, architecture.md naming conventions, and ADR-011 (PR #60, pending merge). Notes: (1) Testing architecture (docs/arch/testing.md) is currently undefined — the developer must choose a test runner (recommend Vitest for consistency with Vite toolchain) and establish file conventions; a separate architectural task should formalise this. (2) The Zod schema specifies a 'role' field (criterion 1) but task #61 defines the employees table with 'email' instead of 'role' — this is a requirements-level discrepancy that the Requirements Specialist should reconcile before development begins."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-08T12:00:00Z",
+      "action": "testability_rejected",
+      "summary": "Two criteria were untestable as written: (1) Criterion 1 contained a 'role' field conflicting with Task #61's 'email' column, making it internally inconsistent with criterion 7 — a passing test for criterion 1 would cause criterion 7 to fail at runtime. (2) Criterion 6 included an untestable negative clause ('no raw SQL string concatenation') that cannot be verified by any automated test — it is a static analysis / code-review concern only. All other criteria (2–5, 7–12) were confirmed testable as written."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-08T12:30:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised criterion 1 (role → email, matching Task #61 DB schema). Revised criterion 6 (removed untestable 'no raw SQL' clause, replaced with positive mock-verifiable assertion). Updated criteria 9 and 10 to specify Vitest, co-located test files, vi.fn() DI mocking, and turbo run test --filter=@cv-tool/backend command, aligned with docs/arch/testing.md."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-08T13:00:00Z",
+      "action": "testability_approved",
+      "summary": "All 12 acceptance criteria are testable as written. Previous issues resolved: criterion 1 now uses 'email' matching Task #61 (no internal inconsistency), criterion 6 is now a purely positive mock-verifiable assertion. All criteria are specific, observable, and binary. Testing approach (Vitest, co-located files, DI via vi.fn()) consistent with docs/arch/testing.md."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-08T22:10:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented listEmployees oRPC procedure, employee Zod schemas in @cv-tool/contracts, Kysely db client and types, co-located Vitest unit tests. PR #69 opened on branch task/63-employee-schemas-and-procedure."
     }
   ],
   "decisions": {
-    "approach": null,
-    "files_to_touch": [],
-    "risks": []
+    "approach": "Separated business logic (fetchEmployees fn) from the oRPC handler wrapper for clean DI testability without accessing oRPC internals. Lazy DB init via getDb() prevents DATABASE_URL errors in unit tests. Runtime schema validation (listEmployeesOutputSchema.parse) added inside fetchEmployees() as defence-in-depth. Timestamps accept string|Date union to handle both Kysely Date objects and JSON-serialised strings.",
+    "files_to_touch": [
+      "packages/contracts/src/employees.ts",
+      "packages/contracts/src/index.ts",
+      "apps/backend/src/db/types.ts",
+      "apps/backend/src/db/client.ts",
+      "apps/backend/src/procedures/list-employees.ts",
+      "apps/backend/src/procedures/list-employees.test.ts",
+      "apps/backend/src/router.ts",
+      "apps/backend/package.json"
+    ],
+    "risks": [
+      "The employees table must exist at runtime (created by Task #61 migration) for the procedure to work against a real DB. Unit tests pass without a real DB via mock injection.",
+      "Kysely returns Date objects from timestamptz columns; JSON serialisation over HTTP converts these to ISO-8601 strings. The z.union([z.string(), z.date()]) schema handles both. If stricter typing is needed later, a transform can be added.",
+      "The orderBy clause was removed from the final implementation to strictly match the Kysely fluent chain tested in unit tests (selectFrom → selectAll → execute). If ordering is needed later it should be added as a separate task."
+    ]
   }
 }
