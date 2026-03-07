@@ -46,3 +46,4 @@ during the original task.
 | Recipe | File | Applies When |
 |--------|------|--------------|
 | Adopting a new frontend library — architecture documentation | [`architecture-doc-update.md`](./architecture-doc-update.md) | Adding a new technology to the frontend stack requires updating `architecture.md`, `tech-decisions.md`, and the relevant `docs/arch/` sub-document |
+| Installing a UI library and wiring its providers | [`mui-provider-setup.md`](./mui-provider-setup.md) | Installing Material UI (or similar) into `@cv-tool/frontend` and wrapping the app tree with `ThemeProvider`, `CssBaseline`, and a bare `theme.ts` config file |
