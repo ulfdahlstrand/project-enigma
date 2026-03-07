@@ -1,6 +1,6 @@
 /**
  * NavigationMenu component — renders a persistent side navigation list for all
- * current application routes (`/` and `/test`).
+ * current application routes (`/`, `/test`, and `/employee`).
  *
  * Uses MUI List, ListItem, ListItemButton, and ListItemText as layout primitives.
  * Each navigation item wraps TanStack Router's <Link> component for client-side
@@ -30,6 +30,11 @@ export function NavigationMenu() {
       <ListItem disablePadding>
         <ListItemButton component={Link} to="/test">
           <ListItemText primary={t("nav.test")} />
+        </ListItemButton>
+      </ListItem>
+      <ListItem disablePadding>
+        <ListItemButton component={Link} to="/employee">
+          <ListItemText primary={t("nav.employees")} />
         </ListItemButton>
       </ListItem>
     </List>

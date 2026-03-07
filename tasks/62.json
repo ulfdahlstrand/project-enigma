@@ -1,17 +1,69 @@
 {
   "issue_id": 62,
-  "status": "in_requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
       "timestamp": "2026-03-08T10:00:00Z",
       "action": "approved",
       "summary": "Task aligns with frontend architecture: route in src/routes/ (TanStack Router file-based routing), data fetching via TanStack Query + oRPC client (no direct fetch), MUI components for rendering (ADR-008), sx prop only (no raw CSS/inline styles), i18n via useTranslation (react-i18next), translation keys in src/locales/en/common.json. Navigation link addition to NavigationMenu.tsx is consistent with existing layout component structure. No architectural changes required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-08T11:00:00Z",
+      "action": "rejected",
+      "summary": "Rejected AC10 and AC11. AC10: 'JSX text content' and 'hard-coded English string literals' were ambiguous — unclear whether aria-label, label= props, or comments counted. AC11: npm run build does not emit missing-key errors for react-i18next (silent runtime fallback), and no i18n linting step is currently configured, giving no executable verification path."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-08T11:30:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised AC10 to restrict the check to 'direct JSX children' (text nodes between JSX tags), explicitly excluding attribute props such as aria-label and label=. Revised AC11 to use a component test that renders the employee route with the real en/common.json loaded and asserts no rendered text contains a raw translation key (namespace.key pattern) — replacing the non-executable npm run build verification."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-07T20:56:50Z",
+      "action": "approved",
+      "summary": "Re-approved after AC10/AC11 revision. All 12 criteria remain fully consistent with documented architecture: routing (ADR-007), data fetching (TanStack Query + oRPC, no direct fetch), MUI components (ADR-008), styling (sx prop only), i18n (all rendered text via t() calls, keys verified via component test with real en/common.json per testing.md), component tests (ADR-011, Vitest + Testing Library + custom render with all providers), navigation (NavigationMenu.tsx). No architectural changes required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-07T21:06:08Z",
+      "action": "testability_approved",
+      "summary": "All 12 acceptance criteria approved as testable. AC1-AC3, AC7-AC9, AC12 are binary static checks (grep/file existence/tsc --noEmit). AC4-AC6 are binary component tests using Vitest + Testing Library + custom render wrapper (QueryClientProvider, RouterProvider, ThemeProvider, I18nextProvider with real en/common.json). AC10 is binary via static grep/AST check or component test for direct JSX children only (attribute props excluded). AC11 is binary via component test with real locale file, asserting no namespace.key pattern in output — consistent with testing.md custom render pattern."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-07T21:09:58Z",
+      "action": "blocked",
+      "summary": "Cannot implement: dependency tasks #57 (backend oRPC endpoint for employees) and #61 (employees database table migration) were both open and unmerged. The contracts package had no listEmployees procedure or employee Zod schemas — without the contract types, employee.tsx could not use the oRPC client type-safely (AC3) and would fail TypeScript compilation (AC12). Blocked pending resolution of both dependency PRs."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2026-03-07T21:25:00Z",
+      "action": "finalized",
+      "summary": "Resuming after developer block comment. Both Architect and Tester approvals for the revised criteria are already logged. No criteria changes were made. Finalizing task: status set to ready_for_development, label updated to agent:developer."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-01-27T00:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented /employee frontend route with TanStack Router createFileRoute('/employee'), useQuery + orpc.listEmployees(), MUI Table rendering, loading/error/empty states, full i18n via useTranslation('common'). Also fixed i18n.ts to register 'common' namespace (previously unconfigured), updated test/setup.ts for 'common' namespace, added nav.employees key to common.json, and added /employee link to NavigationMenu.tsx. PR #68 opened."
     }
   ],
   "decisions": {
-    "approach": null,
-    "files_to_touch": [],
-    "risks": []
+    "approach": "TanStack Router file-based route at /employee. Data fetching via TanStack Query useQuery with orpc.listEmployees() (no input arguments — procedure has no input schema). MUI Table components for rendering. All text via useTranslation('common'). Styling via sx prop exclusively.",
+    "files_to_touch": [
+      "apps/frontend/src/routes/employee.tsx",
+      "apps/frontend/src/components/layout/NavigationMenu.tsx",
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/i18n/i18n.ts",
+      "apps/frontend/src/test/setup.ts"
+    ],
+    "risks": [
+      "French locale for employee keys falls back to English (no fr/common.json). Out of scope per task.",
+      "routeTree.gen.ts is auto-generated and gitignored — TanStack Router must be run (npm run dev or build) for the route to register in the router tree.",
+      "i18n 'common' namespace was not registered in i18n.ts before this task — fixed as part of implementation to ensure NavigationMenu and employee route work correctly."
+    ]
   }
 }
