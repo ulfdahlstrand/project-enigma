@@ -330,6 +330,32 @@ The testing architecture sub-document (`docs/arch/testing.md`) was a placeholder
 
 ---
 
+## ADR-013 — 2026-03-06 — GitHub Actions CI Pipeline for Pull Requests
+
+**Status:** Accepted
+
+**Context:**
+As the project grows, manual test execution before merging pull requests is error-prone and inconsistent. The tester agent previously ran tests as part of the PR-creation step, but this approach is fragile: it depends on the agent's local environment, is not visible to reviewers, and does not block merging if skipped. A mandatory automated CI pipeline is needed to enforce a baseline of correctness (type safety + unit tests) on every PR.
+
+**Decision:**
+Use **GitHub Actions** with a workflow file at `.github/workflows/ci.yml` to run the following checks on every pull request targeting `main`:
+
+1. **Build contracts** — `npm run build --workspace=packages/contracts`. Required because both downstream `tsc` checks and backend tests consume the compiled `dist/` output.
+2. **Type check contracts** — `npx tsc --noEmit -p packages/contracts/tsconfig.json`.
+3. **Type check backend** — `npx tsc --noEmit -p apps/backend/tsconfig.json`.
+4. **Vitest backend** — `npx vitest run` executed in `apps/backend/`, covering all unit tests including procedure handler tests and structural criteria tests.
+
+The workflow uses Node.js 20 (matching the local development environment) and `npm ci` for reproducible installs.
+
+**Consequences:**
+- All PRs must pass type checks and backend tests before merging. The pipeline is a required status check on the `main` branch.
+- The contracts build step is a prerequisite for the remaining steps; failures there will short-circuit the entire run.
+- Frontend type checks and Vitest are not yet included — to be added once the frontend test suite is stabilised and coverage thresholds meet ADR-011's 80% requirement.
+- End-to-end tests are out of scope for this pipeline; a future ADR will decide the E2E strategy.
+- The tester agent no longer runs tests as part of PR creation; CI is the authoritative gate.
+
+---
+
 ## ADR-012 — 2026-03-08 — Kysely as Database Client and Migration Runner
 
 **Status:** Accepted
