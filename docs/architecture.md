@@ -25,8 +25,8 @@ Domain-specific details live in dedicated sub-documents under `docs/arch/`. **Do
 | File | Domain |
 |------|--------|
 | [`arch/frontend.md`](./arch/frontend.md) | UI, components, styling, routing, data-fetching, i18n |
-| [`arch/backend.md`](./arch/backend.md) | Server, API (oRPC), services, shared contracts |
-| [`arch/data-model.md`](./arch/data-model.md) | Database, schema, migrations |
+| [`arch/backend.md`](./arch/backend.md) | Server, API (oRPC), services, shared contracts, database client (Kysely) |
+| [`arch/data-model.md`](./arch/data-model.md) | Database, schema, migrations (Kysely Migrator) |
 | [`arch/testing.md`](./arch/testing.md) | Test framework, file conventions, coverage |
 | [`arch/infrastructure.md`](./arch/infrastructure.md) | Docker, Turborepo pipeline, CI/CD, environments, deployment |
 
@@ -39,7 +39,7 @@ Domain-specific details live in dedicated sub-documents under `docs/arch/`. **Do
 | Language | **TypeScript** (strict mode, all workspaces) |
 | Monorepo | **Turborepo** + **npm workspaces** |
 | Frontend | **React**, **Vite**, **Material UI**, **TanStack Router**, **TanStack Query**, **react-i18next** |
-| Backend | **Node.js**, **oRPC** |
+| Backend | **Node.js**, **oRPC**, **Kysely** |
 | Validation | **Zod** (shared via `@cv-tool/contracts`) |
 | Database | **PostgreSQL** |
 | Local orchestration | **Docker Compose** |
