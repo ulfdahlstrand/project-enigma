@@ -1,17 +1,48 @@
 {
   "issue_id": 61,
-  "status": "in_requirements",
+  "status": "in_review",
   "conversation_log": [
     {
       "agent": "architect",
       "timestamp": "2026-03-08T10:00:00Z",
       "action": "approved",
       "summary": "Task fits within current architecture. Migration file location, naming convention, file structure (up/down with Kysely<unknown>), schema builder usage, column conventions (uuid PK, timestamptz timestamps, snake_case), types file location and patterns (EmployeeTable, Database interface, Selectable/Insertable/Updateable utility types) all match docs/arch/data-model.md and docs/arch/backend.md. No architectural change required. Note: architecture docs show illustrative 'role' column in examples; the actual column set (name, email instead of role) is a product decision within the Requirements Specialist's domain."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-07T08:10:00Z",
+      "action": "testability_approved",
+      "summary": "All 12 acceptance criteria are testable as written. Criteria 1–5, 8–10, 12 are verifiable via static analysis of the migration and types files. Criterion 11 is verifiable by running tsc --noEmit. Criteria 6–7 are integration tests requiring a live PostgreSQL instance, but both define exact observable outcomes (exit code 0, table existence) and are fully measurable."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-01-24T10:00:00Z",
+      "action": "blocked",
+      "summary": "Blocked because `kysely` and `pg` are not installed in apps/backend/package.json, and architecture docs (backend.md, data-model.md) still show 'Database client: TBD'. PR #60 (which was supposed to implement the Kysely architectural decision from #56) did not land its changes. No db/client.ts or db/migrate.ts exist. Cannot proceed until Architect updates architecture.md sub-documents to document Kysely as the chosen database client/migration runner, and the prerequisite infrastructure (Kysely installation, client setup, migrate CLI) is in place. Label agent:architect added."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-08T14:30:00Z",
+      "action": "architecture_updated",
+      "summary": "Updated docs/arch/backend.md and docs/arch/data-model.md to fully document Kysely as the database client and migration runner (ADR-012). Fixed ADR numbering conflict in tech-decisions.md where ADR-011 (Vitest) and Kysely decision were erroneously merged under the same header. Backend.md now includes: Kysely + pg dependencies, Kysely instance pattern in db/client.ts, Database type definitions pattern in db/types.ts (with EmployeeTable example using email field), query patterns, prohibited patterns. Data-model.md now includes: Kysely Migrator as migration runner, TypeScript migration file format with up/down exports, migration rules, migration tracking via kysely_migration table. PR #66 opened."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-08T15:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented employees table migration and migrate CLI. PR #67 opened. Created: apps/backend/src/db/migrations/20260308120000_create_employees.ts (up/down with Kysely schema builder, 5 columns per AC4), apps/backend/src/db/migrate.ts (Migrator + FileMigrationProvider CLI), added 'migrate' script to apps/backend/package.json. apps/backend/src/db/types.ts was pre-existing with all required exports (AC 8-10). Note: migrate.ts was technically listed as out-of-scope but is a direct hard dependency of AC6/AC7, so it was included."
     }
   ],
   "decisions": {
-    "approach": null,
-    "files_to_touch": [],
-    "risks": []
+    "approach": "Created Kysely TypeScript migration file with up/down exports using Kysely schema builder (no raw SQL). Created migrate.ts CLI runner using FileMigrationProvider + Migrator pointing at the migrations directory. Added 'migrate' npm script using tsx. types.ts was already complete.",
+    "files_to_touch": [
+      "apps/backend/src/db/migrations/20260308120000_create_employees.ts",
+      "apps/backend/src/db/migrate.ts",
+      "apps/backend/package.json"
+    ],
+    "risks": [
+      "updated_at column default (now()) only fires on INSERT, not on UPDATE. Auto-updating on UPDATE requires a PostgreSQL trigger, which is out of scope for this task.",
+      "migrate.ts was listed as out-of-scope in the task but is required by AC6/AC7; including it here for completeness — should be noted for future task delineation."
+    ]
   }
 }
