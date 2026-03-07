@@ -9,7 +9,7 @@
 | Runtime | **Node.js** | HTTP server hosting the oRPC handler |
 | API framework | **oRPC** ([orpc.dev](https://orpc.dev/docs/openapi/getting-started)) | End-to-end typed RPC; also exposes OpenAPI spec. **Not** tRPC. |
 | Validation | **Zod** | Schemas shared via `@cv-tool/contracts` |
-| Database client | TBD | Must support TypeScript and parameterised queries (no string concatenation). See [data-model.md](./data-model.md). |
+| Database client | **Kysely** | Type-safe SQL query builder for TypeScript. Uses the `pg` driver via `kysely` PostgreSQL dialect (ADR-011). |
 
 ---
 
@@ -18,14 +18,20 @@
 ```
 apps/backend/
 ├── src/
-│   ├── ...           # oRPC router definitions, procedure implementations,
-│   │                 # database access layer, HTTP server entry point
+│   ├── db/
+│   │   ├── client.ts          # Kysely instance creation and export
+│   │   ├── types.ts           # Generated or hand-written DB type definitions
+│   │   └── migrations/        # TypeScript migration files (Kysely Migrator)
+│   │       ├── 20260307120000_create_employees.ts
+│   │       └── ...
+│   ├── ...                    # oRPC router definitions, procedure implementations,
+│   │                          # HTTP server entry point
 │   └── ...
-├── package.json      # @cv-tool/backend
-└── tsconfig.json     # extends @cv-tool/tsconfig/node.json
+├── package.json               # @cv-tool/backend
+└── tsconfig.json              # extends @cv-tool/tsconfig/node.json
 ```
 
-> Detailed internal structure will be documented as backend features are implemented.
+> Detailed internal structure beyond `src/db/` will be documented as backend features are implemented.
 
 ---
 
@@ -71,3 +77,98 @@ Neither app defines its own copy of a shared schema.
 - Only `apps/backend/` connects to PostgreSQL. The frontend **never** accesses the database directly.
 - All data access is mediated through oRPC procedures.
 - See [data-model.md](./data-model.md) for database schema, migrations, and connection details.
+
+### Kysely — Query Builder (ADR-011)
+
+**Kysely** is the database client for all backend database access. It is a type-safe SQL query builder — not an ORM. Queries are written using Kysely's fluent API and compile to parameterised SQL (no string concatenation).
+
+#### Dependencies
+
+The following packages must be listed as dependencies of `@cv-tool/backend`:
+
+| Package | Purpose |
+|---------|---------|
+| `kysely` | Core query builder |
+| `pg` | PostgreSQL driver (used by Kysely's PostgreSQL dialect) |
+
+#### Kysely Instance
+
+A single `Kysely` instance is created in `apps/backend/src/db/client.ts` and exported for use by all procedure handlers:
+
+```typescript
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
+import type { Database } from "./types.js";
+
+const dialect = new PostgresDialect({
+  pool: new Pool({
+    connectionString: process.env["DATABASE_URL"],
+  }),
+});
+
+export const db = new Kysely<Database>({ dialect });
+```
+
+#### Database Type Definitions
+
+All table types are defined in `apps/backend/src/db/types.ts`. This file exports a `Database` interface that maps table names to their row types:
+
+```typescript
+import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+
+export interface Database {
+  employees: EmployeeTable;
+  // ... future tables
+}
+
+export interface EmployeeTable {
+  id: Generated<string>;
+  name: string;
+  role: string;
+  // ...
+}
+
+// Utility types for each table
+export type Employee = Selectable<EmployeeTable>;
+export type NewEmployee = Insertable<EmployeeTable>;
+export type EmployeeUpdate = Updateable<EmployeeTable>;
+```
+
+> Table types must be updated manually when new migrations add or alter columns. Optionally, `kysely-codegen` can be used to generate types from the live database schema during development, but the committed `types.ts` file is always the source of truth for the TypeScript compiler.
+
+#### Query Patterns
+
+All database queries in procedure handlers must use the Kysely query builder:
+
+```typescript
+// SELECT
+const employees = await db
+  .selectFrom("employees")
+  .selectAll()
+  .execute();
+
+// INSERT
+const newEmployee = await db
+  .insertInto("employees")
+  .values({ name: "Jane Doe", role: "Consultant" })
+  .returningAll()
+  .executeTakeFirstOrThrow();
+
+// UPDATE
+await db
+  .updateTable("employees")
+  .set({ role: "Senior Consultant" })
+  .where("id", "=", employeeId)
+  .execute();
+
+// DELETE
+await db
+  .deleteFrom("employees")
+  .where("id", "=", employeeId)
+  .execute();
+```
+
+**Prohibited patterns:**
+- No raw SQL string concatenation. Use `sql` tagged template from Kysely for raw SQL when needed (it produces parameterised queries).
+- No direct use of the `pg` `Pool` or `Client` to run queries — always go through the Kysely instance.
+- No other query builders or ORMs (e.g. Prisma, Drizzle, TypeORM) alongside Kysely.
