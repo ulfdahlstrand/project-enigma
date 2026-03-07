@@ -70,7 +70,24 @@ No `Dockerfile` or `docker-compose.yml` at the repo root.
 
 ## CI/CD
 
-> CI/CD pipeline details will be documented here when the relevant ADR is recorded.
+See ADR-013 for the decision rationale.
+
+The CI pipeline runs on every pull request targeting `main` via GitHub Actions (`.github/workflows/ci.yml`).
+
+### Pipeline steps
+
+| Step | Command | Scope |
+|---|---|---|
+| Build contracts | `npm run build --workspace=packages/contracts` | Prerequisite — produces `dist/` for downstream tsc and tests |
+| Type check contracts | `npx tsc --noEmit -p packages/contracts/tsconfig.json` | `packages/contracts` |
+| Type check backend | `npx tsc --noEmit -p apps/backend/tsconfig.json` | `apps/backend` |
+| Vitest backend | `npx vitest run` (in `apps/backend`) | `apps/backend` |
+
+### What the pipeline does NOT cover (yet)
+
+- Frontend type check (`apps/frontend`) — to be added when frontend tests are stabilised
+- Frontend Vitest — to be added alongside frontend type check
+- End-to-end tests — out of scope until an E2E strategy is decided (future ADR)
 
 ---
 

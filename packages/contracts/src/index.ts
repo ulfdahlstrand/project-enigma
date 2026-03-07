@@ -1,5 +1,9 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import {
+  employeeSchema,
+  listEmployeesOutputSchema,
+} from "./employees.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -50,7 +54,17 @@ export const contract = oc.router({
   listTestEntries: oc
     .input(listTestEntriesInputSchema)
     .output(listTestEntriesOutputSchema),
+  listEmployees: oc
+    .input(z.object({}))
+    .output(listEmployeesOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
 export type AppRouter = typeof contract;
+
+// ---------------------------------------------------------------------------
+// Employee schemas — re-exported for external consumers
+// ---------------------------------------------------------------------------
+
+export { employeeSchema, listEmployeesOutputSchema };
+export type { Employee } from "./employees.js";

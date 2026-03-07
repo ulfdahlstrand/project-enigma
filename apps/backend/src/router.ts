@@ -2,6 +2,7 @@ import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import { healthHandler } from "./procedures/health.js";
 import { listTestEntriesHandler } from "./procedures/list-test-entries.js";
+import { listEmployeesHandler } from "./procedures/list-employees.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -11,6 +12,7 @@ import { listTestEntriesHandler } from "./procedures/list-test-entries.js";
 export const router = implement(contract).router({
   health: healthHandler,
   listTestEntries: listTestEntriesHandler,
+  listEmployees: listEmployeesHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */
