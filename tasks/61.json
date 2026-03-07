@@ -31,6 +31,12 @@
       "timestamp": "2026-03-08T15:00:00Z",
       "action": "pr_opened",
       "summary": "Implemented employees table migration and migrate CLI. PR #67 opened. Created: apps/backend/src/db/migrations/20260308120000_create_employees.ts (up/down with Kysely schema builder, 5 columns per AC4), apps/backend/src/db/migrate.ts (Migrator + FileMigrationProvider CLI), added 'migrate' script to apps/backend/package.json. apps/backend/src/db/types.ts was pre-existing with all required exports (AC 8-10). Note: migrate.ts was technically listed as out-of-scope but is a direct hard dependency of AC6/AC7, so it was included."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-08T22:20:00Z",
+      "action": "tests_passed",
+      "summary": "10/12 acceptance criteria verified by automated tests (30/30 passing). AC6 and AC7 (live PostgreSQL integration) are deferred per architecture docs — integration tests with a live database are explicitly out of scope until a test database infrastructure is provisioned. All static-analysis and TypeScript criteria pass. The single failing test suite (src/procedures/list-employees.test.ts) is a pre-existing failure from a different task (#57) — unrelated to Task #61's scope. TypeScript errors in list-employees.ts are also from the separate task (missing listEmployees contract export); the migration and types files contributed zero TypeScript errors."
     }
   ],
   "decisions": {
