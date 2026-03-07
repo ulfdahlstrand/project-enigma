@@ -297,3 +297,33 @@ The restructured `architecture.md` retains:
 - New architectural domains that emerge in the future get their own sub-document under `docs/arch/`, registered in the index table.
 - All existing ADRs (001–009) remain in `tech-decisions.md` unchanged. Sub-documents reference ADRs by number (e.g. "See ADR-008") rather than duplicating decision rationale.
 - Only the Architect Agent may write to files under `docs/arch/` or to `docs/architecture.md`.
+
+---
+
+## ADR-011 — 2026-03-08 — Vitest as Test Runner with Co-located Tests and 80% Coverage Threshold
+
+**Status:** Accepted
+
+**Context:**
+The testing architecture sub-document (`docs/arch/testing.md`) was a placeholder with no decisions recorded. Multiple feature tasks require unit and integration tests, but there was no architectural guidance on: test runner selection, file naming/location conventions, coverage thresholds, mocking patterns, or the Turborepo `test` pipeline. Without these decisions, each developer task would make ad-hoc choices leading to inconsistent test infrastructure across workspaces.
+
+**Decision:**
+1. **Test runner: Vitest.** Vitest is the sole test runner for all workspaces. It integrates natively with the existing Vite toolchain (used by the frontend), supports TypeScript via esbuild without additional transforms, and provides a Jest-compatible API (`describe`, `it`, `expect`, `vi.mock`, `vi.fn`). No other test runners (Jest, Mocha, Node.js native test runner) are permitted.
+
+2. **File conventions: Co-located tests.** Test files live next to the source files they test (`cv-service.test.ts` alongside `cv-service.ts`). No `__tests__/` directories. Integration tests use the `.integration.test.ts` suffix. Test utility files (shared helpers, custom render functions) live in `src/test-utils/` within each workspace.
+
+3. **Coverage thresholds: 80% minimum.** All workspaces enforce 80% for statements, branches, functions, and lines using Vitest's `v8` coverage provider. Exceptions require an explanatory comment in `vitest.config.ts` and a note in the introducing PR.
+
+4. **Mocking: Vitest built-in only.** Use `vi.mock`, `vi.fn`, `vi.spyOn` for all mocking. No additional mocking libraries (`sinon`, `jest-mock-extended`, etc.) without a dedicated ADR. Database mocking uses dependency injection — service functions accept the database client as a parameter rather than importing a global singleton.
+
+5. **Frontend test environment: jsdom + Testing Library.** Frontend component tests use `environment: 'jsdom'` with `@testing-library/react`, `@testing-library/jest-dom`, and `@testing-library/user-event` as approved dependencies. A custom render function with all providers (QueryClient, Router, ThemeProvider, i18n) lives in `src/test-utils/render.tsx`.
+
+6. **Turborepo `test` pipeline.** A `test` task is added to `turbo.json` with `"dependsOn": ["^build"]` (tests may import from built packages) and `"outputs": ["coverage/**"]` (for caching). Each workspace defines `"test": "vitest run --coverage"` in its `package.json` scripts. The root `package.json` defines `"test": "turbo run test"`.
+
+**Consequences:**
+- All test code across the monorepo uses a single runner and a consistent file layout, making it easy to navigate and maintain.
+- `vitest` must be added as a dev dependency to every workspace that has tests. Frontend additionally needs `jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, and `@testing-library/user-event`.
+- Coverage reports are generated in `coverage/` directories (gitignored) and cached by Turborepo.
+- The dependency injection pattern for database access ensures tests are decoupled from the eventual database client choice (deferred per ADR-006).
+- Integration and end-to-end testing strategies are deferred to a future architectural decision; this ADR covers unit and component tests only.
+- No network-intercepting libraries (`msw`, `nock`) may be used without a dedicated ADR.
