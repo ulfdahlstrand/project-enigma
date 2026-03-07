@@ -9,7 +9,7 @@
 | Runtime | **Node.js** | HTTP server hosting the oRPC handler |
 | API framework | **oRPC** ([orpc.dev](https://orpc.dev/docs/openapi/getting-started)) | End-to-end typed RPC; also exposes OpenAPI spec. **Not** tRPC. |
 | Validation | **Zod** | Schemas shared via `@cv-tool/contracts` |
-| Database client | **Kysely** | Type-safe SQL query builder for TypeScript. Uses the `pg` driver via `kysely` PostgreSQL dialect (ADR-011). |
+| Database client | **Kysely** | Type-safe SQL query builder for TypeScript. Uses the `pg` driver via `kysely` PostgreSQL dialect (ADR-012). |
 
 ---
 
@@ -21,6 +21,7 @@ apps/backend/
 │   ├── db/
 │   │   ├── client.ts          # Kysely instance creation and export
 │   │   ├── types.ts           # Generated or hand-written DB type definitions
+│   │   ├── migrate.ts         # Migration runner CLI script
 │   │   └── migrations/        # TypeScript migration files (Kysely Migrator)
 │   │       ├── 20260307120000_create_employees.ts
 │   │       └── ...
@@ -78,7 +79,7 @@ Neither app defines its own copy of a shared schema.
 - All data access is mediated through oRPC procedures.
 - See [data-model.md](./data-model.md) for database schema, migrations, and connection details.
 
-### Kysely — Query Builder (ADR-011)
+### Kysely — Query Builder (ADR-012)
 
 **Kysely** is the database client for all backend database access. It is a type-safe SQL query builder — not an ORM. Queries are written using Kysely's fluent API and compile to parameterised SQL (no string concatenation).
 
@@ -90,6 +91,8 @@ The following packages must be listed as dependencies of `@cv-tool/backend`:
 |---------|---------|
 | `kysely` | Core query builder |
 | `pg` | PostgreSQL driver (used by Kysely's PostgreSQL dialect) |
+
+> `@types/pg` should be added as a dev dependency if TypeScript requires type definitions for direct `pg` imports (e.g. in `client.ts` for the `Pool` constructor). However, application code must not use `pg` directly for queries — only through Kysely.
 
 #### Kysely Instance
 
@@ -124,8 +127,9 @@ export interface Database {
 export interface EmployeeTable {
   id: Generated<string>;
   name: string;
-  role: string;
-  // ...
+  email: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 // Utility types for each table
@@ -150,14 +154,14 @@ const employees = await db
 // INSERT
 const newEmployee = await db
   .insertInto("employees")
-  .values({ name: "Jane Doe", role: "Consultant" })
+  .values({ name: "Jane Doe", email: "jane@example.com" })
   .returningAll()
   .executeTakeFirstOrThrow();
 
 // UPDATE
 await db
   .updateTable("employees")
-  .set({ role: "Senior Consultant" })
+  .set({ name: "Jane Smith" })
   .where("id", "=", employeeId)
   .execute();
 
