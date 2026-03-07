@@ -15,8 +15,8 @@
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import Select, { type SelectChangeEvent } from "@mui/material/Select";
-import GB from "country-flag-icons/react/components/GB";
-import type { ComponentType, SVGProps } from "react";
+import type { FlagComponent } from "country-flag-icons/react/3x2";
+import GB from "country-flag-icons/react/3x2/GB";
 import { useTranslation } from "react-i18next";
 import { localeFlagMap } from "./locale-flag-map";
 
@@ -24,7 +24,7 @@ import { localeFlagMap } from "./locale-flag-map";
 // Static map: ISO 3166-1 alpha-2 country code → flag SVG React component.
 // Add a new entry here (and in localeFlagMap) whenever a new locale is added.
 // ---------------------------------------------------------------------------
-const flagComponents: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
+const flagComponents: Record<string, FlagComponent> = {
   GB,
 };
 

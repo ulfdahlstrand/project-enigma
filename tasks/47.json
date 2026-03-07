@@ -28,6 +28,12 @@
       "timestamp": "2026-06-14T12:00:00Z",
       "action": "pr_opened",
       "summary": "Implemented LanguageSelector component with country-flag-icons flag rendering, locale-flag-map.ts mapping file, MUI Select/MenuItem/Box wrappers, sx-only styling, and react-i18next integration. PR #53 opened."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-06-14T08:10:00Z",
+      "action": "tests_failed",
+      "summary": "27/32 tests pass (AC1, AC2, AC3, AC5, AC7 static checks, AC8, AC9 all green). 5 tests fail across AC4, AC6, and AC7 render checks. Root cause: LanguageSelector.tsx imports 'country-flag-icons/react/components/GB', which is not a valid export path in the installed package. The correct path is 'country-flag-icons/react/3x2/GB' (or '1x1'). This single bug causes: AC6 to fail (tsc TS2307 error), AC4a/AC4b to fail (Vite cannot resolve the import at test-time, so no SVG elements render), AC7e/AC7f to fail (component cannot render at all). Fix: update the import in LanguageSelector.tsx from 'country-flag-icons/react/components/GB' to 'country-flag-icons/react/3x2/GB'."
     }
   ],
   "decisions": {
