@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { FileMigrationProvider, Migrator } from "kysely";
-import { db } from "./client.js";
+import { getDb } from "./client.js";
 
 // ---------------------------------------------------------------------------
 // Migration runner CLI
@@ -12,6 +12,8 @@ import { db } from "./client.js";
 // ---------------------------------------------------------------------------
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const db = getDb();
 
 const migrator = new Migrator({
   db,
