@@ -8,6 +8,16 @@
   },
   "nav": {
     "home": "Home",
-    "test": "Test"
+    "test": "Test",
+    "employees": "Employees"
+  },
+  "employee": {
+    "pageTitle": "Employees",
+    "pageDescription": "All employees registered in the system.",
+    "loading": "Loading employees…",
+    "error": "Failed to load employees. Please try again later.",
+    "empty": "No employees found.",
+    "tableHeaderName": "Name",
+    "tableHeaderEmail": "Email"
   }
 }
