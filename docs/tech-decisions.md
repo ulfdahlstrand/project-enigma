@@ -129,7 +129,7 @@ The canonical monorepo layout is:
 - Feature #8 (frontend) and Feature #5 (backend) implementers know exactly where to find shared types: `@cv-tool/contracts`.
 - The structure is extensible: additional packages (e.g. `packages/ui/`, `packages/db/`) follow the same pattern without ambiguity.
 - Any deviation from this structure requires a new ADR and an update to `architecture.md`.
-- The `apps/` vs `packages/` distinction is meaningful and must be respected: apps are deployed/run; packages are libraries consumed by apps.
+- The `apps/` vs `packages/` distinction is meaningful and must be respected: apps are deployed/run; packages are library consumed by apps.
 
 ---
 
@@ -297,3 +297,40 @@ The restructured `architecture.md` retains:
 - New architectural domains that emerge in the future get their own sub-document under `docs/arch/`, registered in the index table.
 - All existing ADRs (001–009) remain in `tech-decisions.md` unchanged. Sub-documents reference ADRs by number (e.g. "See ADR-008") rather than duplicating decision rationale.
 - Only the Architect Agent may write to files under `docs/arch/` or to `docs/architecture.md`.
+
+---
+
+## ADR-011 — 2026-03-08 — Kysely as Database Client and Migration Runner
+
+**Status:** Accepted
+
+**Context:**
+ADR-006 established PostgreSQL as the sole persistent data store and deferred two decisions: (1) the database client library (raw SQL, query builder, or lightweight ORM) and (2) the migration runner. The constraints from ADR-006 are: the client must support TypeScript and use parameterised queries (no string concatenation). Epic #55 requires creating database tables and querying them from the backend, making these decisions blocking prerequisites.
+
+Options evaluated:
+- **`pg` (raw SQL)** — Maximum control, but no type safety for queries. Column/table names are plain strings; return types are `any` unless manually typed. Verbose for common CRUD patterns. No built-in migration support.
+- **Kysely** — Type-safe SQL query builder (not an ORM). Queries are written using a fluent TypeScript API that compiles to parameterised SQL. Full type inference for column names, table names, and return types. Built-in `Migrator` class supports TypeScript migration files. Uses the `pg` driver under the hood via the PostgreSQL dialect. Lightweight (~40KB), no code generation required for basic use.
+- **Drizzle ORM** — TypeScript ORM with SQL-like syntax and its own migration tooling. Heavier abstraction layer with a schema-definition DSL. More opinionated than Kysely; introduces ORM concepts (relations, prepared statements) that add complexity beyond what this project needs.
+- **Prisma** — Full ORM with its own schema language (`.prisma` files), code generation step, and migration engine. Heavy dependency, introduces a non-TypeScript schema language, and requires a build step to generate the client — conflicts with the project's TypeScript-only policy (ADR-003) at the schema definition layer.
+
+**Decision:**
+Use **Kysely** as both the database client and the migration runner for `@cv-tool/backend`.
+
+Key aspects:
+1. **Kysely is the sole database client.** All database queries in the backend must use the Kysely query builder. No other query builders, ORMs, or direct `pg` client usage for application queries.
+2. **The `pg` package is the underlying PostgreSQL driver.** Kysely's `PostgresDialect` uses a `pg.Pool` instance. The `pg` package is a dependency of `@cv-tool/backend` but must not be used directly for application queries — only through Kysely.
+3. **A single `Kysely<Database>` instance** is created in `apps/backend/src/db/client.ts` and exported for use by all procedure handlers. The `Database` type interface is defined in `apps/backend/src/db/types.ts`.
+4. **Kysely's built-in `Migrator`** is the migration runner. It is configured with a `FileMigrationProvider` pointing to `apps/backend/src/db/migrations/`.
+5. **Migration files are TypeScript** (`.ts`), not plain SQL. This allows using Kysely's type-safe schema builder for DDL operations while still permitting raw `sql` tagged templates for edge cases.
+6. **The timestamp-prefixed naming convention from ADR-006 is preserved:** `YYYYMMDDHHMMSS_description.ts`.
+7. **A `migrate` script** in `apps/backend/package.json` runs all pending migrations via `tsx src/db/migrate.ts`.
+8. **Backend-only dependency.** `kysely` and `pg` are listed as dependencies of `@cv-tool/backend` only. No other workspace depends on them.
+
+**Consequences:**
+- All database queries are type-safe: column names, table names, and return types are checked at compile time via the `Database` type interface.
+- Parameterised queries are guaranteed by Kysely's design — no string concatenation is possible through its API.
+- The `Database` type interface in `types.ts` must be updated manually when migrations add or alter columns. Optionally, `kysely-codegen` can generate types from the live schema during development, but the committed `types.ts` is the source of truth.
+- Migration files use Kysely's schema builder API (e.g. `db.schema.createTable(...)`) rather than raw SQL strings, providing a consistent developer experience.
+- The `kysely_migration` table is automatically managed by Kysely's Migrator and must not be modified manually.
+- Kysely has no runtime overhead beyond parameterised query construction — it does not add connection pooling (that is handled by `pg.Pool`), caching, or other middleware.
+- Future database tooling decisions (e.g. seeding) are separate from this ADR and do not affect the Kysely choice.
