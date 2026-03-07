@@ -23,7 +23,7 @@ PostgreSQL (version 16 or later) is the sole persistent data store (ADR-006).
 
 ---
 
-## Migrations (ADR-011)
+## Migrations (ADR-012)
 
 Database schema changes are managed via **Kysely's built-in Migrator**, using TypeScript migration files.
 
@@ -92,7 +92,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .createTable("employees")
     .addColumn("id", "uuid", (col) => col.primaryKey().defaultTo(db.fn("gen_random_uuid")))
     .addColumn("name", "varchar(255)", (col) => col.notNull())
-    .addColumn("role", "varchar(255)", (col) => col.notNull())
+    .addColumn("email", "varchar(255)", (col) => col.notNull().unique())
     .addColumn("created_at", "timestamptz", (col) => col.notNull().defaultTo(db.fn("now")))
     .addColumn("updated_at", "timestamptz", (col) => col.notNull().defaultTo(db.fn("now")))
     .execute();
@@ -120,9 +120,9 @@ Kysely's Migrator automatically creates and manages a `kysely_migration` table i
 
 ## Database Client
 
-The database client is **Kysely** — a type-safe SQL query builder for TypeScript (ADR-011). See [backend.md](./backend.md) for full usage patterns, dependencies, and query examples.
+The database client is **Kysely** — a type-safe SQL query builder for TypeScript (ADR-012). See [backend.md](./backend.md) for full usage patterns, dependencies, and query examples.
 
-**Constraints (from ADR-006, enforced by ADR-011):**
+**Constraints (from ADR-006, enforced by ADR-012):**
 - Must support TypeScript — ✅ Kysely is TypeScript-native.
 - Must use parameterised queries (no string concatenation) — ✅ Kysely generates parameterised SQL by default.
 

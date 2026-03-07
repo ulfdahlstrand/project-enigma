@@ -129,7 +129,7 @@ The canonical monorepo layout is:
 - Feature #8 (frontend) and Feature #5 (backend) implementers know exactly where to find shared types: `@cv-tool/contracts`.
 - The structure is extensible: additional packages (e.g. `packages/ui/`, `packages/db/`) follow the same pattern without ambiguity.
 - Any deviation from this structure requires a new ADR and an update to `architecture.md`.
-- The `apps/` vs `packages/` distinction is meaningful and must be respected: apps are deployed/run; packages are library consumed by apps.
+- The `apps/` vs `packages/` distinction is meaningful and must be respected: apps are deployed/run; packages are libraries consumed by apps.
 
 ---
 
@@ -301,7 +301,6 @@ The restructured `architecture.md` retains:
 ---
 
 ## ADR-011 — 2026-03-08 — Vitest as Test Runner with Co-located Tests and 80% Coverage Threshold
-## ADR-011 — 2026-03-08 — Kysely as Database Client and Migration Runner
 
 **Status:** Accepted
 
@@ -328,6 +327,14 @@ The testing architecture sub-document (`docs/arch/testing.md`) was a placeholder
 - The dependency injection pattern for database access ensures tests are decoupled from the eventual database client choice (deferred per ADR-006).
 - Integration and end-to-end testing strategies are deferred to a future architectural decision; this ADR covers unit and component tests only.
 - No network-intercepting libraries (`msw`, `nock`) may be used without a dedicated ADR.
+
+---
+
+## ADR-012 — 2026-03-08 — Kysely as Database Client and Migration Runner
+
+**Status:** Accepted
+
+**Context:**
 ADR-006 established PostgreSQL as the sole persistent data store and deferred two decisions: (1) the database client library (raw SQL, query builder, or lightweight ORM) and (2) the migration runner. The constraints from ADR-006 are: the client must support TypeScript and use parameterised queries (no string concatenation). Epic #55 requires creating database tables and querying them from the backend, making these decisions blocking prerequisites.
 
 Options evaluated:
