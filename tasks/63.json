@@ -37,6 +37,12 @@
       "timestamp": "2026-03-08T23:15:00Z",
       "action": "tests_failed",
       "summary": "10 of 12 acceptance criteria verified. 2 failures: (1) Criterion 8 — npx tsc --noEmit -p apps/backend/tsconfig.json exits with code 2. Error: apps/backend/src/db/migrate.ts(5,10): error TS2305: Module '\"./client.js\"' has no exported member 'db'. The new client.ts exports getDb() (lazy singleton getter) but the pre-existing migrate.ts still imports the named 'db' export that no longer exists. The developer must either export a 'db' const from client.ts or update migrate.ts to use getDb(). (2) Criterion 3 — contracts package was not rebuilt before the PR: dist/employees.js contained stale z.string() instead of z.union([z.string(), z.date()]) for timestamps, causing Zod validation failures. After manually running 'npm run build' in packages/contracts the build succeeds (exit code 0) and all schema tests pass. The contracts package must be rebuilt as part of the PR — either via turbo pipeline or by committing the updated dist/. Tests for criteria 1–2, 4–7, 9–11, 12 all pass. Criteria 3 (contracts tsc) verified passing after rebuild."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-09T10:00:00Z",
+      "action": "fix_pushed",
+      "summary": "Fixed migrate.ts to use getDb() instead of named 'db' import — resolves TS2305 error and unblocks criterion 8 (backend tsc --noEmit). Contracts dist/ files were already correctly built (z.union([z.string(), z.date()]) for timestamps) and committed on the branch; criterion 3 should now pass without manual rebuild."
     }
   ],
   "decisions": {
@@ -49,7 +55,8 @@
       "apps/backend/src/procedures/list-employees.ts",
       "apps/backend/src/procedures/list-employees.test.ts",
       "apps/backend/src/router.ts",
-      "apps/backend/package.json"
+      "apps/backend/package.json",
+      "apps/backend/src/db/migrate.ts"
     ],
     "risks": [
       "The employees table must exist at runtime (created by Task #61 migration) for the procedure to work against a real DB. Unit tests pass without a real DB via mock injection.",
