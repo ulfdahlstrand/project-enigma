@@ -36,7 +36,7 @@ function EmployeePage() {
     isError,
   } = useQuery({
     queryKey: ["listEmployees"],
-    queryFn: () => orpc.listEmployees(),
+    queryFn: () => orpc.listEmployees({}),
   });
 
   if (isLoading) {

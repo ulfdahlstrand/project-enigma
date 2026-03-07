@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
+import { Route as EmployeeRouteImport } from './routes/employee'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TestRoute = TestRouteImport.update({
   id: '/test',
   path: '/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmployeeRoute = EmployeeRouteImport.update({
+  id: '/employee',
+  path: '/employee',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +31,31 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/employee': typeof EmployeeRoute
   '/test': typeof TestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/employee': typeof EmployeeRoute
   '/test': typeof TestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/employee': typeof EmployeeRoute
   '/test': typeof TestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/test'
+  fullPaths: '/' | '/employee' | '/test'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/test'
-  id: '__root__' | '/' | '/test'
+  to: '/' | '/employee' | '/test'
+  id: '__root__' | '/' | '/employee' | '/test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EmployeeRoute: typeof EmployeeRoute
   TestRoute: typeof TestRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/test'
       fullPath: '/test'
       preLoaderRoute: typeof TestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/employee': {
+      id: '/employee'
+      path: '/employee'
+      fullPath: '/employee'
+      preLoaderRoute: typeof EmployeeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EmployeeRoute: EmployeeRoute,
   TestRoute: TestRoute,
 }
 export const routeTree = rootRouteImport
