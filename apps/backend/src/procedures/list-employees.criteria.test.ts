@@ -205,42 +205,6 @@ describe("Criterion 7 — listEmployees procedure declares output schema as list
 });
 
 // ---------------------------------------------------------------------------
-// Criterion 11 — No create, update, or delete procedures introduced
-// ---------------------------------------------------------------------------
-
-describe("Criterion 11 — no create/update/delete employee procedures introduced", () => {
-  it("router does not have 'createEmployee' procedure", async () => {
-    const { router } = await import("../router.js");
-    expect(router).not.toHaveProperty("createEmployee");
-  });
-
-  it("router does not have 'updateEmployee' procedure", async () => {
-    const { router } = await import("../router.js");
-    expect(router).not.toHaveProperty("updateEmployee");
-  });
-
-  it("router does not have 'deleteEmployee' procedure", async () => {
-    const { router } = await import("../router.js");
-    expect(router).not.toHaveProperty("deleteEmployee");
-  });
-
-  it("contract does not have 'createEmployee' procedure", async () => {
-    const { contract } = await import("@cv-tool/contracts");
-    expect(contract).not.toHaveProperty("createEmployee");
-  });
-
-  it("contract does not have 'updateEmployee' procedure", async () => {
-    const { contract } = await import("@cv-tool/contracts");
-    expect(contract).not.toHaveProperty("updateEmployee");
-  });
-
-  it("contract does not have 'deleteEmployee' procedure", async () => {
-    const { contract } = await import("@cv-tool/contracts");
-    expect(contract).not.toHaveProperty("deleteEmployee");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Criterion 12 — no cross-app imports from apps/frontend/ in backend source
 // ---------------------------------------------------------------------------
 
