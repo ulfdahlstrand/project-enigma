@@ -30,14 +30,14 @@
       "apiError": "Failed to create person. Please try again."
     },
     "detail": {
-      "pageTitle": "Person Details",
+      "pageTitle": "Employee Details",
       "nameLabel": "Name",
       "emailLabel": "Email",
       "saveButton": "Save",
-      "saveSuccess": "Changes saved successfully.",
-      "saveError": "Failed to save changes. Please try again.",
+      "saveSuccess": "Employee saved successfully.",
+      "saveError": "Failed to save employee. Please try again.",
       "notFound": "Person not found.",
-      "loading": "Loading person…"
+      "loading": "Loading employee…"
     }
   },
   "test": {
