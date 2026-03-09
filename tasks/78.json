@@ -1,0 +1,30 @@
+{
+  "issue_id": 78,
+  "status": "in_requirements",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Rewrote all six original acceptance criteria. The previous criteria were vague ('fully functional', 'integrates', 'extensible without structural changes') and not binary/observable. Revised criteria now specify: exact file paths to delete/create, exact i18n config keys to check, MUI Select component (not toggle), country-flag-icons usage with specific country codes (GB, SE), single iterable data structure for language list (no per-language branches), and a required Vitest unit test covering render and changeLanguage invocation. Added Goal, Background, Out of Scope, Files Likely to Change, and Dependencies sections. Restarting Architect + Tester sign-off."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-14T00:05:00Z",
+      "action": "approved",
+      "summary": "All nine acceptance criteria are architecturally consistent. MUI Select/MenuItem aligns with ADR-008, country-flag-icons usage aligns with ADR-009, co-located Vitest test aligns with ADR-011, i18n and locale file structure aligns with frontend.md conventions. Constraint noted: LanguageSelector.tsx must use PascalCase, test file must be co-located as LanguageSelector.test.tsx."
+    }
+  ],
+  "decisions": {
+    "approach": null,
+    "files_to_touch": [
+      "apps/frontend/src/lib/i18n.ts",
+      "apps/frontend/src/locales/fr/ (delete)",
+      "apps/frontend/src/locales/sv/common.json (create)",
+      "apps/frontend/src/components/layout/Header.tsx",
+      "apps/frontend/src/components/layout/LanguageSelector.tsx (likely new)",
+      "apps/frontend/src/components/layout/LanguageSelector.test.tsx (new test)"
+    ],
+    "risks": []
+  }
+}
