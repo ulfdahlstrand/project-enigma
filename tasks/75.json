@@ -1,0 +1,37 @@
+{
+  "issue_id": 75,
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Rewrote acceptance criteria to be fully testable without a browser. Original criteria ('The header on the /test page reads X') required a running browser. Revised criteria now verify the concrete source of truth: the value of the test.heading key in apps/frontend/src/locales/en/common.json, plus a criterion confirming no existing keys are removed. Also updated Goal, Background, Files Likely to Change, and Out of Scope to reflect that: (a) the heading is rendered via i18n and t('test.heading'), (b) the test.* keys are currently absent from common.json, and (c) only the locale file needs to change."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-14T00:01:00Z",
+      "action": "approved",
+      "summary": "Task is consistent with frontend architecture (docs/arch/frontend.md). i18n keys belong in src/locales/<lang>/common.json, strings must go through react-i18next. No architectural impact — single JSON key addition, no new dependencies or structural changes."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T00:02:00Z",
+      "action": "testability_approved",
+      "summary": "All three acceptance criteria are testable as written. AC #1: exact string match on json.test.heading in common.json — binary and file-checkable. AC #2: snapshot of existing keys/values before and after — deterministic. AC #3: file-level diff on test.tsx against committed state — binary pass/fail. No criteria are vague, subjective, or redundant with CI checks."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-07-14T10:00:00Z",
+      "action": "pr_opened",
+      "summary": "Added 'test' object with all test.* keys to apps/frontend/src/locales/en/common.json. heading value is exactly 'Connectivity Test for stack'. No existing keys modified. test.tsx untouched. PR #76 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Added the 'test' object to common.json with all keys used by test.tsx (heading, description, loading, error, empty, tableHeaderId, tableHeaderName, tableHeaderNote). Only the locale file was modified.",
+    "files_to_touch": [
+      "apps/frontend/src/locales/en/common.json"
+    ],
+    "risks": []
+  }
+}
