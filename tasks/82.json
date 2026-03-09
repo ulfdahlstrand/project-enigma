@@ -1,0 +1,193 @@
+{
+  "issue_id": 82,
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T00:00:00Z",
+      "action": "task_created",
+      "summary": "Task #82 created for Feature #81: Add getEmployee, createEmployee, and updateEmployee oRPC procedures (contracts + backend handlers). Requesting Architect review."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T01:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Task fits existing architecture (ADR-005, ADR-012, ADR-011). All patterns (contracts in @cv-tool/contracts, Kysely queries, DI for test mocking, co-located tests) are covered. Notes: (1) oRPC NOT_FOUND must use oRPC's ORPCError with code 'NOT_FOUND' — not a raw Error or HTTP throw. (2) updateEmployee input must enforce at least one of name/email is present at the Zod schema level (use .refine() or z.union()). (3) Procedure handlers must accept the Kysely db instance via parameter (not import the singleton directly) to remain testable per ADR-011 DI pattern."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T02:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Acceptance criteria fully rewritten to address Tester rejection and to incorporate the Architect's binding notes. Changes: (1) All schema criteria are now expressed as concrete parse() call outcomes (pass/throw) rather than descriptions of what the schema 'returns'. (2) updateEmployeeInputSchema criteria enumerate all four cases (no fields → throws; name only → passes; email only → passes; both → passes) and specify .refine() at the Zod level explicitly. (3) Three new DI criteria (7, 8, 9) assert that each handler accepts Kysely<Database> as a parameter and does not require vi.mock(). (4) Unit test criteria (11–16) are rewritten as concrete mock-and-assert descriptions rather than 'a test that covers X'. (5) Two explicit ORPCError criteria (17, 18) specify that NOT_FOUND errors must be thrown as new ORPCError({ code: 'NOT_FOUND' }) — not raw Error or HTTP. Previous Architect and Tester approvals are invalidated by this revision; re-approval requested from both."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-11T03:00:00Z",
+      "action": "testability_rejected",
+      "summary": "17 of 18 criteria are testable. Criterion 10 contains a redundant TypeScript compile-error sub-clause ('Calling the router's type with an incorrect input shape produces a TypeScript compile error') that is enforced by CI type-check and cannot be expressed as a runtime unit test. The first sentence of criterion 10 (router registers the three procedures) is testable. Suggested rewrite: replace the TypeScript sub-clause with an observable runtime assertion that accessing router.getEmployee, router.createEmployee, and router.updateEmployee returns a truthy value. All other criteria (1–9, 11–18) approved."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T04:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Re-review of revised criteria. All 18 criteria are architecturally consistent with ADR-005 (Zod schemas in @cv-tool/contracts), ADR-012 (Kysely query patterns), and ADR-011 (DI mocking pattern). The architectural substance of criterion 10 (router registration) is sound; the Tester's objection to its TypeScript sub-clause is a testability matter for Requirements to resolve with the Tester. Criteria 1–9 and 11–18 fully satisfy all architectural constraints from the first review. No new architectural concerns. Handing back to Requirements to address the Tester's criterion 10 rewrite, then re-obtain Tester approval."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T05:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Third invocation — no change in architectural position. Criterion 10 in the current issue body still contains the un-revised TypeScript compile-error sub-clause. All architectural constraints remain satisfied (criteria 1–9, 11–18). The sole outstanding item is Requirements rewriting criterion 10 per the Tester's suggestion (remove the TypeScript sub-clause; replace with runtime assertion that router.getEmployee, router.createEmployee, and router.updateEmployee are truthy). No new architectural concerns introduced."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T06:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Fourth invocation — architectural position remains unchanged. All 18 criteria satisfy ADR-005 (Zod schemas in @cv-tool/contracts), ADR-012 (Kysely query patterns), and ADR-011 (DI mocking pattern). No new architectural concerns. The sole outstanding item is a testability fix to criterion 10: Requirements must remove the TypeScript compile-error sub-clause and replace it with the Tester's suggested runtime assertion (router.getEmployee / router.createEmployee / router.updateEmployee each return a truthy value). No further Architect review is needed — route directly to agent:tester once criterion 10 is rewritten."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T07:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Fifth invocation — architectural position unchanged. This is a routing error: the Architect has already fully approved this task and the sole remaining action is a Requirements edit to criterion 10 followed by Tester re-approval. The agent:architect label has been removed and agent:requirements re-applied to unblock the correct next step."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-11T08:00:00Z",
+      "action": "approved_with_notes",
+      "summary": "Sixth invocation — architectural position unchanged. This is a repeated routing error. Architect approval is fully on record. The sole required action is Requirements editing criterion 10 to remove the TypeScript compile-error sub-clause and replace it with the Tester's runtime assertion (router.getEmployee / router.createEmployee / router.updateEmployee each return a truthy value), then routing to agent:tester. No further Architect review is needed or should be requested for this task."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T09:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Criterion 10 revised in the issue body: removed the TypeScript compile-error sub-clause ('Calling the router's type with an incorrect input shape produces a TypeScript compile error') and replaced it with the Tester's suggested runtime assertion ('Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined)'). All other criteria (1–9, 11–18) are unchanged from the version the Tester previously approved. Architect approval is already on record for this change; routing to agent:tester for re-approval of criterion 10 only."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T10:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation to verify state and confirm correct routing. Issue body confirmed correct: criterion 10 already contains the Tester-approved runtime assertion ('Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value'). The TypeScript compile-error sub-clause has been removed. Label is agent:tester. Architect approval is on record (multiple times). Awaiting Tester re-approval of criterion 10. No further action required by Requirements at this time."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T11:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (seventh Requirements invocation total). Confirmed: the issue body criterion 10 is already correctly worded — the TypeScript compile-error sub-clause was removed and replaced with the Tester's runtime assertion in the prior invocation. No further edits to the issue body were required. Task JSON updated to log this confirmation. Label remains agent:tester. Awaiting Tester re-approval of criterion 10; all other criteria (1–9, 11–18) were previously approved by the Tester."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T12:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (eighth total). Issue body confirmed definitively correct: criterion 10 reads 'The oRPC router in apps/backend/ exposes getEmployee, createEmployee, and updateEmployee as named properties bound with the live db instance from apps/backend/src/db/client.ts. Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined).' — the TypeScript compile-error sub-clause is absent. Label is agent:tester. Architect approval fully on record. No further Requirements action is needed until the Tester responds. JSON updated to log this invocation."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-11T13:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (ninth total). Issue body re-confirmed correct and re-written via github_update_issue to ensure the authoritative version matches the agreed text. Criterion 10 contains only the runtime assertion: 'Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined).' — the TypeScript compile-error sub-clause is definitively absent. Label confirmed as agent:tester (agent:architect was already absent). Comment posted routing to @agent:tester for final re-approval of criterion 10 only. No further Requirements action required until Tester responds."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T00:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (tenth total). Issue body and task JSON reviewed. Criterion 10 is confirmed correct in the issue body — the TypeScript compile-error sub-clause is absent and the runtime truthy-value assertion is present. Labels confirm agent:tester is set. Architect approval is fully on record (multiple reviews). No edits to the issue body or task JSON were needed. Awaiting Tester re-approval of criterion 10 only; all other criteria (1–9, 11–18) were previously approved by the Tester and are unchanged."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T01:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-review of criterion 10 following the Requirements revision. Criterion 10 now reads: 'The oRPC router in apps/backend/ exposes getEmployee, createEmployee, and updateEmployee as named properties bound with the live db instance from apps/backend/src/db/client.ts. Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined).' The TypeScript compile-error sub-clause has been removed. The criterion is binary (truthy/falsy), concrete (named properties on the router object), and within scope. All 18 criteria are now testable. Full approval granted."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T02:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-invocation review. Confirmed: criterion 10 in the issue body contains the correct runtime assertion wording ('Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined)') — the TypeScript compile-error sub-clause is absent. All 18 acceptance criteria are testable as written. Status updated to ready_for_development. Approval posted to GitHub. Labels updated: status:in-requirements removed, status:ready-for-development and agent:developer set."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T03:00:00Z",
+      "action": "requirements_complete",
+      "summary": "Re-invocation (eleventh total). Full state review performed: issue body is correct (criterion 10 contains the runtime truthy-value assertion; TypeScript compile-error sub-clause is absent), both Architect and Tester approvals are fully on record, task status is ready_for_development, and labels are agent:developer / type:task / status:ready-for-development. No changes were needed. Task #82 is fully defined and ready for development. Requirements role is complete."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T04:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (twelfth total). Triggered as 'revision mode' but no revision is needed. Full review of issue body and comment history confirms: (1) Issue body already contains the correct criterion 10 with the runtime truthy-value assertion — the TypeScript compile-error sub-clause is absent. (2) Tester gave final full approval at 2026-03-09T10:33:16Z covering all 18 criteria. (3) Architect approved multiple times with no outstanding concerns. (4) Labels are agent:developer / type:task / status:ready-for-development. (5) tasks/82.json status is ready_for_development. No criteria were changed; no sign-off restart is required. Task #82 is fully defined and waiting for developer assignment."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T05:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (thirteenth total). Triggered as 'revision mode' but no revision is required. Full review of the issue body, all comments, and task JSON confirms the task is already complete: (1) All 18 acceptance criteria in the issue body are correct and fully worded. Criterion 10 contains only the runtime truthy-value assertion; the TypeScript compile-error sub-clause is absent. (2) Tester final approval on record (2026-03-09T10:33:16Z) covering all 18 criteria. (3) Architect approval fully on record across multiple reviews. (4) Labels: agent:developer / type:task / status:ready-for-development. (5) JSON status: ready_for_development. No changes made. Task #82 is complete from a requirements perspective."
+    },
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T06:00:00Z",
+      "action": "status_check",
+      "summary": "Re-invocation (fourteenth total). Triggered as 'revision mode' but no revision is required. Complete review of the issue body (provided in invocation context), all 23 comments, and tasks/82.json confirms the task is already in its final, fully-approved state. The issue body already contains the corrected criterion 10 — the runtime truthy-value assertion is present and the TypeScript compile-error sub-clause is absent. Both Architect (multiple reviews) and Tester (final approval 2026-03-09T10:33:16Z, confirmed again 2026-03-09T10:33:16Z) have fully signed off. Labels: agent:developer / type:task / status:ready-for-development. No changes made to issue body or JSON. Task #82 is complete from a requirements perspective and requires no further Requirements involvement."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T07:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-invocation (third Tester invocation). No new review required — approval is already fully on record. Confirmed: the issue body criterion 10 contains the correct runtime truthy-value assertion; the TypeScript compile-error sub-clause is absent. All 18 acceptance criteria were approved as testable at 2026-03-09T10:33:16Z and remain unchanged. Task status is ready_for_development with labels agent:developer / type:task / status:ready-for-development. No action taken; no new comment posted (approval already on record)."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T08:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-invocation (fourth Tester invocation). No new review required — approval is already fully on record. The issue body currently contains all 18 acceptance criteria in their final approved form. Criterion 10 reads: 'The oRPC router in apps/backend/ exposes getEmployee, createEmployee, and updateEmployee as named properties bound with the live db instance from apps/backend/src/db/client.ts. Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value (i.e., the procedure is registered and not undefined).' — the TypeScript compile-error sub-clause is absent. All 18 criteria are testable as written. Task status is ready_for_development; labels are agent:developer / type:task / status:ready-for-development. No action required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T09:00:00Z",
+      "action": "testability_approved",
+      "summary": "Fifth Tester invocation. This is a re-invocation against a task that is already fully approved. All 18 acceptance criteria in the issue body are confirmed unchanged from the previously approved version. Criterion 10 contains only the runtime truthy-value assertion; the TypeScript compile-error sub-clause is absent. Status remains ready_for_development. No new action required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T10:00:00Z",
+      "action": "testability_approved",
+      "summary": "Sixth Tester invocation. Re-invocation against a task that is already fully approved. Full review of the issue body (provided in invocation context) confirms all 18 acceptance criteria are unchanged from the previously approved version. Criterion 10 contains only the runtime truthy-value assertion ('Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value'); the TypeScript compile-error sub-clause is absent. Status remains ready_for_development with labels agent:developer / type:task / status:ready-for-development. No new action required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T11:00:00Z",
+      "action": "testability_approved",
+      "summary": "Seventh Tester invocation. Re-invocation against a task that is already fully approved. Full review of the issue body confirms all 18 acceptance criteria are unchanged from the previously approved version. Criterion 10 contains only the runtime truthy-value assertion; the TypeScript compile-error sub-clause is absent. Status remains ready_for_development. No new action required."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T12:00:00Z",
+      "action": "testability_approved",
+      "summary": "Eighth Tester invocation. Re-invocation against a task that is already fully approved. Full review of the issue body confirms all 18 acceptance criteria are unchanged from the previously approved version. Criterion 10 contains only the runtime truthy-value assertion ('Accessing router.getEmployee, router.createEmployee, and router.updateEmployee at runtime returns a truthy value'); the TypeScript compile-error sub-clause is absent. Status remains ready_for_development with labels agent:developer / type:task / status:ready-for-development. No new action required."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-07-14T13:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented getEmployee, createEmployee, and updateEmployee oRPC procedures. PR #85 opened. All 18 acceptance criteria satisfied: 6 Zod schemas in @cv-tool/contracts, 3 procedure handlers with Kysely DI parameter pattern, router registration, unit tests for all handlers (success + NOT_FOUND cases), ORPCError thrown on missing rows."
+    }
+  ],
+  "decisions": {
+    "approach": "Followed existing list-employees.ts DI pattern: each handler file exports a production handler (calling getDb() lazily) and a factory function for test injection. All schemas defined in packages/contracts/src/employees.ts and re-exported via index.ts.",
+    "files_to_touch": [
+      "packages/contracts/src/employees.ts",
+      "packages/contracts/src/index.ts",
+      "apps/backend/src/router.ts",
+      "apps/backend/src/db/types.ts",
+      "apps/backend/src/procedures/get-employee.ts",
+      "apps/backend/src/procedures/get-employee.test.ts",
+      "apps/backend/src/procedures/create-employee.ts",
+      "apps/backend/src/procedures/create-employee.test.ts",
+      "apps/backend/src/procedures/update-employee.ts",
+      "apps/backend/src/procedures/update-employee.test.ts"
+    ],
+    "risks": [
+      "createEmployee uses uuid_generate_v4() via database default — requires uuid-ossp PostgreSQL extension to be installed.",
+      "updateEmployee builds SET clause dynamically from provided fields only — no-op updates (with name/email matching existing values) will still succeed and return the row."
+    ]
+  }
+}
