@@ -1,0 +1,48 @@
+{
+  "issue_id": 78,
+  "status": "in_review",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-07-14T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Rewrote all six original acceptance criteria. The previous criteria were vague ('fully functional', 'integrates', 'extensible without structural changes') and not binary/observable. Revised criteria now specify: exact file paths to delete/create, exact i18n config keys to check, MUI Select component (not toggle), country-flag-icons usage with specific country codes (GB, SE), single iterable data structure for language list (no per-language branches), and a required Vitest unit test covering render and changeLanguage invocation. Added Goal, Background, Out of Scope, Files Likely to Change, and Dependencies sections. Restarting Architect + Tester sign-off."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-07-14T00:05:00Z",
+      "action": "approved",
+      "summary": "All nine acceptance criteria are architecturally consistent. MUI Select/MenuItem aligns with ADR-008, country-flag-icons usage aligns with ADR-009, co-located Vitest test aligns with ADR-011, i18n and locale file structure aligns with frontend.md conventions. Constraint noted: LanguageSelector.tsx must use PascalCase, test file must be co-located as LanguageSelector.test.tsx."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-07-14T00:10:00Z",
+      "action": "testability_approved",
+      "summary": "All 9 acceptance criteria are binary, specific, observable, and within scope. Criterion 1: filesystem deletion check. Criterion 2: text search in i18n.ts. Criterion 3: file existence + top-level key-set equality against en/common.json. Criterion 4: config property inspection in i18n.ts. Criterion 5: component-tree check for MUI Select presence and toggle absence. Criterion 6: render assertion for MenuItem count and correct country-flag-icons SVG components (GB/SE) from exact import path. Criterion 7: mock call assertion for i18n.changeLanguage with correct locale string, verified by criterion 9 test. Criterion 8: structural code check for single iterable data structure, no per-language if/else or JSX branches. Criterion 9: specific new Vitest test (not a generic 'tests pass' criterion) covering render count and changeLanguage invocation. No criteria are vague, subjective, or redundant with CI enforcement."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-07-14T09:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented Swedish language support replacing French. Removed src/locales/fr/, created src/locales/sv/common.json with all en keys, updated src/lib/i18n.ts and src/i18n/i18n.ts to use en/sv (no fr), replaced Button toggle in layout/LanguageSelector.tsx with MUI Select + LANGUAGES array, added co-located LanguageSelector.test.tsx covering render and changeLanguage for both en and sv. PR #79 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "New layout/LanguageSelector.tsx with MUI Select + single LANGUAGES array. Co-located Vitest test. Two i18n config files (src/lib/i18n.ts and src/i18n/i18n.ts) both updated. Dead code: src/i18n/locales/fr.json remains but is not imported.",
+    "files_to_touch": [
+      "apps/frontend/src/lib/i18n.ts",
+      "apps/frontend/src/i18n/i18n.ts",
+      "apps/frontend/src/i18n/locales/sv.json",
+      "apps/frontend/src/locales/sv/common.json",
+      "apps/frontend/src/components/layout/LanguageSelector.tsx",
+      "apps/frontend/src/components/layout/LanguageSelector.test.tsx",
+      "apps/frontend/src/components/layout/Header.tsx",
+      "apps/frontend/src/components/language-selector/LanguageSelector.tsx",
+      "apps/frontend/src/components/language-selector/locale-flag-map.ts"
+    ],
+    "risks": [
+      "src/i18n/locales/fr.json still exists as dead code — orphaned but not imported. Not a criterion violation. Can be cleaned up separately.",
+      "Two i18n config files coexist (src/lib/i18n.ts and src/i18n/i18n.ts). main.tsx imports src/i18n/i18n.ts; src/lib/i18n.ts satisfies AC2/AC4 static checks. Both are consistent."
+    ]
+  }
+}
