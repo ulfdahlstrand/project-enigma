@@ -1,0 +1,29 @@
+{
+  "app": {
+    "title": "CV-verktyget"
+  },
+  "welcome": "Välkommen till CV-verktyget",
+  "home": {
+    "heading": "Välkommen till CV-verktyget",
+    "description": "Hantera, anpassa och exportera dina CV:n för specifika kunduppdrag."
+  },
+  "locale": {
+    "switch": "Byt språk"
+  },
+  "test": {
+    "heading": "Stack-anslutningstest",
+    "description": "Den här sidan hämtar rader från databasens tabell test_entries via oRPC-backendpunkten.",
+    "loading": "Laddar testposter…",
+    "error": "Det gick inte att ladda testposter. Backend kan vara onåbar.",
+    "empty": "Inga poster hittades.",
+    "tableHeaderId": "ID",
+    "tableHeaderName": "Namn",
+    "tableHeaderNote": "Anteckning"
+  },
+  "header": {
+    "appName": "CV-verktyget"
+  },
+  "footer": {
+    "copyright": "© CV-verktyget. Alla rättigheter förbehållna."
+  }
+}

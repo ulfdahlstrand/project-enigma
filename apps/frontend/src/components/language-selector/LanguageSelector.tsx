@@ -17,6 +17,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import type { FlagComponent } from "country-flag-icons/react/3x2";
 import GB from "country-flag-icons/react/3x2/GB";
+import SE from "country-flag-icons/react/3x2/SE";
 import { useTranslation } from "react-i18next";
 import { localeFlagMap } from "./locale-flag-map";
 
@@ -26,6 +27,7 @@ import { localeFlagMap } from "./locale-flag-map";
 // ---------------------------------------------------------------------------
 const flagComponents: Record<string, FlagComponent> = {
   GB,
+  SE,
 };
 
 // ---------------------------------------------------------------------------
