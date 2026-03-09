@@ -1,0 +1,31 @@
+{
+  "id": 84,
+  "title": "[#81] Add \"Add New Person\" button and creation form to the Person List page",
+  "status": "approved",
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/routes/employee.tsx",
+      "apps/frontend/src/routes/employee/new.tsx",
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/routes/employee/new.test.tsx"
+    ],
+    "risks": [
+      "TanStack Router mock in new.test.tsx uses vi.mock to override useNavigate — this pattern is consistent with $id.test.tsx but relies on module-level mock hoisting which Vitest handles correctly with dynamic imports.",
+      "The LIST_EMPLOYEES_QUERY_KEY constant is a tuple (as const) — callsites that destructure or spread it must match the exact type."
+    ]
+  },
+  "conversation_log": [
+    {
+      "agent": "developer",
+      "timestamp": "2025-01-31T10:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented the co-located unit test file for new.tsx (apps/frontend/src/routes/employee/new.test.tsx). The route files (new.tsx, employee.tsx) and i18n keys (common.json) were already implemented. The test file covers all AC10 sub-criteria: (a) empty name shows validation error, (b) invalid email shows validation error, (c) valid inputs call createEmployee mutation. Also covers AC4 (cache invalidation), AC5 (navigation), AC6 (error alert + input retention), AC7/AC8 (validation without backend call), AC9 (i18n key presence), and static source checks. PR opened."
+    },
+    {
+      "agent": "reviewer",
+      "timestamp": "2025-01-31T10:30:00Z",
+      "action": "review_approved",
+      "summary": "PR #86 approved. All checks passed: (1) File co-located at apps/frontend/src/routes/employee/new.test.tsx per testing.md convention. (2) Vitest-only test runner; approved Testing Library dependencies only; no sinon/MSW/nock. (3) vi.mock() used for oRPC client and TanStack Router — consistent with $id.test.tsx established pattern. (4) Inline renderPage helper is the established codebase convention (src/test-utils/render.tsx does not exist; $id.test.tsx uses the same pattern). (5) Static source checks in the test enforce frontend.md styling rules (no .css/.scss, no style={{}}) and data-fetching rules (no fetch/axios). (6) LIST_EMPLOYEES_QUERY_KEY co-location constraint verified by test assertion. (7) createFileRoute('/employee/new') routing constraint verified by static test. (8) Scope correct — only new.test.tsx and tasks/84.json added. PR is ready to merge."
+    }
+  ]
+}

@@ -19,6 +19,16 @@
     "empty": "No employees found.",
     "tableHeaderName": "Name",
     "tableHeaderEmail": "Email",
+    "addPerson": "Add person",
+    "new": {
+      "pageTitle": "Add person",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "saveButton": "Save",
+      "nameRequired": "Name is required.",
+      "emailInvalid": "Please enter a valid email address.",
+      "apiError": "Failed to create person. Please try again."
+    },
     "detail": {
       "pageTitle": "Employee Details",
       "nameLabel": "Name",
