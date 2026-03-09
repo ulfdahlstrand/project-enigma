@@ -40,7 +40,7 @@ export async function updateEmployee(
     .executeTakeFirst();
 
   if (row === undefined) {
-    throw new ORPCError({ code: "NOT_FOUND" });
+    throw new ORPCError("NOT_FOUND");
   }
 
   return {
@@ -59,8 +59,8 @@ export async function updateEmployee(
 export const updateEmployeeHandler = implement(contract.updateEmployee).handler(
   async ({ input }) => {
     return updateEmployee(getDb(), input.id, {
-      name: input.name,
-      email: input.email,
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.email !== undefined && { email: input.email }),
     });
   }
 );
@@ -78,8 +78,8 @@ export const updateEmployeeHandler = implement(contract.updateEmployee).handler(
 export function createUpdateEmployeeHandler(db: Kysely<Database>) {
   return implement(contract.updateEmployee).handler(async ({ input }) => {
     return updateEmployee(db, input.id, {
-      name: input.name,
-      email: input.email,
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.email !== undefined && { email: input.email }),
     });
   });
 }

@@ -36,7 +36,7 @@ export async function getEmployee(
     .executeTakeFirst();
 
   if (row === undefined) {
-    throw new ORPCError({ code: "NOT_FOUND" });
+    throw new ORPCError("NOT_FOUND");
   }
 
   return {
