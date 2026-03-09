@@ -1,6 +1,14 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
-import { listEmployeesOutputSchema } from "./employees.js";
+import {
+  listEmployeesOutputSchema,
+  getEmployeeInputSchema,
+  getEmployeeOutputSchema,
+  createEmployeeInputSchema,
+  createEmployeeOutputSchema,
+  updateEmployeeInputSchema,
+  updateEmployeeOutputSchema,
+} from "./employees.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -42,7 +50,16 @@ export type TestEntry = z.infer<typeof testEntrySchema>;
 // Employee schemas — re-exported from ./employees
 // ---------------------------------------------------------------------------
 
-export { employeeSchema, listEmployeesOutputSchema } from "./employees.js";
+export {
+  employeeSchema,
+  listEmployeesOutputSchema,
+  getEmployeeInputSchema,
+  getEmployeeOutputSchema,
+  createEmployeeInputSchema,
+  createEmployeeOutputSchema,
+  updateEmployeeInputSchema,
+  updateEmployeeOutputSchema,
+} from "./employees.js";
 export type { Employee } from "./employees.js";
 
 // ---------------------------------------------------------------------------
@@ -61,8 +78,16 @@ export const contract = oc.router({
   listEmployees: oc
     .input(z.object({}))
     .output(listEmployeesOutputSchema),
+  getEmployee: oc
+    .input(getEmployeeInputSchema)
+    .output(getEmployeeOutputSchema),
+  createEmployee: oc
+    .input(createEmployeeInputSchema)
+    .output(createEmployeeOutputSchema),
+  updateEmployee: oc
+    .input(updateEmployeeInputSchema)
+    .output(updateEmployeeOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
 export type AppRouter = typeof contract;
-
