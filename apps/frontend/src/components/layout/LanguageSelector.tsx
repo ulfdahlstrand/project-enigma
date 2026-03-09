@@ -1,28 +1,70 @@
 /**
- * LanguageSelector component — renders a locale toggle button in the Header.
+ * LanguageSelector component — renders a language dropdown in the Header.
  *
- * Allows the user to switch between supported application languages.
- * All styling is applied exclusively via MUI sx prop — no inline style objects
- * or imported CSS files.
+ * Replaces the former EN/FR toggle button. Uses an MUI Select + MenuItem
+ * structure so that adding a new language in the future only requires adding
+ * an entry to the `LANGUAGES` array — no structural JSX changes are needed.
+ *
+ * Flag SVGs come from country-flag-icons/react/3x2 (GB for English, SE for Swedish).
+ * All styling is applied exclusively via the MUI sx prop.
  */
-import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import MenuItem from "@mui/material/MenuItem";
+import Select, { type SelectChangeEvent } from "@mui/material/Select";
+import GB from "country-flag-icons/react/3x2/GB";
+import SE from "country-flag-icons/react/3x2/SE";
 import { useTranslation } from "react-i18next";
 
-export function LanguageSelector() {
-  const { t, i18n } = useTranslation();
+// ---------------------------------------------------------------------------
+// Single iterable data structure — the only place languages are declared.
+// To add a new language: add one entry here; nothing else changes in this file.
+// ---------------------------------------------------------------------------
+const LANGUAGES = [
+  { locale: "en", FlagIcon: GB, label: "English" },
+  { locale: "sv", FlagIcon: SE, label: "Svenska" },
+] as const;
 
-  const toggleLocale = () => {
-    const next = i18n.language.startsWith("fr") ? "en" : "fr";
-    void i18n.changeLanguage(next);
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function LanguageSelector() {
+  const { i18n } = useTranslation();
+
+  const handleChange = (event: SelectChangeEvent<string>) => {
+    void i18n.changeLanguage(event.target.value);
   };
 
   return (
-    <Button
-      onClick={toggleLocale}
-      color="inherit"
-      sx={{ textTransform: "none" }}
+    <Select
+      value={i18n.language.startsWith("sv") ? "sv" : "en"}
+      onChange={handleChange}
+      size="small"
+      inputProps={{ "aria-label": "Select language" }}
+      sx={{
+        color: "inherit",
+        ".MuiOutlinedInput-notchedOutline": { border: 0 },
+        ".MuiSelect-icon": { color: "inherit" },
+      }}
     >
-      {t("locale.switch")} ({i18n.language === "fr" ? "EN" : "FR"})
-    </Button>
+      {LANGUAGES.map(({ locale, FlagIcon, label }) => (
+        <MenuItem key={locale} value={locale}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{
+                width: 24,
+                height: 16,
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <FlagIcon aria-hidden="true" width={24} height={16} />
+            </Box>
+            {label}
+          </Box>
+        </MenuItem>
+      ))}
+    </Select>
   );
 }

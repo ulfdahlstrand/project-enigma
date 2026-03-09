@@ -12,4 +12,5 @@
  */
 export const localeFlagMap: Record<string, string> = {
   en: "GB",
+  sv: "SE",
 };

@@ -1,0 +1,33 @@
+{
+  "welcome": "Välkommen till CV-verktyget",
+  "header": {
+    "appName": "CV-verktyget"
+  },
+  "footer": {
+    "copyright": "© CV-verktyget. Alla rättigheter förbehållna."
+  },
+  "nav": {
+    "home": "Hem",
+    "test": "Test",
+    "employees": "Anställda"
+  },
+  "employee": {
+    "pageTitle": "Anställda",
+    "pageDescription": "Alla anställda registrerade i systemet.",
+    "loading": "Laddar anställda…",
+    "error": "Det gick inte att ladda anställda. Försök igen senare.",
+    "empty": "Inga anställda hittades.",
+    "tableHeaderName": "Namn",
+    "tableHeaderEmail": "E-post"
+  },
+  "test": {
+    "heading": "Anslutningstest för stack",
+    "description": "Den här sidan validerar full stack-anslutning från slut till slut.",
+    "loading": "Laddar poster…",
+    "error": "Det gick inte att ladda poster. Försök igen senare.",
+    "empty": "Inga poster hittades.",
+    "tableHeaderId": "ID",
+    "tableHeaderName": "Namn",
+    "tableHeaderNote": "Anteckning"
+  }
+}
