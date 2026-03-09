@@ -18,7 +18,17 @@
     "error": "Failed to load employees. Please try again later.",
     "empty": "No employees found.",
     "tableHeaderName": "Name",
-    "tableHeaderEmail": "Email"
+    "tableHeaderEmail": "Email",
+    "detail": {
+      "pageTitle": "Employee Details",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "saveButton": "Save",
+      "saveSuccess": "Employee saved successfully.",
+      "saveError": "Failed to save employee. Please try again.",
+      "notFound": "Person not found.",
+      "loading": "Loading employee…"
+    }
   },
   "test": {
     "heading": "Connectivity Test for stack",

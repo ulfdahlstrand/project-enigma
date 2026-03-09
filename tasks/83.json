@@ -1,0 +1,33 @@
+{
+  "id": 83,
+  "title": "[#81] Build Person Detail page with view and edit functionality",
+  "status": "in_review",
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/routes/employee/$id.tsx",
+      "apps/frontend/src/routes/employee/$id.test.tsx",
+      "apps/frontend/src/test-utils/render.tsx",
+      "apps/frontend/src/locales/en/common.json"
+    ],
+    "risks": [
+      "Shell/glob expansion of $ in filenames may cause issues in some CI environments — paths containing $id must be single-quoted or escaped",
+      "Route.useParams() is mocked in tests via vi.mock('@tanstack/react-router') — tests depend on this pattern remaining stable",
+      "getEmployeeQueryKey structure is tied to the invalidation assertions in AC6 tests — changing the key format would break tests",
+      "test-utils/render.tsx creates i18n instances on every render call; if test isolation requires a single shared instance, this may need to be adjusted"
+    ]
+  },
+  "conversation_log": [
+    {
+      "agent": "developer",
+      "timestamp": "2025-01-30T00:00:00Z",
+      "action": "started",
+      "summary": "Began implementation of employee detail page route at /employee/$id with TanStack Query, MUI, and i18n."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-01-30T01:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented /employee/$id route component with view/edit form, success/error alerts, loading/not-found states, and full cache invalidation. Created co-located test file covering AC1-AC9 and AC12. Created shared test-utils/render.tsx utility. Added employee.detail i18n keys to common.json. PR opened."
+    }
+  ]
+}
