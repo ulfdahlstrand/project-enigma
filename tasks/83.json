@@ -1,0 +1,27 @@
+{
+  "id": 83,
+  "title": "[#81] Build Person Detail page with view and edit functionality",
+  "status": "in_review",
+  "decisions": {
+    "files_to_touch": [
+      "apps/frontend/src/routes/employee/$id.tsx",
+      "apps/frontend/src/routes/employee/$id.test.tsx",
+      "apps/frontend/src/locales/en/common.json",
+      "tasks/83.json"
+    ],
+    "risks": [
+      "TanStack Router useParams() is mocked at module level via vi.mock('@tanstack/react-router') — this is consistent with the established pattern in $id.test.tsx and works correctly with Vitest module hoisting.",
+      "The getEmployeeQueryKey factory function returns a readonly tuple — consumers must not mutate it.",
+      "LIST_EMPLOYEES_QUERY_KEY is imported from ./new.tsx to avoid duplicating the constant; if new.tsx is ever deleted or renamed this import will break.",
+      "The NOT_FOUND error detection relies on duck-typing the error object's 'code' property — if oRPC changes its error shape this could fail silently."
+    ]
+  },
+  "conversation_log": [
+    {
+      "agent": "developer",
+      "timestamp": "2025-07-14T12:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented the employee detail page at apps/frontend/src/routes/employee/$id.tsx. The page fetches a single employee via getEmployee oRPC query, displays name and email TextFields, and allows saving via updateEmployee mutation. On success it shows a success Alert and invalidates both getEmployee and listEmployees query keys. On error it shows an error Alert. Loading state shows CircularProgress. NOT_FOUND error shows a translated message. All user-facing strings are in apps/frontend/src/locales/en/common.json under employee.detail.*. Co-located test file at $id.test.tsx covers AC1–AC9. PR opened."
+    }
+  ]
+}

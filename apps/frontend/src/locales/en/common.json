@@ -18,7 +18,27 @@
     "error": "Failed to load employees. Please try again later.",
     "empty": "No employees found.",
     "tableHeaderName": "Name",
-    "tableHeaderEmail": "Email"
+    "tableHeaderEmail": "Email",
+    "addPerson": "Add person",
+    "new": {
+      "pageTitle": "Add person",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "saveButton": "Save",
+      "nameRequired": "Name is required.",
+      "emailInvalid": "Please enter a valid email address.",
+      "apiError": "Failed to create person. Please try again."
+    },
+    "detail": {
+      "pageTitle": "Person Details",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "saveButton": "Save",
+      "saveSuccess": "Changes saved successfully.",
+      "saveError": "Failed to save changes. Please try again.",
+      "notFound": "Person not found.",
+      "loading": "Loading person…"
+    }
   },
   "test": {
     "heading": "Connectivity Test for stack",
