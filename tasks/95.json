@@ -1,0 +1,46 @@
+{
+  "issue_id": 95,
+  "status": "in_review",
+  "branch": "task/95-change-test-page-heading-to-sthlmtech",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-01-31T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised acceptance criteria to remove non-testable runtime browser render check ('The /test page renders an <h1> containing SthlmTech'). Replaced with a concrete Vitest unit test criterion specifying the test file location and exact assertion. Tightened the 'no other keys modified' criterion to reference git diff. Removed the vague 'Existing tests are updated or new tests added' criterion and replaced it with a specific, binary unit test criterion. All criteria are now verifiable without a running browser."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-10T11:00:00Z",
+      "action": "approved",
+      "summary": "Task fits within current architecture. i18n update matches frontend.md locale conventions. Route file placement matches TanStack Router file-based routing rules. Co-located test file naming and use of Vitest + @testing-library/react matches testing.md conventions exactly."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-10T11:05:00Z",
+      "action": "testability_approved",
+      "summary": "All three acceptance criteria are testable as written. Criterion 1: file read confirms exact string value — binary and specific. Criterion 2: git diff output is deterministic and directly verifiable — binary and specific. Criterion 3: co-located Vitest unit test with exact file name, exact assertion (heading element contains 'SthlmTech'), runnable via vitest run — binary, specific, and within scope. No vague, subjective, or CI-redundant criteria present."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-10T12:00:00Z",
+      "action": "started",
+      "summary": "Branch task/95-change-test-page-heading-to-sthlmtech created. Implementing i18n key update and test file update."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-10T13:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented: (1) Updated test.heading in en/common.json from 'qwerty' to 'SthlmTech'. (2) Updated test.test.tsx assertions from 'qwerty' to 'SthlmTech' across AC1 and AC4. No changes to test.tsx (route component already uses t('test.heading') — no hardcoded strings). PR #96 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Update test.heading in apps/frontend/src/locales/en/common.json from 'qwerty' to 'SthlmTech'. Update test.test.tsx to assert 'SthlmTech' instead of 'qwerty'. No changes to test.tsx required as it already uses t('test.heading') with no hardcoded strings.",
+    "files_to_touch": [
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/routes/test.test.tsx",
+      "tasks/95.json"
+    ],
+    "risks": []
+  }
+}
