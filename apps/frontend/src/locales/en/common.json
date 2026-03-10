@@ -45,7 +45,7 @@
     }
   },
   "test": {
-    "heading": "test",
+    "heading": "CV managing app qwerty",
     "description": "This page validates full end-to-end stack connectivity.",
     "loading": "Loading entries…",
     "error": "Failed to load entries. Please try again later.",
