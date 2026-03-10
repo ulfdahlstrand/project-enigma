@@ -8,7 +8,8 @@
  *   database → oRPC backend endpoint (OpenAPIHandler) → TanStack Query → React
  *
  * It contains no CV-specific business logic. All user-facing strings are
- * sourced from the i18n system via the `useTranslation` hook.
+ * sourced from the i18n system via the `useTranslation` hook — specifically
+ * the "common" namespace (`src/locales/en/common.json`).
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/test")({
 });
 
 function TestPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation("common");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["listTestEntries"],
