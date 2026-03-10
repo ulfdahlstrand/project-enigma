@@ -2,10 +2,10 @@
  * Tests for the /test route.
  *
  * Acceptance criteria covered:
- *   AC1 — test.heading in en/common.json is exactly "Qwerty"
+ *   AC1 — test.heading in en/common.json is exactly "CV managing app"
  *   AC2 — No other keys in en/common.json are added, removed, or modified
- *   AC3 — test.tsx renders heading via t("test.heading") with no hardcoded "Qwerty" in JSX
- *   AC4 — Rendered <h1> contains "Qwerty" using real locale file and custom render utility
+ *   AC3 — test.tsx renders heading via t("test.heading") with no hardcoded "CV managing app" in JSX
+ *   AC4 — Rendered <h1> contains "CV managing app" using real locale file and custom render utility
  */
 
 import React from "react";
@@ -40,12 +40,12 @@ const mockListTestEntries = orpc.listTestEntries as ReturnType<typeof vi.fn>;
 const TestPage = Route.options.component as React.ComponentType;
 
 // ---------------------------------------------------------------------------
-// AC1 — test.heading value in en/common.json is exactly "Qwerty"
+// AC1 — test.heading value in en/common.json is exactly "CV managing app"
 // ---------------------------------------------------------------------------
 
-describe("AC1 — test.heading in en/common.json is exactly 'Qwerty'", () => {
-  it("has the value 'Qwerty' for the test.heading key", () => {
-    expect(enCommon.test.heading).toBe("Qwerty");
+describe("AC1 — test.heading in en/common.json is exactly 'CV managing app'", () => {
+  it("has the value 'CV managing app' for the test.heading key", () => {
+    expect(enCommon.test.heading).toBe("CV managing app");
   });
 });
 
@@ -127,30 +127,30 @@ describe("AC2 — en/common.json structure is unchanged (only test.heading value
 });
 
 // ---------------------------------------------------------------------------
-// AC3 — test.tsx renders heading via t("test.heading"); no hardcoded "Qwerty"
+// AC3 — test.tsx renders heading via t("test.heading"); no hardcoded "CV managing app"
 // ---------------------------------------------------------------------------
 
-describe("AC3 — test.tsx uses t('test.heading') and has no hardcoded 'Qwerty' in JSX", () => {
+describe("AC3 — test.tsx uses t('test.heading') and has no hardcoded 'CV managing app' in JSX", () => {
   it('contains t("test.heading") in the source', () => {
     expect(testRouteSourceRaw).toContain('t("test.heading")');
   });
 
-  it("does not contain the hardcoded string 'Qwerty' in the source", () => {
-    expect(testRouteSourceRaw).not.toContain("Qwerty");
+  it("does not contain the hardcoded string 'CV managing app' in the source", () => {
+    expect(testRouteSourceRaw).not.toContain("CV managing app");
   });
 });
 
 // ---------------------------------------------------------------------------
-// AC4 — Rendered <h1> contains "Qwerty" using real locale file
+// AC4 — Rendered <h1> contains "CV managing app" using real locale file
 // ---------------------------------------------------------------------------
 
-describe("AC4 — Rendered <h1> contains 'Qwerty' via real locale file and custom render utility", () => {
-  it("displays 'Qwerty' in the h1 heading", () => {
+describe("AC4 — Rendered <h1> contains 'CV managing app' via real locale file and custom render utility", () => {
+  it("displays 'CV managing app' in the h1 heading", () => {
     mockListTestEntries.mockResolvedValue({ entries: [] });
 
     renderWithProviders(<TestPage />);
 
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveTextContent("Qwerty");
+    expect(heading).toHaveTextContent("CV managing app");
   });
 });
