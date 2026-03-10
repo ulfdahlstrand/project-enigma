@@ -7,7 +7,7 @@ labels: 'type:feature, status:backlog, agent:architect'
 
 ## Parent Epic
 <!-- Link to parent epic -->
-Closes #
+Part of #
 
 ## Description
 <!-- What does this feature do? -->
