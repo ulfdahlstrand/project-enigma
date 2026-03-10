@@ -19,25 +19,29 @@
     "empty": "No employees found.",
     "tableHeaderName": "Name",
     "tableHeaderEmail": "Email",
-    "addPerson": "Add person",
+    "addPerson": "Add employee",
     "new": {
-      "pageTitle": "Add person",
+      "pageTitle": "Add employee",
       "nameLabel": "Name",
       "emailLabel": "Email",
-      "saveButton": "Save",
+      "submit": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "error": "Failed to save employee. Please try again.",
       "nameRequired": "Name is required.",
-      "emailInvalid": "Please enter a valid email address.",
-      "apiError": "Failed to create person. Please try again."
+      "emailInvalid": "Please enter a valid email address."
     },
     "detail": {
+      "loading": "Loading employee…",
+      "error": "Failed to load employee. Please try again later.",
+      "back": "Back to employees",
       "pageTitle": "Employee Details",
       "nameLabel": "Name",
       "emailLabel": "Email",
       "saveButton": "Save",
       "saveSuccess": "Employee saved successfully.",
       "saveError": "Failed to save employee. Please try again.",
-      "notFound": "Person not found.",
-      "loading": "Loading employee…"
+      "notFound": "Employee not found."
     }
   },
   "test": {

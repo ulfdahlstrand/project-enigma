@@ -18,7 +18,31 @@
     "error": "Det gick inte att ladda anställda. Försök igen senare.",
     "empty": "Inga anställda hittades.",
     "tableHeaderName": "Namn",
-    "tableHeaderEmail": "E-post"
+    "tableHeaderEmail": "E-post",
+    "addPerson": "Lägg till anställd",
+    "new": {
+      "pageTitle": "Lägg till anställd",
+      "nameLabel": "Namn",
+      "emailLabel": "E-post",
+      "submit": "Spara",
+      "saving": "Sparar…",
+      "cancel": "Avbryt",
+      "error": "Det gick inte att spara den anställde. Försök igen.",
+      "nameRequired": "Namn är obligatoriskt.",
+      "emailInvalid": "Ange en giltig e-postadress."
+    },
+    "detail": {
+      "loading": "Laddar anställd…",
+      "error": "Det gick inte att ladda den anställde. Försök igen senare.",
+      "back": "Tillbaka till anställda",
+      "pageTitle": "Anställd",
+      "nameLabel": "Namn",
+      "emailLabel": "E-post",
+      "saveButton": "Spara",
+      "saveSuccess": "Anställd sparad.",
+      "saveError": "Det gick inte att spara den anställde. Försök igen.",
+      "notFound": "Anställd hittades inte."
+    }
   },
   "test": {
     "heading": "Anslutningstest för stack",
