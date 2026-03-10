@@ -20,7 +20,7 @@ export const Route = createFileRoute("/test")({
 });
 
 function TestPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation("common");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["listTestEntries"],

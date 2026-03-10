@@ -1,0 +1,50 @@
+{
+  "issue_id": 92,
+  "status": "in_progress",
+  "branch": "task/92-change-test-page-heading-to-qwerty",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-01-31T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised acceptance criteria from vague browser-observable outcomes to concrete, binary, automatable checks. Criteria now specify: (1) the exact JSON value in en/common.json, (2) no other keys changed, (3) no hardcoded string introduced in JSX, (4) a new Vitest unit test asserting the rendered h1 contains 'qwerty' using the real en/common.json. Updated task body with Goal, Background, Out of Scope, Files Likely to Change, and Dependencies sections. No tasks/issue state file previously existed."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-10T10:30:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with architecture. The locale file path matches the prescribed src/locales/<lang>/common.json structure. The i18n constraint (no hardcoded strings in JSX, use useTranslation) is correctly enforced in the acceptance criteria. The test file placement (co-located at src/routes/test.test.tsx) and use of the custom render utility with real en/common.json aligns with testing.md. Vitest + @testing-library/react are the approved stack."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-10T10:45:00Z",
+      "action": "testability_approved",
+      "summary": "All four acceptance criteria are testable as written. AC1: JSON-parse check for exact key value — binary. AC2: Key-set diff of locale file — binary. AC3: AST/grep check that t('test.heading') is still used and no hardcoded 'qwerty' string appears in JSX — binary. AC4: Named Vitest unit test file at a specific path asserting a specific element's text content using specified tooling — binary, and valid as a 'new test must exist for specific behaviour' criterion rather than a generic CI-implied statement."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-10T11:00:00Z",
+      "action": "testability_approved",
+      "summary": "Re-review confirms all four acceptance criteria remain testable as written. No changes to criteria since prior approval. AC1-AC4 are each binary, specific, within scope, and not CI-implied. Approval reaffirmed; @agent:developer tagged."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-10T12:00:00Z",
+      "action": "branch_created",
+      "summary": "Created branch task/92-change-test-page-heading-to-qwerty. Starting implementation: update test.heading in common.json to 'qwerty', update test.tsx to use useTranslation('common'), and write test.test.tsx."
+    }
+  ],
+  "decisions": {
+    "approach": "Update the test.heading value in apps/frontend/src/locales/en/common.json from 'test' to 'qwerty'. Change test.tsx to use useTranslation('common') — consistent with employee.tsx and necessary for the test render utility (which loads common namespace) to resolve t('test.heading') correctly. Add test.test.tsx using renderWithProviders custom utility.",
+    "files_to_touch": [
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/routes/test.tsx",
+      "apps/frontend/src/routes/test.test.tsx",
+      "tasks/92.json"
+    ],
+    "risks": [
+      "The test.tsx component previously used useTranslation() (defaultNS='translation'), which resolves test.heading from the translation namespace (en.json), not from common.json. Changing to useTranslation('common') is required for AC4 to work via the renderWithProviders utility (which has an empty translation namespace). This change is architecturally consistent with employee.tsx.",
+      "If other tests assert the heading text is 'test', they will need updating — but this is intentional and part of the task."
+    ]
+  }
+}
