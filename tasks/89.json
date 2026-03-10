@@ -1,0 +1,38 @@
+{
+  "issue_id": 89,
+  "status": "in_review",
+  "branch": "task/89-change-test-page-heading",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-01-01T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised acceptance criteria after task revision invocation. Original single criterion ('The <h1> heading on the /test page displays \"test\"') was not automatically testable — it required a running browser. Investigation of the codebase revealed that the /test route renders its heading via t(\"test.heading\") (react-i18next), and the locale file apps/frontend/src/locales/en/common.json currently holds 'Connectivity Test for stack' for that key. Revised criteria are now fully file-checkable: (1) common.json test.heading equals exactly 'test', (2) no other key is removed or changed, (3) test.tsx is unchanged. Component must not be modified; only the locale JSON file changes — consistent with the established i18n convention confirmed by prior task #75."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2025-01-01T00:01:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with the i18n convention in arch/frontend.md: all user-facing strings must go through react-i18next, translation files live in src/locales/<lang>/common.json, and components must not hardcode strings. Only apps/frontend/src/locales/en/common.json changes — no structural, naming, or interface concerns."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2025-01-01T00:02:00Z",
+      "action": "testability_approved",
+      "summary": "All three acceptance criteria are testable as written. Criterion 1 (test.heading value equals exactly 'test') is a precise JSON key/value assertion — binary pass/fail. Criterion 2 (no other key removed or changed) is a full-file structural comparison against a known baseline — binary pass/fail. Criterion 3 (test.tsx unchanged) is a file-content identity check — binary pass/fail. No criterion is vague, subjective, or redundant with CI-enforced checks."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2025-07-11T00:00:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented change to test.heading in apps/frontend/src/locales/en/common.json from 'Connectivity Test for stack' to 'test'. PR #90 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Update test.heading in apps/frontend/src/locales/en/common.json from 'Connectivity Test for stack' to 'test'. No component changes required.",
+    "files_to_touch": [
+      "apps/frontend/src/locales/en/common.json"
+    ],
+    "risks": []
+  }
+}
