@@ -1,0 +1,42 @@
+{
+  "issue_id": 98,
+  "status": "in_review",
+  "branch": "task/98-change-test-heading-to-qwerty-v2",
+  "conversation_log": [
+    {
+      "agent": "requirements",
+      "timestamp": "2025-01-31T00:00:00Z",
+      "action": "criteria_revised",
+      "summary": "Revised acceptance criteria from vague browser-observable assertions to fully automatable binary checks. Original criteria ('The H1 element on the /test route displays the text Qwerty' and 'No other text, styling, or structural elements on the page are affected') were not binary or automatable. Revised criteria now specify: (1) exact JSON value of test.heading in en/common.json, (2) no other locale keys changed, (3) test.tsx must still use t('test.heading') with no hardcoded string in JSX, (4) a co-located Vitest unit test at test.test.tsx asserting the rendered <h1> contains 'Qwerty' via real locale file and custom render utility. Pattern aligned with previously approved task #92."
+    },
+    {
+      "agent": "architect",
+      "timestamp": "2026-03-10T13:40:00Z",
+      "action": "approved",
+      "summary": "Task is fully consistent with architecture. Locale file change follows the react-i18next mandate (frontend.md). Test is co-located at test.test.tsx (testing.md co-location rule), uses Vitest, the real en/common.json, and the custom render utility at src/test-utils/render.tsx (testing.md frontend test utilities). No new dependencies, no structural changes."
+    },
+    {
+      "agent": "tester",
+      "timestamp": "2026-03-10T13:45:00Z",
+      "action": "testability_approved",
+      "summary": "All four acceptance criteria are testable as written. (1) Exact string comparison of test.heading in en/common.json — binary pass/fail. (2) Key-set and value diff of locale file — binary pass/fail. (3) Source inspection of test.tsx for t('test.heading') presence and absence of hardcoded 'Qwerty' in JSX — binary pass/fail. (4) Specific new Vitest unit test asserting rendered <h1> contains 'Qwerty' via real locale file and custom render utility — specific, observable, and not a generic CI-implied check. No vague, subjective, or immeasurable criteria present."
+    },
+    {
+      "agent": "developer",
+      "timestamp": "2026-03-10T14:30:00Z",
+      "action": "pr_opened",
+      "summary": "Implemented all 4 acceptance criteria. Updated test.heading in en/common.json to 'Qwerty'. Updated test.tsx to use useTranslation('common') so it resolves from common.json. Created test.test.tsx with AC1-AC4 assertions using renderWithProviders and real locale file. PR #99 opened."
+    }
+  ],
+  "decisions": {
+    "approach": "Update the test.heading i18n key in apps/frontend/src/locales/en/common.json to 'Qwerty'; update test.tsx to use useTranslation('common') (consistent with employee.tsx pattern); verify via co-located Vitest unit test using the real locale file.",
+    "files_to_touch": [
+      "apps/frontend/src/locales/en/common.json",
+      "apps/frontend/src/routes/test.tsx",
+      "apps/frontend/src/routes/test.test.tsx"
+    ],
+    "risks": [
+      "test.tsx previously used useTranslation() (default 'translation' namespace) instead of useTranslation('common'). This caused test keys to be unresolved. Changed to useTranslation('common') to match the common.json locale file. This is consistent with how employee.tsx works."
+    ]
+  }
+}
