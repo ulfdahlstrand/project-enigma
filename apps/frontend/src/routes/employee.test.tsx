@@ -36,6 +36,36 @@ import navigationSourceRaw from "../components/layout/NavigationMenu.tsx?raw";
 import { Route } from "./employee";
 
 // ---------------------------------------------------------------------------
+// Mock TanStack Router — Link and useNavigate need a RouterProvider in real
+// usage; replacing them here avoids the need for a full router context.
+// ---------------------------------------------------------------------------
+
+const mockNavigate = vi.fn();
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    Link: React.forwardRef(function MockLink(
+      {
+        children,
+        to,
+        ...props
+      }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
+      ref: React.Ref<HTMLAnchorElement>
+    ) {
+      return (
+        <a href={to} ref={ref} {...props}>
+          {children}
+        </a>
+      );
+    }),
+  };
+});
+
+// ---------------------------------------------------------------------------
 // Mock the oRPC client module — prevents real network calls
 // ---------------------------------------------------------------------------
 

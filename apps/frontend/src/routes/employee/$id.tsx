@@ -8,7 +8,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/employee/$id")({
 
 function EmployeeDetailPage() {
   const { t } = useTranslation("common");
-  const { id } = Route.useParams();
+  const { id } = useParams({ from: Route.fullPath });
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
