@@ -29,7 +29,9 @@
       "cancel": "Avbryt",
       "error": "Det gick inte att spara den anställde. Försök igen.",
       "nameRequired": "Namn är obligatoriskt.",
-      "emailInvalid": "Ange en giltig e-postadress."
+      "emailInvalid": "Ange en giltig e-postadress.",
+      "saveButton": "Spara",
+      "apiError": "Det gick inte att spara den anställde. Försök igen."
     },
     "detail": {
       "loading": "Laddar anställd…",

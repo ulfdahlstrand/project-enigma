@@ -1,6 +1,6 @@
 {
   "issue_id": 89,
-  "status": "in_review",
+  "status": "complete",
   "branch": "task/89-change-test-page-heading",
   "conversation_log": [
     {
@@ -26,6 +26,12 @@
       "timestamp": "2025-07-11T00:00:00Z",
       "action": "pr_opened",
       "summary": "Implemented change to test.heading in apps/frontend/src/locales/en/common.json from 'Connectivity Test for stack' to 'test'. PR #90 opened."
+    },
+    {
+      "agent": "orchestrator",
+      "timestamp": "2026-03-10T10:15:49.483Z",
+      "action": "pr_merged",
+      "summary": "PR #90 merged. Task complete."
     }
   ],
   "decisions": {

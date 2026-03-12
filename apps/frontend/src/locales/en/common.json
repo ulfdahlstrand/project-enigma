@@ -29,7 +29,9 @@
       "cancel": "Cancel",
       "error": "Failed to save employee. Please try again.",
       "nameRequired": "Name is required.",
-      "emailInvalid": "Please enter a valid email address."
+      "emailInvalid": "Please enter a valid email address.",
+      "saveButton": "Save",
+      "apiError": "Failed to save employee. Please try again."
     },
     "detail": {
       "loading": "Loading employee…",
