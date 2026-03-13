@@ -7,8 +7,10 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { contract } from "@cv-tool/contracts";
 import { router } from "./router.js";
 import { verifyGoogleToken, type AuthUser } from "./auth/verify-google-token.js";
+import { upsertUser } from "./auth/upsert-user.js";
+import type { User } from "./db/types.js";
 
-export type AppContext = { user: AuthUser | null };
+export type AppContext = { user: User | null };
 
 const port = Number(process.env["BACKEND_PORT"] ?? 3001);
 
@@ -39,7 +41,8 @@ const server = createServer(async (req, res) => {
 
   const authHeader = req.headers["authorization"] ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const user = token ? await verifyGoogleToken(token) : null;
+  const googleUser: AuthUser | null = token ? await verifyGoogleToken(token) : null;
+  const user: User | null = googleUser ? await upsertUser(googleUser).catch(() => null) : null;
 
   const result = await handler.handle(req, res, { context: { user } });
 
