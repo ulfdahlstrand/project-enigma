@@ -4,7 +4,7 @@
  * On successful authentication the Google ID token is stored in localStorage
  * via AuthContext and the user is redirected to /employee.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { GoogleLogin } from "@react-oauth/google";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -13,7 +13,14 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../auth/auth-context";
 
+const TOKEN_KEY = "cv-tool:id-token";
+
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => {
+    if (localStorage.getItem(TOKEN_KEY)) {
+      throw redirect({ to: "/employee" });
+    }
+  },
   component: LoginPage,
 });
 
