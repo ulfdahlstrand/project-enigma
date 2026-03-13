@@ -7,7 +7,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
@@ -26,7 +26,14 @@ import { orpc } from "../orpc-client";
 
 export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 
+const TOKEN_KEY = "cv-tool:id-token";
+
 export const Route = createFileRoute("/employee")({
+  beforeLoad: () => {
+    if (!localStorage.getItem(TOKEN_KEY)) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: EmployeePage,
 });
 
@@ -94,7 +101,7 @@ function EmployeePage() {
                   key={employee.id}
                   hover
                   sx={{ cursor: "pointer" }}
-                  onClick={() => void navigate({ to: "/employee/$employeeId", params: { employeeId: employee.id } })}
+                  onClick={() => void navigate({ to: "/employee/$id", params: { id: employee.id } })}
                 >
                   <TableCell>{employee.name}</TableCell>
                   <TableCell>{employee.email}</TableCell>
