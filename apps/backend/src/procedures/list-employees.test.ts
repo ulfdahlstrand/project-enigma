@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
-import type { Database } from "../db/types.js";
+import type { Database, User } from "../db/types.js";
 import { createListEmployeesHandler } from "./list-employees.js";
+
+const MOCK_USER: User = {
+  id: "550e8400-e29b-41d4-a716-446655440099",
+  google_sub: "google-sub-test",
+  email: "test@example.com",
+  name: "Test User",
+  role: "consultant",
+  created_at: new Date("2026-01-01T00:00:00Z"),
+};
 
 // ---------------------------------------------------------------------------
 // Unit tests for the listEmployees procedure handler.
@@ -48,7 +57,8 @@ describe("listEmployees procedure", () => {
 
     // Act — use the public oRPC `call()` helper to invoke the procedure.
     // Input is {} because the contract declares `oc.input(z.object({}))`.
-    const result = await call(handler, {});
+    // Pass a mock user context so requireAuth() does not throw UNAUTHORIZED.
+    const result = await call(handler, {}, { context: { user: MOCK_USER } });
 
     // Assert: correct Kysely fluent chain was invoked
     expect(selectFrom).toHaveBeenCalledWith("employees");
@@ -65,7 +75,7 @@ describe("listEmployees procedure", () => {
     const handler = createListEmployeesHandler(db);
 
     // Act
-    const result = await call(handler, {});
+    const result = await call(handler, {}, { context: { user: MOCK_USER } });
 
     // Assert
     expect(execute).toHaveBeenCalledTimes(1);
