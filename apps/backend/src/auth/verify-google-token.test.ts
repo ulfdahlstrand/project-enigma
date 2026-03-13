@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { verifyGoogleToken, type VerifyFn } from "./verify-google-token";
+import { verifyGoogleToken, type VerifyFn } from "./verify-google-token.js";
 
 const VALID_PAYLOAD = {
   sub: "google-sub-123",

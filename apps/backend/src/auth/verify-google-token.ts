@@ -37,8 +37,8 @@ export async function verifyGoogleToken(
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const defaultVerifyFn: VerifyFn = (token) =>
-  client.verifyIdToken({
-    idToken: token,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
+const defaultVerifyFn: VerifyFn = (token) => {
+  const audience = process.env.GOOGLE_CLIENT_ID;
+  if (!audience) throw new Error("GOOGLE_CLIENT_ID is not set");
+  return client.verifyIdToken({ idToken: token, audience });
+};
