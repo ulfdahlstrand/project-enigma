@@ -22,7 +22,9 @@ export async function upsertUser(
       name: googleUser.name,
       role: "consultant",
     })
-    .onConflict((oc) => oc.column("google_sub").doNothing())
+    .onConflict((oc) =>
+      oc.column("google_sub").doUpdateSet({ email: (eb) => eb.ref("excluded.email") })
+    )
     .returning(["id", "google_sub", "email", "name", "role", "created_at"])
     .executeTakeFirstOrThrow();
 }
