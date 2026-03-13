@@ -3,6 +3,7 @@ import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
+import { requireAuth, type AuthContext } from "../auth/require-auth.js";
 
 // ---------------------------------------------------------------------------
 // createEmployee — query logic
@@ -46,7 +47,8 @@ export async function createEmployee(
 // ---------------------------------------------------------------------------
 
 export const createEmployeeHandler = implement(contract.createEmployee).handler(
-  async ({ input }) => {
+  async ({ input, context }) => {
+    requireAuth(context as AuthContext);
     return createEmployee(getDb(), input.name, input.email);
   }
 );
@@ -62,7 +64,8 @@ export const createEmployeeHandler = implement(contract.createEmployee).handler(
  * @param db - Kysely instance to inject (real or mock).
  */
 export function createCreateEmployeeHandler(db: Kysely<Database>) {
-  return implement(contract.createEmployee).handler(async ({ input }) => {
+  return implement(contract.createEmployee).handler(async ({ input, context }) => {
+    requireAuth(context as AuthContext);
     return createEmployee(db, input.name, input.email);
   });
 }

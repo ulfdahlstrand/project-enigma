@@ -8,7 +8,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -28,7 +28,14 @@ import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
 export const getEmployeeQueryKey = (id: string) =>
   ["getEmployee", id] as const;
 
+const TOKEN_KEY = "cv-tool:id-token";
+
 export const Route = createFileRoute("/employee/$id")({
+  beforeLoad: () => {
+    if (!localStorage.getItem(TOKEN_KEY)) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: EmployeeDetailPage,
 });
 
