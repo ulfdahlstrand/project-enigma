@@ -10,7 +10,7 @@
  * (queryKey definition) and this form (cache invalidation on success) reference
  * the same value — per the architectural requirement for query key co-location.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -28,7 +28,14 @@ import { orpc } from "../../orpc-client";
  */
 export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 
+const TOKEN_KEY = "cv-tool:id-token";
+
 export const Route = createFileRoute("/employee/new")({
+  beforeLoad: () => {
+    if (!localStorage.getItem(TOKEN_KEY)) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: NewEmployeePage,
 });
 
