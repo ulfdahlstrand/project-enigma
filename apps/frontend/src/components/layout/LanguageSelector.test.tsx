@@ -13,9 +13,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mock react-i18next so tests are isolated from locale file loading.
-// The mock exposes a stable changeLanguage spy so tests can assert on it.
+// mockLanguage is mutable so individual tests can set the starting locale.
 // ---------------------------------------------------------------------------
 const mockChangeLanguage = vi.fn();
+let mockLanguage = "en";
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
@@ -25,7 +26,7 @@ vi.mock("react-i18next", async (importOriginal) => {
       t: (key: string, fallback?: string) => fallback ?? key,
       i18n: {
         changeLanguage: mockChangeLanguage,
-        language: "en",
+        language: mockLanguage,
       },
     }),
   };
@@ -43,6 +44,7 @@ import { LanguageSelector } from "./LanguageSelector";
 describe("LanguageSelector (layout)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLanguage = "en";
   });
 
   it("renders a MenuItem for each supported language (en and sv)", async () => {
@@ -80,6 +82,7 @@ describe("LanguageSelector (layout)", () => {
   });
 
   it("calls i18n.changeLanguage('en') when the English option is selected", async () => {
+    mockLanguage = "sv";
     render(<LanguageSelector />);
 
     // Open the dropdown
