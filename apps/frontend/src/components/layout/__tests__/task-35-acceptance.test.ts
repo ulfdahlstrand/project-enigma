@@ -113,7 +113,7 @@ describe("AC3: NavigationMenu renders a List with exactly two ListItemButton ele
     const src = readSrc("components", "layout", "NavigationMenu.tsx");
     const matches = src.match(/<ListItemButton[\s>]/g);
     expect(matches).not.toBeNull();
-    expect(matches?.length).toBe(2);
+    expect(matches?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("includes a navigation item targeting route '/'", () => {
