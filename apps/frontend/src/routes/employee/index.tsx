@@ -3,7 +3,7 @@
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
  * Rendering: MUI Table components from @mui/material.
- * Styling: MUI sx prop only — no .css/.scss imports, no style={{ }} props.
+ * Styling: MUI sx prop only — no .css/.scss files, no style={{ }} props.
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
@@ -22,13 +22,13 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
-import { orpc } from "../orpc-client";
+import { orpc } from "../../orpc-client";
 
 export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/employee")({
+export const Route = createFileRoute("/employee/")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });

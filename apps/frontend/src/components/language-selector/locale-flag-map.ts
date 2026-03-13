@@ -11,6 +11,6 @@
  *  - Values are ISO 3166-1 alpha-2 country codes (upper-case, two letters)
  */
 export const localeFlagMap: Record<string, string> = {
-  en: "GB",
   sv: "SE",
+  en: "GB",
 };

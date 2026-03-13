@@ -13,9 +13,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { orpc } from "../orpc-client";
+import { orpc } from "../../orpc-client";
 
-export const Route = createFileRoute("/test")({
+export const Route = createFileRoute("/test/")({
   component: TestPage,
 });
 

@@ -11,11 +11,11 @@ import { useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { useAuth } from "../auth/auth-context";
+import { useAuth } from "../../auth/auth-context";
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/login/")({
   beforeLoad: () => {
     if (localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/employee" });

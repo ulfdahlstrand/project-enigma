@@ -56,7 +56,7 @@ describe("upsertUser", () => {
     const insertIntoMock = db.insertInto as ReturnType<typeof vi.fn>;
     expect(insertIntoMock).toHaveBeenCalledWith("users");
 
-    const valuesMock = insertIntoMock.mock.results[0].value.values as ReturnType<typeof vi.fn>;
+    const valuesMock = insertIntoMock.mock.results[0]!.value.values as ReturnType<typeof vi.fn>;
     expect(valuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         google_sub: GOOGLE_USER.sub,
@@ -72,8 +72,8 @@ describe("upsertUser", () => {
     await upsertUser(GOOGLE_USER, db);
 
     const insertIntoMock = db.insertInto as ReturnType<typeof vi.fn>;
-    const valuesMock = insertIntoMock.mock.results[0].value.values as ReturnType<typeof vi.fn>;
-    const onConflictMock = valuesMock.mock.results[0].value.onConflict as ReturnType<typeof vi.fn>;
+    const valuesMock = insertIntoMock.mock.results[0]!.value.values as ReturnType<typeof vi.fn>;
+    const onConflictMock = valuesMock.mock.results[0]!.value.onConflict as ReturnType<typeof vi.fn>;
 
     expect(onConflictMock).toHaveBeenCalled();
   });
