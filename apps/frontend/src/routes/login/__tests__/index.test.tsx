@@ -4,9 +4,9 @@ import { render, screen, act } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import enCommon from "../locales/en/common.json";
-import { AuthProvider } from "../auth/auth-context";
-import { Route } from "./login";
+import enCommon from "../../../locales/en/common.json";
+import { AuthProvider } from "../../../auth/auth-context";
+import { Route } from "..";
 
 // ---------------------------------------------------------------------------
 // Mock @react-oauth/google — avoids needing a real client ID

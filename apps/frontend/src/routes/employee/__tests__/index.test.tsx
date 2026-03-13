@@ -26,14 +26,14 @@ import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 
 // Real locale file for AC11 verification
-import enCommon from "../locales/en/common.json";
+import enCommon from "../../../locales/en/common.json";
 
 // Source file content for static grep checks (AC2, AC3, AC7, AC8, AC10)
-import employeeSourceRaw from "./employee.tsx?raw";
-import navigationSourceRaw from "../components/layout/NavigationMenu.tsx?raw";
+import employeeSourceRaw from "../index.tsx?raw";
+import navigationSourceRaw from "../../../components/layout/NavigationMenu.tsx?raw";
 
 // The component under test — imported as a named export
-import { Route } from "./employee";
+import { Route } from "..";
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router — Link and useNavigate need a RouterProvider in real
@@ -69,13 +69,13 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Mock the oRPC client module — prevents real network calls
 // ---------------------------------------------------------------------------
 
-vi.mock("../orpc-client", () => ({
+vi.mock("../../../orpc-client", () => ({
   orpc: {
     listEmployees: vi.fn(),
   },
 }));
 
-import { orpc } from "../orpc-client";
+import { orpc } from "../../../orpc-client";
 
 const mockListEmployees = orpc.listEmployees as ReturnType<typeof vi.fn>;
 
@@ -230,20 +230,11 @@ describe("AC6 — Multiple employees: name and email rendered for each", () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC10 — No plain string literals as direct JSX children in employee.tsx
+// AC10 — No plain string literals as direct JSX children in employee/index.tsx
 // ---------------------------------------------------------------------------
 
-describe("AC10 — No plain string literals as direct JSX children in employee.tsx", () => {
+describe("AC10 — No plain string literals as direct JSX children in employee/index.tsx", () => {
   it("contains no string literals directly between JSX tags (e.g. <Tag>literal</Tag>)", () => {
-    // Strip single-line comment lines before scanning for JSX text content.
-    // A JSX text child looks like:  >SomePlainText<
-    // Valid i18n calls look like:   >{t("key")}<  or  >{variable}<
-    //
-    // We scan each line, skipping comment lines, looking for:
-    //   - A closing '>' followed by text that contains letters
-    //   - The text is NOT wrapped in { }
-    //   - Followed by an opening '<'
-
     const lines = employeeSourceRaw.split("\n");
     const violations: string[] = [];
 
@@ -258,17 +249,12 @@ describe("AC10 — No plain string literals as direct JSX children in employee.t
         continue;
       }
 
-      // Match: >...text...< where the content does NOT start with { or end with }
-      // This is the signature of a hard-coded JSX text node.
-      // Pattern: >\s*[A-Za-z][^{}<>]*\s*<
       const jsxTextNodePattern = />\s*([A-Za-z][^{}<>]*?)\s*</g;
       let match: RegExpExecArray | null;
       while ((match = jsxTextNodePattern.exec(line)) !== null) {
-        // match[1] is the first capture group — guard against undefined
         const captured = match[1];
         if (captured === undefined) continue;
         const textContent = captured.trim();
-        // Must contain at least one letter (not just punctuation / whitespace)
         if (!textContent || !/[A-Za-z]/.test(textContent)) continue;
         violations.push(
           `Potential hard-coded JSX text child: "${textContent}" — in line: "${trimmed}"`
@@ -301,16 +287,11 @@ describe("AC11 — All translation keys resolve (no raw namespace.key in rendere
     // Wait for the employee name to appear (data has loaded)
     await screen.findByText("Test Employee");
 
-    // A raw (unresolved) translation key looks like:  employee.pageTitle
-    // We check the full body text for that pattern.
     const allText = document.body.textContent ?? "";
 
-    // Pattern: two lowercase/camelCase words separated by a dot
-    // e.g. "employee.empty", "nav.employees"
     const rawKeyPattern = /\b[a-z][a-zA-Z]*\.[a-z][a-zA-Z]*\b/g;
     const matches = allText.match(rawKeyPattern) ?? [];
 
-    // Filter out legitimate non-key patterns (e.g. domain names in test data emails)
     const knownNonKeys = new Set([
       "example.com",
       "test.com",
@@ -326,7 +307,6 @@ describe("AC11 — All translation keys resolve (no raw namespace.key in rendere
 
     renderEmployeePage();
 
-    // Wait for the empty state message
     await screen.findByText(enCommon.employee.empty);
 
     const allText = document.body.textContent ?? "";
@@ -344,17 +324,14 @@ describe("AC11 — All translation keys resolve (no raw namespace.key in rendere
 // Static file checks — AC2, AC3, AC7, AC8, AC9
 // ---------------------------------------------------------------------------
 
-describe("Static checks on employee.tsx source file", () => {
-  // AC2 — createFileRoute("/employee") call present (file uses double quotes)
+describe("Static checks on employee/index.tsx source file", () => {
+  // AC2 — createFileRoute("/employee") call present (trailing slash is added by codegen)
   it('AC2 — contains createFileRoute("/employee") call', () => {
-    expect(employeeSourceRaw).toContain('createFileRoute("/employee")');
+    expect(employeeSourceRaw).toMatch(/createFileRoute\("\/employee\/?"\)/);
   });
 
   // AC3 — No direct fetch, axios, or XMLHttpRequest calls
-  // Note: The file comment mentions "no direct fetch/axios" but we check for
-  // actual runtime usage (import or call), not comment mentions.
   it("AC3 — does not import or call fetch() at runtime", () => {
-    // Strip comment lines then search for fetch(
     const codeLines = employeeSourceRaw
       .split("\n")
       .filter((l) => {
@@ -366,7 +343,6 @@ describe("Static checks on employee.tsx source file", () => {
   });
 
   it("AC3 — does not import or use axios at runtime", () => {
-    // Strip comment lines then search for axios
     const codeLines = employeeSourceRaw
       .split("\n")
       .filter((l) => {
@@ -395,7 +371,6 @@ describe("Static checks on employee.tsx source file", () => {
     expect(employeeSourceRaw).not.toMatch(/import\s+.*\.scss['"]/);
   });
 
-  // AC8 — No inline style={{ prop (actual JSX usage, not in comments)
   it("AC8 — does not use inline style={{ in JSX (outside comments)", () => {
     const codeLines = employeeSourceRaw
       .split("\n")

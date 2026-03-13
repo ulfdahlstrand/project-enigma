@@ -28,26 +28,26 @@ import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 
 // Real locale file — so translated strings match what the UI renders (AC9/AC11)
-import enCommon from "../../locales/en/common.json";
+import enCommon from "../../../locales/en/common.json";
 
 // Source files for static checks (AC1, AC3, AC9)
-import newEmployeeSourceRaw from "./new.tsx?raw";
-import employeeListSourceRaw from "../employee.tsx?raw";
+import newEmployeeSourceRaw from "../new.tsx?raw";
+import employeeListSourceRaw from "../index.tsx?raw";
 
 // Module under test
-import { Route, LIST_EMPLOYEES_QUERY_KEY } from "./new";
+import { Route, LIST_EMPLOYEES_QUERY_KEY } from "../new";
 
 // ---------------------------------------------------------------------------
 // Mock the oRPC client — prevents real network calls
 // ---------------------------------------------------------------------------
 
-vi.mock("../../orpc-client", () => ({
+vi.mock("../../../orpc-client", () => ({
   orpc: {
     createEmployee: vi.fn(),
   },
 }));
 
-import { orpc } from "../../orpc-client";
+import { orpc } from "../../../orpc-client";
 
 const mockCreateEmployee = orpc.createEmployee as ReturnType<typeof vi.fn>;
 
@@ -576,9 +576,9 @@ describe("Static checks on new.tsx source", () => {
   });
 });
 
-describe("Static checks on employee list (employee.tsx) source", () => {
+describe("Static checks on employee list (index.tsx) source", () => {
   // AC1 — "Add person" button present on list page
-  it('AC1 — employee list page imports LIST_EMPLOYEES_QUERY_KEY from ./employee/new', () => {
+  it('AC1 — employee list page references LIST_EMPLOYEES_QUERY_KEY', () => {
     expect(employeeListSourceRaw).toContain("LIST_EMPLOYEES_QUERY_KEY");
   });
 

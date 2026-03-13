@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { Route } from "./employee";
+import { Route } from "..";
 
 const TOKEN_KEY = "cv-tool:id-token";
 

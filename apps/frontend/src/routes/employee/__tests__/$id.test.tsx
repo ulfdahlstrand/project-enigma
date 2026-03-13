@@ -17,35 +17,35 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
 
 // Real locale file — used to match displayed translated text
-import enCommon from "../../locales/en/common.json";
+import enCommon from "../../../locales/en/common.json";
 
 // Custom render utility (AC12)
 import {
   renderWithProviders,
   buildTestQueryClient,
-} from "../../test-utils/render";
+} from "../../../test-utils/render";
 
 // Import the route to extract the component under test
-import { Route, getEmployeeQueryKey } from "./$id";
-import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
+import { Route, getEmployeeQueryKey } from "../$id";
+import { LIST_EMPLOYEES_QUERY_KEY } from "../new";
 
 // ---------------------------------------------------------------------------
 // Mock the oRPC client — prevents real network calls
 // ---------------------------------------------------------------------------
 
-vi.mock("../../orpc-client", () => ({
+vi.mock("../../../orpc-client", () => ({
   orpc: {
     getEmployee: vi.fn(),
     updateEmployee: vi.fn(),
   },
 }));
 
-import { orpc } from "../../orpc-client";
+import { orpc } from "../../../orpc-client";
 
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockUpdateEmployee = orpc.updateEmployee as ReturnType<typeof vi.fn>;
