@@ -122,7 +122,9 @@
       "assignmentPresent": "Present",
       "backButton": "Back to Resumes",
       "export": {
+        "pdf": "Export PDF",
         "markdown": "Export Markdown",
+        "docx": "Export Word",
         "exporting": "Exporting…",
         "selectFormat": "Select export format"
       }
