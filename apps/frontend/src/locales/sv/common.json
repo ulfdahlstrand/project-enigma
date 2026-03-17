@@ -115,6 +115,8 @@
       "notFound": "Meritförteckning hittades inte.",
       "skillsHeading": "Kompetenser",
       "noSkills": "Inga kompetenser tillagda.",
+      "specialSkillsHeading": "Specialkunskaper",
+      "highlightedExperienceHeading": "Exempel på erfarenhet",
       "editButton": "Redigera",
       "addAssignment": "Lägg till uppdrag",
       "assignmentsHeading": "Uppdrag",

@@ -115,6 +115,8 @@
       "notFound": "Resume not found.",
       "skillsHeading": "Skills",
       "noSkills": "No skills added yet.",
+      "specialSkillsHeading": "Special skills",
+      "highlightedExperienceHeading": "Highlighted experience",
       "editButton": "Edit",
       "addAssignment": "Add Assignment",
       "assignmentsHeading": "Assignments",
