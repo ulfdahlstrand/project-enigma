@@ -14,8 +14,6 @@ export interface EmployeeTable {
   id: Generated<string>;
   name: string;
   email: string;
-  title: string | null;
-  presentation: Generated<string[]>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -38,6 +36,8 @@ export interface ResumeTable {
   id: Generated<string>;
   employee_id: string;
   title: string;
+  consultant_title: string | null;
+  presentation: Generated<string[]>;
   summary: string | null;
   language: Generated<string>;
   is_main: Generated<boolean>;
@@ -74,6 +74,8 @@ export interface AssignmentTable {
   technologies: ColumnType<string[], string[], string[]>;
   is_current: Generated<boolean>;
   keywords: string | null;
+  type: string | null;
+  highlight: Generated<boolean>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

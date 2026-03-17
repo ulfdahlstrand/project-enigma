@@ -35,25 +35,34 @@ const BASE_CV_JSON = {
 type MockDb = Kysely<Database> & {
   _mocks: {
     insertExecute: ReturnType<typeof vi.fn>;
+    insertExecuteTakeFirstOrThrow: ReturnType<typeof vi.fn>;
     updateExecute: ReturnType<typeof vi.fn>;
     selectExecuteTakeFirst: ReturnType<typeof vi.fn>;
     insertValues: ReturnType<typeof vi.fn>;
   };
 };
 
+const MAIN_RESUME = { id: "resume-main-id" };
+
 function buildDb({
+  mainResume = undefined,
   existingAssignment = undefined,
   existingEducation = undefined,
 }: {
+  mainResume?: { id: string } | undefined;
   existingAssignment?: { id: string } | undefined;
   existingEducation?: { id: string } | undefined;
 } = {}): MockDb {
   const insertExecute = vi.fn().mockResolvedValue(undefined);
-  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
+  // Used when creating a new resume: .returning("id").executeTakeFirstOrThrow()
+  const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue({ id: "new-resume-id" });
+  const insertReturning = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: insertExecuteTakeFirstOrThrow });
+  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute, returning: insertReturning });
   const insertInto = vi.fn().mockReturnValue({ values: insertValues });
 
-  // selectFrom chain for duplicate checks — first call is the assignment check
+  // selectFrom chain — call order: 1) main resume lookup, 2) assignment duplicate check, 3+) education duplicate checks
   const selectExecuteTakeFirst = vi.fn()
+    .mockResolvedValueOnce(mainResume)
     .mockResolvedValueOnce(existingAssignment)
     .mockResolvedValue(existingEducation);
 
@@ -84,7 +93,7 @@ function buildDb({
     selectFrom,
     insertInto,
     updateTable,
-    _mocks: { insertExecute, updateExecute, selectExecuteTakeFirst, insertValues },
+    _mocks: { insertExecute, insertExecuteTakeFirstOrThrow, updateExecute, selectExecuteTakeFirst, insertValues },
   } as unknown as MockDb;
 }
 
@@ -125,14 +134,14 @@ describe("importCv — assignments", () => {
   });
 
   it("joins context/responsibilities/result with double newline", async () => {
-    const db = buildDb();
+    const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { description: string };
     expect(passedValues.description).toBe("Built things.\n\nImproved performance.");
   });
 
   it("uses 'Unknown' when client is empty", async () => {
-    const db = buildDb();
+    const db = buildDb({ mainResume: MAIN_RESUME });
     const cv = {
       ...BASE_CV_JSON,
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, client: "   " }],
@@ -143,7 +152,7 @@ describe("importCv — assignments", () => {
   });
 
   it("uses technologies array directly", async () => {
-    const db = buildDb();
+    const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { technologies: string[] };
     expect(passedValues.technologies).toEqual(["TypeScript", "Node.js"]);
@@ -172,16 +181,34 @@ describe("importCv — education", () => {
   });
 });
 
-describe("importCv — employee update", () => {
-  it("calls updateTable for employees when title is non-empty", async () => {
-    const db = buildDb();
-    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+describe("importCv — resume", () => {
+  it("updates existing main resume when one exists and title is non-empty", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
+    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
-    expect(updateMock).toHaveBeenCalledWith("employees");
+    expect(updateMock).toHaveBeenCalledWith("resumes");
+    expect(result.resumeCreated).toBe(false);
   });
 
-  it("skips employee update when title and presentation are empty", async () => {
-    const db = buildDb();
+  it("creates a new main resume when none exists", async () => {
+    const db = buildDb({ mainResume: undefined });
+    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const insertMock = (db as unknown as { insertInto: ReturnType<typeof vi.fn> }).insertInto;
+    expect(insertMock).toHaveBeenCalledWith("resumes");
+    expect(result.resumeCreated).toBe(true);
+  });
+
+  it("links new assignments to the resume id", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
+    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const passedValues = db._mocks.insertValues.mock.calls.find(
+      (call) => (call[0] as { resume_id?: string }).resume_id !== undefined
+    )?.[0] as { resume_id: string } | undefined;
+    expect(passedValues?.resume_id).toBe(MAIN_RESUME.id);
+  });
+
+  it("skips title/presentation update when title and presentation are empty", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
     const cv = {
       ...BASE_CV_JSON,
       consultant: { name: "Test", title: "", presentation: [] },

@@ -1,6 +1,7 @@
 import { implement } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
+import { sql } from "kysely";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
@@ -54,12 +55,18 @@ export async function updateResume(
 
   const set: {
     title?: string;
+    consultant_title?: string | null;
+    presentation?: unknown;
     summary?: string | null;
     language?: string;
     is_main?: boolean;
   } = {};
 
   if (input.title !== undefined) set.title = input.title;
+  if (input.consultantTitle !== undefined) set.consultant_title = input.consultantTitle;
+  if (input.presentation !== undefined) {
+    set.presentation = sql`${JSON.stringify(input.presentation)}::jsonb`;
+  }
   if (input.summary !== undefined) set.summary = input.summary;
   if (input.language !== undefined) set.language = input.language;
   if (input.isMain !== undefined) set.is_main = input.isMain;
@@ -79,6 +86,8 @@ export async function updateResume(
     id: row.id,
     employeeId: row.employee_id,
     title: row.title,
+    consultantTitle: row.consultant_title,
+    presentation: row.presentation ?? [],
     summary: row.summary,
     language: row.language,
     isMain: row.is_main,

@@ -80,10 +80,14 @@
       "parseError": "Invalid JSON — please check the format and try again.",
       "importError": "Import failed. Please try again.",
       "resultHeading": "Import complete",
+      "resumeCreated": "A new main resume was created with the imported assignments.",
       "assignmentsCreated": "Assignments created: {{count}}",
       "assignmentsSkipped": "Assignments skipped (duplicates): {{count}}",
       "educationCreated": "Education entries created: {{count}}",
-      "educationSkipped": "Education entries skipped (duplicates): {{count}}"
+      "educationSkipped": "Education entries skipped (duplicates): {{count}}",
+      "languageLabel": "CV language",
+      "languageSv": "Swedish",
+      "languageEn": "English"
     }
   },
   "resume": {
@@ -120,11 +124,10 @@
     },
     "edit": {
       "pageTitle": "Edit Resume",
+      "consultantTitleLabel": "Consultant title",
+      "presentationLabel": "Presentation",
+      "presentationHelper": "Separate paragraphs with a blank line.",
       "summaryLabel": "Summary",
-      "skillNameLabel": "Skill name",
-      "skillLevelLabel": "Level",
-      "addSkillButton": "Add skill",
-      "removeSkillButton": "Remove",
       "saveButton": "Save",
       "saving": "Saving…",
       "saveSuccess": "Resume saved.",

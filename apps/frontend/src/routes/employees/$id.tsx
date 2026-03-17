@@ -53,7 +53,6 @@ export const Route = createFileRoute("/employees/$id")({
 const editEmployeeFormSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  title: z.string(),
 });
 
 type EditEmployeeFormValues = z.infer<typeof editEmployeeFormSchema>;
@@ -92,7 +91,7 @@ function EmployeeDetailPage() {
 
   const { register, handleSubmit, reset } = useForm<EditEmployeeFormValues>({
     resolver: zodResolver(editEmployeeFormSchema),
-    defaultValues: { name: "", email: "", title: "" },
+    defaultValues: { name: "", email: "" },
   });
 
   useEffect(() => {
@@ -100,7 +99,6 @@ function EmployeeDetailPage() {
       reset({
         name: employee.name,
         email: employee.email,
-        title: employee.title ?? "",
       });
     }
   }, [employee, reset]);
@@ -111,7 +109,6 @@ function EmployeeDetailPage() {
         id,
         name: input.name.trim(),
         email: input.email.trim(),
-        title: input.title.trim() || null,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
@@ -250,11 +247,6 @@ function EmployeeDetailPage() {
           required
           fullWidth
         />
-        <TextField
-          label={t("employee.detail.titleLabel")}
-          {...register("title")}
-          fullWidth
-        />
         <Button
           type="submit"
           variant="contained"
@@ -264,19 +256,6 @@ function EmployeeDetailPage() {
           {t("employee.detail.saveButton")}
         </Button>
       </Box>
-
-      {employee?.presentation && employee.presentation.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            {t("employee.detail.presentationHeading")}
-          </Typography>
-          {employee.presentation.map((paragraph, i) => (
-            <Typography key={i} variant="body1" sx={{ mb: 1 }}>
-              {paragraph}
-            </Typography>
-          ))}
-        </Box>
-      )}
 
       <Divider sx={{ my: 3 }} />
 

@@ -80,10 +80,14 @@
       "parseError": "Ogiltig JSON — kontrollera formatet och försök igen.",
       "importError": "Importen misslyckades. Försök igen.",
       "resultHeading": "Import klar",
+      "resumeCreated": "En ny huvud-CV skapades med de importerade uppdragen.",
       "assignmentsCreated": "Uppdrag skapade: {{count}}",
       "assignmentsSkipped": "Uppdrag hoppades över (dubbletter): {{count}}",
       "educationCreated": "Utbildningsposter skapade: {{count}}",
-      "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}"
+      "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}",
+      "languageLabel": "CV-språk",
+      "languageSv": "Svenska",
+      "languageEn": "Engelska"
     }
   },
   "resume": {
@@ -120,11 +124,10 @@
     },
     "edit": {
       "pageTitle": "Redigera meritförteckning",
+      "consultantTitleLabel": "Konsulttitel",
+      "presentationLabel": "Presentation",
+      "presentationHelper": "Separera stycken med en blank rad.",
       "summaryLabel": "Sammanfattning",
-      "skillNameLabel": "Kompetensnamn",
-      "skillLevelLabel": "Nivå",
-      "addSkillButton": "Lägg till",
-      "removeSkillButton": "Ta bort",
       "saveButton": "Spara",
       "saving": "Sparar…",
       "saveSuccess": "Meritförteckning sparad.",

@@ -23,6 +23,8 @@ export const resumeSchema = z.object({
   id: z.string().uuid(),
   employeeId: z.string().uuid(),
   title: z.string(),
+  consultantTitle: z.string().nullable(),
+  presentation: z.array(z.string()),
   summary: z.string().nullable(),
   language: z.string(),
   isMain: z.boolean(),
@@ -73,6 +75,8 @@ export const updateResumeInputSchema = z
   .object({
     id: z.string().uuid(),
     title: z.string().min(1).optional(),
+    consultantTitle: z.string().nullable().optional(),
+    presentation: z.array(z.string()).optional(),
     summary: z.string().nullable().optional(),
     language: z.string().optional(),
     isMain: z.boolean().optional(),
@@ -80,6 +84,8 @@ export const updateResumeInputSchema = z
   .refine(
     (d) =>
       d.title !== undefined ||
+      d.consultantTitle !== undefined ||
+      d.presentation !== undefined ||
       d.summary !== undefined ||
       d.language !== undefined ||
       d.isMain !== undefined,

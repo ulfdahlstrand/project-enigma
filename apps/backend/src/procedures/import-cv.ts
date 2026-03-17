@@ -11,29 +11,64 @@ import type { importCvInputSchema } from "@cv-tool/contracts";
 type ImportCvInput = z.infer<typeof importCvInputSchema>;
 
 export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
-  const { employeeId, cvJson } = input;
+  const { employeeId, language, cvJson } = input;
   const { consultant, education, assignments } = cvJson;
 
   // ---------------------------------------------------------------------------
-  // 1. Update employee title and presentation
+  // 1. Resolve or create the main resume
+  //    - If a main resume exists: update consultant_title and presentation
+  //    - If none exists: create one (is_main=true) with data from the CV JSON
   // ---------------------------------------------------------------------------
 
-  const updates: Array<Promise<unknown>> = [];
-  if (consultant.title) {
-    updates.push(
-      db.updateTable("employees").set({ title: consultant.title }).where("id", "=", employeeId).execute()
-    );
+  let resumeId: string;
+  let resumeCreated = false;
+
+  const existingMainResume = await db
+    .selectFrom("resumes")
+    .select("id")
+    .where("employee_id", "=", employeeId)
+    .where("is_main", "=", true)
+    .where("language", "=", language)
+    .executeTakeFirst();
+
+  if (existingMainResume) {
+    resumeId = existingMainResume.id;
+    const resumeUpdates: Array<Promise<unknown>> = [];
+    if (consultant.title) {
+      resumeUpdates.push(
+        db
+          .updateTable("resumes")
+          .set({ consultant_title: consultant.title, language })
+          .where("id", "=", resumeId)
+          .execute()
+      );
+    }
+    if (consultant.presentation.length > 0) {
+      resumeUpdates.push(
+        db
+          .updateTable("resumes")
+          .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
+          .where("id", "=", resumeId)
+          .execute()
+      );
+    }
+    await Promise.all(resumeUpdates);
+  } else {
+    const newResume = await db
+      .insertInto("resumes")
+      .values({
+        employee_id: employeeId,
+        title: `${consultant.name} CV`,
+        consultant_title: consultant.title || null,
+        presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[],
+        language,
+        is_main: true,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    resumeId = newResume.id;
+    resumeCreated = true;
   }
-  if (consultant.presentation.length > 0) {
-    updates.push(
-      db
-        .updateTable("employees")
-        .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
-        .where("id", "=", employeeId)
-        .execute()
-    );
-  }
-  await Promise.all(updates);
 
   // ---------------------------------------------------------------------------
   // 2. Import assignments — skip duplicates (same employee + client + role + start)
@@ -46,13 +81,13 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     const clientName = a.client.trim() || "Unknown";
 
     // Resolve dates — use explicit start_date/end_date if present, fall back to period
-    let startDate: string;
-    let endDate: string | null;
+    let startDate: Date;
+    let endDate: Date | null;
     let isCurrent: boolean;
 
     if (a.start_date) {
-      startDate = a.start_date;
-      endDate = a.end_date ?? null;
+      startDate = new Date(a.start_date);
+      endDate = a.end_date ? new Date(a.end_date) : null;
       isCurrent = a.end_date === null;
     } else {
       const period = parsePeriod(a.period ?? "");
@@ -91,7 +126,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .insertInto("assignments")
       .values({
         employee_id: employeeId,
-        resume_id: null,
+        resume_id: resumeId,
         client_name: clientName,
         role: a.role.trim(),
         description,
@@ -100,6 +135,8 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         is_current: isCurrent,
         technologies,
         keywords,
+        type: a.type ?? null,
+        highlight: a.highlight ?? false,
       })
       .execute();
 
@@ -151,7 +188,38 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     educationCreated++;
   }
 
+  // ---------------------------------------------------------------------------
+  // 4. Import skills — clear existing and reimport from skills section
+  // ---------------------------------------------------------------------------
+
+  if (cvJson.skills) {
+    await db.deleteFrom("resume_skills").where("cv_id", "=", resumeId).execute();
+
+    let skillOrder = 0;
+    for (const [category, value] of Object.entries(cvJson.skills)) {
+      const names: string[] = Array.isArray(value)
+        ? (value as unknown[]).filter((v): v is string => typeof v === "string")
+        : typeof value === "string"
+        ? [value]
+        : [];
+
+      for (const name of names) {
+        if (!name.trim()) continue;
+        await db
+          .insertInto("resume_skills")
+          .values({
+            cv_id: resumeId,
+            name: name.trim(),
+            category,
+            sort_order: skillOrder++,
+          })
+          .execute();
+      }
+    }
+  }
+
   return {
+    resumeCreated,
     assignmentsCreated,
     assignmentsSkipped,
     educationCreated,

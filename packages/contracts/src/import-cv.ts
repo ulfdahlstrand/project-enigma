@@ -47,10 +47,12 @@ export type CvJson = z.infer<typeof cvJsonSchema>;
 
 export const importCvInputSchema = z.object({
   employeeId: z.string().uuid(),
+  language: z.string().default("en"),
   cvJson: cvJsonSchema,
 });
 
 export const importCvOutputSchema = z.object({
+  resumeCreated: z.boolean(),
   assignmentsCreated: z.number(),
   assignmentsSkipped: z.number(),
   educationCreated: z.number(),

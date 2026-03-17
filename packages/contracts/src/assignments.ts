@@ -18,6 +18,8 @@ export const assignmentSchema = z.object({
   technologies: z.array(z.string()),
   isCurrent: z.boolean(),
   keywords: z.string().nullable(),
+  type: z.string().nullable(),
+  highlight: z.boolean(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
@@ -57,6 +59,8 @@ export const createAssignmentInputSchema = z.object({
   technologies: z.array(z.string()).default([]),
   isCurrent: z.boolean().default(false),
   keywords: z.string().nullable().optional(),
+  type: z.string().nullable().optional(),
+  highlight: z.boolean().default(false),
 });
 
 export const createAssignmentOutputSchema = assignmentSchema;
@@ -77,6 +81,8 @@ export const updateAssignmentInputSchema = z
     technologies: z.array(z.string()).optional(),
     isCurrent: z.boolean().optional(),
     keywords: z.string().nullable().optional(),
+    type: z.string().nullable().optional(),
+    highlight: z.boolean().optional(),
   })
   .refine(
     (d) =>
@@ -88,7 +94,9 @@ export const updateAssignmentInputSchema = z
       d.technologies !== undefined ||
       d.isCurrent !== undefined ||
       d.resumeId !== undefined ||
-      d.keywords !== undefined,
+      d.keywords !== undefined ||
+      d.type !== undefined ||
+      d.highlight !== undefined,
     { message: "At least one field must be provided" }
   );
 

@@ -11,16 +11,23 @@
  * i18n: all visible text via useTranslation("common").
  */
 import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import FormControl from "@mui/material/FormControl";
+import FormLabel from "@mui/material/FormLabel";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../orpc-client";
+import { LIST_ASSIGNMENTS_QUERY_KEY } from "../assignments";
+import { getEducationQueryKey } from "./$id";
+import { LIST_RESUMES_QUERY_KEY } from "../resumes";
 
 const TOKEN_KEY = "cv-tool:id-token";
 
@@ -37,14 +44,23 @@ function ImportCvPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ strict: false }) as { id: string };
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const [jsonText, setJsonText] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"sv" | "en">("sv");
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
       const parsed = cvJsonSchema.parse(cvJson);
-      return orpc.importCv({ employeeId: id, cvJson: parsed });
+      return orpc.importCv({ employeeId: id, language, cvJson: parsed });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: getEducationQueryKey(id) }),
+        queryClient.invalidateQueries({ queryKey: [...LIST_RESUMES_QUERY_KEY, id] }),
+      ]);
     },
   });
 
@@ -112,6 +128,11 @@ function ImportCvPage() {
           <Typography variant="subtitle2" gutterBottom>
             {t("employee.import.resultHeading")}
           </Typography>
+          {mutation.data.resumeCreated && (
+            <Typography variant="body2">
+              {t("employee.import.resumeCreated")}
+            </Typography>
+          )}
           <Typography variant="body2">
             {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
           </Typography>
@@ -126,6 +147,20 @@ function ImportCvPage() {
           </Typography>
         </Alert>
       )}
+
+      <FormControl sx={{ mb: 2 }}>
+        <FormLabel sx={{ mb: 0.5 }}>{t("employee.import.languageLabel")}</FormLabel>
+        <ToggleButtonGroup
+          value={language}
+          exclusive
+          onChange={(_e, val) => { if (val) setLanguage(val as "sv" | "en"); }}
+          size="small"
+          aria-label={t("employee.import.languageLabel")}
+        >
+          <ToggleButton value="sv">{t("employee.import.languageSv")}</ToggleButton>
+          <ToggleButton value="en">{t("employee.import.languageEn")}</ToggleButton>
+        </ToggleButtonGroup>
+      </FormControl>
 
       <TextField
         label={t("employee.import.jsonLabel")}

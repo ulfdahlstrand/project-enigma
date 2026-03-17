@@ -24,6 +24,8 @@ export async function createAssignment(db: Kysely<Database>, input: CreateAssign
       technologies: input.technologies ?? [],
       is_current: input.isCurrent ?? false,
       keywords: input.keywords ?? null,
+      type: input.type ?? null,
+      highlight: input.highlight ?? false,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
