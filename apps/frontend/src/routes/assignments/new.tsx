@@ -45,6 +45,8 @@ function NewAssignmentPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isCurrent, setIsCurrent] = useState(false);
+  const [technologiesRaw, setTechnologiesRaw] = useState("");
+  const [keywords, setKeywords] = useState("");
   const [saveError, setSaveError] = useState(false);
 
   const mutation = useMutation({
@@ -63,16 +65,21 @@ function NewAssignmentPage() {
     e.preventDefault();
     setSaveError(false);
     if (!employeeId) return;
+    const technologies = technologiesRaw
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
     mutation.mutate({
       employeeId: employeeId ?? "",
       resumeId: resumeId ?? null,
       clientName: clientName.trim(),
       role: role.trim(),
-      description: description.trim(),
+      description,
       startDate,
       endDate: endDate || null,
       isCurrent,
-      technologies: [],
+      technologies,
+      keywords: keywords.trim() || null,
     });
   };
 
@@ -113,7 +120,7 @@ function NewAssignmentPage() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           multiline
-          rows={3}
+          minRows={4}
           fullWidth
         />
         <TextField
@@ -132,6 +139,19 @@ function NewAssignmentPage() {
           onChange={(e) => setEndDate(e.target.value)}
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label={t("assignment.new.technologiesLabel")}
+          value={technologiesRaw}
+          onChange={(e) => setTechnologiesRaw(e.target.value)}
+          fullWidth
+          placeholder="React, TypeScript, Node.js"
+        />
+        <TextField
+          label={t("assignment.new.keywordsLabel")}
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          fullWidth
         />
         <FormControlLabel
           control={

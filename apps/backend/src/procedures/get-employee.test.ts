@@ -17,6 +17,8 @@ const FIXED_EMPLOYEE = {
   id: VALID_UUID,
   name: "Alice Smith",
   email: "alice@example.com",
+  title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
 };
@@ -44,6 +46,8 @@ describe("getEmployee", () => {
       id: FIXED_EMPLOYEE.id,
       name: FIXED_EMPLOYEE.name,
       email: FIXED_EMPLOYEE.email,
+      title: null,
+      presentation: [],
       createdAt: FIXED_EMPLOYEE.created_at,
       updatedAt: FIXED_EMPLOYEE.updated_at,
     });
