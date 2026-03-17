@@ -25,10 +25,14 @@ const ASSIGNMENT_ROW = {
 
 function buildSelectMock(rows: unknown[]) {
   const execute = vi.fn().mockResolvedValue(rows);
-  const orderBy = vi.fn().mockReturnValue({ execute });
-  const whereChain = { orderBy, where: vi.fn() };
+  const orderByChain: { execute: ReturnType<typeof vi.fn>; orderBy: ReturnType<typeof vi.fn> } = {
+    execute,
+    orderBy: vi.fn(),
+  };
+  orderByChain.orderBy.mockReturnValue(orderByChain);
+  const whereChain = { orderBy: orderByChain.orderBy, where: vi.fn() };
   whereChain.where.mockReturnValue(whereChain);
-  const selectAll = vi.fn().mockReturnValue({ orderBy, where: whereChain.where });
+  const selectAll = vi.fn().mockReturnValue({ orderBy: orderByChain.orderBy, where: whereChain.where });
   const selectFrom = vi.fn().mockReturnValue({ selectAll });
   const db = { selectFrom } as unknown as Kysely<Database>;
   return { db, selectFrom, execute };
@@ -36,13 +40,17 @@ function buildSelectMock(rows: unknown[]) {
 
 function buildDbWithEmployeeLookup(assignRows: unknown[], employeeId: string) {
   const execute = vi.fn().mockResolvedValue(assignRows);
-  const orderBy = vi.fn().mockReturnValue({ execute });
+  const orderByChain: { execute: ReturnType<typeof vi.fn>; orderBy: ReturnType<typeof vi.fn> } = {
+    execute,
+    orderBy: vi.fn(),
+  };
+  orderByChain.orderBy.mockReturnValue(orderByChain);
   const whereChain: { orderBy: ReturnType<typeof vi.fn>; where: ReturnType<typeof vi.fn> } = {
-    orderBy,
+    orderBy: orderByChain.orderBy,
     where: vi.fn(),
   };
   whereChain.where.mockReturnValue(whereChain);
-  const selectAll = vi.fn().mockReturnValue({ orderBy, where: whereChain.where });
+  const selectAll = vi.fn().mockReturnValue({ orderBy: orderByChain.orderBy, where: whereChain.where });
 
   const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });

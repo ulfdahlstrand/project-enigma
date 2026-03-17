@@ -2,6 +2,7 @@ import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
@@ -64,7 +65,12 @@ export async function listAssignments(
     query = query.where("resume_id", "=", input.resumeId);
   }
 
-  const rows = await query.orderBy("start_date", "desc").execute();
+  const rows = await query
+    .orderBy("is_current", "desc")
+    .orderBy(sql`end_date DESC NULLS FIRST`)
+    .orderBy("start_date", "desc")
+    .orderBy("created_at", "desc")
+    .execute();
   return rows.map(rowToAssignment);
 }
 
