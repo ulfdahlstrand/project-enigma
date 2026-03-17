@@ -1,13 +1,4 @@
-/**
- * /resumes route — displays the list of resumes for the logged-in consultant.
- *
- * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
- * Rendering: MUI Table components from @mui/material.
- * Styling: MUI sx prop only — no .css/.scss files, no style={{ }} props.
- * i18n: all visible text via useTranslation("common") — no plain string literals
- *       as direct JSX children.
- */
-import { createFileRoute, redirect, useNavigate, useSearch, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -25,8 +16,9 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import { useSearch } from "@tanstack/react-router";
 
-export const LIST_RESUMES_QUERY_KEY = ["listResumes"] as const;
+export const LIST_ASSIGNMENTS_QUERY_KEY = ["listAssignments"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
@@ -34,34 +26,34 @@ const searchSchema = z.object({
   employeeId: z.string().optional(),
 });
 
-export const Route = createFileRoute("/resumes/")({
+export const Route = createFileRoute("/assignments/")({
   validateSearch: searchSchema,
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
     }
   },
-  component: ResumeListPage,
+  component: AssignmentListPage,
 });
 
-function ResumeListPage() {
+function AssignmentListPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
 
-  const {
-    data: resumes,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: employeeId ? [...LIST_RESUMES_QUERY_KEY, employeeId] : LIST_RESUMES_QUERY_KEY,
-    queryFn: () => orpc.listResumes(employeeId ? { employeeId } : {}),
+  const queryKey = employeeId
+    ? [...LIST_ASSIGNMENTS_QUERY_KEY, employeeId]
+    : LIST_ASSIGNMENTS_QUERY_KEY;
+
+  const { data: assignments, isLoading, isError } = useQuery({
+    queryKey,
+    queryFn: () => orpc.listAssignments(employeeId ? { employeeId } : {}),
   });
 
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("resume.loading")} />
+        <CircularProgress aria-label={t("assignment.loading")} />
       </Box>
     );
   }
@@ -69,7 +61,7 @@ function ResumeListPage() {
   if (isError) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("resume.error")}</Alert>
+        <Alert severity="error">{t("assignment.error")}</Alert>
       </Box>
     );
   }
@@ -78,49 +70,53 @@ function ResumeListPage() {
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
         <Typography variant="h4" component="h1">
-          {t("resume.pageTitle")}
+          {t("assignment.pageTitle")}
         </Typography>
-        {employeeId && (
-          <Button
-            variant="contained"
-            component={Link}
-            to="/resumes/new"
-            search={{ employeeId }}
-          >
-            {t("resume.addResume")}
-          </Button>
-        )}
+        <Button
+          variant="contained"
+          component={Link}
+          to="/assignments/new"
+          search={employeeId ? { employeeId } : {}}
+        >
+          {t("assignment.addAssignment")}
+        </Button>
       </Box>
 
-      {resumes && resumes.length === 0 ? (
-        <Typography variant="body1">{t("resume.empty")}</Typography>
+      {assignments && assignments.length === 0 ? (
+        <Typography variant="body1">{t("assignment.empty")}</Typography>
       ) : (
         <TableContainer component={Paper}>
-          <Table aria-label={t("resume.pageTitle")}>
+          <Table aria-label={t("assignment.pageTitle")}>
             <TableHead>
               <TableRow>
-                <TableCell>{t("resume.tableHeaderTitle")}</TableCell>
-                <TableCell>{t("resume.tableHeaderLanguage")}</TableCell>
-                <TableCell>{t("resume.tableHeaderMain")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderCurrent")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {resumes?.map((resume) => (
+              {assignments?.map((assignment) => (
                 <TableRow
-                  key={resume.id}
+                  key={assignment.id}
                   hover
                   sx={{ cursor: "pointer" }}
                   onClick={() =>
-                    void navigate({ to: "/resumes/$id", params: { id: resume.id } })
+                    void navigate({ to: "/assignments/$id", params: { id: assignment.id } })
                   }
                 >
-                  <TableCell>{resume.title}</TableCell>
+                  <TableCell>{assignment.clientName}</TableCell>
+                  <TableCell>{assignment.role}</TableCell>
                   <TableCell>
-                    <Chip label={resume.language} size="small" />
+                    {typeof assignment.startDate === "string"
+                      ? assignment.startDate.slice(0, 10)
+                      : assignment.startDate instanceof Date
+                        ? assignment.startDate.toISOString().slice(0, 10)
+                        : ""}
                   </TableCell>
                   <TableCell>
-                    {resume.isMain ? (
-                      <Chip label={t("resume.mainBadge")} color="primary" size="small" />
+                    {assignment.isCurrent ? (
+                      <Chip label={t("assignment.tableHeaderCurrent")} color="success" size="small" />
                     ) : null}
                   </TableCell>
                 </TableRow>

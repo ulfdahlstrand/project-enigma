@@ -57,11 +57,20 @@
     "loading": "Loading resumes…",
     "error": "Failed to load resumes. Please try again later.",
     "empty": "No resumes found.",
+    "addResume": "Add resume",
     "tableHeaderTitle": "Title",
     "tableHeaderLanguage": "Language",
     "tableHeaderMain": "Main",
     "languageBadge": "{{language}}",
     "mainBadge": "Main",
+    "new": {
+      "pageTitle": "New Resume",
+      "titleLabel": "Title",
+      "languageLabel": "Language",
+      "saveButton": "Create",
+      "cancel": "Cancel",
+      "saveError": "Failed to create resume. Please try again."
+    },
     "detail": {
       "loading": "Loading resume…",
       "error": "Failed to load resume.",
@@ -69,6 +78,10 @@
       "skillsHeading": "Skills",
       "noSkills": "No skills added yet.",
       "editButton": "Edit",
+      "addAssignment": "Add Assignment",
+      "assignmentsHeading": "Assignments",
+      "noAssignments": "No assignments added yet.",
+      "assignmentPresent": "Present",
       "backButton": "Back to Resumes"
     },
     "edit": {
@@ -83,6 +96,45 @@
       "saveSuccess": "Resume saved.",
       "saveError": "Failed to save resume. Please try again.",
       "backButton": "Back"
+    }
+  },
+  "assignment": {
+    "pageTitle": "Assignments",
+    "loading": "Loading assignments…",
+    "error": "Failed to load assignments. Please try again later.",
+    "empty": "No assignments found.",
+    "tableHeaderClient": "Client",
+    "tableHeaderRole": "Role",
+    "tableHeaderStart": "Start date",
+    "tableHeaderCurrent": "Current",
+    "addAssignment": "Add assignment",
+    "new": {
+      "pageTitle": "New Assignment",
+      "clientNameLabel": "Client name",
+      "roleLabel": "Role",
+      "descriptionLabel": "Description",
+      "startDateLabel": "Start date",
+      "endDateLabel": "End date",
+      "technologiesLabel": "Technologies",
+      "isCurrentLabel": "Currently active",
+      "saveButton": "Save",
+      "cancel": "Cancel",
+      "saveError": "Failed to save assignment. Please try again."
+    },
+    "detail": {
+      "loading": "Loading assignment…",
+      "notFound": "Assignment not found.",
+      "clientNameLabel": "Client name",
+      "roleLabel": "Role",
+      "descriptionLabel": "Description",
+      "startDateLabel": "Start date",
+      "endDateLabel": "End date",
+      "technologiesLabel": "Technologies",
+      "isCurrentLabel": "Currently active",
+      "saveButton": "Save",
+      "saveSuccess": "Assignment saved.",
+      "saveError": "Failed to save assignment. Please try again.",
+      "back": "Back to assignments"
     }
   },
   "test": {

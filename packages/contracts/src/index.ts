@@ -21,6 +21,18 @@ import {
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
 } from "./resumes.js";
+import {
+  listAssignmentsInputSchema,
+  listAssignmentsOutputSchema,
+  getAssignmentInputSchema,
+  getAssignmentOutputSchema,
+  createAssignmentInputSchema,
+  createAssignmentOutputSchema,
+  updateAssignmentInputSchema,
+  updateAssignmentOutputSchema,
+  deleteAssignmentInputSchema,
+  deleteAssignmentOutputSchema,
+} from "./assignments.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -96,6 +108,25 @@ export {
 export type { ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
 // ---------------------------------------------------------------------------
+// Assignment schemas — re-exported from ./assignments
+// ---------------------------------------------------------------------------
+
+export {
+  assignmentSchema,
+  listAssignmentsInputSchema,
+  listAssignmentsOutputSchema,
+  getAssignmentInputSchema,
+  getAssignmentOutputSchema,
+  createAssignmentInputSchema,
+  createAssignmentOutputSchema,
+  updateAssignmentInputSchema,
+  updateAssignmentOutputSchema,
+  deleteAssignmentInputSchema,
+  deleteAssignmentOutputSchema,
+} from "./assignments.js";
+export type { Assignment } from "./assignments.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -125,6 +156,11 @@ export const contract = oc.router({
   createResume: oc.input(createResumeInputSchema).output(createResumeOutputSchema),
   updateResume: oc.input(updateResumeInputSchema).output(updateResumeOutputSchema),
   deleteResume: oc.input(deleteResumeInputSchema).output(deleteResumeOutputSchema),
+  listAssignments: oc.input(listAssignmentsInputSchema).output(listAssignmentsOutputSchema),
+  getAssignment: oc.input(getAssignmentInputSchema).output(getAssignmentOutputSchema),
+  createAssignment: oc.input(createAssignmentInputSchema).output(createAssignmentOutputSchema),
+  updateAssignment: oc.input(updateAssignmentInputSchema).output(updateAssignmentOutputSchema),
+  deleteAssignment: oc.input(deleteAssignmentInputSchema).output(deleteAssignmentOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

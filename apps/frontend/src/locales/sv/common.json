@@ -57,11 +57,20 @@
     "loading": "Laddar meritförteckningar…",
     "error": "Kunde inte ladda meritförteckningar. Försök igen.",
     "empty": "Inga meritförteckningar hittades.",
+    "addResume": "Lägg till meritförteckning",
     "tableHeaderTitle": "Titel",
     "tableHeaderLanguage": "Språk",
     "tableHeaderMain": "Huvud",
     "languageBadge": "{{language}}",
     "mainBadge": "Huvud",
+    "new": {
+      "pageTitle": "Ny meritförteckning",
+      "titleLabel": "Titel",
+      "languageLabel": "Språk",
+      "saveButton": "Skapa",
+      "cancel": "Avbryt",
+      "saveError": "Det gick inte att skapa meritförteckningen. Försök igen."
+    },
     "detail": {
       "loading": "Laddar meritförteckning…",
       "error": "Kunde inte ladda meritförteckning.",
@@ -69,6 +78,10 @@
       "skillsHeading": "Kompetenser",
       "noSkills": "Inga kompetenser tillagda.",
       "editButton": "Redigera",
+      "addAssignment": "Lägg till uppdrag",
+      "assignmentsHeading": "Uppdrag",
+      "noAssignments": "Inga uppdrag tillagda.",
+      "assignmentPresent": "Nuvarande",
       "backButton": "Tillbaka till meritförteckningar"
     },
     "edit": {
@@ -83,6 +96,45 @@
       "saveSuccess": "Meritförteckning sparad.",
       "saveError": "Kunde inte spara meritförteckning. Försök igen.",
       "backButton": "Tillbaka"
+    }
+  },
+  "assignment": {
+    "pageTitle": "Uppdrag",
+    "loading": "Laddar uppdrag…",
+    "error": "Det gick inte att ladda uppdrag. Försök igen senare.",
+    "empty": "Inga uppdrag hittades.",
+    "tableHeaderClient": "Kund",
+    "tableHeaderRole": "Roll",
+    "tableHeaderStart": "Startdatum",
+    "tableHeaderCurrent": "Pågående",
+    "addAssignment": "Lägg till uppdrag",
+    "new": {
+      "pageTitle": "Nytt uppdrag",
+      "clientNameLabel": "Kundnamn",
+      "roleLabel": "Roll",
+      "descriptionLabel": "Beskrivning",
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Slutdatum",
+      "technologiesLabel": "Teknologier",
+      "isCurrentLabel": "Pågående uppdrag",
+      "saveButton": "Spara",
+      "cancel": "Avbryt",
+      "saveError": "Det gick inte att spara uppdraget. Försök igen."
+    },
+    "detail": {
+      "loading": "Laddar uppdrag…",
+      "notFound": "Uppdraget hittades inte.",
+      "clientNameLabel": "Kundnamn",
+      "roleLabel": "Roll",
+      "descriptionLabel": "Beskrivning",
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Slutdatum",
+      "technologiesLabel": "Teknologier",
+      "isCurrentLabel": "Pågående uppdrag",
+      "saveButton": "Spara",
+      "saveSuccess": "Uppdraget sparades.",
+      "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+      "back": "Tillbaka till uppdrag"
     }
   },
   "test": {

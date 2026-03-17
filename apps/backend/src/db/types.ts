@@ -1,4 +1,4 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "kysely";
 
 // ---------------------------------------------------------------------------
 // Database interface
@@ -58,11 +58,31 @@ export type ResumeSkill = Selectable<ResumeSkillTable>;
 export type NewResumeSkill = Insertable<ResumeSkillTable>;
 export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
 
+export interface AssignmentTable {
+  id: Generated<string>;
+  employee_id: string;
+  resume_id: string | null;
+  client_name: string;
+  role: string;
+  description: Generated<string>;
+  start_date: Date;
+  end_date: Date | null;
+  technologies: ColumnType<string[], string[], string[]>;
+  is_current: Generated<boolean>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type Assignment = Selectable<AssignmentTable>;
+export type NewAssignment = Insertable<AssignmentTable>;
+export type AssignmentUpdate = Updateable<AssignmentTable>;
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
+  assignments: AssignmentTable;
 }
 
 // ---------------------------------------------------------------------------

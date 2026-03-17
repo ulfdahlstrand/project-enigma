@@ -19,6 +19,13 @@ import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 
@@ -55,6 +62,12 @@ function ResumeDetailPage() {
     queryKey,
     queryFn: () => orpc.getResume({ id }),
     retry: false,
+  });
+
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["listAssignments", "resume", id],
+    queryFn: () => orpc.listAssignments({ resumeId: id }),
+    enabled: !!resume,
   });
 
   if (isLoading) {
@@ -125,6 +138,54 @@ function ResumeDetailPage() {
         </List>
       )}
 
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="h6" gutterBottom>
+        {t("resume.detail.assignmentsHeading")}
+      </Typography>
+
+      {assignments.length === 0 ? (
+        <Typography variant="body2">{t("resume.detail.noAssignments")}</Typography>
+      ) : (
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
+            <TableHead>
+              <TableRow>
+                <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
+                <TableCell>{t("assignment.tableHeaderStart").replace("Start", "End")}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {assignments.map((a) => (
+                <TableRow
+                  key={a.id}
+                  hover
+                  sx={{ cursor: "pointer" }}
+                  onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
+                >
+                  <TableCell>{a.clientName}</TableCell>
+                  <TableCell>{a.role}</TableCell>
+                  <TableCell>
+                    {typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}
+                  </TableCell>
+                  <TableCell>
+                    {a.isCurrent ? (
+                      <Chip label={t("resume.detail.assignmentPresent")} color="success" size="small" />
+                    ) : typeof a.endDate === "string" ? (
+                      a.endDate.slice(0, 10)
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
       <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
         <Button
           variant="contained"
@@ -133,6 +194,14 @@ function ResumeDetailPage() {
           }
         >
           {t("resume.detail.editButton")}
+        </Button>
+        <Button
+          variant="outlined"
+          component={Link}
+          to="/assignments/new"
+          search={{ resumeId: id, employeeId: resume?.employeeId }}
+        >
+          {t("resume.detail.addAssignment")}
         </Button>
         <Button component={Link} to="/resumes">
           {t("resume.detail.backButton")}

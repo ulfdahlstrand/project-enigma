@@ -31,12 +31,14 @@ vi.mock("../../../orpc-client", () => ({
     listResumes: vi.fn(),
     getResume: vi.fn(),
     updateResume: vi.fn(),
+    listAssignments: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockListAssignments = orpc.listAssignments as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -102,6 +104,10 @@ function renderPage() {
   const result = renderWithProviders(<ResumeDetailPage />, { queryClient });
   return { ...result, queryClient };
 }
+
+beforeEach(() => {
+  mockListAssignments.mockResolvedValue([]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -277,5 +283,76 @@ describe("Route export", () => {
   it("exports a Route object with a component", () => {
     expect(Route).toBeDefined();
     expect(Route.options.component).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Assignments section
+// ---------------------------------------------------------------------------
+
+const TEST_ASSIGNMENTS = [
+  {
+    id: "assign-1",
+    employeeId: "emp-id-1",
+    resumeId: TEST_RESUME_ID,
+    clientName: "Acme Corp",
+    role: "Senior Developer",
+    description: "",
+    startDate: "2022-01-01",
+    endDate: "2023-06-30",
+    technologies: ["TypeScript"],
+    isCurrent: false,
+    createdAt: "2022-01-01T00:00:00Z",
+    updatedAt: "2022-01-01T00:00:00Z",
+  },
+  {
+    id: "assign-2",
+    employeeId: "emp-id-1",
+    resumeId: TEST_RESUME_ID,
+    clientName: "Beta Inc",
+    role: "Tech Lead",
+    description: "",
+    startDate: "2023-07-01",
+    endDate: null,
+    technologies: ["Go"],
+    isCurrent: true,
+    createdAt: "2023-07-01T00:00:00Z",
+    updatedAt: "2023-07-01T00:00:00Z",
+  },
+];
+
+describe("Assignments section", () => {
+  beforeEach(() => {
+    mockGetResume.mockResolvedValue(TEST_RESUME);
+  });
+
+  it("renders the assignments heading", async () => {
+    mockListAssignments.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText(TEST_RESUME.title);
+    expect(screen.getByText(enCommon.resume.detail.assignmentsHeading)).toBeInTheDocument();
+  });
+
+  it("renders 'no assignments' message when list is empty", async () => {
+    mockListAssignments.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText(TEST_RESUME.title);
+    expect(screen.getByText(enCommon.resume.detail.noAssignments)).toBeInTheDocument();
+  });
+
+  it("renders client name and role for each assignment", async () => {
+    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
+    renderPage();
+    await screen.findByText("Acme Corp");
+    expect(screen.getByText("Senior Developer")).toBeInTheDocument();
+    expect(screen.getByText("Beta Inc")).toBeInTheDocument();
+    expect(screen.getByText("Tech Lead")).toBeInTheDocument();
+  });
+
+  it("renders 'Present' chip for current assignment", async () => {
+    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
+    renderPage();
+    await screen.findByText("Beta Inc");
+    expect(screen.getByText(enCommon.resume.detail.assignmentPresent)).toBeInTheDocument();
   });
 });
