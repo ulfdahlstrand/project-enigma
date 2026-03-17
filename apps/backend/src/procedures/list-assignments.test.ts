@@ -20,6 +20,8 @@ const ASSIGNMENT_ROW = {
   technologies: ["TypeScript", "React"],
   is_current: true,
   keywords: null,
+  type: null,
+  highlight: false,
   created_at: new Date("2023-01-01T00:00:00.000Z"),
   updated_at: new Date("2023-01-01T00:00:00.000Z"),
 };

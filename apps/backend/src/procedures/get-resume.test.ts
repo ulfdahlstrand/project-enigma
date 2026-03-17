@@ -11,6 +11,10 @@ import { createGetResumeHandler, getResume } from "./get-resume.js";
 
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
+
+const ADMIN_USER = { id: "user-admin-1", google_sub: "sub-admin", email: "admin@example.com", name: "Admin", role: "admin" as const, created_at: new Date("2025-01-01") };
+const CONSULTANT_USER = { id: "user-cons-1", google_sub: "sub-cons", email: "consultant@example.com", name: "Consultant", role: "consultant" as const, created_at: new Date("2025-01-01") };
+const CONSULTANT_USER_2 = { id: "user-cons-2", google_sub: "sub-cons2", email: "other@example.com", name: "Other", role: "consultant" as const, created_at: new Date("2025-01-01") };
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const SKILL_ID_1 = "550e8400-e29b-41d4-a716-446655440031";
 const SKILL_ID_2 = "550e8400-e29b-41d4-a716-446655440032";
@@ -22,6 +26,8 @@ const RESUME_ROW = {
   summary: "Experienced backend engineer",
   language: "en",
   is_main: true,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
 };
@@ -110,7 +116,7 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
 describe("getResume query function", () => {
   it("returns a resume with its skills array for an admin", async () => {
     const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     const result = await getResume(db, adminUser, RESUME_ID);
 
@@ -132,7 +138,7 @@ describe("getResume query function", () => {
 
   it("returns a resume with an empty skills array when no skills exist", async () => {
     const { db } = buildDbMock(RESUME_ROW, []);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     const result = await getResume(db, adminUser, RESUME_ID);
 
@@ -141,7 +147,7 @@ describe("getResume query function", () => {
 
   it("orders skills by sort_order ascending", async () => {
     const { db, skillsOrderBy } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     await getResume(db, adminUser, RESUME_ID);
 
@@ -150,7 +156,7 @@ describe("getResume query function", () => {
 
   it("throws NOT_FOUND when resume does not exist", async () => {
     const { db } = buildDbMock(undefined, []);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     await expect(getResume(db, adminUser, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
@@ -159,7 +165,7 @@ describe("getResume query function", () => {
 
   it("consultant can fetch their own resume", async () => {
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = CONSULTANT_USER;
 
     const result = await getResume(db, consultantUser, RESUME_ID);
 
@@ -169,7 +175,7 @@ describe("getResume query function", () => {
   it("throws FORBIDDEN when consultant tries to fetch another employee's resume", async () => {
     // Resume belongs to EMPLOYEE_ID_1 but consultant maps to EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_2);
-    const consultantUser = { role: "consultant" as const, email: "other@example.com" };
+    const consultantUser = CONSULTANT_USER_2;
 
     await expect(getResume(db, consultantUser, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"

@@ -24,6 +24,8 @@ const RESUME_ROW_1 = {
   summary: "Experienced backend engineer",
   language: "en",
   is_main: true,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
 };
@@ -35,6 +37,8 @@ const RESUME_ROW_2 = {
   summary: null,
   language: "sv",
   is_main: false,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-02-01T00:00:00.000Z"),
   updated_at: new Date("2025-02-01T00:00:00.000Z"),
 };

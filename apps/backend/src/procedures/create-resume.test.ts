@@ -13,6 +13,9 @@ const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 
+const ADMIN_USER = { id: "user-admin-1", google_sub: "sub-admin", email: "admin@example.com", name: "Admin", role: "admin" as const, created_at: new Date("2025-01-01") };
+const CONSULTANT_USER = { id: "user-cons-1", google_sub: "sub-cons", email: "consultant@example.com", name: "Consultant", role: "consultant" as const, created_at: new Date("2025-01-01") };
+
 const NEW_RESUME_ROW = {
   id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
@@ -20,6 +23,8 @@ const NEW_RESUME_ROW = {
   summary: null,
   language: "en",
   is_main: false,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-03-01T00:00:00.000Z"),
   updated_at: new Date("2025-03-01T00:00:00.000Z"),
 };
@@ -107,7 +112,7 @@ function buildDbWithMissingEmployee() {
 describe("createResume query function", () => {
   it("admin creates resume for any employee and returns resume with empty skills array", async () => {
     const { db, values } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -133,7 +138,7 @@ describe("createResume query function", () => {
 
   it("consultant creates resume for their own employee_id and succeeds", async () => {
     const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = CONSULTANT_USER;
 
     const result = await createResume(db, consultantUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -148,7 +153,7 @@ describe("createResume query function", () => {
   it("throws FORBIDDEN when consultant tries to create a resume for a different employee", async () => {
     // Consultant maps to EMPLOYEE_ID_1 but input.employeeId is EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = CONSULTANT_USER;
 
     await expect(
       createResume(db, consultantUser, {
@@ -186,7 +191,7 @@ describe("createResume query function", () => {
 
   it("maps DB snake_case fields to camelCase in output", async () => {
     const { db } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = ADMIN_USER;
 
     const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,

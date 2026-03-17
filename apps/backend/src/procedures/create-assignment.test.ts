@@ -20,6 +20,8 @@ const RETURNED_ROW = {
   technologies: ["TypeScript"],
   is_current: false,
   keywords: null,
+  type: null,
+  highlight: false,
   created_at: new Date("2023-01-01T00:00:00.000Z"),
   updated_at: new Date("2023-01-01T00:00:00.000Z"),
 };
