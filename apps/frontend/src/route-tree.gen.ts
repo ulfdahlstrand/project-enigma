@@ -13,12 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TestIndexRouteImport } from './routes/test/index'
 import { Route as ResumesIndexRouteImport } from './routes/resumes/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
-import { Route as EmployeeIndexRouteImport } from './routes/employee/index'
+import { Route as EmployeesIndexRouteImport } from './routes/employees/index'
 import { Route as AssignmentsIndexRouteImport } from './routes/assignments/index'
 import { Route as ResumesNewRouteImport } from './routes/resumes/new'
 import { Route as ResumesIdRouteImport } from './routes/resumes/$id'
-import { Route as EmployeeNewRouteImport } from './routes/employee/new'
-import { Route as EmployeeIdRouteImport } from './routes/employee/$id'
+import { Route as EmployeesNewRouteImport } from './routes/employees/new'
+import { Route as EmployeesIdRouteImport } from './routes/employees/$id'
 import { Route as AssignmentsNewRouteImport } from './routes/assignments/new'
 import { Route as AssignmentsIdRouteImport } from './routes/assignments/$id'
 import { Route as ResumesIdEditRouteImport } from './routes/resumes/$id.edit'
@@ -43,9 +43,9 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
   path: '/login/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmployeeIndexRoute = EmployeeIndexRouteImport.update({
-  id: '/employee/',
-  path: '/employee/',
+const EmployeesIndexRoute = EmployeesIndexRouteImport.update({
+  id: '/employees/',
+  path: '/employees/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssignmentsIndexRoute = AssignmentsIndexRouteImport.update({
@@ -63,14 +63,14 @@ const ResumesIdRoute = ResumesIdRouteImport.update({
   path: '/resumes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmployeeNewRoute = EmployeeNewRouteImport.update({
-  id: '/employee/new',
-  path: '/employee/new',
+const EmployeesNewRoute = EmployeesNewRouteImport.update({
+  id: '/employees/new',
+  path: '/employees/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmployeeIdRoute = EmployeeIdRouteImport.update({
-  id: '/employee/$id',
-  path: '/employee/$id',
+const EmployeesIdRoute = EmployeesIdRouteImport.update({
+  id: '/employees/$id',
+  path: '/employees/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssignmentsNewRoute = AssignmentsNewRouteImport.update({
@@ -93,12 +93,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assignments/$id': typeof AssignmentsIdRoute
   '/assignments/new': typeof AssignmentsNewRoute
-  '/employee/$id': typeof EmployeeIdRoute
-  '/employee/new': typeof EmployeeNewRoute
+  '/employees/$id': typeof EmployeesIdRoute
+  '/employees/new': typeof EmployeesNewRoute
   '/resumes/$id': typeof ResumesIdRouteWithChildren
   '/resumes/new': typeof ResumesNewRoute
   '/assignments/': typeof AssignmentsIndexRoute
-  '/employee/': typeof EmployeeIndexRoute
+  '/employees/': typeof EmployeesIndexRoute
   '/login/': typeof LoginIndexRoute
   '/resumes/': typeof ResumesIndexRoute
   '/test/': typeof TestIndexRoute
@@ -108,12 +108,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assignments/$id': typeof AssignmentsIdRoute
   '/assignments/new': typeof AssignmentsNewRoute
-  '/employee/$id': typeof EmployeeIdRoute
-  '/employee/new': typeof EmployeeNewRoute
+  '/employees/$id': typeof EmployeesIdRoute
+  '/employees/new': typeof EmployeesNewRoute
   '/resumes/$id': typeof ResumesIdRouteWithChildren
   '/resumes/new': typeof ResumesNewRoute
   '/assignments': typeof AssignmentsIndexRoute
-  '/employee': typeof EmployeeIndexRoute
+  '/employees': typeof EmployeesIndexRoute
   '/login': typeof LoginIndexRoute
   '/resumes': typeof ResumesIndexRoute
   '/test': typeof TestIndexRoute
@@ -124,12 +124,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assignments/$id': typeof AssignmentsIdRoute
   '/assignments/new': typeof AssignmentsNewRoute
-  '/employee/$id': typeof EmployeeIdRoute
-  '/employee/new': typeof EmployeeNewRoute
+  '/employees/$id': typeof EmployeesIdRoute
+  '/employees/new': typeof EmployeesNewRoute
   '/resumes/$id': typeof ResumesIdRouteWithChildren
   '/resumes/new': typeof ResumesNewRoute
   '/assignments/': typeof AssignmentsIndexRoute
-  '/employee/': typeof EmployeeIndexRoute
+  '/employees/': typeof EmployeesIndexRoute
   '/login/': typeof LoginIndexRoute
   '/resumes/': typeof ResumesIndexRoute
   '/test/': typeof TestIndexRoute
@@ -141,12 +141,12 @@ export interface FileRouteTypes {
     | '/'
     | '/assignments/$id'
     | '/assignments/new'
-    | '/employee/$id'
-    | '/employee/new'
+    | '/employees/$id'
+    | '/employees/new'
     | '/resumes/$id'
     | '/resumes/new'
     | '/assignments/'
-    | '/employee/'
+    | '/employees/'
     | '/login/'
     | '/resumes/'
     | '/test/'
@@ -156,12 +156,12 @@ export interface FileRouteTypes {
     | '/'
     | '/assignments/$id'
     | '/assignments/new'
-    | '/employee/$id'
-    | '/employee/new'
+    | '/employees/$id'
+    | '/employees/new'
     | '/resumes/$id'
     | '/resumes/new'
     | '/assignments'
-    | '/employee'
+    | '/employees'
     | '/login'
     | '/resumes'
     | '/test'
@@ -171,12 +171,12 @@ export interface FileRouteTypes {
     | '/'
     | '/assignments/$id'
     | '/assignments/new'
-    | '/employee/$id'
-    | '/employee/new'
+    | '/employees/$id'
+    | '/employees/new'
     | '/resumes/$id'
     | '/resumes/new'
     | '/assignments/'
-    | '/employee/'
+    | '/employees/'
     | '/login/'
     | '/resumes/'
     | '/test/'
@@ -187,12 +187,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssignmentsIdRoute: typeof AssignmentsIdRoute
   AssignmentsNewRoute: typeof AssignmentsNewRoute
-  EmployeeIdRoute: typeof EmployeeIdRoute
-  EmployeeNewRoute: typeof EmployeeNewRoute
+  EmployeesIdRoute: typeof EmployeesIdRoute
+  EmployeesNewRoute: typeof EmployeesNewRoute
   ResumesIdRoute: typeof ResumesIdRouteWithChildren
   ResumesNewRoute: typeof ResumesNewRoute
   AssignmentsIndexRoute: typeof AssignmentsIndexRoute
-  EmployeeIndexRoute: typeof EmployeeIndexRoute
+  EmployeesIndexRoute: typeof EmployeesIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   ResumesIndexRoute: typeof ResumesIndexRoute
   TestIndexRoute: typeof TestIndexRoute
@@ -228,11 +228,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/employee/': {
-      id: '/employee/'
-      path: '/employee'
-      fullPath: '/employee/'
-      preLoaderRoute: typeof EmployeeIndexRouteImport
+    '/employees/': {
+      id: '/employees/'
+      path: '/employees'
+      fullPath: '/employees/'
+      preLoaderRoute: typeof EmployeesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assignments/': {
@@ -256,18 +256,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResumesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/employee/new': {
-      id: '/employee/new'
-      path: '/employee/new'
-      fullPath: '/employee/new'
-      preLoaderRoute: typeof EmployeeNewRouteImport
+    '/employees/new': {
+      id: '/employees/new'
+      path: '/employees/new'
+      fullPath: '/employees/new'
+      preLoaderRoute: typeof EmployeesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/employee/$id': {
-      id: '/employee/$id'
-      path: '/employee/$id'
-      fullPath: '/employee/$id'
-      preLoaderRoute: typeof EmployeeIdRouteImport
+    '/employees/$id': {
+      id: '/employees/$id'
+      path: '/employees/$id'
+      fullPath: '/employees/$id'
+      preLoaderRoute: typeof EmployeesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assignments/new': {
@@ -310,12 +310,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssignmentsIdRoute: AssignmentsIdRoute,
   AssignmentsNewRoute: AssignmentsNewRoute,
-  EmployeeIdRoute: EmployeeIdRoute,
-  EmployeeNewRoute: EmployeeNewRoute,
+  EmployeesIdRoute: EmployeesIdRoute,
+  EmployeesNewRoute: EmployeesNewRoute,
   ResumesIdRoute: ResumesIdRouteWithChildren,
   ResumesNewRoute: ResumesNewRoute,
   AssignmentsIndexRoute: AssignmentsIndexRoute,
-  EmployeeIndexRoute: EmployeeIndexRoute,
+  EmployeesIndexRoute: EmployeesIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   ResumesIndexRoute: ResumesIndexRoute,
   TestIndexRoute: TestIndexRoute,

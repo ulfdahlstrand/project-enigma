@@ -2,7 +2,7 @@
  * Tests for the /employee route.
  *
  * Acceptance criteria covered:
- *   AC2  — createFileRoute("/employee") call present in source
+ *   AC2  — createFileRoute("/employees") call present in source
  *   AC3  — No direct fetch(, axios, or XMLHttpRequest calls
  *   AC4  — Renders translated "no employees" message on empty response
  *   AC5  — Renders name + email for a single employee

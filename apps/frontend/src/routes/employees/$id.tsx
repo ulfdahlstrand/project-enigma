@@ -1,5 +1,5 @@
 /**
- * /employee/:id route — displays and allows editing of a single employee's details.
+ * /employees/:id route — displays and allows editing of a single employee's details.
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
  * Mutation: TanStack Query useMutation + oRPC client for updating the employee.
@@ -30,7 +30,7 @@ export const getEmployeeQueryKey = (id: string) =>
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/employee/$id")({
+export const Route = createFileRoute("/employees/$id")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });

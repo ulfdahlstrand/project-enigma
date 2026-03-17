@@ -28,7 +28,7 @@ export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/employee/")({
+export const Route = createFileRoute("/employees/")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -75,7 +75,7 @@ function EmployeePage() {
         <Button
           variant="contained"
           component={Link}
-          to="/employee/new"
+          to="/employees/new"
         >
           {t("employee.addPerson")}
         </Button>
@@ -101,7 +101,7 @@ function EmployeePage() {
                   key={employee.id}
                   hover
                   sx={{ cursor: "pointer" }}
-                  onClick={() => void navigate({ to: "/employee/$id", params: { id: employee.id } })}
+                  onClick={() => void navigate({ to: "/employees/$id", params: { id: employee.id } })}
                 >
                   <TableCell>{employee.name}</TableCell>
                   <TableCell>{employee.email}</TableCell>

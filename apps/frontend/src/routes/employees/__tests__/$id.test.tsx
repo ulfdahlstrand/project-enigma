@@ -1,8 +1,8 @@
 /**
- * Tests for the /employee/:id route — Employee Detail Page.
+ * Tests for the /employees/:id route — Employee Detail Page.
  *
  * Acceptance criteria covered:
- *   AC1  — File existence at apps/frontend/src/routes/employee/$id.tsx
+ *   AC1  — File existence at apps/frontend/src/routes/employees/$id.tsx
  *           (verified by the fact that the import below succeeds)
  *   AC2  — Renders name and email TextFields when getEmployee resolves
  *   AC3  — Does NOT render an input whose value equals the employee's id
@@ -359,7 +359,7 @@ describe("AC9 — NOT_FOUND error state", () => {
 // ---------------------------------------------------------------------------
 
 describe("AC1 — Route file exists and exports Route", () => {
-  it("exports a Route object with createFileRoute('/employee/$id')", () => {
+  it("exports a Route object with createFileRoute('/employees/$id')", () => {
     expect(Route).toBeDefined();
     expect(Route.options.component).toBeDefined();
   });

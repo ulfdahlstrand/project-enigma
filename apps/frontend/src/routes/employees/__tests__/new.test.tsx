@@ -1,5 +1,5 @@
 /**
- * Tests for the /employee/new route — form for creating a new employee.
+ * Tests for the /employees/new route — form for creating a new employee.
  *
  * Acceptance criteria covered:
  *   AC1  — "Add person" button exists on the list page (static source check)
@@ -7,7 +7,7 @@
  *   AC3  — Submitting via useMutation (oRPC client) — no direct fetch/axios
  *   AC4  — Cache invalidation: queryClient.invalidateQueries called with
  *           LIST_EMPLOYEES_QUERY_KEY on successful mutation
- *   AC5  — Navigate to /employee/:id on successful creation
+ *   AC5  — Navigate to /employees/:id on successful creation
  *   AC6  — Error Alert rendered on mutation failure; form retains user input
  *   AC7  — Submitting with empty name shows inline validation error (no backend call)
  *   AC8  — Submitting with empty/invalid email shows inline validation error
@@ -376,7 +376,7 @@ describe("AC4 — listEmployees cache is invalidated after successful creation",
 });
 
 // ---------------------------------------------------------------------------
-// AC5 — Navigate to /employee/:id after successful creation
+// AC5 — Navigate to /employees/:id after successful creation
 // ---------------------------------------------------------------------------
 
 describe("AC5 — Navigate to the new employee detail page after creation", () => {
@@ -392,7 +392,7 @@ describe("AC5 — Navigate to the new employee detail page after creation", () =
     mockCreateEmployee.mockResolvedValue(NEW_EMPLOYEE);
   });
 
-  it("calls navigate to /employee/$id with the new employee's id", async () => {
+  it("calls navigate to /employees/$id with the new employee's id", async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -411,7 +411,7 @@ describe("AC5 — Navigate to the new employee detail page after creation", () =
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/employee/$id",
+        to: "/employees/$id",
         params: { id: NEW_EMPLOYEE.id },
       });
     });

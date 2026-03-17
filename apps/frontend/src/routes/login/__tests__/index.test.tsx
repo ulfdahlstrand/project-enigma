@@ -108,6 +108,6 @@ describe("LoginPage", () => {
     await act(async () => {
       screen.getByRole("button", { name: /sign in with google/i }).click();
     });
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/employee" });
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" });
   });
 });

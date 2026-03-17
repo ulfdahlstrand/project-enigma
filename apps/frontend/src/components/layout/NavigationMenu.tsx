@@ -33,7 +33,7 @@ export function NavigationMenu() {
         </ListItemButton>
       </ListItem>
       <ListItem disablePadding>
-        <ListItemButton component={Link} to="/employee">
+        <ListItemButton component={Link} to="/employees">
           <ListItemText primary={t("nav.employees")} />
         </ListItemButton>
       </ListItem>

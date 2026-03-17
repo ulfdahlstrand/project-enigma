@@ -1,5 +1,5 @@
 /**
- * /employee/new route — form for creating a new employee record.
+ * /employees/new route — form for creating a new employee record.
  *
  * Data mutation: TanStack Query useMutation + oRPC client (no direct fetch/axios).
  * Styling: MUI sx prop only — no .css/.scss imports, no style={{ }} props.
@@ -30,7 +30,7 @@ export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/employee/new")({
+export const Route = createFileRoute("/employees/new")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -54,7 +54,7 @@ function NewEmployeePage() {
       orpc.createEmployee(input),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: LIST_EMPLOYEES_QUERY_KEY });
-      await navigate({ to: "/employee/$id", params: { id: data.id } });
+      await navigate({ to: "/employees/$id", params: { id: data.id } });
     },
   });
 
