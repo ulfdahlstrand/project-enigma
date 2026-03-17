@@ -36,3 +36,4 @@ coverage/
 
 # Flower orchestrator runtime data
 .flower/
+.claude/worktrees/
