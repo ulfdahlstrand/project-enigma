@@ -80,6 +80,7 @@
       "parseError": "Ogiltig JSON — kontrollera formatet och försök igen.",
       "importError": "Importen misslyckades. Försök igen.",
       "resultHeading": "Import klar",
+      "resumeCreated": "En ny huvud-CV skapades med de importerade uppdragen.",
       "assignmentsCreated": "Uppdrag skapade: {{count}}",
       "assignmentsSkipped": "Uppdrag hoppades över (dubbletter): {{count}}",
       "educationCreated": "Utbildningsposter skapade: {{count}}",

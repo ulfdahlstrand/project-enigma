@@ -15,24 +15,30 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   const { consultant, education, assignments } = cvJson;
 
   // ---------------------------------------------------------------------------
-  // 1. Update main resume's consultant_title and presentation (if one exists)
+  // 1. Resolve or create the main resume
+  //    - If a main resume exists: update consultant_title and presentation
+  //    - If none exists: create one (is_main=true) with data from the CV JSON
   // ---------------------------------------------------------------------------
 
-  const mainResume = await db
+  let resumeId: string;
+  let resumeCreated = false;
+
+  const existingMainResume = await db
     .selectFrom("resumes")
     .select("id")
     .where("employee_id", "=", employeeId)
     .where("is_main", "=", true)
     .executeTakeFirst();
 
-  if (mainResume) {
+  if (existingMainResume) {
+    resumeId = existingMainResume.id;
     const resumeUpdates: Array<Promise<unknown>> = [];
     if (consultant.title) {
       resumeUpdates.push(
         db
           .updateTable("resumes")
           .set({ consultant_title: consultant.title })
-          .where("id", "=", mainResume.id)
+          .where("id", "=", resumeId)
           .execute()
       );
     }
@@ -41,11 +47,25 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         db
           .updateTable("resumes")
           .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
-          .where("id", "=", mainResume.id)
+          .where("id", "=", resumeId)
           .execute()
       );
     }
     await Promise.all(resumeUpdates);
+  } else {
+    const newResume = await db
+      .insertInto("resumes")
+      .values({
+        employee_id: employeeId,
+        title: `${consultant.name} CV`,
+        consultant_title: consultant.title || null,
+        presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[],
+        is_main: true,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    resumeId = newResume.id;
+    resumeCreated = true;
   }
 
   // ---------------------------------------------------------------------------
@@ -104,7 +124,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .insertInto("assignments")
       .values({
         employee_id: employeeId,
-        resume_id: null,
+        resume_id: resumeId,
         client_name: clientName,
         role: a.role.trim(),
         description,
@@ -165,6 +185,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   }
 
   return {
+    resumeCreated,
     assignmentsCreated,
     assignmentsSkipped,
     educationCreated,

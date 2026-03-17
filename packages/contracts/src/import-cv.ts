@@ -51,6 +51,7 @@ export const importCvInputSchema = z.object({
 });
 
 export const importCvOutputSchema = z.object({
+  resumeCreated: z.boolean(),
   assignmentsCreated: z.number(),
   assignmentsSkipped: z.number(),
   educationCreated: z.number(),

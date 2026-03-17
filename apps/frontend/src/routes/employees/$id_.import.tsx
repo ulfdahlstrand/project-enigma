@@ -112,6 +112,11 @@ function ImportCvPage() {
           <Typography variant="subtitle2" gutterBottom>
             {t("employee.import.resultHeading")}
           </Typography>
+          {mutation.data.resumeCreated && (
+            <Typography variant="body2">
+              {t("employee.import.resumeCreated")}
+            </Typography>
+          )}
           <Typography variant="body2">
             {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
           </Typography>
