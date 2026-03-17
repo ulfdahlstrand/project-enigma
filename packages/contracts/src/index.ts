@@ -48,6 +48,8 @@ import {
 import {
   exportResumeMarkdownInputSchema,
   exportResumeMarkdownOutputSchema,
+  exportResumePdfInputSchema,
+  exportResumePdfOutputSchema,
 } from "./export-resume.js";
 
 // ---------------------------------------------------------------------------
@@ -176,6 +178,8 @@ export type { CvJson } from "./import-cv.js";
 export {
   exportResumeMarkdownInputSchema,
   exportResumeMarkdownOutputSchema,
+  exportResumePdfInputSchema,
+  exportResumePdfOutputSchema,
 } from "./export-resume.js";
 
 // ---------------------------------------------------------------------------
@@ -220,6 +224,9 @@ export const contract = oc.router({
   exportResumeMarkdown: oc
     .input(exportResumeMarkdownInputSchema)
     .output(exportResumeMarkdownOutputSchema),
+  exportResumePdf: oc
+    .input(exportResumePdfInputSchema)
+    .output(exportResumePdfOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
