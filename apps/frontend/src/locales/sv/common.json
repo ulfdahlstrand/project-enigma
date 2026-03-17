@@ -85,6 +85,45 @@
       "backButton": "Tillbaka"
     }
   },
+  "assignment": {
+    "pageTitle": "Uppdrag",
+    "loading": "Laddar uppdrag…",
+    "error": "Det gick inte att ladda uppdrag. Försök igen senare.",
+    "empty": "Inga uppdrag hittades.",
+    "tableHeaderClient": "Kund",
+    "tableHeaderRole": "Roll",
+    "tableHeaderStart": "Startdatum",
+    "tableHeaderCurrent": "Pågående",
+    "addAssignment": "Lägg till uppdrag",
+    "new": {
+      "pageTitle": "Nytt uppdrag",
+      "clientNameLabel": "Kundnamn",
+      "roleLabel": "Roll",
+      "descriptionLabel": "Beskrivning",
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Slutdatum",
+      "technologiesLabel": "Teknologier",
+      "isCurrentLabel": "Pågående uppdrag",
+      "saveButton": "Spara",
+      "cancel": "Avbryt",
+      "saveError": "Det gick inte att spara uppdraget. Försök igen."
+    },
+    "detail": {
+      "loading": "Laddar uppdrag…",
+      "notFound": "Uppdraget hittades inte.",
+      "clientNameLabel": "Kundnamn",
+      "roleLabel": "Roll",
+      "descriptionLabel": "Beskrivning",
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Slutdatum",
+      "technologiesLabel": "Teknologier",
+      "isCurrentLabel": "Pågående uppdrag",
+      "saveButton": "Spara",
+      "saveSuccess": "Uppdraget sparades.",
+      "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+      "back": "Tillbaka till uppdrag"
+    }
+  },
   "test": {
     "heading": "Anslutningstest för stack",
     "description": "Den här sidan validerar full stack-anslutning från slut till slut.",
