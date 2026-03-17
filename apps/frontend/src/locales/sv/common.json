@@ -57,11 +57,20 @@
     "loading": "Laddar meritförteckningar…",
     "error": "Kunde inte ladda meritförteckningar. Försök igen.",
     "empty": "Inga meritförteckningar hittades.",
+    "addResume": "Lägg till meritförteckning",
     "tableHeaderTitle": "Titel",
     "tableHeaderLanguage": "Språk",
     "tableHeaderMain": "Huvud",
     "languageBadge": "{{language}}",
     "mainBadge": "Huvud",
+    "new": {
+      "pageTitle": "Ny meritförteckning",
+      "titleLabel": "Titel",
+      "languageLabel": "Språk",
+      "saveButton": "Skapa",
+      "cancel": "Avbryt",
+      "saveError": "Det gick inte att skapa meritförteckningen. Försök igen."
+    },
     "detail": {
       "loading": "Laddar meritförteckning…",
       "error": "Kunde inte ladda meritförteckning.",

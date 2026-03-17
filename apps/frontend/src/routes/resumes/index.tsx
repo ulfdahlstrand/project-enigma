@@ -7,12 +7,13 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
@@ -75,9 +76,21 @@ function ResumeListPage() {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
-        {t("resume.pageTitle")}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+        <Typography variant="h4" component="h1">
+          {t("resume.pageTitle")}
+        </Typography>
+        {employeeId && (
+          <Button
+            variant="contained"
+            component={Link}
+            to="/resumes/new"
+            search={{ employeeId }}
+          >
+            {t("resume.addResume")}
+          </Button>
+        )}
+      </Box>
 
       {resumes && resumes.length === 0 ? (
         <Typography variant="body1">{t("resume.empty")}</Typography>

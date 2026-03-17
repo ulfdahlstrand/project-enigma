@@ -57,11 +57,20 @@
     "loading": "Loading resumes…",
     "error": "Failed to load resumes. Please try again later.",
     "empty": "No resumes found.",
+    "addResume": "Add resume",
     "tableHeaderTitle": "Title",
     "tableHeaderLanguage": "Language",
     "tableHeaderMain": "Main",
     "languageBadge": "{{language}}",
     "mainBadge": "Main",
+    "new": {
+      "pageTitle": "New Resume",
+      "titleLabel": "Title",
+      "languageLabel": "Language",
+      "saveButton": "Create",
+      "cancel": "Cancel",
+      "saveError": "Failed to create resume. Please try again."
+    },
     "detail": {
       "loading": "Loading resume…",
       "error": "Failed to load resume.",
