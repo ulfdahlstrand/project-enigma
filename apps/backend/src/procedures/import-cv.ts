@@ -1,7 +1,7 @@
 import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthContext } from "../auth/require-auth.js";
@@ -18,17 +18,22 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   // 1. Update employee title and presentation
   // ---------------------------------------------------------------------------
 
-  const set: { title?: string | null; presentation?: string[] } = {};
-  if (consultant.title) set.title = consultant.title;
-  if (consultant.presentation.length > 0) set.presentation = consultant.presentation;
-
-  if (Object.keys(set).length > 0) {
-    await db
-      .updateTable("employees")
-      .set(set)
-      .where("id", "=", employeeId)
-      .execute();
+  const updates: Array<Promise<unknown>> = [];
+  if (consultant.title) {
+    updates.push(
+      db.updateTable("employees").set({ title: consultant.title }).where("id", "=", employeeId).execute()
+    );
   }
+  if (consultant.presentation.length > 0) {
+    updates.push(
+      db
+        .updateTable("employees")
+        .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
+        .where("id", "=", employeeId)
+        .execute()
+    );
+  }
+  await Promise.all(updates);
 
   // ---------------------------------------------------------------------------
   // 2. Import assignments — skip duplicates (same employee + client + role + start)

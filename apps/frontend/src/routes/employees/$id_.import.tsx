@@ -24,7 +24,7 @@ import { orpc } from "../../orpc-client";
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/employees/$id/import")({
+export const Route = createFileRoute("/employees/$id_/import")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/employees/$id/import")({
 
 function ImportCvPage() {
   const { t } = useTranslation("common");
-  const { id } = useParams({ from: Route.fullPath });
+  const { id } = useParams({ strict: false }) as { id: string };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [jsonText, setJsonText] = useState("");
