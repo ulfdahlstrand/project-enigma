@@ -199,14 +199,24 @@ function EmployeeDetailPage() {
         <Typography variant="h4" component="h1">
           {t("employee.detail.pageTitle")}
         </Typography>
-        <Button
-          variant="outlined"
-          component={Link}
-          to="/resumes"
-          search={{ employeeId: id }}
-        >
-          {t("employee.detail.viewResumes")}
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            component={Link}
+            to="/employees/$id/import"
+            params={{ id }}
+          >
+            {t("employee.detail.importCvButton")}
+          </Button>
+          <Button
+            variant="outlined"
+            component={Link}
+            to="/resumes"
+            search={{ employeeId: id }}
+          >
+            {t("employee.detail.viewResumes")}
+          </Button>
+        </Box>
       </Box>
 
       {mutation.isSuccess && (

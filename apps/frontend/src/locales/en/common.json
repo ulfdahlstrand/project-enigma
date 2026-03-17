@@ -65,7 +65,25 @@
       "educationTypeLanguage": "Language",
       "educationEmpty": "No entries yet.",
       "educationAddError": "Failed to add entry. Please try again.",
-      "educationDeleteError": "Failed to delete entry. Please try again."
+      "educationDeleteError": "Failed to delete entry. Please try again.",
+      "importCvButton": "Import CV JSON"
+    },
+    "import": {
+      "pageTitle": "Import CV JSON",
+      "pageDescription": "Paste or upload a CV JSON file to import assignments and education entries.",
+      "jsonLabel": "CV JSON",
+      "jsonPlaceholder": "Paste CV JSON here…",
+      "uploadButton": "Upload file",
+      "importButton": "Import",
+      "importing": "Importing…",
+      "backButton": "Back",
+      "parseError": "Invalid JSON — please check the format and try again.",
+      "importError": "Import failed. Please try again.",
+      "resultHeading": "Import complete",
+      "assignmentsCreated": "Assignments created: {{count}}",
+      "assignmentsSkipped": "Assignments skipped (duplicates): {{count}}",
+      "educationCreated": "Education entries created: {{count}}",
+      "educationSkipped": "Education entries skipped (duplicates): {{count}}"
     }
   },
   "resume": {

@@ -1,0 +1,174 @@
+/**
+ * /employees/:id/import route — import CV JSON for an employee.
+ *
+ * The user pastes or uploads a CV JSON file. The JSON is validated against
+ * cvJsonSchema from @cv-tool/contracts before being sent to the backend.
+ * On success, a summary of created/skipped records is displayed.
+ *
+ * Data: no initial query — all state is local until the mutation fires.
+ * Mutation: TanStack Query useMutation + oRPC client (importCv).
+ * Styling: MUI sx prop only.
+ * i18n: all visible text via useTranslation("common").
+ */
+import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { useRef, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { cvJsonSchema } from "@cv-tool/contracts";
+import { orpc } from "../../orpc-client";
+
+const TOKEN_KEY = "cv-tool:id-token";
+
+export const Route = createFileRoute("/employees/$id/import")({
+  beforeLoad: () => {
+    if (!localStorage.getItem(TOKEN_KEY)) {
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: ImportCvPage,
+});
+
+function ImportCvPage() {
+  const { t } = useTranslation("common");
+  const { id } = useParams({ from: Route.fullPath });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [jsonText, setJsonText] = useState("");
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (cvJson: unknown) => {
+      const parsed = cvJsonSchema.parse(cvJson);
+      return orpc.importCv({ employeeId: id, cvJson: parsed });
+    },
+  });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setJsonText((event.target?.result as string) ?? "");
+      setParseError(null);
+      mutation.reset();
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-uploaded
+    e.target.value = "";
+  };
+
+  const handleImport = () => {
+    setParseError(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      setParseError(t("employee.import.parseError"));
+      return;
+    }
+    mutation.mutate(parsed);
+  };
+
+  return (
+    <Box sx={{ p: 2, maxWidth: 720 }}>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+        <Typography variant="h4" component="h1">
+          {t("employee.import.pageTitle")}
+        </Typography>
+        <Button
+          variant="outlined"
+          component={Link}
+          to="/employees/$id"
+          params={{ id }}
+          aria-label={t("employee.import.backButton")}
+        >
+          {t("employee.import.backButton")}
+        </Button>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {t("employee.import.pageDescription")}
+      </Typography>
+
+      {parseError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {parseError}
+        </Alert>
+      )}
+
+      {mutation.isError && !parseError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("employee.import.importError")}
+        </Alert>
+      )}
+
+      {mutation.isSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            {t("employee.import.resultHeading")}
+          </Typography>
+          <Typography variant="body2">
+            {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
+          </Typography>
+          <Typography variant="body2">
+            {t("employee.import.assignmentsSkipped", { count: mutation.data.assignmentsSkipped })}
+          </Typography>
+          <Typography variant="body2">
+            {t("employee.import.educationCreated", { count: mutation.data.educationCreated })}
+          </Typography>
+          <Typography variant="body2">
+            {t("employee.import.educationSkipped", { count: mutation.data.educationSkipped })}
+          </Typography>
+        </Alert>
+      )}
+
+      <TextField
+        label={t("employee.import.jsonLabel")}
+        placeholder={t("employee.import.jsonPlaceholder")}
+        value={jsonText}
+        onChange={(e) => {
+          setJsonText(e.target.value);
+          setParseError(null);
+          mutation.reset();
+        }}
+        multiline
+        minRows={12}
+        fullWidth
+        sx={{ mb: 2, fontFamily: "monospace" }}
+        slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
+      />
+
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <Button
+          variant="contained"
+          disabled={!jsonText.trim() || mutation.isPending}
+          onClick={handleImport}
+          aria-label={t("employee.import.importButton")}
+        >
+          {mutation.isPending
+            ? t("employee.import.importing")
+            : t("employee.import.importButton")}
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label={t("employee.import.uploadButton")}
+        >
+          {t("employee.import.uploadButton")}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: "none" }}
+          onChange={handleFileUpload}
+        />
+      </Box>
+    </Box>
+  );
+}

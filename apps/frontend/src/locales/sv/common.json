@@ -65,7 +65,25 @@
       "educationTypeLanguage": "Språk",
       "educationEmpty": "Inga poster ännu.",
       "educationAddError": "Det gick inte att lägga till. Försök igen.",
-      "educationDeleteError": "Det gick inte att ta bort. Försök igen."
+      "educationDeleteError": "Det gick inte att ta bort. Försök igen.",
+      "importCvButton": "Importera CV-JSON"
+    },
+    "import": {
+      "pageTitle": "Importera CV-JSON",
+      "pageDescription": "Klistra in eller ladda upp en CV-JSON-fil för att importera uppdrag och utbildningsposter.",
+      "jsonLabel": "CV-JSON",
+      "jsonPlaceholder": "Klistra in CV-JSON här…",
+      "uploadButton": "Ladda upp fil",
+      "importButton": "Importera",
+      "importing": "Importerar…",
+      "backButton": "Tillbaka",
+      "parseError": "Ogiltig JSON — kontrollera formatet och försök igen.",
+      "importError": "Importen misslyckades. Försök igen.",
+      "resultHeading": "Import klar",
+      "assignmentsCreated": "Uppdrag skapade: {{count}}",
+      "assignmentsSkipped": "Uppdrag hoppades över (dubbletter): {{count}}",
+      "educationCreated": "Utbildningsposter skapade: {{count}}",
+      "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}"
     }
   },
   "resume": {
