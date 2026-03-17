@@ -49,7 +49,23 @@
       "saveSuccess": "Anställd sparad.",
       "saveError": "Det gick inte att spara den anställde. Försök igen.",
       "notFound": "Anställd hittades inte.",
-      "viewResumes": "Visa meritförteckningar"
+      "viewResumes": "Visa meritförteckningar",
+      "titleLabel": "Titel",
+      "presentationHeading": "Presentation",
+      "educationHeading": "Utbildning",
+      "educationDegrees": "Examina",
+      "educationCertifications": "Certifieringar",
+      "educationLanguages": "Talade språk",
+      "educationValueLabel": "Värde",
+      "educationTypeLabel": "Typ",
+      "educationAddButton": "Lägg till",
+      "educationDeleteButton": "Ta bort",
+      "educationTypeDegree": "Examen",
+      "educationTypeCertification": "Certifiering",
+      "educationTypeLanguage": "Språk",
+      "educationEmpty": "Inga poster ännu.",
+      "educationAddError": "Det gick inte att lägga till. Försök igen.",
+      "educationDeleteError": "Det gick inte att ta bort. Försök igen."
     }
   },
   "resume": {

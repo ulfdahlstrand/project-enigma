@@ -49,7 +49,23 @@
       "saveSuccess": "Employee saved successfully.",
       "saveError": "Failed to save employee. Please try again.",
       "notFound": "Employee not found.",
-      "viewResumes": "View Resumes"
+      "viewResumes": "View Resumes",
+      "titleLabel": "Title",
+      "presentationHeading": "Presentation",
+      "educationHeading": "Education",
+      "educationDegrees": "Degrees",
+      "educationCertifications": "Certifications",
+      "educationLanguages": "Spoken Languages",
+      "educationValueLabel": "Value",
+      "educationTypeLabel": "Type",
+      "educationAddButton": "Add",
+      "educationDeleteButton": "Delete",
+      "educationTypeDegree": "Degree",
+      "educationTypeCertification": "Certification",
+      "educationTypeLanguage": "Language",
+      "educationEmpty": "No entries yet.",
+      "educationAddError": "Failed to add entry. Please try again.",
+      "educationDeleteError": "Failed to delete entry. Please try again."
     }
   },
   "resume": {
