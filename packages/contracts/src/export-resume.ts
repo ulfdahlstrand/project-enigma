@@ -7,4 +7,5 @@ export const exportResumeMarkdownInputSchema = z.object({
 export const exportResumeMarkdownOutputSchema = z.object({
   markdown: z.string(),
   filename: z.string(),
+  referenceId: z.string().uuid(),
 });

@@ -28,7 +28,7 @@ export async function exportResumeMarkdown(
   db: Kysely<Database>,
   user: AuthUser,
   resumeId: string
-): Promise<{ markdown: string; filename: string }> {
+): Promise<{ markdown: string; filename: string; referenceId: string }> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   const resume = await db
@@ -78,10 +78,25 @@ export async function exportResumeMarkdown(
 
   const lines: string[] = [];
 
+  const filename = `${slug(name)}-${language}-cv.md`;
+
+  // Insert export record to get a reference_id (opaque identifier for the export)
+  const record = await db
+    .insertInto("export_records")
+    .values({
+      resume_id: resume.id,
+      employee_id: resume.employee_id,
+      format: "markdown",
+      filename,
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+
+  const referenceId = record.id;
+
   // --- Frontmatter ---
   lines.push("---");
-  lines.push(`resume_id: ${resume.id}`);
-  lines.push(`employee_id: ${resume.employee_id}`);
+  lines.push(`reference_id: ${referenceId}`);
   lines.push(`language: ${language}`);
   lines.push(`exported_at: ${exportedAt}`);
   lines.push("---");
@@ -187,9 +202,8 @@ export async function exportResumeMarkdown(
   }
 
   const markdown = lines.join("\n").trimEnd() + "\n";
-  const filename = `${slug(name)}-${language}-cv.md`;
 
-  return { markdown, filename };
+  return { markdown, filename, referenceId };
 }
 
 // ---------------------------------------------------------------------------

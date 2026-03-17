@@ -98,6 +98,18 @@ export type Education = Selectable<EducationTable>;
 export type NewEducation = Insertable<EducationTable>;
 export type EducationUpdate = Updateable<EducationTable>;
 
+export interface ExportRecordTable {
+  id: Generated<string>;
+  resume_id: string;
+  employee_id: string;
+  format: string;
+  filename: string;
+  exported_at: Generated<Date>;
+}
+
+export type ExportRecord = Selectable<ExportRecordTable>;
+export type NewExportRecord = Insertable<ExportRecordTable>;
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
@@ -105,6 +117,7 @@ export interface Database {
   resume_skills: ResumeSkillTable;
   assignments: AssignmentTable;
   education: EducationTable;
+  export_records: ExportRecordTable;
 }
 
 // ---------------------------------------------------------------------------
