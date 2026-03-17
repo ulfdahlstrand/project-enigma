@@ -10,17 +10,17 @@ import {
   updateEmployeeOutputSchema,
 } from "./employees.js";
 import {
-  listCVsInputSchema,
-  listCVsOutputSchema,
-  getCVInputSchema,
-  getCVOutputSchema,
-  createCVInputSchema,
-  createCVOutputSchema,
-  updateCVInputSchema,
-  updateCVOutputSchema,
-  deleteCVInputSchema,
-  deleteCVOutputSchema,
-} from "./cvs.js";
+  listResumesInputSchema,
+  listResumesOutputSchema,
+  getResumeInputSchema,
+  getResumeOutputSchema,
+  createResumeInputSchema,
+  createResumeOutputSchema,
+  updateResumeInputSchema,
+  updateResumeOutputSchema,
+  deleteResumeInputSchema,
+  deleteResumeOutputSchema,
+} from "./resumes.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -75,25 +75,25 @@ export {
 export type { Employee } from "./employees.js";
 
 // ---------------------------------------------------------------------------
-// CV schemas — re-exported from ./cvs
+// Resume schemas — re-exported from ./resumes
 // ---------------------------------------------------------------------------
 
 export {
-  cvSkillSchema,
-  cvSchema,
-  cvWithSkillsSchema,
-  listCVsInputSchema,
-  listCVsOutputSchema,
-  getCVInputSchema,
-  getCVOutputSchema,
-  createCVInputSchema,
-  createCVOutputSchema,
-  updateCVInputSchema,
-  updateCVOutputSchema,
-  deleteCVInputSchema,
-  deleteCVOutputSchema,
-} from "./cvs.js";
-export type { CVSkill, CV, CVWithSkills } from "./cvs.js";
+  resumeSkillSchema,
+  resumeSchema,
+  resumeWithSkillsSchema,
+  listResumesInputSchema,
+  listResumesOutputSchema,
+  getResumeInputSchema,
+  getResumeOutputSchema,
+  createResumeInputSchema,
+  createResumeOutputSchema,
+  updateResumeInputSchema,
+  updateResumeOutputSchema,
+  deleteResumeInputSchema,
+  deleteResumeOutputSchema,
+} from "./resumes.js";
+export type { ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
 // ---------------------------------------------------------------------------
 // Router contract
@@ -120,11 +120,11 @@ export const contract = oc.router({
   updateEmployee: oc
     .input(updateEmployeeInputSchema)
     .output(updateEmployeeOutputSchema),
-  listCVs: oc.input(listCVsInputSchema).output(listCVsOutputSchema),
-  getCV: oc.input(getCVInputSchema).output(getCVOutputSchema),
-  createCV: oc.input(createCVInputSchema).output(createCVOutputSchema),
-  updateCV: oc.input(updateCVInputSchema).output(updateCVOutputSchema),
-  deleteCV: oc.input(deleteCVInputSchema).output(deleteCVOutputSchema),
+  listResumes: oc.input(listResumesInputSchema).output(listResumesOutputSchema),
+  getResume: oc.input(getResumeInputSchema).output(getResumeOutputSchema),
+  createResume: oc.input(createResumeInputSchema).output(createResumeOutputSchema),
+  updateResume: oc.input(updateResumeInputSchema).output(updateResumeOutputSchema),
+  deleteResume: oc.input(deleteResumeInputSchema).output(deleteResumeOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

@@ -4,41 +4,41 @@ import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthUser, type AppContext } from "../auth/require-auth.js";
+import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
-import type { listCVsInputSchema, listCVsOutputSchema } from "@cv-tool/contracts";
+import type { listResumesInputSchema, listResumesOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
-// listCVs — query logic
+// listResumes — query logic
 //
 // The query logic is extracted into a plain async function so it can be unit
 // tested with a mock Kysely instance without relying on oRPC internals.
 // ---------------------------------------------------------------------------
 
-type ListCVsInput = z.infer<typeof listCVsInputSchema>;
-type ListCVsOutput = z.infer<typeof listCVsOutputSchema>;
+type ListResumesInput = z.infer<typeof listResumesInputSchema>;
+type ListResumesOutput = z.infer<typeof listResumesOutputSchema>;
 
 /**
- * Queries CVs from the database with optional filters.
+ * Queries resumes from the database with optional filters.
  *
  * Access rules:
- *   - Admins can see all CVs and may optionally filter by employeeId or language.
- *   - Consultants only see CVs belonging to their own employee record;
+ *   - Admins can see all resumes and may optionally filter by employeeId or language.
+ *   - Consultants only see resumes belonging to their own employee record;
  *     any employeeId filter in the input is ignored for ownership purposes.
  *
  * @param db    - Kysely instance (real or mock).
  * @param user  - The authenticated user.
  * @param input - Optional filter parameters (employeeId, language).
  */
-export async function listCVs(
+export async function listResumes(
   db: Kysely<Database>,
   user: AuthUser,
-  input: ListCVsInput
-): Promise<ListCVsOutput> {
+  input: ListResumesInput
+): Promise<ListResumesOutput> {
   // Determine ownership constraint
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  let query = db.selectFrom("cvs").selectAll();
+  let query = db.selectFrom("resumes").selectAll();
 
   if (ownerEmployeeId !== null) {
     // Consultant: scope to their own employee, but still allow language filter
@@ -74,10 +74,10 @@ export async function listCVs(
 // oRPC procedure handler — production handler using the default db singleton
 // ---------------------------------------------------------------------------
 
-export const listCVsHandler = implement(contract.listCVs).handler(
-  async ({ input, context }: { input: ListCVsInput; context: AppContext }) => {
-    const user = requireAuth(context);
-    return listCVs(getDb(), user, input);
+export const listResumesHandler = implement(contract.listResumes).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return listResumes(getDb(), user, input);
   }
 );
 
@@ -86,16 +86,16 @@ export const listCVsHandler = implement(contract.listCVs).handler(
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a `listCVs` oRPC handler backed by the given Kysely instance.
+ * Creates a `listResumes` oRPC handler backed by the given Kysely instance.
  * Intended for use in unit tests via dependency injection.
  *
  * @param db - Kysely instance to inject (real or mock).
  */
-export function createListCVsHandler(db: Kysely<Database>) {
-  return implement(contract.listCVs).handler(
-    async ({ input, context }: { input: ListCVsInput; context: AppContext }) => {
-      const user = requireAuth(context);
-      return listCVs(db, user, input);
+export function createListResumesHandler(db: Kysely<Database>) {
+  return implement(contract.listResumes).handler(
+    async ({ input, context }) => {
+      const user = requireAuth(context as AuthContext);
+      return listResumes(db, user, input);
     }
   );
 }

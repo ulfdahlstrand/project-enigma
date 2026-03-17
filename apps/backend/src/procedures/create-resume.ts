@@ -5,44 +5,44 @@ import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthUser, type AppContext } from "../auth/require-auth.js";
+import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
-import type { createCVInputSchema, createCVOutputSchema } from "@cv-tool/contracts";
+import type { createResumeInputSchema, createResumeOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
-// createCV — query logic
+// createResume — query logic
 // ---------------------------------------------------------------------------
 
-type CreateCVInput = z.infer<typeof createCVInputSchema>;
-type CreateCVOutput = z.infer<typeof createCVOutputSchema>;
+type CreateResumeInput = z.infer<typeof createResumeInputSchema>;
+type CreateResumeOutput = z.infer<typeof createResumeOutputSchema>;
 
 /**
- * Inserts a new CV record and returns the created CV with an empty skills array.
+ * Inserts a new resume record and returns the created resume with an empty skills array.
  *
  * Access rules:
- *   - Admins can create CVs for any employee.
- *   - Consultants can only create CVs for their own employee record;
+ *   - Admins can create resumes for any employee.
+ *   - Consultants can only create resumes for their own employee record;
  *     throws FORBIDDEN if the input employeeId does not match their own.
  *
  * @param db    - Kysely instance (real or mock).
  * @param user  - The authenticated user.
- * @param input - CV creation parameters.
- * @throws ORPCError("FORBIDDEN") if a consultant tries to create a CV for another employee.
+ * @param input - Resume creation parameters.
+ * @throws ORPCError("FORBIDDEN") if a consultant tries to create a resume for another employee.
  */
-export async function createCV(
+export async function createResume(
   db: Kysely<Database>,
   user: AuthUser,
-  input: CreateCVInput
-): Promise<CreateCVOutput> {
+  input: CreateResumeInput
+): Promise<CreateResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Consultants may only create CVs for their own employee record
+  // Consultants may only create resumes for their own employee record
   if (ownerEmployeeId !== null && input.employeeId !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
   const row = await db
-    .insertInto("cvs")
+    .insertInto("resumes")
     .values({
       employee_id: input.employeeId,
       title: input.title,
@@ -69,10 +69,10 @@ export async function createCV(
 // oRPC procedure handler — production handler using the default db singleton
 // ---------------------------------------------------------------------------
 
-export const createCVHandler = implement(contract.createCV).handler(
-  async ({ input, context }: { input: CreateCVInput; context: AppContext }) => {
-    const user = requireAuth(context);
-    return createCV(getDb(), user, input);
+export const createResumeHandler = implement(contract.createResume).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return createResume(getDb(), user, input);
   }
 );
 
@@ -81,16 +81,16 @@ export const createCVHandler = implement(contract.createCV).handler(
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a `createCV` oRPC handler backed by the given Kysely instance.
+ * Creates a `createResume` oRPC handler backed by the given Kysely instance.
  * Intended for use in unit tests via dependency injection.
  *
  * @param db - Kysely instance to inject (real or mock).
  */
-export function createCreateCVHandler(db: Kysely<Database>) {
-  return implement(contract.createCV).handler(
-    async ({ input, context }: { input: CreateCVInput; context: AppContext }) => {
-      const user = requireAuth(context);
-      return createCV(db, user, input);
+export function createCreateResumeHandler(db: Kysely<Database>) {
+  return implement(contract.createResume).handler(
+    async ({ input, context }) => {
+      const user = requireAuth(context as AuthContext);
+      return createResume(db, user, input);
     }
   );
 }

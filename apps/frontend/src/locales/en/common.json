@@ -49,30 +49,30 @@
       "saveSuccess": "Employee saved successfully.",
       "saveError": "Failed to save employee. Please try again.",
       "notFound": "Employee not found.",
-      "viewCVs": "View CVs"
+      "viewResumes": "View Resumes"
     }
   },
-  "cv": {
-    "pageTitle": "My CVs",
-    "loading": "Loading CVs…",
-    "error": "Failed to load CVs. Please try again later.",
-    "empty": "No CVs found.",
+  "resume": {
+    "pageTitle": "My Resumes",
+    "loading": "Loading resumes…",
+    "error": "Failed to load resumes. Please try again later.",
+    "empty": "No resumes found.",
     "tableHeaderTitle": "Title",
     "tableHeaderLanguage": "Language",
     "tableHeaderMain": "Main",
     "languageBadge": "{{language}}",
     "mainBadge": "Main",
     "detail": {
-      "loading": "Loading CV…",
-      "error": "Failed to load CV.",
-      "notFound": "CV not found.",
+      "loading": "Loading resume…",
+      "error": "Failed to load resume.",
+      "notFound": "Resume not found.",
       "skillsHeading": "Skills",
       "noSkills": "No skills added yet.",
       "editButton": "Edit",
-      "backButton": "Back to CVs"
+      "backButton": "Back to Resumes"
     },
     "edit": {
-      "pageTitle": "Edit CV",
+      "pageTitle": "Edit Resume",
       "summaryLabel": "Summary",
       "skillNameLabel": "Skill name",
       "skillLevelLabel": "Level",
@@ -80,8 +80,8 @@
       "removeSkillButton": "Remove",
       "saveButton": "Save",
       "saving": "Saving…",
-      "saveSuccess": "CV saved.",
-      "saveError": "Failed to save CV. Please try again.",
+      "saveSuccess": "Resume saved.",
+      "saveError": "Failed to save resume. Please try again.",
       "backButton": "Back"
     }
   },

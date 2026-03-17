@@ -1,16 +1,16 @@
 /**
- * /cv/$id/edit route — CV editor form (summary + skills UI).
+ * /resumes/$id/edit route — resume editor form (summary + skills UI).
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
- * Mutation: TanStack Query useMutation + oRPC client for updating the CV.
- * Cache invalidation: invalidates getCV query key on success.
+ * Mutation: TanStack Query useMutation + oRPC client for updating the resume.
+ * Cache invalidation: invalidates getResume query key on success.
  * Styling: MUI sx prop only — no .css/.scss imports, no style={{ }} props.
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  *
- * Note: skill CRUD via updateCV is not yet in the API. For now, updateCV only
+ * Note: skill CRUD via updateResume is not yet in the API. For now, updateResume only
  * saves `summary`. The skills UI is rendered for future use but save only calls
- * orpc.updateCV({ id, summary }).
+ * orpc.updateResume({ id, summary }).
  */
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,20 +23,20 @@ import CircularProgress from "@mui/material/CircularProgress";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
-import { getCVQueryKey } from "./$id";
+import { getResumeQueryKey } from "./$id";
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/cv/$id/edit")({
+export const Route = createFileRoute("/resumes/$id/edit")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
     }
   },
-  component: CvEditPage,
+  component: ResumeEditPage,
 });
 
-function CvEditPage() {
+function ResumeEditPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ from: Route.fullPath });
   const navigate = useNavigate();
@@ -46,26 +46,26 @@ function CvEditPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
-  const queryKey = getCVQueryKey(id);
+  const queryKey = getResumeQueryKey(id);
 
   const {
-    data: cv,
+    data: resume,
     isLoading,
   } = useQuery({
     queryKey,
-    queryFn: () => orpc.getCV({ id }),
+    queryFn: () => orpc.getResume({ id }),
     retry: false,
   });
 
   // Sync local form state when the query resolves
   useEffect(() => {
-    if (cv) {
-      setSummary(cv.summary ?? "");
+    if (resume) {
+      setSummary(resume.summary ?? "");
     }
-  }, [cv]);
+  }, [resume]);
 
   const mutation = useMutation({
-    mutationFn: () => orpc.updateCV({ id, summary }),
+    mutationFn: () => orpc.updateResume({ id, summary }),
     onSuccess: async () => {
       setSaveError(false);
       setSaveSuccess(true);
@@ -84,13 +84,13 @@ function CvEditPage() {
   };
 
   const handleBack = () => {
-    void navigate({ to: "/cv/$id", params: { id } });
+    void navigate({ to: "/resumes/$id", params: { id } });
   };
 
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("cv.edit.pageTitle")} />
+        <CircularProgress aria-label={t("resume.edit.pageTitle")} />
       </Box>
     );
   }
@@ -98,24 +98,24 @@ function CvEditPage() {
   return (
     <Box sx={{ p: 2, maxWidth: 720 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        {t("cv.edit.pageTitle")}
+        {t("resume.edit.pageTitle")}
       </Typography>
 
       {saveSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          {t("cv.edit.saveSuccess")}
+          {t("resume.edit.saveSuccess")}
         </Alert>
       )}
 
       {saveError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {t("cv.edit.saveError")}
+          {t("resume.edit.saveError")}
         </Alert>
       )}
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField
-          label={t("cv.edit.summaryLabel")}
+          label={t("resume.edit.summaryLabel")}
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           multiline
@@ -128,16 +128,16 @@ function CvEditPage() {
             variant="contained"
             onClick={handleSave}
             disabled={mutation.isPending}
-            aria-label={t("cv.edit.saveButton")}
+            aria-label={t("resume.edit.saveButton")}
           >
-            {mutation.isPending ? t("cv.edit.saving") : t("cv.edit.saveButton")}
+            {mutation.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
           </Button>
           <Button
             variant="outlined"
             onClick={handleBack}
-            aria-label={t("cv.edit.backButton")}
+            aria-label={t("resume.edit.backButton")}
           >
-            {t("cv.edit.backButton")}
+            {t("resume.edit.backButton")}
           </Button>
         </Box>
       </Box>

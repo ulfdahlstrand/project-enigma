@@ -3,20 +3,20 @@ import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
-import { createCreateCVHandler, createCV } from "./create-cv.js";
+import { createCreateResumeHandler, createResume } from "./create-resume.js";
 
 // ---------------------------------------------------------------------------
-// Unit tests for the createCV procedure.
+// Unit tests for the createResume procedure.
 // ---------------------------------------------------------------------------
 
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
-const CV_ID = "550e8400-e29b-41d4-a716-446655440021";
+const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 
-const NEW_CV_ROW = {
-  id: CV_ID,
+const NEW_RESUME_ROW = {
+  id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
-  title: "New Backend CV",
+  title: "New Backend Resume",
   summary: null,
   language: "en",
   is_main: false,
@@ -29,24 +29,24 @@ const NEW_CV_ROW = {
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock Kysely instance that handles the CV insert and skills query
- * that createCV performs.
+ * Builds a mock Kysely instance that handles the resume insert and skills query
+ * that createResume performs.
  */
 function buildInsertMock(insertedRow: unknown) {
-  // Skills query (returns empty array since newly created CVs have no skills)
+  // Skills query (returns empty array since newly created resumes have no skills)
   const skillsExecute = vi.fn().mockResolvedValue([]);
   const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // CV insert chain
+  // Resume insert chain
   const executeTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedRow);
   const returningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow });
   const values = vi.fn().mockReturnValue({ returningAll });
   const insertInto = vi.fn().mockReturnValue({ values });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "cv_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_skills") return { selectAll: skillsSelectAll };
     return {};
   });
 
@@ -75,7 +75,7 @@ function buildDbWithEmployeeLookup(
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "cv_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_skills") return { selectAll: skillsSelectAll };
     return {};
   });
 
@@ -101,57 +101,57 @@ function buildDbWithMissingEmployee() {
 }
 
 // ---------------------------------------------------------------------------
-// Tests: createCV query function
+// Tests: createResume query function
 // ---------------------------------------------------------------------------
 
-describe("createCV query function", () => {
-  it("admin creates CV for any employee and returns CV with empty skills array", async () => {
-    const { db, values } = buildInsertMock(NEW_CV_ROW);
+describe("createResume query function", () => {
+  it("admin creates resume for any employee and returns resume with empty skills array", async () => {
+    const { db, values } = buildInsertMock(NEW_RESUME_ROW);
     const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await createCV(db, adminUser, {
+    const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,
-      title: "New Backend CV",
+      title: "New Backend Resume",
       language: "en",
       summary: null,
     });
 
     expect(result).toMatchObject({
-      id: CV_ID,
+      id: RESUME_ID,
       employeeId: EMPLOYEE_ID_1,
-      title: "New Backend CV",
+      title: "New Backend Resume",
     });
     expect(result.skills).toEqual([]);
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         employee_id: EMPLOYEE_ID_1,
-        title: "New Backend CV",
+        title: "New Backend Resume",
         language: "en",
       })
     );
   });
 
-  it("consultant creates CV for their own employee_id and succeeds", async () => {
-    const { db } = buildDbWithEmployeeLookup(NEW_CV_ROW, EMPLOYEE_ID_1);
+  it("consultant creates resume for their own employee_id and succeeds", async () => {
+    const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
     const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
 
-    const result = await createCV(db, consultantUser, {
+    const result = await createResume(db, consultantUser, {
       employeeId: EMPLOYEE_ID_1,
-      title: "New Backend CV",
+      title: "New Backend Resume",
       language: "en",
       summary: null,
     });
 
-    expect(result.id).toBe(CV_ID);
+    expect(result.id).toBe(RESUME_ID);
   });
 
-  it("throws FORBIDDEN when consultant tries to create a CV for a different employee", async () => {
+  it("throws FORBIDDEN when consultant tries to create a resume for a different employee", async () => {
     // Consultant maps to EMPLOYEE_ID_1 but input.employeeId is EMPLOYEE_ID_2
-    const { db } = buildDbWithEmployeeLookup(NEW_CV_ROW, EMPLOYEE_ID_1);
+    const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
     const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
 
     await expect(
-      createCV(db, consultantUser, {
+      createResume(db, consultantUser, {
         employeeId: EMPLOYEE_ID_2,
         title: "Hack Attempt",
         language: "en",
@@ -164,7 +164,7 @@ describe("createCV query function", () => {
 
   it("succeeds for a consultant with no employee record (no ownership restriction)", async () => {
     // resolveEmployeeId returns null when no employee matches → no restriction
-    const { db } = buildInsertMock({ ...NEW_CV_ROW, title: "Ghost CV" });
+    const { db } = buildInsertMock({ ...NEW_RESUME_ROW, title: "Ghost Resume" });
     // Override selectFrom so employees lookup returns undefined
     const realSelectFrom = (db as unknown as { selectFrom: ReturnType<typeof vi.fn> }).selectFrom;
     realSelectFrom.mockImplementation((table: string) => {
@@ -175,22 +175,22 @@ describe("createCV query function", () => {
     });
     const consultantUser = { role: "consultant" as const, email: "ghost@example.com" };
 
-    const result = await createCV(db, consultantUser, {
+    const result = await createResume(db, consultantUser, {
       employeeId: EMPLOYEE_ID_1,
-      title: "Ghost CV",
+      title: "Ghost Resume",
       language: "en",
       summary: null,
     });
-    expect(result.title).toBe("Ghost CV");
+    expect(result.title).toBe("Ghost Resume");
   });
 
   it("maps DB snake_case fields to camelCase in output", async () => {
-    const { db } = buildInsertMock(NEW_CV_ROW);
+    const { db } = buildInsertMock(NEW_RESUME_ROW);
     const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await createCV(db, adminUser, {
+    const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,
-      title: "New Backend CV",
+      title: "New Backend Resume",
       language: "en",
       summary: null,
     });
@@ -198,40 +198,40 @@ describe("createCV query function", () => {
     expect(result).toMatchObject({
       employeeId: EMPLOYEE_ID_1,
       isMain: false,
-      createdAt: NEW_CV_ROW.created_at,
-      updatedAt: NEW_CV_ROW.updated_at,
+      createdAt: NEW_RESUME_ROW.created_at,
+      updatedAt: NEW_RESUME_ROW.updated_at,
     });
     expect(result).not.toHaveProperty("employee_id");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests: createCreateCVHandler (oRPC handler)
+// Tests: createCreateResumeHandler (oRPC handler)
 // ---------------------------------------------------------------------------
 
-describe("createCreateCVHandler", () => {
-  it("creates a CV for authenticated admin", async () => {
-    const { db } = buildInsertMock(NEW_CV_ROW);
-    const handler = createCreateCVHandler(db);
+describe("createCreateResumeHandler", () => {
+  it("creates a resume for authenticated admin", async () => {
+    const { db } = buildInsertMock(NEW_RESUME_ROW);
+    const handler = createCreateResumeHandler(db);
 
     const result = await call(
       handler,
-      { employeeId: EMPLOYEE_ID_1, title: "New Backend CV", language: "en" },
+      { employeeId: EMPLOYEE_ID_1, title: "New Backend Resume", language: "en" },
       { context: { user: { role: "admin", email: "admin@example.com" } } }
     );
 
-    expect(result.id).toBe(CV_ID);
+    expect(result.id).toBe(RESUME_ID);
     expect(result.skills).toEqual([]);
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {
-    const { db } = buildInsertMock(NEW_CV_ROW);
-    const handler = createCreateCVHandler(db);
+    const { db } = buildInsertMock(NEW_RESUME_ROW);
+    const handler = createCreateResumeHandler(db);
 
     await expect(
       call(
         handler,
-        { employeeId: EMPLOYEE_ID_1, title: "New CV", language: "en" },
+        { employeeId: EMPLOYEE_ID_1, title: "New Resume", language: "en" },
         { context: {} }
       )
     ).rejects.toSatisfy(

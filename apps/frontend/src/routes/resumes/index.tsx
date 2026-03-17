@@ -1,5 +1,5 @@
 /**
- * /cv route — displays the list of CVs for the logged-in consultant.
+ * /resumes route — displays the list of resumes for the logged-in consultant.
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
  * Rendering: MUI Table components from @mui/material.
@@ -25,7 +25,7 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 
-export const LIST_CVS_QUERY_KEY = ["listCVs"] as const;
+export const LIST_RESUMES_QUERY_KEY = ["listResumes"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
@@ -33,34 +33,34 @@ const searchSchema = z.object({
   employeeId: z.string().optional(),
 });
 
-export const Route = createFileRoute("/cv/")({
+export const Route = createFileRoute("/resumes/")({
   validateSearch: searchSchema,
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
     }
   },
-  component: CvListPage,
+  component: ResumeListPage,
 });
 
-function CvListPage() {
+function ResumeListPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
 
   const {
-    data: cvs,
+    data: resumes,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: employeeId ? [...LIST_CVS_QUERY_KEY, employeeId] : LIST_CVS_QUERY_KEY,
-    queryFn: () => orpc.listCVs(employeeId ? { employeeId } : {}),
+    queryKey: employeeId ? [...LIST_RESUMES_QUERY_KEY, employeeId] : LIST_RESUMES_QUERY_KEY,
+    queryFn: () => orpc.listResumes(employeeId ? { employeeId } : {}),
   });
 
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("cv.loading")} />
+        <CircularProgress aria-label={t("resume.loading")} />
       </Box>
     );
   }
@@ -68,7 +68,7 @@ function CvListPage() {
   if (isError) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("cv.error")}</Alert>
+        <Alert severity="error">{t("resume.error")}</Alert>
       </Box>
     );
   }
@@ -76,38 +76,38 @@ function CvListPage() {
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
-        {t("cv.pageTitle")}
+        {t("resume.pageTitle")}
       </Typography>
 
-      {cvs && cvs.length === 0 ? (
-        <Typography variant="body1">{t("cv.empty")}</Typography>
+      {resumes && resumes.length === 0 ? (
+        <Typography variant="body1">{t("resume.empty")}</Typography>
       ) : (
         <TableContainer component={Paper}>
-          <Table aria-label={t("cv.pageTitle")}>
+          <Table aria-label={t("resume.pageTitle")}>
             <TableHead>
               <TableRow>
-                <TableCell>{t("cv.tableHeaderTitle")}</TableCell>
-                <TableCell>{t("cv.tableHeaderLanguage")}</TableCell>
-                <TableCell>{t("cv.tableHeaderMain")}</TableCell>
+                <TableCell>{t("resume.tableHeaderTitle")}</TableCell>
+                <TableCell>{t("resume.tableHeaderLanguage")}</TableCell>
+                <TableCell>{t("resume.tableHeaderMain")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {cvs?.map((cv) => (
+              {resumes?.map((resume) => (
                 <TableRow
-                  key={cv.id}
+                  key={resume.id}
                   hover
                   sx={{ cursor: "pointer" }}
                   onClick={() =>
-                    void navigate({ to: "/cv/$id", params: { id: cv.id } })
+                    void navigate({ to: "/resumes/$id", params: { id: resume.id } })
                   }
                 >
-                  <TableCell>{cv.title}</TableCell>
+                  <TableCell>{resume.title}</TableCell>
                   <TableCell>
-                    <Chip label={cv.language} size="small" />
+                    <Chip label={resume.language} size="small" />
                   </TableCell>
                   <TableCell>
-                    {cv.isMain ? (
-                      <Chip label={t("cv.mainBadge")} color="primary" size="small" />
+                    {resume.isMain ? (
+                      <Chip label={t("resume.mainBadge")} color="primary" size="small" />
                     ) : null}
                   </TableCell>
                 </TableRow>

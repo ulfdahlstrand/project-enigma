@@ -3,20 +3,20 @@ import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
-import { createUpdateCVHandler, updateCV } from "./update-cv.js";
+import { createUpdateResumeHandler, updateResume } from "./update-resume.js";
 
 // ---------------------------------------------------------------------------
-// Unit tests for the updateCV procedure.
+// Unit tests for the updateResume procedure.
 // ---------------------------------------------------------------------------
 
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
-const CV_ID = "550e8400-e29b-41d4-a716-446655440021";
+const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 
-const UPDATED_CV_ROW = {
-  id: CV_ID,
+const UPDATED_RESUME_ROW = {
+  id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
-  title: "Updated Backend CV",
+  title: "Updated Backend Resume",
   summary: "Updated summary",
   language: "en",
   is_main: true,
@@ -29,14 +29,14 @@ const UPDATED_CV_ROW = {
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock that handles: optional CV lookup for ownership check +
+ * Builds a mock that handles: optional resume lookup for ownership check +
  * the UPDATE chain.
  */
-function buildUpdateMock(cvLookupRow: unknown, updatedRow: unknown) {
-  // CV lookup (selectFrom cvs for ownership check)
-  const cvLookupExecuteTakeFirst = vi.fn().mockResolvedValue(cvLookupRow);
-  const cvLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: cvLookupExecuteTakeFirst });
-  const cvLookupSelect = vi.fn().mockReturnValue({ where: cvLookupWhere });
+function buildUpdateMock(resumeLookupRow: unknown, updatedRow: unknown) {
+  // Resume lookup (selectFrom resumes for ownership check)
+  const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
+  const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
+  const resumeLookupSelect = vi.fn().mockReturnValue({ where: resumeLookupWhere });
 
   // UPDATE chain
   const executeTakeFirst = vi.fn().mockResolvedValue(updatedRow);
@@ -46,23 +46,23 @@ function buildUpdateMock(cvLookupRow: unknown, updatedRow: unknown) {
   const updateTable = vi.fn().mockReturnValue({ set });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "cvs") return { select: cvLookupSelect };
+    if (table === "resumes") return { select: resumeLookupSelect };
     return {};
   });
 
   const db = { updateTable, selectFrom } as unknown as Kysely<Database>;
-  return { db, updateTable, set, updateWhere, returningAll, executeTakeFirst, cvLookupExecuteTakeFirst };
+  return { db, updateTable, set, updateWhere, returningAll, executeTakeFirst, resumeLookupExecuteTakeFirst };
 }
 
 /** Builds a db mock that also handles the employee lookup (for consultant auth). */
 function buildDbWithEmployeeLookup(
-  cvLookupRow: unknown,
+  resumeLookupRow: unknown,
   updatedRow: unknown,
   employeeId: string
 ) {
-  const cvLookupExecuteTakeFirst = vi.fn().mockResolvedValue(cvLookupRow);
-  const cvLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: cvLookupExecuteTakeFirst });
-  const cvLookupSelect = vi.fn().mockReturnValue({ where: cvLookupWhere });
+  const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
+  const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
+  const resumeLookupSelect = vi.fn().mockReturnValue({ where: resumeLookupWhere });
 
   const executeTakeFirst = vi.fn().mockResolvedValue(updatedRow);
   const returningAll = vi.fn().mockReturnValue({ executeTakeFirst });
@@ -76,7 +76,7 @@ function buildDbWithEmployeeLookup(
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "cvs") return { select: cvLookupSelect };
+    if (table === "resumes") return { select: resumeLookupSelect };
     return {};
   });
 
@@ -85,31 +85,31 @@ function buildDbWithEmployeeLookup(
 }
 
 // ---------------------------------------------------------------------------
-// Tests: updateCV query function
+// Tests: updateResume query function
 // ---------------------------------------------------------------------------
 
-describe("updateCV query function", () => {
-  it("updates title only and returns the updated CV row", async () => {
+describe("updateResume query function", () => {
+  it("updates title only and returns the updated resume row", async () => {
     const { db, set } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_CV_ROW
+      UPDATED_RESUME_ROW
     );
     const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await updateCV(db, adminUser, {
-      id: CV_ID,
-      title: "Updated Backend CV",
+    const result = await updateResume(db, adminUser, {
+      id: RESUME_ID,
+      title: "Updated Backend Resume",
     });
 
     expect(result).toMatchObject({
-      id: CV_ID,
-      title: "Updated Backend CV",
+      id: RESUME_ID,
+      title: "Updated Backend Resume",
       isMain: true,
     });
-    expect(set).toHaveBeenCalledWith(expect.objectContaining({ title: "Updated Backend CV" }));
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ title: "Updated Backend Resume" }));
   });
 
-  it("throws NOT_FOUND when the CV does not exist (update returns undefined)", async () => {
+  it("throws NOT_FOUND when the resume does not exist (update returns undefined)", async () => {
     const { db } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },
       undefined
@@ -117,36 +117,36 @@ describe("updateCV query function", () => {
     const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
     await expect(
-      updateCV(db, adminUser, { id: CV_ID, title: "Ghost" })
+      updateResume(db, adminUser, { id: RESUME_ID, title: "Ghost" })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
 
-  it("consultant updates their own CV successfully", async () => {
+  it("consultant updates their own resume successfully", async () => {
     const { db } = buildDbWithEmployeeLookup(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_CV_ROW,
+      UPDATED_RESUME_ROW,
       EMPLOYEE_ID_1
     );
     const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
 
-    const result = await updateCV(db, consultantUser, { id: CV_ID, title: "Updated" });
+    const result = await updateResume(db, consultantUser, { id: RESUME_ID, title: "Updated" });
 
-    expect(result.id).toBe(CV_ID);
+    expect(result.id).toBe(RESUME_ID);
   });
 
-  it("throws FORBIDDEN when consultant tries to update another employee's CV", async () => {
-    // CV belongs to EMPLOYEE_ID_1, consultant maps to EMPLOYEE_ID_2
+  it("throws FORBIDDEN when consultant tries to update another employee's resume", async () => {
+    // Resume belongs to EMPLOYEE_ID_1, consultant maps to EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_CV_ROW,
+      UPDATED_RESUME_ROW,
       EMPLOYEE_ID_2
     );
     const consultantUser = { role: "consultant" as const, email: "other@example.com" };
 
     await expect(
-      updateCV(db, consultantUser, { id: CV_ID, title: "Hack" })
+      updateResume(db, consultantUser, { id: RESUME_ID, title: "Hack" })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
@@ -155,17 +155,17 @@ describe("updateCV query function", () => {
   it("maps DB snake_case fields to camelCase in output", async () => {
     const { db } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_CV_ROW
+      UPDATED_RESUME_ROW
     );
     const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await updateCV(db, adminUser, { id: CV_ID, title: "Updated" });
+    const result = await updateResume(db, adminUser, { id: RESUME_ID, title: "Updated" });
 
     expect(result).toMatchObject({
       employeeId: EMPLOYEE_ID_1,
       isMain: true,
-      createdAt: UPDATED_CV_ROW.created_at,
-      updatedAt: UPDATED_CV_ROW.updated_at,
+      createdAt: UPDATED_RESUME_ROW.created_at,
+      updatedAt: UPDATED_RESUME_ROW.updated_at,
     });
     expect(result).not.toHaveProperty("employee_id");
     expect(result).not.toHaveProperty("is_main");
@@ -173,33 +173,33 @@ describe("updateCV query function", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: createUpdateCVHandler (oRPC handler)
+// Tests: createUpdateResumeHandler (oRPC handler)
 // ---------------------------------------------------------------------------
 
-describe("createUpdateCVHandler", () => {
-  it("updates a CV for authenticated admin", async () => {
+describe("createUpdateResumeHandler", () => {
+  it("updates a resume for authenticated admin", async () => {
     const { db } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_CV_ROW
+      UPDATED_RESUME_ROW
     );
-    const handler = createUpdateCVHandler(db);
+    const handler = createUpdateResumeHandler(db);
 
     const result = await call(
       handler,
-      { id: CV_ID, title: "Updated Backend CV" },
+      { id: RESUME_ID, title: "Updated Backend Resume" },
       { context: { user: { role: "admin", email: "admin@example.com" } } }
     );
 
-    expect(result.id).toBe(CV_ID);
-    expect(result.title).toBe("Updated Backend CV");
+    expect(result.id).toBe(RESUME_ID);
+    expect(result.title).toBe("Updated Backend Resume");
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {
-    const { db } = buildUpdateMock({ employee_id: EMPLOYEE_ID_1 }, UPDATED_CV_ROW);
-    const handler = createUpdateCVHandler(db);
+    const { db } = buildUpdateMock({ employee_id: EMPLOYEE_ID_1 }, UPDATED_RESUME_ROW);
+    const handler = createUpdateResumeHandler(db);
 
     await expect(
-      call(handler, { id: CV_ID, title: "Updated" }, { context: {} })
+      call(handler, { id: RESUME_ID, title: "Updated" }, { context: {} })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "UNAUTHORIZED"
     );

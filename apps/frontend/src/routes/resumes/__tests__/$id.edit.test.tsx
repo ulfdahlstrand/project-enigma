@@ -1,12 +1,12 @@
 /**
- * Tests for the /cv/$id/edit route — CV Editor Form.
+ * Tests for the /resumes/$id/edit route — Resume Editor Form.
  *
  * Acceptance criteria covered:
- *   - Renders summary textarea with the current CV value
- *   - Save button calls updateCV with the correct id and summary
+ *   - Renders summary textarea with the current resume value
+ *   - Save button calls updateResume with the correct id and summary
  *   - Shows success alert after a successful save
  *   - Shows error alert on save failure
- *   - Shows loading state while CV is being fetched
+ *   - Shows loading state while resume is being fetched
  *   - Back button is present
  */
 
@@ -28,22 +28,22 @@ import { Route } from "../$id.edit";
 
 vi.mock("../../../orpc-client", () => ({
   orpc: {
-    listCVs: vi.fn(),
-    getCV: vi.fn(),
-    updateCV: vi.fn(),
+    listResumes: vi.fn(),
+    getResume: vi.fn(),
+    updateResume: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../orpc-client";
 
-const mockGetCV = orpc.getCV as ReturnType<typeof vi.fn>;
-const mockUpdateCV = orpc.updateCV as ReturnType<typeof vi.fn>;
+const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockUpdateResume = orpc.updateResume as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
 // ---------------------------------------------------------------------------
 
-const TEST_CV_ID = "cv-edit-test-id";
+const TEST_RESUME_ID = "resume-edit-test-id";
 const mockNavigate = vi.fn();
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -51,7 +51,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    useParams: () => ({ id: TEST_CV_ID }),
+    useParams: () => ({ id: TEST_RESUME_ID }),
     useNavigate: () => mockNavigate,
     Link: React.forwardRef(function MockLink(
       {
@@ -74,22 +74,22 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
-const TEST_CV = {
-  id: TEST_CV_ID,
+const TEST_RESUME = {
+  id: TEST_RESUME_ID,
   employeeId: "emp-id-1",
-  title: "Senior Developer CV",
+  title: "Senior Developer Resume",
   summary: "Initial summary text here.",
   language: "en",
   isMain: true,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
   skills: [
-    { id: "skill-1", cvId: TEST_CV_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
+    { id: "skill-1", cvId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
   ],
 };
 
-const UPDATED_CV = {
-  ...TEST_CV,
+const UPDATED_RESUME = {
+  ...TEST_RESUME,
   summary: "Updated summary text.",
 };
 
@@ -97,11 +97,11 @@ const UPDATED_CV = {
 // Render helper
 // ---------------------------------------------------------------------------
 
-const CvEditPage = Route.options.component as React.ComponentType;
+const ResumeEditPage = Route.options.component as React.ComponentType;
 
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  const result = renderWithProviders(<CvEditPage />, { queryClient });
+  const result = renderWithProviders(<ResumeEditPage />, { queryClient });
   return { ...result, queryClient };
 }
 
@@ -114,8 +114,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Loading state", () => {
-  it("renders a progressbar element while getCV is loading", () => {
-    mockGetCV.mockReturnValue(new Promise(() => undefined));
+  it("renders a progressbar element while getResume is loading", () => {
+    mockGetResume.mockReturnValue(new Promise(() => undefined));
     renderPage();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
@@ -127,35 +127,35 @@ describe("Loading state", () => {
 
 describe("Form rendering", () => {
   beforeEach(() => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
   });
 
   it("renders the page title", async () => {
     renderPage();
-    const pageTitle = await screen.findByText(enCommon.cv.edit.pageTitle);
+    const pageTitle = await screen.findByText(enCommon.resume.edit.pageTitle);
     expect(pageTitle).toBeInTheDocument();
   });
 
-  it("renders the summary textarea with current CV summary value", async () => {
+  it("renders the summary textarea with current resume summary value", async () => {
     renderPage();
-    const summaryInput = await screen.findByDisplayValue(TEST_CV.summary!);
+    const summaryInput = await screen.findByDisplayValue(TEST_RESUME.summary!);
     expect(summaryInput).toBeInTheDocument();
   });
 
   it("renders a Save button", async () => {
     renderPage();
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     expect(saveBtn).toBeInTheDocument();
   });
 
   it("renders a Back button", async () => {
     renderPage();
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
     const backBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.backButton,
+      name: enCommon.resume.edit.backButton,
     });
     expect(backBtn).toBeInTheDocument();
   });
@@ -167,45 +167,45 @@ describe("Form rendering", () => {
 
 describe("Save — success", () => {
   beforeEach(() => {
-    mockGetCV.mockResolvedValue(TEST_CV);
-    mockUpdateCV.mockResolvedValue(UPDATED_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
+    mockUpdateResume.mockResolvedValue(UPDATED_RESUME);
   });
 
-  it("calls orpc.updateCV with the correct id and current summary on save", async () => {
+  it("calls orpc.updateResume with the correct id and current summary on save", async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockUpdateCV).toHaveBeenCalledWith({
-        id: TEST_CV_ID,
-        summary: TEST_CV.summary,
+      expect(mockUpdateResume).toHaveBeenCalledWith({
+        id: TEST_RESUME_ID,
+        summary: TEST_RESUME.summary,
       });
     });
   });
 
-  it("calls orpc.updateCV with updated summary after editing the field", async () => {
+  it("calls orpc.updateResume with updated summary after editing the field", async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const summaryInput = await screen.findByDisplayValue(TEST_CV.summary!);
+    const summaryInput = await screen.findByDisplayValue(TEST_RESUME.summary!);
     await user.clear(summaryInput);
     await user.type(summaryInput, "New summary content");
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockUpdateCV).toHaveBeenCalledWith({
-        id: TEST_CV_ID,
+      expect(mockUpdateResume).toHaveBeenCalledWith({
+        id: TEST_RESUME_ID,
         summary: "New summary content",
       });
     });
@@ -215,34 +215,34 @@ describe("Save — success", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
-    const successMsg = await screen.findByText(enCommon.cv.edit.saveSuccess);
+    const successMsg = await screen.findByText(enCommon.resume.edit.saveSuccess);
     expect(successMsg).toBeInTheDocument();
   });
 
-  it("invalidates the getCV query on successful save", async () => {
+  it("invalidates the getResume query on successful save", async () => {
     const user = userEvent.setup();
     const { queryClient } = renderPage();
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
-    await screen.findByText(enCommon.cv.edit.saveSuccess);
+    await screen.findByText(enCommon.resume.edit.saveSuccess);
 
     expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["getCV", TEST_CV_ID] })
+      expect.objectContaining({ queryKey: ["getResume", TEST_RESUME_ID] })
     );
   });
 });
@@ -253,22 +253,22 @@ describe("Save — success", () => {
 
 describe("Save — error", () => {
   beforeEach(() => {
-    mockGetCV.mockResolvedValue(TEST_CV);
-    mockUpdateCV.mockRejectedValue(new Error("Server error"));
+    mockGetResume.mockResolvedValue(TEST_RESUME);
+    mockUpdateResume.mockRejectedValue(new Error("Server error"));
   });
 
-  it("shows error alert when updateCV fails", async () => {
+  it("shows error alert when updateResume fails", async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByDisplayValue(TEST_CV.summary!);
+    await screen.findByDisplayValue(TEST_RESUME.summary!);
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
-    const errorMsg = await screen.findByText(enCommon.cv.edit.saveError);
+    const errorMsg = await screen.findByText(enCommon.resume.edit.saveError);
     expect(errorMsg).toBeInTheDocument();
   });
 
@@ -276,16 +276,16 @@ describe("Save — error", () => {
     const user = userEvent.setup();
     renderPage();
 
-    const summaryInput = await screen.findByDisplayValue(TEST_CV.summary!);
+    const summaryInput = await screen.findByDisplayValue(TEST_RESUME.summary!);
     await user.clear(summaryInput);
     await user.type(summaryInput, "Modified summary");
 
     const saveBtn = screen.getByRole("button", {
-      name: enCommon.cv.edit.saveButton,
+      name: enCommon.resume.edit.saveButton,
     });
     await user.click(saveBtn);
 
-    await screen.findByText(enCommon.cv.edit.saveError);
+    await screen.findByText(enCommon.resume.edit.saveError);
 
     expect(screen.getByDisplayValue("Modified summary")).toBeInTheDocument();
   });

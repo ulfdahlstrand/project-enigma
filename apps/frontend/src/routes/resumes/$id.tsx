@@ -1,5 +1,5 @@
 /**
- * /cv/$id route — read-only CV detail page with skills.
+ * /resumes/$id route — read-only resume detail page with skills.
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
  * Rendering: MUI components from @mui/material.
@@ -23,44 +23,44 @@ import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 
 /**
- * Query key factory for a single CV lookup.
+ * Query key factory for a single resume lookup.
  * Exported so tests can assert against the exact key structure.
  */
-export const getCVQueryKey = (id: string) => ["getCV", id] as const;
+export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
-export const Route = createFileRoute("/cv/$id")({
+export const Route = createFileRoute("/resumes/$id")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
     }
   },
-  component: CvDetailPage,
+  component: ResumeDetailPage,
 });
 
-function CvDetailPage() {
+function ResumeDetailPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ from: Route.fullPath });
   const navigate = useNavigate();
 
-  const queryKey = getCVQueryKey(id);
+  const queryKey = getResumeQueryKey(id);
 
   const {
-    data: cv,
+    data: resume,
     isLoading,
     isError,
     error,
   } = useQuery({
     queryKey,
-    queryFn: () => orpc.getCV({ id }),
+    queryFn: () => orpc.getResume({ id }),
     retry: false,
   });
 
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("cv.detail.loading")} />
+        <CircularProgress aria-label={t("resume.detail.loading")} />
       </Box>
     );
   }
@@ -75,14 +75,14 @@ function CvDetailPage() {
     if (isNotFound) {
       return (
         <Box sx={{ mt: 2 }}>
-          <Typography variant="body1">{t("cv.detail.notFound")}</Typography>
+          <Typography variant="body1">{t("resume.detail.notFound")}</Typography>
         </Box>
       );
     }
 
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("cv.detail.error")}</Alert>
+        <Alert severity="error">{t("resume.detail.error")}</Alert>
       </Box>
     );
   }
@@ -91,30 +91,30 @@ function CvDetailPage() {
     <Box sx={{ p: 2, maxWidth: 720 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
         <Typography variant="h4" component="h1">
-          {cv?.title}
+          {resume?.title}
         </Typography>
-        {cv?.language && (
-          <Chip label={cv.language} size="small" />
+        {resume?.language && (
+          <Chip label={resume.language} size="small" />
         )}
       </Box>
 
-      {cv?.summary && (
+      {resume?.summary && (
         <Typography variant="body1" sx={{ mb: 2 }}>
-          {cv.summary}
+          {resume.summary}
         </Typography>
       )}
 
       <Divider sx={{ my: 2 }} />
 
       <Typography variant="h6" gutterBottom>
-        {t("cv.detail.skillsHeading")}
+        {t("resume.detail.skillsHeading")}
       </Typography>
 
-      {cv?.skills && cv.skills.length === 0 ? (
-        <Typography variant="body2">{t("cv.detail.noSkills")}</Typography>
+      {resume?.skills && resume.skills.length === 0 ? (
+        <Typography variant="body2">{t("resume.detail.noSkills")}</Typography>
       ) : (
         <List dense>
-          {cv?.skills?.map((skill) => (
+          {resume?.skills?.map((skill) => (
             <ListItem key={skill.id} disablePadding>
               <ListItemText
                 primary={skill.name}
@@ -129,13 +129,13 @@ function CvDetailPage() {
         <Button
           variant="contained"
           onClick={() =>
-            void navigate({ to: "/cv/$id/edit", params: { id } })
+            void navigate({ to: "/resumes/$id/edit", params: { id } })
           }
         >
-          {t("cv.detail.editButton")}
+          {t("resume.detail.editButton")}
         </Button>
-        <Button component={Link} to="/cv">
-          {t("cv.detail.backButton")}
+        <Button component={Link} to="/resumes">
+          {t("resume.detail.backButton")}
         </Button>
       </Box>
     </Box>

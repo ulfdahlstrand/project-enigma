@@ -30,7 +30,7 @@ export interface UserTable {
 export type User = Selectable<UserTable>;
 export type NewUser = Insertable<UserTable>;
 
-export interface CvTable {
+export interface ResumeTable {
   id: Generated<string>;
   employee_id: string;
   title: string;
@@ -41,11 +41,11 @@ export interface CvTable {
   updated_at: Generated<Date>;
 }
 
-export type Cv = Selectable<CvTable>;
-export type NewCv = Insertable<CvTable>;
-export type CvUpdate = Updateable<CvTable>;
+export type Resume = Selectable<ResumeTable>;
+export type NewResume = Insertable<ResumeTable>;
+export type ResumeUpdate = Updateable<ResumeTable>;
 
-export interface CvSkillTable {
+export interface ResumeSkillTable {
   id: Generated<string>;
   cv_id: string;
   name: string;
@@ -54,15 +54,15 @@ export interface CvSkillTable {
   sort_order: Generated<number>;
 }
 
-export type CvSkill = Selectable<CvSkillTable>;
-export type NewCvSkill = Insertable<CvSkillTable>;
-export type CvSkillUpdate = Updateable<CvSkillTable>;
+export type ResumeSkill = Selectable<ResumeSkillTable>;
+export type NewResumeSkill = Insertable<ResumeSkillTable>;
+export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
 
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
-  cvs: CvTable;
-  cv_skills: CvSkillTable;
+  resumes: ResumeTable;
+  resume_skills: ResumeSkillTable;
 }
 
 // ---------------------------------------------------------------------------
