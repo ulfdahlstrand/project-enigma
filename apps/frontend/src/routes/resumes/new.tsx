@@ -2,7 +2,8 @@ import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-ro
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,6 +18,13 @@ const TOKEN_KEY = "cv-tool:id-token";
 const searchSchema = z.object({
   employeeId: z.string().optional(),
 });
+
+const newResumeFormSchema = z.object({
+  title: z.string().min(1),
+  language: z.string().min(1),
+});
+
+type NewResumeFormValues = z.infer<typeof newResumeFormSchema>;
 
 export const Route = createFileRoute("/resumes/new")({
   validateSearch: searchSchema,
@@ -34,30 +42,27 @@ function NewResumePage() {
   const queryClient = useQueryClient();
   const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
 
-  const [title, setTitle] = useState("");
-  const [language, setLanguage] = useState("en");
-  const [saveError, setSaveError] = useState(false);
+  const { register, handleSubmit, formState: { isSubmitting, isValid } } = useForm<NewResumeFormValues>({
+    resolver: zodResolver(newResumeFormSchema),
+    defaultValues: { title: "", language: "en" },
+    mode: "onChange",
+  });
 
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (data: NewResumeFormValues) =>
       orpc.createResume({
         employeeId: employeeId ?? "",
-        title: title.trim(),
-        language,
+        title: data.title.trim(),
+        language: data.language,
       }),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
       void navigate({ to: "/resumes/$id", params: { id: data.id } });
     },
-    onError: () => {
-      setSaveError(true);
-    },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaveError(false);
-    mutation.mutate();
+  const onSubmit = (data: NewResumeFormValues) => {
+    mutation.mutate(data);
   };
 
   return (
@@ -66,7 +71,7 @@ function NewResumePage() {
         {t("resume.new.pageTitle")}
       </Typography>
 
-      {saveError && (
+      {mutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("resume.new.saveError")}
         </Alert>
@@ -74,22 +79,20 @@ function NewResumePage() {
 
       <Box
         component="form"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         noValidate
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <TextField
           label={t("resume.new.titleLabel")}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          {...register("title")}
           required
           fullWidth
           autoFocus
         />
         <TextField
           label={t("resume.new.languageLabel")}
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+          {...register("language")}
           fullWidth
           placeholder="en"
         />
@@ -97,7 +100,7 @@ function NewResumePage() {
           <Button
             type="submit"
             variant="contained"
-            disabled={mutation.isPending || !title.trim()}
+            disabled={mutation.isPending || isSubmitting || !isValid}
             aria-label={t("resume.new.saveButton")}
           >
             {t("resume.new.saveButton")}

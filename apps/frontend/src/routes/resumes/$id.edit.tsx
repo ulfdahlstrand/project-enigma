@@ -15,7 +15,10 @@
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -26,6 +29,12 @@ import { orpc } from "../../orpc-client";
 import { getResumeQueryKey } from "./$id";
 
 const TOKEN_KEY = "cv-tool:id-token";
+
+const editResumeFormSchema = z.object({
+  summary: z.string(),
+});
+
+type EditResumeFormValues = z.infer<typeof editResumeFormSchema>;
 
 export const Route = createFileRoute("/resumes/$id/edit")({
   beforeLoad: () => {
@@ -42,10 +51,6 @@ function ResumeEditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [summary, setSummary] = useState("");
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-
   const queryKey = getResumeQueryKey(id);
 
   const {
@@ -57,30 +62,27 @@ function ResumeEditPage() {
     retry: false,
   });
 
-  // Sync local form state when the query resolves
+  const { register, handleSubmit, reset } = useForm<EditResumeFormValues>({
+    resolver: zodResolver(editResumeFormSchema),
+    defaultValues: { summary: "" },
+  });
+
   useEffect(() => {
     if (resume) {
-      setSummary(resume.summary ?? "");
+      reset({ summary: resume.summary ?? "" });
     }
-  }, [resume]);
+  }, [resume, reset]);
 
   const mutation = useMutation({
-    mutationFn: () => orpc.updateResume({ id, summary }),
+    mutationFn: (data: EditResumeFormValues) =>
+      orpc.updateResume({ id, summary: data.summary }),
     onSuccess: async () => {
-      setSaveError(false);
-      setSaveSuccess(true);
       await queryClient.invalidateQueries({ queryKey });
-    },
-    onError: () => {
-      setSaveSuccess(false);
-      setSaveError(true);
     },
   });
 
-  const handleSave = () => {
-    setSaveSuccess(false);
-    setSaveError(false);
-    mutation.mutate();
+  const onSubmit = (data: EditResumeFormValues) => {
+    mutation.mutate(data);
   };
 
   const handleBack = () => {
@@ -101,23 +103,26 @@ function ResumeEditPage() {
         {t("resume.edit.pageTitle")}
       </Typography>
 
-      {saveSuccess && (
+      {mutation.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {t("resume.edit.saveSuccess")}
         </Alert>
       )}
 
-      {saveError && (
+      {mutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("resume.edit.saveError")}
         </Alert>
       )}
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
         <TextField
           label={t("resume.edit.summaryLabel")}
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
+          {...register("summary")}
           multiline
           minRows={4}
           fullWidth
@@ -125,8 +130,8 @@ function ResumeEditPage() {
 
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
+            type="submit"
             variant="contained"
-            onClick={handleSave}
             disabled={mutation.isPending}
             aria-label={t("resume.edit.saveButton")}
           >
