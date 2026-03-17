@@ -1,11 +1,11 @@
 /**
- * Tests for the /cv route — CV List Page.
+ * Tests for the /resumes route — Resume List Page.
  *
  * Acceptance criteria covered:
  *   - Renders loading state (CircularProgress) while query is pending
- *   - Renders empty state when no CVs are returned
- *   - Renders CV list with title and language chip
- *   - Clicking a row navigates to /cv/$id
+ *   - Renders empty state when no resumes are returned
+ *   - Renders resume list with title and language chip
+ *   - Clicking a row navigates to /resumes/$id
  *   - Renders error state when the query fails
  *   - Redirects to /login when unauthenticated (beforeLoad guard)
  */
@@ -20,7 +20,7 @@ import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../test-utils/render";
-import { Route, LIST_CVS_QUERY_KEY } from "..";
+import { Route, LIST_RESUMES_QUERY_KEY } from "..";
 
 // ---------------------------------------------------------------------------
 // Mock oRPC client
@@ -28,15 +28,15 @@ import { Route, LIST_CVS_QUERY_KEY } from "..";
 
 vi.mock("../../../orpc-client", () => ({
   orpc: {
-    listCVs: vi.fn(),
-    getCV: vi.fn(),
-    updateCV: vi.fn(),
+    listResumes: vi.fn(),
+    getResume: vi.fn(),
+    updateResume: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../orpc-client";
 
-const mockListCVs = orpc.listCVs as ReturnType<typeof vi.fn>;
+const mockListResumes = orpc.listResumes as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -50,6 +50,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useSearch: () => ({}),
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -71,11 +72,11 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
-const TEST_CVS = [
+const TEST_RESUMES = [
   {
-    id: "cv-id-1",
+    id: "resume-id-1",
     employeeId: "emp-id-1",
-    title: "Senior Developer CV",
+    title: "Senior Developer Resume",
     summary: "Experienced developer",
     language: "en",
     isMain: true,
@@ -83,9 +84,9 @@ const TEST_CVS = [
     updatedAt: "2024-01-01T00:00:00Z",
   },
   {
-    id: "cv-id-2",
+    id: "resume-id-2",
     employeeId: "emp-id-1",
-    title: "Junior Developer CV",
+    title: "Junior Developer Resume",
     summary: null,
     language: "sv",
     isMain: false,
@@ -98,11 +99,11 @@ const TEST_CVS = [
 // Render helper
 // ---------------------------------------------------------------------------
 
-const CvListPage = Route.options.component as React.ComponentType;
+const ResumeListPage = Route.options.component as React.ComponentType;
 
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  const result = renderWithProviders(<CvListPage />, { queryClient });
+  const result = renderWithProviders(<ResumeListPage />, { queryClient });
   return { ...result, queryClient };
 }
 
@@ -115,14 +116,14 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Loading state", () => {
-  it("renders a progressbar element while listCVs is loading", () => {
-    mockListCVs.mockReturnValue(new Promise(() => undefined));
+  it("renders a progressbar element while listResumes is loading", () => {
+    mockListResumes.mockReturnValue(new Promise(() => undefined));
     renderPage();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
   it("does not render table rows while loading", () => {
-    mockListCVs.mockReturnValue(new Promise(() => undefined));
+    mockListResumes.mockReturnValue(new Promise(() => undefined));
     renderPage();
     expect(screen.queryByRole("row")).toBeNull();
   });
@@ -134,74 +135,74 @@ describe("Loading state", () => {
 
 describe("Empty state", () => {
   beforeEach(() => {
-    mockListCVs.mockResolvedValue([]);
+    mockListResumes.mockResolvedValue([]);
   });
 
-  it("renders the translated empty message when no CVs are returned", async () => {
+  it("renders the translated empty message when no resumes are returned", async () => {
     renderPage();
-    const emptyMsg = await screen.findByText(enCommon.cv.empty);
+    const emptyMsg = await screen.findByText(enCommon.resume.empty);
     expect(emptyMsg).toBeInTheDocument();
   });
 
-  it("does not render a table when CV list is empty", async () => {
+  it("does not render a table when resume list is empty", async () => {
     renderPage();
-    await screen.findByText(enCommon.cv.empty);
+    await screen.findByText(enCommon.resume.empty);
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// CV list rendering
+// Resume list rendering
 // ---------------------------------------------------------------------------
 
-describe("CV list rendering", () => {
+describe("Resume list rendering", () => {
   beforeEach(() => {
-    mockListCVs.mockResolvedValue(TEST_CVS);
+    mockListResumes.mockResolvedValue(TEST_RESUMES);
   });
 
   it("renders the page title", async () => {
     renderPage();
-    const title = await screen.findByText(enCommon.cv.pageTitle);
+    const title = await screen.findByText(enCommon.resume.pageTitle);
     expect(title).toBeInTheDocument();
   });
 
-  it("renders the first CV title in the table", async () => {
+  it("renders the first resume title in the table", async () => {
     renderPage();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const titleCell = await screen.findByText(TEST_CVS[0]!.title);
+    const titleCell = await screen.findByText(TEST_RESUMES[0]!.title);
     expect(titleCell).toBeInTheDocument();
   });
 
-  it("renders the second CV title in the table", async () => {
+  it("renders the second resume title in the table", async () => {
     renderPage();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const titleCell = await screen.findByText(TEST_CVS[1]!.title);
+    const titleCell = await screen.findByText(TEST_RESUMES[1]!.title);
     expect(titleCell).toBeInTheDocument();
   });
 
-  it("renders the language chip for the first CV", async () => {
+  it("renders the language chip for the first resume", async () => {
     renderPage();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const languageChip = await screen.findByText(TEST_CVS[0]!.language);
+    const languageChip = await screen.findByText(TEST_RESUMES[0]!.language);
     expect(languageChip).toBeInTheDocument();
   });
 
-  it("renders the main badge for the main CV", async () => {
+  it("renders the main badge for the main resume", async () => {
     renderPage();
     // "Main" appears in both the table header and the chip badge — findAllByText covers both
-    const mainElements = await screen.findAllByText(enCommon.cv.mainBadge);
+    const mainElements = await screen.findAllByText(enCommon.resume.mainBadge);
     expect(mainElements.length).toBeGreaterThan(0);
   });
 
   it("renders table headers", async () => {
     renderPage();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await screen.findByText(TEST_CVS[0]!.title);
+    await screen.findByText(TEST_RESUMES[0]!.title);
     expect(
-      screen.getByText(enCommon.cv.tableHeaderTitle)
+      screen.getByText(enCommon.resume.tableHeaderTitle)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(enCommon.cv.tableHeaderLanguage)
+      screen.getByText(enCommon.resume.tableHeaderLanguage)
     ).toBeInTheDocument();
   });
 });
@@ -212,21 +213,21 @@ describe("CV list rendering", () => {
 
 describe("Row click navigation", () => {
   beforeEach(() => {
-    mockListCVs.mockResolvedValue(TEST_CVS);
+    mockListResumes.mockResolvedValue(TEST_RESUMES);
   });
 
-  it("navigates to /cv/$id when a row is clicked", async () => {
+  it("navigates to /resumes/$id when a row is clicked", async () => {
     const user = userEvent.setup();
     renderPage();
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const row = await screen.findByText(TEST_CVS[0]!.title);
+    const row = await screen.findByText(TEST_RESUMES[0]!.title);
     await user.click(row);
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/cv/$id",
+      to: "/resumes/$id",
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      params: { id: TEST_CVS[0]!.id },
+      params: { id: TEST_RESUMES[0]!.id },
     });
   });
 });
@@ -237,12 +238,12 @@ describe("Row click navigation", () => {
 
 describe("Error state", () => {
   beforeEach(() => {
-    mockListCVs.mockRejectedValue(new Error("Server error"));
+    mockListResumes.mockRejectedValue(new Error("Server error"));
   });
 
-  it("renders an error alert when listCVs fails", async () => {
+  it("renders an error alert when listResumes fails", async () => {
     renderPage();
-    const errorMsg = await screen.findByText(enCommon.cv.error);
+    const errorMsg = await screen.findByText(enCommon.resume.error);
     expect(errorMsg).toBeInTheDocument();
   });
 });
@@ -252,8 +253,8 @@ describe("Error state", () => {
 // ---------------------------------------------------------------------------
 
 describe("Exports", () => {
-  it("exports LIST_CVS_QUERY_KEY as a const tuple", () => {
-    expect(LIST_CVS_QUERY_KEY).toEqual(["listCVs"]);
+  it("exports LIST_RESUMES_QUERY_KEY as a const tuple", () => {
+    expect(LIST_RESUMES_QUERY_KEY).toEqual(["listResumes"]);
   });
 
   it("exports Route with the correct path", () => {

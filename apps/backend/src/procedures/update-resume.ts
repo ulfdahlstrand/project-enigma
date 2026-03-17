@@ -5,41 +5,41 @@ import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthUser, type AppContext } from "../auth/require-auth.js";
+import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
-import type { updateCVInputSchema, updateCVOutputSchema } from "@cv-tool/contracts";
+import type { updateResumeInputSchema, updateResumeOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
-// updateCV — query logic
+// updateResume — query logic
 // ---------------------------------------------------------------------------
 
-type UpdateCVInput = z.infer<typeof updateCVInputSchema>;
-type UpdateCVOutput = z.infer<typeof updateCVOutputSchema>;
+type UpdateResumeInput = z.infer<typeof updateResumeInputSchema>;
+type UpdateResumeOutput = z.infer<typeof updateResumeOutputSchema>;
 
 /**
- * Updates an existing CV's fields and returns the updated row.
+ * Updates an existing resume's fields and returns the updated row.
  *
  * Access rules:
- *   - Admins can update any CV.
- *   - Consultants can only update CVs belonging to their own employee record.
+ *   - Admins can update any resume.
+ *   - Consultants can only update resumes belonging to their own employee record.
  *
  * @param db    - Kysely instance (real or mock).
  * @param user  - The authenticated user.
  * @param input - Update parameters (id + fields to update).
- * @throws ORPCError("NOT_FOUND")  if no CV matches the given id.
- * @throws ORPCError("FORBIDDEN")  if a consultant attempts to update another's CV.
+ * @throws ORPCError("NOT_FOUND")  if no resume matches the given id.
+ * @throws ORPCError("FORBIDDEN")  if a consultant attempts to update another's resume.
  */
-export async function updateCV(
+export async function updateResume(
   db: Kysely<Database>,
   user: AuthUser,
-  input: UpdateCVInput
-): Promise<UpdateCVOutput> {
+  input: UpdateResumeInput
+): Promise<UpdateResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Ownership check for consultants: fetch the CV's employee_id first
+  // Ownership check for consultants: fetch the resume's employee_id first
   if (ownerEmployeeId !== null) {
     const existing = await db
-      .selectFrom("cvs")
+      .selectFrom("resumes")
       .select("employee_id")
       .where("id", "=", input.id)
       .executeTakeFirst();
@@ -65,7 +65,7 @@ export async function updateCV(
   if (input.isMain !== undefined) set.is_main = input.isMain;
 
   const row = await db
-    .updateTable("cvs")
+    .updateTable("resumes")
     .set(set)
     .where("id", "=", input.id)
     .returningAll()
@@ -91,10 +91,10 @@ export async function updateCV(
 // oRPC procedure handler — production handler using the default db singleton
 // ---------------------------------------------------------------------------
 
-export const updateCVHandler = implement(contract.updateCV).handler(
-  async ({ input, context }: { input: UpdateCVInput; context: AppContext }) => {
-    const user = requireAuth(context);
-    return updateCV(getDb(), user, input);
+export const updateResumeHandler = implement(contract.updateResume).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return updateResume(getDb(), user, input);
   }
 );
 
@@ -103,16 +103,16 @@ export const updateCVHandler = implement(contract.updateCV).handler(
 // ---------------------------------------------------------------------------
 
 /**
- * Creates an `updateCV` oRPC handler backed by the given Kysely instance.
+ * Creates an `updateResume` oRPC handler backed by the given Kysely instance.
  * Intended for use in unit tests via dependency injection.
  *
  * @param db - Kysely instance to inject (real or mock).
  */
-export function createUpdateCVHandler(db: Kysely<Database>) {
-  return implement(contract.updateCV).handler(
-    async ({ input, context }: { input: UpdateCVInput; context: AppContext }) => {
-      const user = requireAuth(context);
-      return updateCV(db, user, input);
+export function createUpdateResumeHandler(db: Kysely<Database>) {
+  return implement(contract.updateResume).handler(
+    async ({ input, context }) => {
+      const user = requireAuth(context as AuthContext);
+      return updateResume(db, user, input);
     }
   );
 }

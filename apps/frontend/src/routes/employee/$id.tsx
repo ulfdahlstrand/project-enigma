@@ -137,10 +137,10 @@ function EmployeeDetailPage() {
         <Button
           variant="outlined"
           component={Link}
-          to="/cv"
+          to="/resumes"
           search={{ employeeId: id }}
         >
-          {t("employee.detail.viewCVs")}
+          {t("employee.detail.viewResumes")}
         </Button>
       </Box>
 

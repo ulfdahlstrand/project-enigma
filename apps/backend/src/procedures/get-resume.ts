@@ -5,67 +5,67 @@ import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthUser, type AppContext } from "../auth/require-auth.js";
+import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
-import type { getCVOutputSchema } from "@cv-tool/contracts";
+import type { getResumeOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
-// getCV — query logic
+// getResume — query logic
 // ---------------------------------------------------------------------------
 
-type GetCVOutput = z.infer<typeof getCVOutputSchema>;
+type GetResumeOutput = z.infer<typeof getResumeOutputSchema>;
 
 /**
- * Fetches a single CV with its skills by ID.
+ * Fetches a single resume with its skills by ID.
  *
  * Access rules:
- *   - Admins can fetch any CV.
- *   - Consultants can only fetch CVs belonging to their employee record;
- *     throws FORBIDDEN if the CV belongs to a different employee.
+ *   - Admins can fetch any resume.
+ *   - Consultants can only fetch resumes belonging to their employee record;
+ *     throws FORBIDDEN if the resume belongs to a different employee.
  *
  * @param db   - Kysely instance (real or mock).
  * @param user - The authenticated user.
- * @param id   - UUID of the CV to retrieve.
- * @throws ORPCError("NOT_FOUND")  if the CV does not exist.
- * @throws ORPCError("FORBIDDEN")  if a consultant attempts to access another's CV.
+ * @param id   - UUID of the resume to retrieve.
+ * @throws ORPCError("NOT_FOUND")  if the resume does not exist.
+ * @throws ORPCError("FORBIDDEN")  if a consultant attempts to access another's resume.
  */
-export async function getCV(
+export async function getResume(
   db: Kysely<Database>,
   user: AuthUser,
   id: string
-): Promise<GetCVOutput> {
+): Promise<GetResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  const cvRow = await db
-    .selectFrom("cvs")
+  const resumeRow = await db
+    .selectFrom("resumes")
     .selectAll()
     .where("id", "=", id)
     .executeTakeFirst();
 
-  if (cvRow === undefined) {
+  if (resumeRow === undefined) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (ownerEmployeeId !== null && cvRow.employee_id !== ownerEmployeeId) {
+  if (ownerEmployeeId !== null && resumeRow.employee_id !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
   const skillRows = await db
-    .selectFrom("cv_skills")
+    .selectFrom("resume_skills")
     .selectAll()
     .where("cv_id", "=", id)
     .orderBy("sort_order", "asc")
     .execute();
 
   return {
-    id: cvRow.id,
-    employeeId: cvRow.employee_id,
-    title: cvRow.title,
-    summary: cvRow.summary,
-    language: cvRow.language,
-    isMain: cvRow.is_main,
-    createdAt: cvRow.created_at,
-    updatedAt: cvRow.updated_at,
+    id: resumeRow.id,
+    employeeId: resumeRow.employee_id,
+    title: resumeRow.title,
+    summary: resumeRow.summary,
+    language: resumeRow.language,
+    isMain: resumeRow.is_main,
+    createdAt: resumeRow.created_at,
+    updatedAt: resumeRow.updated_at,
     skills: skillRows.map((s) => ({
       id: s.id,
       cvId: s.cv_id,
@@ -81,10 +81,10 @@ export async function getCV(
 // oRPC procedure handler — production handler using the default db singleton
 // ---------------------------------------------------------------------------
 
-export const getCVHandler = implement(contract.getCV).handler(
-  async ({ input, context }: { input: { id: string }; context: AppContext }) => {
-    const user = requireAuth(context);
-    return getCV(getDb(), user, input.id);
+export const getResumeHandler = implement(contract.getResume).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return getResume(getDb(), user, input.id);
   }
 );
 
@@ -93,16 +93,16 @@ export const getCVHandler = implement(contract.getCV).handler(
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a `getCV` oRPC handler backed by the given Kysely instance.
+ * Creates a `getResume` oRPC handler backed by the given Kysely instance.
  * Intended for use in unit tests via dependency injection.
  *
  * @param db - Kysely instance to inject (real or mock).
  */
-export function createGetCVHandler(db: Kysely<Database>) {
-  return implement(contract.getCV).handler(
-    async ({ input, context }: { input: { id: string }; context: AppContext }) => {
-      const user = requireAuth(context);
-      return getCV(db, user, input.id);
+export function createGetResumeHandler(db: Kysely<Database>) {
+  return implement(contract.getResume).handler(
+    async ({ input, context }) => {
+      const user = requireAuth(context as AuthContext);
+      return getResume(db, user, input.id);
     }
   );
 }

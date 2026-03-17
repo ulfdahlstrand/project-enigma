@@ -2,135 +2,92 @@
 
 ## Project Overview
 
-A consultant CV creation and maintenance tool. Consultants manage structured CVs with assignments, export to PDF/DOCX, and maintain multiple language and "angled" variants (e.g. Tech Lead, Architect). Managers track customer demands and match consultants to engagements.
+A consultant resume creation and maintenance tool. Consultants manage structured
+resumes with assignments, export to PDF/DOCX, and maintain multiple language and
+role variants. Managers track customer demands and match consultants to engagements.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Monorepo | Turborepo + npm workspaces |
-| Frontend | React 19, Vite, TanStack Router, TanStack Query, Material UI |
-| API | oRPC (type-safe RPC with OpenAPI) |
-| Validation | Zod |
-| Backend | Node.js + TypeScript strict |
-| Database | PostgreSQL 16 via Kysely |
-| i18n | react-i18next (EN + SV) |
-| Testing | Vitest |
-
-## Implementation Order — ALWAYS follow this phase sequence
-
-Phases are tracked as GitHub Milestones. **Never implement a later phase before an earlier one is complete.**
-
-### Phase 1: Authentication & Foundation (Milestone 1)
-**Issues: #203, #211–#213, #230–#234**
-
-Dependencies: none — start here.
-
-1. Register Azure AD app (#230)
-2. Frontend MSAL login flow (#231)
-3. Backend JWT validation middleware (#232)
-4. Users table + first-login provisioning (#233)
-5. Frontend route guards (#234)
-6. RBAC roles enforced on API (#212)
-7. Protected routes wired up (#213)
-
-> All other phases require authenticated users. Do not skip.
-
----
-
-### Phase 2: Core CV & Assignment Data (Milestone 2)
-**Issues: #204–#205, #214–#219, #235–#243**
-
-Dependencies: Phase 1 complete.
-
-Order within phase:
-1. CV database schema migration (#235)
-2. Assignment database migration (#241)
-3. CV CRUD API procedures (#236, #237)
-4. Assignment CRUD API procedures (#242)
-5. CV list and detail pages (#238)
-6. CV editor form (#239)
-7. Assignment list and edit UI (#243)
-
----
-
-### Phase 3: Upload, AI & Customer Demands (Milestone 3)
-**Issues: #206–#207, #217, #220–#223, #240, #244–#251**
-
-Dependencies: Phase 2 complete (CV and assignment schema must exist).
-
-Order within phase:
-1. File upload endpoint (#240)
-2. Customer + demand schema (#244)
-3. Demand CRUD API (#245)
-4. Demand management UI (#246)
-5. AI provider infrastructure (#247)
-6. `improveDescription` streaming procedure (#248)
-7. AI improve button in UI (#249)
-8. AI assignment extraction procedure (#250)
-9. Extracted assignments review UI (#251)
-
----
-
-### Phase 4: Export, Variants & Smart Suggestions (Milestone 4)
-**Issues: #208–#210, #224–#229, #252–#261**
-
-Dependencies: Phase 2 complete; Phase 3 AI infrastructure recommended.
-
-Order within phase:
-1. PDF generation service (#252)
-2. DOCX generation service (#254)
-3. Export buttons in CV UI (#253)
-4. CV variants schema migration (#255)
-5. CV variant CRUD API (#256)
-6. Variant selector UI (#257)
-7. Language selector for CV (#258)
-8. CV version history + diff storage (#259)
-9. Suggestion generation procedure (#260)
-10. Suggestion review UI (#261)
-
----
-
-## Key Conventions
-
-- **No hardcoded strings in JSX** — always use i18n keys (`useTranslation`)
-- **Styling** — MUI `sx` prop only, no CSS/SCSS files
-- **API calls** — use oRPC client + TanStack Query, never raw fetch
-- **Mutations** — always immutable (return new objects, never mutate in place)
-- **Validation** — Zod schemas in `packages/contracts`, shared between frontend and backend
-- **Tests** — write tests first (TDD), 80% coverage minimum
-- **Database access** — Kysely only, dependency-injected into procedures for testability
-- **File naming** — `kebab-case` for utilities/routes, `PascalCase` for React components
+| Layer       | Technology                                                  |
+|-------------|-------------------------------------------------------------|
+| Monorepo    | Turborepo + npm workspaces                                  |
+| Frontend    | React 19, Vite, TanStack Router, TanStack Query, MUI        |
+| API         | oRPC (type-safe RPC)                                        |
+| Validation  | Zod (schemas live in `packages/contracts`)                  |
+| Backend     | Node.js + TypeScript strict                                 |
+| Database    | PostgreSQL 16 via Kysely                                    |
+| Auth        | Google OAuth + JWT                                          |
+| i18n        | react-i18next (EN + SV locales)                             |
+| Testing     | Vitest + React Testing Library                              |
 
 ## Workspace Structure
 
 ```
-apps/frontend/     React SPA
-apps/backend/      Node.js oRPC server
+apps/frontend/       React SPA
+apps/backend/        Node.js oRPC server
 packages/contracts/  Shared Zod schemas + oRPC types
-packages/database/   Migrations
 packages/tsconfig/   Shared TS config
 ```
 
 ## Running the Project
 
 ```bash
-# Start everything (Docker required)
-docker compose up
-
-# Frontend only
+docker compose up                    # full stack (Docker required)
 cd apps/frontend && npm run dev
-
-# Backend only
 cd apps/backend && npm run dev
-
-# Run migrations
 cd apps/backend && npm run migrate
 ```
 
+## Project-Specific Conventions
+
+These **override or extend** the global ECC rules:
+
+- **JSX text**: always via `useTranslation("common")` — no plain string literals as JSX children
+- **Styling**: MUI `sx` prop only — no CSS/SCSS files, no `style={{}}` props
+- **API calls**: oRPC client + TanStack Query — never raw `fetch` or `axios`
+- **DB access**: Kysely only, dependency-injected into procedures for testability
+- **Routes**: plural convention — `/resumes`, `/employees`, etc.
+- **File naming**: `kebab-case` for utilities/routes, `PascalCase` for React components
+
+## Git Workflow (project override)
+
+> The global ECC git rules apply, with these project-specific additions:
+
+- **PRs always target `dev`**, NEVER `main`. Always pass `--base dev` to `gh pr create`.
+- `main` is production-only; it receives code from `dev` after QA.
+- One commit per task (GitHub issue), one PR per feature (multiple task commits).
+- Push branch after every completed feature.
+
+## Tooling
+
+- Use **everything-claude-code (ECC)** agents for all orchestration and planning.
+- Use **`gh` CLI** (Bash) for all GitHub operations (issues, PRs, labels).
+- Do **NOT** use `mcp__flower__*` or `mcp__flower-orchestrator__*` tools.
+
+## Implementation Phases — follow in order
+
+Phases are tracked as GitHub Milestones. Never implement a later phase before an earlier one is complete.
+
+### Phase 1 — Auth & Foundation
+Issues: #203, #211–#213, #230–#234. All other phases depend on this.
+
+### Phase 2 — Core Resume & Assignment Data
+Issues: #204–#205, #214–#219, #235–#243. Requires Phase 1.
+
+### Phase 3 — Upload, AI & Customer Demands
+Issues: #206–#207, #217, #220–#223, #240, #244–#251. Requires Phase 2.
+
+### Phase 4 — Export, Variants & Smart Suggestions
+Issues: #208–#210, #224–#229, #252–#261. Requires Phase 2.
+
 ## GitHub Issue Labels
 
-- `type:epic` — large body of work (one per major feature area)
-- `type:feature` — mid-level feature (Part of an Epic)
-- `type:task` — single implementable unit (Part of a Feature)
+- `type:epic` — large body of work
+- `type:feature` — mid-level feature (part of an epic)
+- `type:task` — single implementable unit (part of a feature)
 - `status:backlog` → `status:ready-for-dev` → `status:in-progress` → `status:in-review` → `status:done`
+
+## Open Questions
+
+- Auth: CLAUDE.md originally referenced Azure AD/MSAL; implementation uses Google OAuth. Which is canonical?
+- Employee rename (#279): which phase/milestone does this belong to?

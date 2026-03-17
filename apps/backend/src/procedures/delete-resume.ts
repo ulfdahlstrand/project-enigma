@@ -4,38 +4,38 @@ import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthUser, type AppContext } from "../auth/require-auth.js";
+import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
 
 // ---------------------------------------------------------------------------
-// deleteCV — query logic
+// deleteResume — query logic
 // ---------------------------------------------------------------------------
 
 /**
- * Deletes a CV by ID.
+ * Deletes a resume by ID.
  *
  * Access rules:
- *   - Admins can delete any CV.
- *   - Consultants can only delete CVs belonging to their own employee record.
+ *   - Admins can delete any resume.
+ *   - Consultants can only delete resumes belonging to their own employee record.
  *
  * @param db   - Kysely instance (real or mock).
  * @param user - The authenticated user.
- * @param id   - UUID of the CV to delete.
+ * @param id   - UUID of the resume to delete.
  * @returns { deleted: true }
- * @throws ORPCError("NOT_FOUND")  if no CV matches the given id.
- * @throws ORPCError("FORBIDDEN")  if a consultant attempts to delete another's CV.
+ * @throws ORPCError("NOT_FOUND")  if no resume matches the given id.
+ * @throws ORPCError("FORBIDDEN")  if a consultant attempts to delete another's resume.
  */
-export async function deleteCV(
+export async function deleteResume(
   db: Kysely<Database>,
   user: AuthUser,
   id: string
 ): Promise<{ deleted: true }> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Ownership check for consultants: verify the CV's employee_id
+  // Ownership check for consultants: verify the resume's employee_id
   if (ownerEmployeeId !== null) {
     const existing = await db
-      .selectFrom("cvs")
+      .selectFrom("resumes")
       .select("employee_id")
       .where("id", "=", id)
       .executeTakeFirst();
@@ -50,7 +50,7 @@ export async function deleteCV(
   }
 
   const deleted = await db
-    .deleteFrom("cvs")
+    .deleteFrom("resumes")
     .where("id", "=", id)
     .returning("id")
     .executeTakeFirst();
@@ -66,10 +66,10 @@ export async function deleteCV(
 // oRPC procedure handler — production handler using the default db singleton
 // ---------------------------------------------------------------------------
 
-export const deleteCVHandler = implement(contract.deleteCV).handler(
-  async ({ input, context }: { input: { id: string }; context: AppContext }) => {
-    const user = requireAuth(context);
-    return deleteCV(getDb(), user, input.id);
+export const deleteResumeHandler = implement(contract.deleteResume).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return deleteResume(getDb(), user, input.id);
   }
 );
 
@@ -78,16 +78,16 @@ export const deleteCVHandler = implement(contract.deleteCV).handler(
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a `deleteCV` oRPC handler backed by the given Kysely instance.
+ * Creates a `deleteResume` oRPC handler backed by the given Kysely instance.
  * Intended for use in unit tests via dependency injection.
  *
  * @param db - Kysely instance to inject (real or mock).
  */
-export function createDeleteCVHandler(db: Kysely<Database>) {
-  return implement(contract.deleteCV).handler(
-    async ({ input, context }: { input: { id: string }; context: AppContext }) => {
-      const user = requireAuth(context);
-      return deleteCV(db, user, input.id);
+export function createDeleteResumeHandler(db: Kysely<Database>) {
+  return implement(contract.deleteResume).handler(
+    async ({ input, context }) => {
+      const user = requireAuth(context as AuthContext);
+      return deleteResume(db, user, input.id);
     }
   );
 }

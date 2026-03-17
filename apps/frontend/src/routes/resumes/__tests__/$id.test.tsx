@@ -1,27 +1,26 @@
 /**
- * Tests for the /cv/$id route — CV Detail Page (read-only).
+ * Tests for the /resumes/$id route — Resume Detail Page (read-only).
  *
  * Acceptance criteria covered:
  *   - Renders loading state (CircularProgress) while query is pending
- *   - Renders CV title, language chip, and summary when data resolves
- *   - Renders skills list when CV has skills
+ *   - Renders resume title, language chip, and summary when data resolves
+ *   - Renders skills list when resume has skills
  *   - Renders "no skills" message when skills array is empty
  *   - Renders not-found message when query returns NOT_FOUND error
- *   - Edit button is present and links to /cv/$id/edit
- *   - Back link is present and points to /cv
+ *   - Edit button is present and links to /resumes/$id/edit
+ *   - Back link is present and points to /resumes
  */
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../locales/en/common.json";
 import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../test-utils/render";
-import { Route, getCVQueryKey } from "../$id";
+import { Route, getResumeQueryKey } from "../$id";
 
 // ---------------------------------------------------------------------------
 // Mock oRPC client
@@ -29,28 +28,28 @@ import { Route, getCVQueryKey } from "../$id";
 
 vi.mock("../../../orpc-client", () => ({
   orpc: {
-    listCVs: vi.fn(),
-    getCV: vi.fn(),
-    updateCV: vi.fn(),
+    listResumes: vi.fn(),
+    getResume: vi.fn(),
+    updateResume: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../orpc-client";
 
-const mockGetCV = orpc.getCV as ReturnType<typeof vi.fn>;
+const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
 // ---------------------------------------------------------------------------
 
-const TEST_CV_ID = "cv-test-id-99";
+const TEST_RESUME_ID = "resume-test-id-99";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    useParams: () => ({ id: TEST_CV_ID }),
+    useParams: () => ({ id: TEST_RESUME_ID }),
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -72,23 +71,23 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
-const TEST_CV = {
-  id: TEST_CV_ID,
+const TEST_RESUME = {
+  id: TEST_RESUME_ID,
   employeeId: "emp-id-1",
-  title: "Senior Developer CV",
+  title: "Senior Developer Resume",
   summary: "Experienced full-stack developer with 10 years of experience.",
   language: "en",
   isMain: true,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
   skills: [
-    { id: "skill-1", cvId: TEST_CV_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
-    { id: "skill-2", cvId: TEST_CV_ID, name: "React", level: "Advanced", category: "Frontend", sortOrder: 2 },
+    { id: "skill-1", cvId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
+    { id: "skill-2", cvId: TEST_RESUME_ID, name: "React", level: "Advanced", category: "Frontend", sortOrder: 2 },
   ],
 };
 
-const TEST_CV_NO_SKILLS = {
-  ...TEST_CV,
+const TEST_RESUME_NO_SKILLS = {
+  ...TEST_RESUME,
   skills: [],
 };
 
@@ -96,11 +95,11 @@ const TEST_CV_NO_SKILLS = {
 // Render helper
 // ---------------------------------------------------------------------------
 
-const CvDetailPage = Route.options.component as React.ComponentType;
+const ResumeDetailPage = Route.options.component as React.ComponentType;
 
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  const result = renderWithProviders(<CvDetailPage />, { queryClient });
+  const result = renderWithProviders(<ResumeDetailPage />, { queryClient });
   return { ...result, queryClient };
 }
 
@@ -113,16 +112,16 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Loading state", () => {
-  it("renders a progressbar element while getCV is loading", () => {
-    mockGetCV.mockReturnValue(new Promise(() => undefined));
+  it("renders a progressbar element while getResume is loading", () => {
+    mockGetResume.mockReturnValue(new Promise(() => undefined));
     renderPage();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("does not render the CV title while loading", () => {
-    mockGetCV.mockReturnValue(new Promise(() => undefined));
+  it("does not render the resume title while loading", () => {
+    mockGetResume.mockReturnValue(new Promise(() => undefined));
     renderPage();
-    expect(screen.queryByText(TEST_CV.title)).toBeNull();
+    expect(screen.queryByText(TEST_RESUME.title)).toBeNull();
   });
 });
 
@@ -130,26 +129,26 @@ describe("Loading state", () => {
 // Resolved data rendering
 // ---------------------------------------------------------------------------
 
-describe("CV detail rendering", () => {
+describe("Resume detail rendering", () => {
   beforeEach(() => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
   });
 
-  it("renders the CV title as a heading", async () => {
+  it("renders the resume title as a heading", async () => {
     renderPage();
-    const title = await screen.findByText(TEST_CV.title);
+    const title = await screen.findByText(TEST_RESUME.title);
     expect(title).toBeInTheDocument();
   });
 
   it("renders the language chip", async () => {
     renderPage();
-    const languageChip = await screen.findByText(TEST_CV.language);
+    const languageChip = await screen.findByText(TEST_RESUME.language);
     expect(languageChip).toBeInTheDocument();
   });
 
   it("renders the summary text", async () => {
     renderPage();
-    const summary = await screen.findByText(TEST_CV.summary!);
+    const summary = await screen.findByText(TEST_RESUME.summary!);
     expect(summary).toBeInTheDocument();
   });
 });
@@ -160,34 +159,34 @@ describe("CV detail rendering", () => {
 
 describe("Skills list", () => {
   it("renders skills heading", async () => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    const heading = await screen.findByText(enCommon.cv.detail.skillsHeading);
+    const heading = await screen.findByText(enCommon.resume.detail.skillsHeading);
     expect(heading).toBeInTheDocument();
   });
 
   it("renders each skill name", async () => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    for (const skill of TEST_CV.skills) {
+    for (const skill of TEST_RESUME.skills) {
       const skillName = await screen.findByText(skill.name);
       expect(skillName).toBeInTheDocument();
     }
   });
 
   it("renders each skill level", async () => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    for (const skill of TEST_CV.skills) {
+    for (const skill of TEST_RESUME.skills) {
       const skillLevel = await screen.findByText(skill.level!);
       expect(skillLevel).toBeInTheDocument();
     }
   });
 
   it("renders 'no skills' message when skills array is empty", async () => {
-    mockGetCV.mockResolvedValue(TEST_CV_NO_SKILLS);
+    mockGetResume.mockResolvedValue(TEST_RESUME_NO_SKILLS);
     renderPage();
-    const noSkills = await screen.findByText(enCommon.cv.detail.noSkills);
+    const noSkills = await screen.findByText(enCommon.resume.detail.noSkills);
     expect(noSkills).toBeInTheDocument();
   });
 });
@@ -198,22 +197,22 @@ describe("Skills list", () => {
 
 describe("Navigation", () => {
   beforeEach(() => {
-    mockGetCV.mockResolvedValue(TEST_CV);
+    mockGetResume.mockResolvedValue(TEST_RESUME);
   });
 
   it("renders an Edit button when data is loaded", async () => {
     renderPage();
-    await screen.findByText(TEST_CV.title);
+    await screen.findByText(TEST_RESUME.title);
     const editBtn = screen.getByRole("button", {
-      name: enCommon.cv.detail.editButton,
+      name: enCommon.resume.detail.editButton,
     });
     expect(editBtn).toBeInTheDocument();
   });
 
-  it("renders a Back link to /cv", async () => {
+  it("renders a Back link to /resumes", async () => {
     renderPage();
-    await screen.findByText(TEST_CV.title);
-    const backLink = screen.getByText(enCommon.cv.detail.backButton);
+    await screen.findByText(TEST_RESUME.title);
+    const backLink = screen.getByText(enCommon.resume.detail.backButton);
     expect(backLink).toBeInTheDocument();
   });
 });
@@ -227,18 +226,18 @@ describe("NOT_FOUND error state", () => {
     const notFoundError = Object.assign(new Error("Not found"), {
       code: "NOT_FOUND",
     });
-    mockGetCV.mockRejectedValue(notFoundError);
+    mockGetResume.mockRejectedValue(notFoundError);
   });
 
   it("renders the not-found message", async () => {
     renderPage();
-    const notFoundMsg = await screen.findByText(enCommon.cv.detail.notFound);
+    const notFoundMsg = await screen.findByText(enCommon.resume.detail.notFound);
     expect(notFoundMsg).toBeInTheDocument();
   });
 
-  it("does not render any input elements when CV is not found", async () => {
+  it("does not render any input elements when resume is not found", async () => {
     renderPage();
-    await screen.findByText(enCommon.cv.detail.notFound);
+    await screen.findByText(enCommon.resume.detail.notFound);
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
   });
 });
@@ -249,12 +248,12 @@ describe("NOT_FOUND error state", () => {
 
 describe("Generic error state", () => {
   beforeEach(() => {
-    mockGetCV.mockRejectedValue(new Error("Server error"));
+    mockGetResume.mockRejectedValue(new Error("Server error"));
   });
 
-  it("renders an error alert when getCV fails", async () => {
+  it("renders an error alert when getResume fails", async () => {
     renderPage();
-    const errorMsg = await screen.findByText(enCommon.cv.detail.error);
+    const errorMsg = await screen.findByText(enCommon.resume.detail.error);
     expect(errorMsg).toBeInTheDocument();
   });
 });
@@ -263,10 +262,10 @@ describe("Generic error state", () => {
 // Query key factory
 // ---------------------------------------------------------------------------
 
-describe("getCVQueryKey", () => {
-  it("returns a tuple with 'getCV' and the given id", () => {
-    const key = getCVQueryKey("my-cv-id");
-    expect(key).toEqual(["getCV", "my-cv-id"]);
+describe("getResumeQueryKey", () => {
+  it("returns a tuple with 'getResume' and the given id", () => {
+    const key = getResumeQueryKey("my-resume-id");
+    expect(key).toEqual(["getResume", "my-resume-id"]);
   });
 });
 

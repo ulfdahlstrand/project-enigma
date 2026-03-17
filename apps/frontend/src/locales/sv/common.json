@@ -49,30 +49,30 @@
       "saveSuccess": "Anställd sparad.",
       "saveError": "Det gick inte att spara den anställde. Försök igen.",
       "notFound": "Anställd hittades inte.",
-      "viewCVs": "Visa CV"
+      "viewResumes": "Visa meritförteckningar"
     }
   },
-  "cv": {
-    "pageTitle": "Mina CV",
-    "loading": "Laddar CV…",
-    "error": "Kunde inte ladda CV. Försök igen.",
-    "empty": "Inga CV hittades.",
+  "resume": {
+    "pageTitle": "Mina meritförteckningar",
+    "loading": "Laddar meritförteckningar…",
+    "error": "Kunde inte ladda meritförteckningar. Försök igen.",
+    "empty": "Inga meritförteckningar hittades.",
     "tableHeaderTitle": "Titel",
     "tableHeaderLanguage": "Språk",
     "tableHeaderMain": "Huvud",
     "languageBadge": "{{language}}",
     "mainBadge": "Huvud",
     "detail": {
-      "loading": "Laddar CV…",
-      "error": "Kunde inte ladda CV.",
-      "notFound": "CV hittades inte.",
+      "loading": "Laddar meritförteckning…",
+      "error": "Kunde inte ladda meritförteckning.",
+      "notFound": "Meritförteckning hittades inte.",
       "skillsHeading": "Kompetenser",
       "noSkills": "Inga kompetenser tillagda.",
       "editButton": "Redigera",
-      "backButton": "Tillbaka till CV"
+      "backButton": "Tillbaka till meritförteckningar"
     },
     "edit": {
-      "pageTitle": "Redigera CV",
+      "pageTitle": "Redigera meritförteckning",
       "summaryLabel": "Sammanfattning",
       "skillNameLabel": "Kompetensnamn",
       "skillLevelLabel": "Nivå",
@@ -80,8 +80,8 @@
       "removeSkillButton": "Ta bort",
       "saveButton": "Spara",
       "saving": "Sparar…",
-      "saveSuccess": "CV sparat.",
-      "saveError": "Kunde inte spara CV. Försök igen.",
+      "saveSuccess": "Meritförteckning sparad.",
+      "saveError": "Kunde inte spara meritförteckning. Försök igen.",
       "backButton": "Tillbaka"
     }
   },

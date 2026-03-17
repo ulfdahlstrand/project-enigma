@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
-// CV schemas
+// Resume schemas
 //
 // Shared between frontend and backend via @cv-tool/contracts.
 //
@@ -10,7 +10,7 @@ import { z } from "zod";
 // plain-JS Date instances from Kysely or serialised strings from JSON.
 // ---------------------------------------------------------------------------
 
-export const cvSkillSchema = z.object({
+export const resumeSkillSchema = z.object({
   id: z.string().uuid(),
   cvId: z.string().uuid(),
   name: z.string(),
@@ -19,7 +19,7 @@ export const cvSkillSchema = z.object({
   sortOrder: z.number(),
 });
 
-export const cvSchema = z.object({
+export const resumeSchema = z.object({
   id: z.string().uuid(),
   employeeId: z.string().uuid(),
   title: z.string(),
@@ -30,46 +30,46 @@ export const cvSchema = z.object({
   updatedAt: z.union([z.string(), z.date()]),
 });
 
-export const cvWithSkillsSchema = cvSchema.extend({
-  skills: z.array(cvSkillSchema),
+export const resumeWithSkillsSchema = resumeSchema.extend({
+  skills: z.array(resumeSkillSchema),
 });
 
 // ---------------------------------------------------------------------------
-// listCVs schemas
+// listResumes schemas
 // ---------------------------------------------------------------------------
 
-export const listCVsInputSchema = z.object({
+export const listResumesInputSchema = z.object({
   employeeId: z.string().uuid().optional(),
   language: z.string().optional(),
 });
 
-export const listCVsOutputSchema = z.array(cvSchema);
+export const listResumesOutputSchema = z.array(resumeSchema);
 
 // ---------------------------------------------------------------------------
-// getCV schemas
+// getResume schemas
 // ---------------------------------------------------------------------------
 
-export const getCVInputSchema = z.object({ id: z.string().uuid() });
-export const getCVOutputSchema = cvWithSkillsSchema;
+export const getResumeInputSchema = z.object({ id: z.string().uuid() });
+export const getResumeOutputSchema = resumeWithSkillsSchema;
 
 // ---------------------------------------------------------------------------
-// createCV schemas
+// createResume schemas
 // ---------------------------------------------------------------------------
 
-export const createCVInputSchema = z.object({
+export const createResumeInputSchema = z.object({
   employeeId: z.string().uuid(),
   title: z.string().min(1),
   language: z.string().default("en"),
   summary: z.string().nullable().optional(),
 });
 
-export const createCVOutputSchema = cvWithSkillsSchema;
+export const createResumeOutputSchema = resumeWithSkillsSchema;
 
 // ---------------------------------------------------------------------------
-// updateCV schemas
+// updateResume schemas
 // ---------------------------------------------------------------------------
 
-export const updateCVInputSchema = z
+export const updateResumeInputSchema = z
   .object({
     id: z.string().uuid(),
     title: z.string().min(1).optional(),
@@ -86,19 +86,19 @@ export const updateCVInputSchema = z
     { message: "At least one field must be provided" }
   );
 
-export const updateCVOutputSchema = cvSchema;
+export const updateResumeOutputSchema = resumeSchema;
 
 // ---------------------------------------------------------------------------
-// deleteCV schemas
+// deleteResume schemas
 // ---------------------------------------------------------------------------
 
-export const deleteCVInputSchema = z.object({ id: z.string().uuid() });
-export const deleteCVOutputSchema = z.object({ deleted: z.literal(true) });
+export const deleteResumeInputSchema = z.object({ id: z.string().uuid() });
+export const deleteResumeOutputSchema = z.object({ deleted: z.literal(true) });
 
 // ---------------------------------------------------------------------------
 // Inferred TypeScript types
 // ---------------------------------------------------------------------------
 
-export type CVSkill = z.infer<typeof cvSkillSchema>;
-export type CV = z.infer<typeof cvSchema>;
-export type CVWithSkills = z.infer<typeof cvWithSkillsSchema>;
+export type ResumeSkill = z.infer<typeof resumeSkillSchema>;
+export type Resume = z.infer<typeof resumeSchema>;
+export type ResumeWithSkills = z.infer<typeof resumeWithSkillsSchema>;
