@@ -26,6 +26,15 @@ import { Route, getResumeQueryKey } from "../$id";
 // Mock oRPC client
 // ---------------------------------------------------------------------------
 
+vi.mock("../../../components/RouterButton", () => ({
+  default: React.forwardRef(function MockRouterButton(
+    { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown; params?: unknown },
+    ref: React.Ref<HTMLAnchorElement>
+  ) {
+    return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
+  }),
+}));
+
 vi.mock("../../../orpc-client", () => ({
   orpc: {
     listResumes: vi.fn(),

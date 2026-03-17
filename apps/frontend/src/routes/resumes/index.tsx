@@ -7,13 +7,12 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useNavigate, useSearch, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
@@ -25,6 +24,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 
 export const LIST_RESUMES_QUERY_KEY = ["listResumes"] as const;
 
@@ -81,14 +81,13 @@ function ResumeListPage() {
           {t("resume.pageTitle")}
         </Typography>
         {employeeId && (
-          <Button
+          <RouterButton
             variant="contained"
-            component={Link}
             to="/resumes/new"
             search={{ employeeId }}
           >
             {t("resume.addResume")}
-          </Button>
+          </RouterButton>
         )}
       </Box>
 

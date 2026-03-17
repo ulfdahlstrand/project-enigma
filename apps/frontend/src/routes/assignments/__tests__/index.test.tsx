@@ -7,6 +7,15 @@ import enCommon from "../../../locales/en/common.json";
 import { renderWithProviders, buildTestQueryClient } from "../../../test-utils/render";
 import { Route, LIST_ASSIGNMENTS_QUERY_KEY } from "..";
 
+vi.mock("../../../components/RouterButton", () => ({
+  default: React.forwardRef(function MockRouterButton(
+    { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown; params?: unknown },
+    ref: React.Ref<HTMLAnchorElement>
+  ) {
+    return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
+  }),
+}));
+
 vi.mock("../../../orpc-client", () => ({
   orpc: {
     listAssignments: vi.fn(),
@@ -68,7 +77,7 @@ const AssignmentListPage = Route.options.component as React.ComponentType;
 
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  return { queryClient, ...renderWithProviders(<AssignmentListPage />, { queryClient }) };
+  return renderWithProviders(<AssignmentListPage />, { queryClient });
 }
 
 afterEach(() => vi.clearAllMocks());

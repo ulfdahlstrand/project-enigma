@@ -1,10 +1,9 @@
-import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
@@ -16,6 +15,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 import { useSearch } from "@tanstack/react-router";
 
 export const LIST_ASSIGNMENTS_QUERY_KEY = ["listAssignments"] as const;
@@ -72,14 +72,13 @@ function AssignmentListPage() {
         <Typography variant="h4" component="h1">
           {t("assignment.pageTitle")}
         </Typography>
-        <Button
+        <RouterButton
           variant="contained"
-          component={Link}
           to="/assignments/new"
           search={employeeId ? { employeeId } : {}}
         >
           {t("assignment.addAssignment")}
-        </Button>
+        </RouterButton>
       </Box>
 
       {assignments && assignments.length === 0 ? (
