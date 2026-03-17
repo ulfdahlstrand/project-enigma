@@ -123,6 +123,7 @@
       "backButton": "Tillbaka till meritförteckningar",
       "export": {
         "markdown": "Exportera Markdown",
+        "docx": "Exportera Word",
         "exporting": "Exporterar…",
         "selectFormat": "Välj exportformat"
       }

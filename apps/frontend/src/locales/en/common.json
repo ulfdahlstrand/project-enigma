@@ -123,6 +123,7 @@
       "backButton": "Back to Resumes",
       "export": {
         "markdown": "Export Markdown",
+        "docx": "Export Word",
         "exporting": "Exporting…",
         "selectFormat": "Select export format"
       }

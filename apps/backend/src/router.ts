@@ -21,6 +21,7 @@ import { createEducationHandler } from "./procedures/create-education.js";
 import { deleteEducationHandler } from "./procedures/delete-education.js";
 import { importCvHandler } from "./procedures/import-cv.js";
 import { exportResumeMarkdownHandler } from "./procedures/export-resume-markdown.js";
+import { exportResumeDocxHandler } from "./procedures/export-resume-docx.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -53,6 +54,7 @@ export const router = implement(contract).router({
   deleteEducation: deleteEducationHandler,
   importCv: importCvHandler,
   exportResumeMarkdown: exportResumeMarkdownHandler,
+  exportResumeDocx: exportResumeDocxHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

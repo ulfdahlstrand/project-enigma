@@ -9,3 +9,14 @@ export const exportResumeMarkdownOutputSchema = z.object({
   filename: z.string(),
   referenceId: z.string().uuid(),
 });
+
+export const exportResumeDocxInputSchema = z.object({
+  resumeId: z.string().uuid(),
+});
+
+export const exportResumeDocxOutputSchema = z.object({
+  /** Base64-encoded DOCX bytes */
+  docx: z.string(),
+  filename: z.string(),
+  referenceId: z.string().uuid(),
+});
