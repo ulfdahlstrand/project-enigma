@@ -120,7 +120,12 @@
       "assignmentsHeading": "Uppdrag",
       "noAssignments": "Inga uppdrag tillagda.",
       "assignmentPresent": "Nuvarande",
-      "backButton": "Tillbaka till meritförteckningar"
+      "backButton": "Tillbaka till meritförteckningar",
+      "export": {
+        "markdown": "Exportera Markdown",
+        "exporting": "Exporterar…",
+        "selectFormat": "Välj exportformat"
+      }
     },
     "edit": {
       "pageTitle": "Redigera meritförteckning",
