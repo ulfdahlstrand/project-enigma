@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import type { AuthUser } from "./require-auth.js";
@@ -36,7 +35,10 @@ export async function resolveEmployeeId(
     .executeTakeFirst();
 
   if (row === undefined) {
-    throw new ORPCError("FORBIDDEN");
+    // No employee record found for this consultant's email. Return null so
+    // they can still browse CVs. This is a known gap until user↔employee
+    // linkage is modelled with an explicit FK (tracked as tech debt).
+    return null;
   }
 
   return row.id;

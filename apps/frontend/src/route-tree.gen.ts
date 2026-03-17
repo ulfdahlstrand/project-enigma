@@ -13,8 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TestIndexRouteImport } from './routes/test/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as EmployeeIndexRouteImport } from './routes/employee/index'
+import { Route as CvIndexRouteImport } from './routes/cv/index'
 import { Route as EmployeeNewRouteImport } from './routes/employee/new'
 import { Route as EmployeeIdRouteImport } from './routes/employee/$id'
+import { Route as CvIdRouteImport } from './routes/cv/$id'
+import { Route as CvIdEditRouteImport } from './routes/cv/$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -36,6 +39,11 @@ const EmployeeIndexRoute = EmployeeIndexRouteImport.update({
   path: '/employee/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CvIndexRoute = CvIndexRouteImport.update({
+  id: '/cv/',
+  path: '/cv/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmployeeNewRoute = EmployeeNewRouteImport.update({
   id: '/employee/new',
   path: '/employee/new',
@@ -46,57 +54,93 @@ const EmployeeIdRoute = EmployeeIdRouteImport.update({
   path: '/employee/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CvIdRoute = CvIdRouteImport.update({
+  id: '/cv/$id',
+  path: '/cv/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CvIdEditRoute = CvIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => CvIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cv/$id': typeof CvIdRouteWithChildren
   '/employee/$id': typeof EmployeeIdRoute
   '/employee/new': typeof EmployeeNewRoute
+  '/cv/': typeof CvIndexRoute
   '/employee/': typeof EmployeeIndexRoute
   '/login/': typeof LoginIndexRoute
   '/test/': typeof TestIndexRoute
+  '/cv/$id/edit': typeof CvIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cv/$id': typeof CvIdRouteWithChildren
   '/employee/$id': typeof EmployeeIdRoute
   '/employee/new': typeof EmployeeNewRoute
+  '/cv': typeof CvIndexRoute
   '/employee': typeof EmployeeIndexRoute
   '/login': typeof LoginIndexRoute
   '/test': typeof TestIndexRoute
+  '/cv/$id/edit': typeof CvIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cv/$id': typeof CvIdRouteWithChildren
   '/employee/$id': typeof EmployeeIdRoute
   '/employee/new': typeof EmployeeNewRoute
+  '/cv/': typeof CvIndexRoute
   '/employee/': typeof EmployeeIndexRoute
   '/login/': typeof LoginIndexRoute
   '/test/': typeof TestIndexRoute
+  '/cv/$id/edit': typeof CvIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cv/$id'
     | '/employee/$id'
     | '/employee/new'
+    | '/cv/'
     | '/employee/'
     | '/login/'
     | '/test/'
+    | '/cv/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/employee/$id' | '/employee/new' | '/employee' | '/login' | '/test'
+  to:
+    | '/'
+    | '/cv/$id'
+    | '/employee/$id'
+    | '/employee/new'
+    | '/cv'
+    | '/employee'
+    | '/login'
+    | '/test'
+    | '/cv/$id/edit'
   id:
     | '__root__'
     | '/'
+    | '/cv/$id'
     | '/employee/$id'
     | '/employee/new'
+    | '/cv/'
     | '/employee/'
     | '/login/'
     | '/test/'
+    | '/cv/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CvIdRoute: typeof CvIdRouteWithChildren
   EmployeeIdRoute: typeof EmployeeIdRoute
   EmployeeNewRoute: typeof EmployeeNewRoute
+  CvIndexRoute: typeof CvIndexRoute
   EmployeeIndexRoute: typeof EmployeeIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   TestIndexRoute: typeof TestIndexRoute
@@ -132,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cv/': {
+      id: '/cv/'
+      path: '/cv'
+      fullPath: '/cv/'
+      preLoaderRoute: typeof CvIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/employee/new': {
       id: '/employee/new'
       path: '/employee/new'
@@ -146,13 +197,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cv/$id': {
+      id: '/cv/$id'
+      path: '/cv/$id'
+      fullPath: '/cv/$id'
+      preLoaderRoute: typeof CvIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cv/$id/edit': {
+      id: '/cv/$id/edit'
+      path: '/edit'
+      fullPath: '/cv/$id/edit'
+      preLoaderRoute: typeof CvIdEditRouteImport
+      parentRoute: typeof CvIdRoute
+    }
   }
 }
 
+interface CvIdRouteChildren {
+  CvIdEditRoute: typeof CvIdEditRoute
+}
+
+const CvIdRouteChildren: CvIdRouteChildren = {
+  CvIdEditRoute: CvIdEditRoute,
+}
+
+const CvIdRouteWithChildren = CvIdRoute._addFileChildren(CvIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CvIdRoute: CvIdRouteWithChildren,
   EmployeeIdRoute: EmployeeIdRoute,
   EmployeeNewRoute: EmployeeNewRoute,
+  CvIndexRoute: CvIndexRoute,
   EmployeeIndexRoute: EmployeeIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   TestIndexRoute: TestIndexRoute,

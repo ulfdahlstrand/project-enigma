@@ -162,20 +162,26 @@ describe("createCV query function", () => {
     );
   });
 
-  it("throws FORBIDDEN when consultant has no employee record", async () => {
-    const { db } = buildDbWithMissingEmployee();
+  it("succeeds for a consultant with no employee record (no ownership restriction)", async () => {
+    // resolveEmployeeId returns null when no employee matches → no restriction
+    const { db } = buildInsertMock({ ...NEW_CV_ROW, title: "Ghost CV" });
+    // Override selectFrom so employees lookup returns undefined
+    const realSelectFrom = (db as unknown as { selectFrom: ReturnType<typeof vi.fn> }).selectFrom;
+    realSelectFrom.mockImplementation((table: string) => {
+      if (table === "employees") {
+        return { select: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ executeTakeFirst: vi.fn().mockResolvedValue(undefined) }) }) };
+      }
+      return realSelectFrom.getMockImplementation()!(table);
+    });
     const consultantUser = { role: "consultant" as const, email: "ghost@example.com" };
 
-    await expect(
-      createCV(db, consultantUser, {
-        employeeId: EMPLOYEE_ID_1,
-        title: "Ghost CV",
-        language: "en",
-        summary: null,
-      })
-    ).rejects.toSatisfy(
-      (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
-    );
+    const result = await createCV(db, consultantUser, {
+      employeeId: EMPLOYEE_ID_1,
+      title: "Ghost CV",
+      language: "en",
+      summary: null,
+    });
+    expect(result.title).toBe("Ghost CV");
   });
 
   it("maps DB snake_case fields to camelCase in output", async () => {
