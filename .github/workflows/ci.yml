@@ -18,7 +18,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Build contracts
         run: npm run build --workspace=packages/contracts
