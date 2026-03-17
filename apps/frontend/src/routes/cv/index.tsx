@@ -7,7 +7,8 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
@@ -28,7 +29,12 @@ export const LIST_CVS_QUERY_KEY = ["listCVs"] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
+const searchSchema = z.object({
+  employeeId: z.string().optional(),
+});
+
 export const Route = createFileRoute("/cv/")({
+  validateSearch: searchSchema,
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -40,14 +46,15 @@ export const Route = createFileRoute("/cv/")({
 function CvListPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
+  const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
 
   const {
     data: cvs,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: LIST_CVS_QUERY_KEY,
-    queryFn: () => orpc.listCVs({}),
+    queryKey: employeeId ? [...LIST_CVS_QUERY_KEY, employeeId] : LIST_CVS_QUERY_KEY,
+    queryFn: () => orpc.listCVs(employeeId ? { employeeId } : {}),
   });
 
   if (isLoading) {

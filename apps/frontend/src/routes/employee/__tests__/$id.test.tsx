@@ -77,8 +77,13 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    // Override only the hook used by the component
     useParams: () => ({ id: TEST_EMPLOYEE.id }),
+    Link: React.forwardRef(function MockLink(
+      { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown },
+      ref: React.Ref<HTMLAnchorElement>
+    ) {
+      return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
+    }),
   };
 });
 

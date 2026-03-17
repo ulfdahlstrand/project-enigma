@@ -45,13 +45,12 @@ describe("resolveEmployeeId", () => {
     expect(result).toBe(EMPLOYEE_ID);
   });
 
-  it("throws FORBIDDEN for a consultant with no matching employee record", async () => {
+  it("returns null for a consultant with no matching employee record", async () => {
     const { db } = buildSelectMock(undefined);
     const user = { role: "consultant" as const, email: "unknown@example.com" };
 
-    await expect(resolveEmployeeId(db, user)).rejects.toSatisfy(
-      (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
-    );
+    const result = await resolveEmployeeId(db, user);
+    expect(result).toBeNull();
   });
 
   it("queries employees by the consultant's email", async () => {

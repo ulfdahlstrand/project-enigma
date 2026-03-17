@@ -8,7 +8,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -130,9 +130,19 @@ function EmployeeDetailPage() {
 
   return (
     <Box sx={{ p: 2, maxWidth: 480 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t("employee.detail.pageTitle")}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+        <Typography variant="h4" component="h1">
+          {t("employee.detail.pageTitle")}
+        </Typography>
+        <Button
+          variant="outlined"
+          component={Link}
+          to="/cv"
+          search={{ employeeId: id }}
+        >
+          {t("employee.detail.viewCVs")}
+        </Button>
+      </Box>
 
       {saveSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>

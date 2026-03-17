@@ -48,7 +48,8 @@
       "saveButton": "Save",
       "saveSuccess": "Employee saved successfully.",
       "saveError": "Failed to save employee. Please try again.",
-      "notFound": "Employee not found."
+      "notFound": "Employee not found.",
+      "viewCVs": "View CVs"
     }
   },
   "cv": {

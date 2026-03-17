@@ -48,7 +48,8 @@
       "saveButton": "Spara",
       "saveSuccess": "Anställd sparad.",
       "saveError": "Det gick inte att spara den anställde. Försök igen.",
-      "notFound": "Anställd hittades inte."
+      "notFound": "Anställd hittades inte.",
+      "viewCVs": "Visa CV"
     }
   },
   "cv": {
