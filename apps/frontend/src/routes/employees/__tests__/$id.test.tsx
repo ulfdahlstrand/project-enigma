@@ -42,6 +42,9 @@ vi.mock("../../../orpc-client", () => ({
   orpc: {
     getEmployee: vi.fn(),
     updateEmployee: vi.fn(),
+    listEducation: vi.fn(),
+    createEducation: vi.fn(),
+    deleteEducation: vi.fn(),
   },
 }));
 
@@ -49,6 +52,7 @@ import { orpc } from "../../../orpc-client";
 
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockUpdateEmployee = orpc.updateEmployee as ReturnType<typeof vi.fn>;
+const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -108,6 +112,10 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("AC8 — Loading state", () => {
+  beforeEach(() => {
+    mockListEducation.mockResolvedValue([]);
+  });
+
   it("renders a progressbar element while getEmployee is loading", () => {
     // Return a promise that never resolves — keeps the component in loading state
     mockGetEmployee.mockReturnValue(new Promise(() => undefined));
@@ -129,6 +137,7 @@ describe("AC8 — Loading state", () => {
 describe("AC2 — Resolved data: name and email TextFields", () => {
   beforeEach(() => {
     mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
+    mockListEducation.mockResolvedValue([]);
   });
 
   it("renders a TextField whose value equals the employee name", async () => {
@@ -151,6 +160,7 @@ describe("AC2 — Resolved data: name and email TextFields", () => {
 describe("AC3 — Employee id is NOT rendered as an input value", () => {
   beforeEach(() => {
     mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
+    mockListEducation.mockResolvedValue([]);
   });
 
   it("does not render an input whose displayed value equals the employee id", async () => {
@@ -168,6 +178,7 @@ describe("AC3 — Employee id is NOT rendered as an input value", () => {
 describe('AC4 — "Save" button is rendered', () => {
   beforeEach(() => {
     mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
+    mockListEducation.mockResolvedValue([]);
   });
 
   it("renders a button with accessible label matching the save button text", async () => {
@@ -192,6 +203,7 @@ describe("AC5 — Success message after successful save", () => {
       name: TEST_EMPLOYEE.name,
       email: TEST_EMPLOYEE.email,
     });
+    mockListEducation.mockResolvedValue([]);
   });
 
   it("displays success Alert containing the translated success message", async () => {
@@ -223,6 +235,7 @@ describe("AC6 — Query keys invalidated after successful save", () => {
   it("invalidates both getEmployee and listEmployees query keys", async () => {
     mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
     mockUpdateEmployee.mockResolvedValue(TEST_EMPLOYEE);
+    mockListEducation.mockResolvedValue([]);
 
     const queryClient = buildTestQueryClient();
     const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -261,6 +274,7 @@ describe("AC7 — Error on save: Alert shown, inputs retain values", () => {
   beforeEach(() => {
     mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
     mockUpdateEmployee.mockRejectedValue(new Error("Server error"));
+    mockListEducation.mockResolvedValue([]);
   });
 
   it("displays an error Alert containing the translated error message", async () => {
@@ -337,6 +351,7 @@ describe("AC9 — NOT_FOUND error state", () => {
       code: "NOT_FOUND",
     });
     mockGetEmployee.mockRejectedValue(notFoundError);
+    mockListEducation.mockResolvedValue([]);
   });
 
   it('renders the "Person not found" translated message', async () => {

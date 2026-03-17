@@ -12,13 +12,18 @@ import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-rout
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
@@ -30,6 +35,9 @@ import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
  */
 export const getEmployeeQueryKey = (id: string) =>
   ["getEmployee", id] as const;
+
+export const getEducationQueryKey = (employeeId: string) =>
+  ["listEducation", employeeId] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
 
@@ -45,9 +53,17 @@ export const Route = createFileRoute("/employees/$id")({
 const editEmployeeFormSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  title: z.string(),
 });
 
 type EditEmployeeFormValues = z.infer<typeof editEmployeeFormSchema>;
+
+const addEducationFormSchema = z.object({
+  type: z.enum(["degree", "certification", "language"]),
+  value: z.string().min(1),
+});
+
+type AddEducationFormValues = z.infer<typeof addEducationFormSchema>;
 
 function EmployeeDetailPage() {
   const { t } = useTranslation("common");
@@ -55,6 +71,7 @@ function EmployeeDetailPage() {
   const queryClient = useQueryClient();
 
   const queryKey = getEmployeeQueryKey(id);
+  const educationQueryKey = getEducationQueryKey(id);
 
   const {
     data: employee,
@@ -67,20 +84,35 @@ function EmployeeDetailPage() {
     retry: false,
   });
 
+  const { data: educationList = [] } = useQuery({
+    queryKey: educationQueryKey,
+    queryFn: () => orpc.listEducation({ employeeId: id }),
+    enabled: !!employee,
+  });
+
   const { register, handleSubmit, reset } = useForm<EditEmployeeFormValues>({
     resolver: zodResolver(editEmployeeFormSchema),
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "", email: "", title: "" },
   });
 
   useEffect(() => {
     if (employee) {
-      reset({ name: employee.name, email: employee.email });
+      reset({
+        name: employee.name,
+        email: employee.email,
+        title: employee.title ?? "",
+      });
     }
   }, [employee, reset]);
 
   const mutation = useMutation({
     mutationFn: (input: EditEmployeeFormValues) =>
-      orpc.updateEmployee({ id, name: input.name.trim(), email: input.email.trim() }),
+      orpc.updateEmployee({
+        id,
+        name: input.name.trim(),
+        email: input.email.trim(),
+        title: input.title.trim() || null,
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       await queryClient.invalidateQueries({
@@ -89,8 +121,40 @@ function EmployeeDetailPage() {
     },
   });
 
+  const {
+    register: registerEducation,
+    handleSubmit: handleSubmitEducation,
+    control: educationControl,
+    reset: resetEducation,
+    formState: { isSubmitting: isAddingEducation },
+  } = useForm<AddEducationFormValues>({
+    resolver: zodResolver(addEducationFormSchema),
+    defaultValues: { type: "degree", value: "" },
+  });
+
+  const createEducationMutation = useMutation({
+    mutationFn: (data: AddEducationFormValues) =>
+      orpc.createEducation({ employeeId: id, type: data.type, value: data.value }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: educationQueryKey });
+      resetEducation();
+    },
+  });
+
+  const deleteEducationMutation = useMutation({
+    mutationFn: (educationId: string) =>
+      orpc.deleteEducation({ id: educationId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: educationQueryKey });
+    },
+  });
+
   const onSubmit = (data: EditEmployeeFormValues) => {
     mutation.mutate(data);
+  };
+
+  const onAddEducation = (data: AddEducationFormValues) => {
+    createEducationMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -124,6 +188,10 @@ function EmployeeDetailPage() {
       </Box>
     );
   }
+
+  const degrees = educationList.filter((e) => e.type === "degree");
+  const certifications = educationList.filter((e) => e.type === "certification");
+  const languages = educationList.filter((e) => e.type === "language");
 
   return (
     <Box sx={{ p: 2, maxWidth: 480 }}>
@@ -172,6 +240,11 @@ function EmployeeDetailPage() {
           required
           fullWidth
         />
+        <TextField
+          label={t("employee.detail.titleLabel")}
+          {...register("title")}
+          fullWidth
+        />
         <Button
           type="submit"
           variant="contained"
@@ -179,6 +252,116 @@ function EmployeeDetailPage() {
           aria-label={t("employee.detail.saveButton")}
         >
           {t("employee.detail.saveButton")}
+        </Button>
+      </Box>
+
+      {employee?.presentation && employee.presentation.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {t("employee.detail.presentationHeading")}
+          </Typography>
+          {employee.presentation.map((paragraph, i) => (
+            <Typography key={i} variant="body1" sx={{ mb: 1 }}>
+              {paragraph}
+            </Typography>
+          ))}
+        </Box>
+      )}
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="h5" gutterBottom>
+        {t("employee.detail.educationHeading")}
+      </Typography>
+
+      {createEducationMutation.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("employee.detail.educationAddError")}
+        </Alert>
+      )}
+      {deleteEducationMutation.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("employee.detail.educationDeleteError")}
+        </Alert>
+      )}
+
+      {([
+        { key: "degree", label: t("employee.detail.educationDegrees"), entries: degrees },
+        { key: "certification", label: t("employee.detail.educationCertifications"), entries: certifications },
+        { key: "language", label: t("employee.detail.educationLanguages"), entries: languages },
+      ] as const).map(({ key, label, entries }) => (
+        <Box key={key} sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+            {label}
+          </Typography>
+          {entries.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t("employee.detail.educationEmpty")}
+            </Typography>
+          ) : (
+            entries.map((entry) => (
+              <Box
+                key={entry.id}
+                sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5 }}
+              >
+                <Typography variant="body2">{entry.value}</Typography>
+                <Button
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  disabled={deleteEducationMutation.isPending}
+                  onClick={() => deleteEducationMutation.mutate(entry.id)}
+                  aria-label={t("employee.detail.educationDeleteButton")}
+                >
+                  {t("employee.detail.educationDeleteButton")}
+                </Button>
+              </Box>
+            ))
+          )}
+        </Box>
+      ))}
+
+      <Box
+        component="form"
+        onSubmit={handleSubmitEducation(onAddEducation)}
+        noValidate
+        sx={{ display: "flex", gap: 1, mt: 1, alignItems: "flex-start" }}
+      >
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="education-type-label">
+            {t("employee.detail.educationTypeLabel")}
+          </InputLabel>
+          <Controller
+            name="type"
+            control={educationControl}
+            render={({ field }) => (
+              <Select
+                labelId="education-type-label"
+                label={t("employee.detail.educationTypeLabel")}
+                {...field}
+              >
+                <MenuItem value="degree">{t("employee.detail.educationTypeDegree")}</MenuItem>
+                <MenuItem value="certification">{t("employee.detail.educationTypeCertification")}</MenuItem>
+                <MenuItem value="language">{t("employee.detail.educationTypeLanguage")}</MenuItem>
+              </Select>
+            )}
+          />
+        </FormControl>
+        <TextField
+          label={t("employee.detail.educationValueLabel")}
+          {...registerEducation("value")}
+          size="small"
+          sx={{ flex: 1 }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          size="small"
+          disabled={isAddingEducation || createEducationMutation.isPending}
+          aria-label={t("employee.detail.educationAddButton")}
+          sx={{ mt: 0.5 }}
+        >
+          {t("employee.detail.educationAddButton")}
         </Button>
       </Box>
     </Box>
