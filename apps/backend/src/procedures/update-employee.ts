@@ -21,17 +21,21 @@ import { requireAuth, type AuthContext } from "../auth/require-auth.js";
 export async function updateEmployee(
   db: Kysely<Database>,
   id: string,
-  updates: { name?: string; email?: string }
+  updates: { name?: string; email?: string; title?: string | null; presentation?: string[] }
 ): Promise<{
   id: string;
   name: string;
   email: string;
+  title: string | null;
+  presentation: string[];
   createdAt: Date;
   updatedAt: Date;
 }> {
-  const set: { name?: string; email?: string } = {};
+  const set: { name?: string; email?: string; title?: string | null; presentation?: string[] } = {};
   if (updates.name !== undefined) set.name = updates.name;
   if (updates.email !== undefined) set.email = updates.email;
+  if (updates.title !== undefined) set.title = updates.title;
+  if (updates.presentation !== undefined) set.presentation = updates.presentation;
 
   const row = await db
     .updateTable("employees")
@@ -48,6 +52,8 @@ export async function updateEmployee(
     id: row.id,
     name: row.name,
     email: row.email,
+    title: row.title,
+    presentation: row.presentation ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -63,6 +69,8 @@ export const updateEmployeeHandler = implement(contract.updateEmployee).handler(
     return updateEmployee(getDb(), input.id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.presentation !== undefined && { presentation: input.presentation }),
     });
   }
 );
@@ -83,6 +91,8 @@ export function createUpdateEmployeeHandler(db: Kysely<Database>) {
     return updateEmployee(db, input.id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.presentation !== undefined && { presentation: input.presentation }),
     });
   });
 }

@@ -1,5 +1,7 @@
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "kysely";
 
+export type EducationType = "degree" | "certification" | "language";
+
 // ---------------------------------------------------------------------------
 // Database interface
 //
@@ -12,6 +14,8 @@ export interface EmployeeTable {
   id: Generated<string>;
   name: string;
   email: string;
+  title: string | null;
+  presentation: Generated<string[]>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -69,6 +73,17 @@ export interface AssignmentTable {
   end_date: Date | null;
   technologies: ColumnType<string[], string[], string[]>;
   is_current: Generated<boolean>;
+  keywords: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface EducationTable {
+  id: Generated<string>;
+  employee_id: string;
+  type: EducationType;
+  value: string;
+  sort_order: Generated<number>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -77,12 +92,17 @@ export type Assignment = Selectable<AssignmentTable>;
 export type NewAssignment = Insertable<AssignmentTable>;
 export type AssignmentUpdate = Updateable<AssignmentTable>;
 
+export type Education = Selectable<EducationTable>;
+export type NewEducation = Insertable<EducationTable>;
+export type EducationUpdate = Updateable<EducationTable>;
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
   assignments: AssignmentTable;
+  education: EducationTable;
 }
 
 // ---------------------------------------------------------------------------
