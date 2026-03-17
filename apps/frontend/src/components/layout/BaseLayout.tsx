@@ -1,35 +1,53 @@
 /**
- * BaseLayout component — the application shell shared by all routes.
+ * BaseLayout component — Slack-inspired application shell.
  *
- * Renders Header at the top, a side NavigationMenu alongside the matched child
- * route via <Outlet />, and Footer at the bottom. Wired into TanStack Router's
- * __root.tsx so it persists across all client-side navigations without
- * unmounting.
- *
- * Layout uses MUI Box with flexbox to ensure the footer is pushed to the bottom
- * of the viewport when content is short, with the NavigationMenu positioned as
- * a persistent side column next to the main content area. Styling is applied
- * exclusively via MUI sx prop — no inline style objects or imported CSS files.
+ * Layout: full-height sidebar (aubergine) on the left containing the app
+ * name and navigation, with a scrollable white content area on the right.
+ * No separate Header or Footer — they are integrated into the sidebar and
+ * content area respectively, keeping the chrome minimal.
  */
 import Box from "@mui/material/Box";
 import { Outlet } from "@tanstack/react-router";
-import { Footer } from "./Footer";
-import { Header } from "./Header";
 import { NavigationMenu } from "./NavigationMenu";
+import { SIDEBAR_BG, SIDEBAR_WIDTH } from "../../lib/theme";
 
 export function BaseLayout() {
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <Box sx={{ display: "flex", flexGrow: 1 }}>
-        <Box component="nav" sx={{ width: 200, flexShrink: 0 }}>
-          <NavigationMenu />
-        </Box>
-        <Box component="main" sx={{ flexGrow: 1 }}>
-          <Outlet />
-        </Box>
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* Sidebar */}
+      <Box
+        component="nav"
+        sx={{
+          width: SIDEBAR_WIDTH,
+          flexShrink: 0,
+          bgcolor: SIDEBAR_BG,
+          display: "flex",
+          flexDirection: "column",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          bottom: 0,
+          overflowY: "auto",
+          zIndex: 1200,
+        }}
+      >
+        <NavigationMenu />
       </Box>
-      <Footer />
+
+      {/* Main content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          ml: `${SIDEBAR_WIDTH}px`,
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Outlet />
+      </Box>
     </Box>
   );
 }

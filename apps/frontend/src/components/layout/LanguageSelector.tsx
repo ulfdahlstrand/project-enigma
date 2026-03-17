@@ -46,9 +46,11 @@ export function LanguageSelector() {
       size="small"
       inputProps={{ "aria-label": t("languageSelector.label", "Select language") }}
       sx={{
-        color: "inherit",
+        color: "rgba(255,255,255,0.72)",
+        fontSize: "0.875rem",
         ".MuiOutlinedInput-notchedOutline": { border: 0 },
-        ".MuiSelect-icon": { color: "inherit" },
+        ".MuiSelect-icon": { color: "rgba(255,255,255,0.72)" },
+        "&:hover": { color: "#fff" },
       }}
     >
       {Object.entries(localeFlagMap).map(([locale, countryCode]) => {

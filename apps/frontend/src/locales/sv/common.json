@@ -13,8 +13,8 @@
   },
   "nav": {
     "home": "Hem",
-    "test": "Test",
-    "employees": "Anställda"
+    "employees": "Anställda",
+    "resumes": "Meritförteckningar"
   },
   "employee": {
     "pageTitle": "Anställda",
