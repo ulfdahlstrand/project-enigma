@@ -45,6 +45,7 @@ const TEST_ASSIGNMENT = {
   endDate: null,
   technologies: ["TypeScript"],
   isCurrent: false,
+  keywords: null,
   createdAt: "2023-01-01T00:00:00Z",
   updatedAt: "2023-01-01T00:00:00Z",
 };

@@ -41,6 +41,10 @@ import {
   deleteEducationInputSchema,
   deleteEducationOutputSchema,
 } from "./education.js";
+import {
+  importCvInputSchema,
+  importCvOutputSchema,
+} from "./import-cv.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -151,6 +155,17 @@ export {
 export type { Education, EducationType } from "./education.js";
 
 // ---------------------------------------------------------------------------
+// CV import schemas — re-exported from ./import-cv
+// ---------------------------------------------------------------------------
+
+export {
+  cvJsonSchema,
+  importCvInputSchema,
+  importCvOutputSchema,
+} from "./import-cv.js";
+export type { CvJson } from "./import-cv.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -188,6 +203,7 @@ export const contract = oc.router({
   listEducation: oc.input(listEducationInputSchema).output(listEducationOutputSchema),
   createEducation: oc.input(createEducationInputSchema).output(createEducationOutputSchema),
   deleteEducation: oc.input(deleteEducationInputSchema).output(deleteEducationOutputSchema),
+  importCv: oc.input(importCvInputSchema).output(importCvOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

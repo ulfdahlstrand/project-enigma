@@ -38,6 +38,8 @@ function AssignmentDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isCurrent, setIsCurrent] = useState(false);
+  const [technologiesRaw, setTechnologiesRaw] = useState("");
+  const [keywords, setKeywords] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
@@ -71,11 +73,13 @@ function AssignmentDetailPage() {
           : ""
       );
       setIsCurrent(assignment.isCurrent);
+      setTechnologiesRaw(assignment.technologies.join(", "));
+      setKeywords(assignment.keywords ?? "");
     }
   }, [assignment]);
 
   const mutation = useMutation({
-    mutationFn: (input: { clientName: string; role: string; description: string; startDate: string; endDate: string | null; isCurrent: boolean }) =>
+    mutationFn: (input: { clientName: string; role: string; description: string; startDate: string; endDate: string | null; isCurrent: boolean; technologies: string[]; keywords: string | null }) =>
       orpc.updateAssignment({ id, ...input }),
     onSuccess: async () => {
       setSaveError(false);
@@ -93,13 +97,19 @@ function AssignmentDetailPage() {
     e.preventDefault();
     setSaveSuccess(false);
     setSaveError(false);
+    const technologies = technologiesRaw
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
     mutation.mutate({
       clientName: clientName.trim(),
       role: role.trim(),
-      description: description.trim(),
+      description,
       startDate,
       endDate: endDate || null,
       isCurrent,
+      technologies,
+      keywords: keywords.trim() || null,
     });
   };
 
@@ -180,7 +190,7 @@ function AssignmentDetailPage() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           multiline
-          rows={3}
+          minRows={4}
           fullWidth
         />
         <TextField
@@ -199,6 +209,19 @@ function AssignmentDetailPage() {
           onChange={(e) => setEndDate(e.target.value)}
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label={t("assignment.detail.technologiesLabel")}
+          value={technologiesRaw}
+          onChange={(e) => setTechnologiesRaw(e.target.value)}
+          fullWidth
+          placeholder="React, TypeScript, Node.js"
+        />
+        <TextField
+          label={t("assignment.detail.keywordsLabel")}
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          fullWidth
         />
         <FormControlLabel
           control={
