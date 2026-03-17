@@ -134,6 +134,14 @@ function ResumeDetailPage() {
         >
           {t("resume.detail.editButton")}
         </Button>
+        <Button
+          variant="outlined"
+          component={Link}
+          to="/assignments/new"
+          search={{ resumeId: id, employeeId: resume?.employeeId }}
+        >
+          {t("resume.detail.addAssignment")}
+        </Button>
         <Button component={Link} to="/resumes">
           {t("resume.detail.backButton")}
         </Button>

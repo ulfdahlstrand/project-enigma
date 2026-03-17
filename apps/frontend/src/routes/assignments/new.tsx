@@ -20,6 +20,7 @@ const TOKEN_KEY = "cv-tool:id-token";
 
 const searchSchema = z.object({
   employeeId: z.string().optional(),
+  resumeId: z.string().optional(),
 });
 
 export const Route = createFileRoute("/assignments/new")({
@@ -36,7 +37,7 @@ function NewAssignmentPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
+  const { employeeId, resumeId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string };
 
   const [clientName, setClientName] = useState("");
   const [role, setRole] = useState("");
@@ -63,7 +64,8 @@ function NewAssignmentPage() {
     setSaveError(false);
     if (!employeeId) return;
     mutation.mutate({
-      employeeId,
+      employeeId: employeeId ?? "",
+      resumeId: resumeId ?? null,
       clientName: clientName.trim(),
       role: role.trim(),
       description: description.trim(),
