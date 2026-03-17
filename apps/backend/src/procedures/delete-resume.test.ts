@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createDeleteResumeHandler, deleteResume } from "./delete-resume.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the deleteResume procedure.
@@ -82,9 +83,7 @@ describe("deleteResume query function", () => {
       { employee_id: EMPLOYEE_ID_1 },
       { id: RESUME_ID }
     );
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
-
-    const result = await deleteResume(db, adminUser, RESUME_ID);
+    const result = await deleteResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(result).toEqual({ deleted: true });
     expect(deleteFrom).toHaveBeenCalledWith("resumes");
@@ -96,9 +95,7 @@ describe("deleteResume query function", () => {
       { id: RESUME_ID },
       EMPLOYEE_ID_1
     );
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
-
-    const result = await deleteResume(db, consultantUser, RESUME_ID);
+    const result = await deleteResume(db, MOCK_CONSULTANT, RESUME_ID);
 
     expect(result).toEqual({ deleted: true });
   });
@@ -110,18 +107,14 @@ describe("deleteResume query function", () => {
       { id: RESUME_ID },
       EMPLOYEE_ID_2
     );
-    const consultantUser = { role: "consultant" as const, email: "other@example.com" };
-
-    await expect(deleteResume(db, consultantUser, RESUME_ID)).rejects.toSatisfy(
+    await expect(deleteResume(db, MOCK_CONSULTANT_2, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
   });
 
   it("throws NOT_FOUND when the resume does not exist (delete returns undefined)", async () => {
     const { db } = buildDeleteMock({ employee_id: EMPLOYEE_ID_1 }, undefined);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
-
-    await expect(deleteResume(db, adminUser, RESUME_ID)).rejects.toSatisfy(
+    await expect(deleteResume(db, MOCK_ADMIN, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
@@ -133,9 +126,7 @@ describe("deleteResume query function", () => {
       undefined,
       EMPLOYEE_ID_1
     );
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
-
-    await expect(deleteResume(db, consultantUser, RESUME_ID)).rejects.toSatisfy(
+    await expect(deleteResume(db, MOCK_CONSULTANT, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
@@ -156,7 +147,7 @@ describe("createDeleteResumeHandler", () => {
     const result = await call(
       handler,
       { id: RESUME_ID },
-      { context: { user: { role: "admin", email: "admin@example.com" } } }
+      { context: { user: MOCK_ADMIN } }
     );
 
     expect(result).toEqual({ deleted: true });

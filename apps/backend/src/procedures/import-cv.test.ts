@@ -100,7 +100,7 @@ function buildDb({
 describe("importCv — assignments", () => {
   it("creates assignment from valid period", async () => {
     const db = buildDb();
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     expect(result.assignmentsCreated).toBe(1);
     expect(result.assignmentsSkipped).toBe(0);
   });
@@ -111,7 +111,7 @@ describe("importCv — assignments", () => {
       ...BASE_CV_JSON,
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, period: "not a period" }],
     };
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: cv });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
     expect(result.assignmentsSkipped).toBe(1);
     expect(result.assignmentsCreated).toBe(0);
   });
@@ -122,20 +122,20 @@ describe("importCv — assignments", () => {
       ...BASE_CV_JSON,
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, period: "" }],
     };
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: cv });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
     expect(result.assignmentsSkipped).toBe(1);
   });
 
   it("skips duplicate assignments", async () => {
     const db = buildDb({ existingAssignment: { id: "existing-id" } });
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     expect(result.assignmentsSkipped).toBe(1);
     expect(result.assignmentsCreated).toBe(0);
   });
 
   it("joins context/responsibilities/result with double newline", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
-    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { description: string };
     expect(passedValues.description).toBe("Built things.\n\nImproved performance.");
   });
@@ -146,14 +146,14 @@ describe("importCv — assignments", () => {
       ...BASE_CV_JSON,
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, client: "   " }],
     };
-    await importCv(db, { employeeId: EMP_ID, cvJson: cv });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { client_name: string };
     expect(passedValues.client_name).toBe("Unknown");
   });
 
   it("uses technologies array directly", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
-    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { technologies: string[] };
     expect(passedValues.technologies).toEqual(["TypeScript", "Node.js"]);
   });
@@ -162,7 +162,7 @@ describe("importCv — assignments", () => {
 describe("importCv — education", () => {
   it("creates degree, certification, and language entries", async () => {
     const db = buildDb();
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     // 1 assignment + 1 degree + 1 cert + 2 languages = 5 inserts total
     expect(result.educationCreated).toBe(4);
     expect(result.educationSkipped).toBe(0);
@@ -175,7 +175,7 @@ describe("importCv — education", () => {
     db._mocks.selectExecuteTakeFirst.mockReset();
     db._mocks.selectExecuteTakeFirst.mockResolvedValue({ id: "edu-id" });
     const cv = { ...BASE_CV_JSON, assignments: [] };
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: cv });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
     expect(result.educationCreated).toBe(0);
     expect(result.educationSkipped).toBe(4);
   });
@@ -184,7 +184,7 @@ describe("importCv — education", () => {
 describe("importCv — resume", () => {
   it("updates existing main resume when one exists and title is non-empty", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
     expect(updateMock).toHaveBeenCalledWith("resumes");
     expect(result.resumeCreated).toBe(false);
@@ -192,7 +192,7 @@ describe("importCv — resume", () => {
 
   it("creates a new main resume when none exists", async () => {
     const db = buildDb({ mainResume: undefined });
-    const result = await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const insertMock = (db as unknown as { insertInto: ReturnType<typeof vi.fn> }).insertInto;
     expect(insertMock).toHaveBeenCalledWith("resumes");
     expect(result.resumeCreated).toBe(true);
@@ -200,7 +200,7 @@ describe("importCv — resume", () => {
 
   it("links new assignments to the resume id", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
-    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls.find(
       (call) => (call[0] as { resume_id?: string }).resume_id !== undefined
     )?.[0] as { resume_id: string } | undefined;
@@ -214,7 +214,7 @@ describe("importCv — resume", () => {
       consultant: { name: "Test", title: "", presentation: [] },
       assignments: [],
     };
-    await importCv(db, { employeeId: EMP_ID, cvJson: cv });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
     const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
     expect(updateMock).not.toHaveBeenCalled();
   });
@@ -224,7 +224,7 @@ describe("createImportCvHandler", () => {
   it("returns result when authenticated", async () => {
     const db = buildDb();
     const handler = createImportCvHandler(db as unknown as Kysely<Database>);
-    const result = await call(handler, { employeeId: EMP_ID, cvJson: BASE_CV_JSON }, {
+    const result = await call(handler, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON }, {
       context: { user: { role: "admin", email: "a@example.com" } },
     });
     expect(result.assignmentsCreated).toBeGreaterThanOrEqual(0);
@@ -234,7 +234,7 @@ describe("createImportCvHandler", () => {
     const db = buildDb();
     const handler = createImportCvHandler(db as unknown as Kysely<Database>);
     await expect(
-      call(handler, { employeeId: EMP_ID, cvJson: BASE_CV_JSON }, { context: {} })
+      call(handler, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON }, { context: {} })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "UNAUTHORIZED"
     );

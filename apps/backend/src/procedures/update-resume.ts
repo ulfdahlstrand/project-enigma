@@ -56,7 +56,7 @@ export async function updateResume(
   const set: {
     title?: string;
     consultant_title?: string | null;
-    presentation?: unknown;
+    presentation?: string[];
     summary?: string | null;
     language?: string;
     is_main?: boolean;
@@ -65,7 +65,7 @@ export async function updateResume(
   if (input.title !== undefined) set.title = input.title;
   if (input.consultantTitle !== undefined) set.consultant_title = input.consultantTitle;
   if (input.presentation !== undefined) {
-    set.presentation = sql`${JSON.stringify(input.presentation)}::jsonb`;
+    set.presentation = sql`${JSON.stringify(input.presentation)}::jsonb` as unknown as string[];
   }
   if (input.summary !== undefined) set.summary = input.summary;
   if (input.language !== undefined) set.language = input.language;

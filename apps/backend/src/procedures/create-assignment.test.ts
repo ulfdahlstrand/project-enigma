@@ -31,6 +31,9 @@ const VALID_INPUT = {
   clientName: "Acme Corp",
   role: "Developer",
   startDate: "2023-01-01",
+  description: "",
+  isCurrent: false,
+  highlight: false,
   technologies: ["TypeScript"],
 };
 
