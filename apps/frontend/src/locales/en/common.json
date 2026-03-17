@@ -51,6 +51,39 @@
       "notFound": "Employee not found."
     }
   },
+  "cv": {
+    "pageTitle": "My CVs",
+    "loading": "Loading CVs…",
+    "error": "Failed to load CVs. Please try again later.",
+    "empty": "No CVs found.",
+    "tableHeaderTitle": "Title",
+    "tableHeaderLanguage": "Language",
+    "tableHeaderMain": "Main",
+    "languageBadge": "{{language}}",
+    "mainBadge": "Main",
+    "detail": {
+      "loading": "Loading CV…",
+      "error": "Failed to load CV.",
+      "notFound": "CV not found.",
+      "skillsHeading": "Skills",
+      "noSkills": "No skills added yet.",
+      "editButton": "Edit",
+      "backButton": "Back to CVs"
+    },
+    "edit": {
+      "pageTitle": "Edit CV",
+      "summaryLabel": "Summary",
+      "skillNameLabel": "Skill name",
+      "skillLevelLabel": "Level",
+      "addSkillButton": "Add skill",
+      "removeSkillButton": "Remove",
+      "saveButton": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "CV saved.",
+      "saveError": "Failed to save CV. Please try again.",
+      "backButton": "Back"
+    }
+  },
   "test": {
     "heading": "CV managing app",
     "description": "This page validates full end-to-end stack connectivity.",

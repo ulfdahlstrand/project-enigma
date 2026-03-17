@@ -51,6 +51,39 @@
       "notFound": "Anställd hittades inte."
     }
   },
+  "cv": {
+    "pageTitle": "Mina CV",
+    "loading": "Laddar CV…",
+    "error": "Kunde inte ladda CV. Försök igen.",
+    "empty": "Inga CV hittades.",
+    "tableHeaderTitle": "Titel",
+    "tableHeaderLanguage": "Språk",
+    "tableHeaderMain": "Huvud",
+    "languageBadge": "{{language}}",
+    "mainBadge": "Huvud",
+    "detail": {
+      "loading": "Laddar CV…",
+      "error": "Kunde inte ladda CV.",
+      "notFound": "CV hittades inte.",
+      "skillsHeading": "Kompetenser",
+      "noSkills": "Inga kompetenser tillagda.",
+      "editButton": "Redigera",
+      "backButton": "Tillbaka till CV"
+    },
+    "edit": {
+      "pageTitle": "Redigera CV",
+      "summaryLabel": "Sammanfattning",
+      "skillNameLabel": "Kompetensnamn",
+      "skillLevelLabel": "Nivå",
+      "addSkillButton": "Lägg till",
+      "removeSkillButton": "Ta bort",
+      "saveButton": "Spara",
+      "saving": "Sparar…",
+      "saveSuccess": "CV sparat.",
+      "saveError": "Kunde inte spara CV. Försök igen.",
+      "backButton": "Tillbaka"
+    }
+  },
   "test": {
     "heading": "Anslutningstest för stack",
     "description": "Den här sidan validerar full stack-anslutning från slut till slut.",
