@@ -47,6 +47,7 @@ export type CvJson = z.infer<typeof cvJsonSchema>;
 
 export const importCvInputSchema = z.object({
   employeeId: z.string().uuid(),
+  language: z.string().default("en"),
   cvJson: cvJsonSchema,
 });
 

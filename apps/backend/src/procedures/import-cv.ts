@@ -11,7 +11,7 @@ import type { importCvInputSchema } from "@cv-tool/contracts";
 type ImportCvInput = z.infer<typeof importCvInputSchema>;
 
 export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
-  const { employeeId, cvJson } = input;
+  const { employeeId, language, cvJson } = input;
   const { consultant, education, assignments } = cvJson;
 
   // ---------------------------------------------------------------------------
@@ -28,6 +28,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     .select("id")
     .where("employee_id", "=", employeeId)
     .where("is_main", "=", true)
+    .where("language", "=", language)
     .executeTakeFirst();
 
   if (existingMainResume) {
@@ -37,7 +38,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       resumeUpdates.push(
         db
           .updateTable("resumes")
-          .set({ consultant_title: consultant.title })
+          .set({ consultant_title: consultant.title, language })
           .where("id", "=", resumeId)
           .execute()
       );
@@ -60,6 +61,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         title: `${consultant.name} CV`,
         consultant_title: consultant.title || null,
         presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[],
+        language,
         is_main: true,
       })
       .returning("id")
@@ -79,13 +81,13 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     const clientName = a.client.trim() || "Unknown";
 
     // Resolve dates — use explicit start_date/end_date if present, fall back to period
-    let startDate: string;
-    let endDate: string | null;
+    let startDate: Date;
+    let endDate: Date | null;
     let isCurrent: boolean;
 
     if (a.start_date) {
-      startDate = a.start_date;
-      endDate = a.end_date ?? null;
+      startDate = new Date(a.start_date);
+      endDate = a.end_date ? new Date(a.end_date) : null;
       isCurrent = a.end_date === null;
     } else {
       const period = parsePeriod(a.period ?? "");

@@ -84,7 +84,10 @@
       "assignmentsCreated": "Uppdrag skapade: {{count}}",
       "assignmentsSkipped": "Uppdrag hoppades över (dubbletter): {{count}}",
       "educationCreated": "Utbildningsposter skapade: {{count}}",
-      "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}"
+      "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}",
+      "languageLabel": "CV-språk",
+      "languageSv": "Svenska",
+      "languageEn": "Engelska"
     }
   },
   "resume": {

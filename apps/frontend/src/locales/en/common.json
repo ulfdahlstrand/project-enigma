@@ -84,7 +84,10 @@
       "assignmentsCreated": "Assignments created: {{count}}",
       "assignmentsSkipped": "Assignments skipped (duplicates): {{count}}",
       "educationCreated": "Education entries created: {{count}}",
-      "educationSkipped": "Education entries skipped (duplicates): {{count}}"
+      "educationSkipped": "Education entries skipped (duplicates): {{count}}",
+      "languageLabel": "CV language",
+      "languageSv": "Swedish",
+      "languageEn": "English"
     }
   },
   "resume": {
