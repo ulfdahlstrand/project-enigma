@@ -254,6 +254,156 @@ function CoverPageContent({
 }
 
 // ---------------------------------------------------------------------------
+// Skills page content
+// ---------------------------------------------------------------------------
+
+interface SkillsPageContentProps {
+  employeeName: string;
+  skills: Array<{ id: string; name: string; category: string | null }>;
+  degrees: string[];
+  certifications: string[];
+  languages: string[];
+}
+
+function SkillsPageContent({
+  employeeName,
+  skills,
+  degrees,
+  certifications,
+  languages,
+}: SkillsPageContentProps) {
+  const { t } = useTranslation("common");
+
+  // Group skills by category; null/empty category → key ""
+  const grouped = skills.reduce<Record<string, string[]>>((acc, skill) => {
+    const key = skill.category?.trim() || "";
+    return { ...acc, [key]: [...(acc[key] ?? []), skill.name] };
+  }, {});
+
+  const categories = Object.entries(grouped).sort(([a], [b]) => {
+    if (a === "") return 1;   // uncategorised to the end
+    if (b === "") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Split categories across two columns (~half each)
+  const mid = Math.ceil(categories.length / 2);
+  const leftCategories = categories.slice(0, mid);
+  const rightCategories = categories.slice(mid);
+
+  const hasOther = degrees.length > 0 || certifications.length > 0 || languages.length > 0;
+
+  const CategoryBlock = ({ label, skillNames }: { label: string; skillNames: string[] }) => (
+    <Box sx={{ mb: 2.5 }}>
+      <Box
+        sx={{
+          bgcolor: "#F1F3F4",
+          px: 1.5,
+          py: 0.75,
+          mb: 1,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block" }}
+        >
+          {label.toUpperCase()}
+        </Typography>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, fontSize: "0.75rem" }}>
+        {skillNames.join(", ")}
+      </Typography>
+    </Box>
+  );
+
+  return (
+    <Box>
+      {/* Name + "Konsultprofil" label */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h2" component="p" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.1 }}>
+          {employeeName}
+        </Typography>
+        <Typography variant="h3" color="text.primary">
+          {t("resume.detail.consultantProfileLabel")}
+        </Typography>
+      </Box>
+
+      {/* Two-column skill categories */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start" }}>
+        {/* Left column */}
+        <Box>
+          {leftCategories.map(([cat, names]) => (
+            <CategoryBlock
+              key={cat}
+              label={cat || t("resume.detail.skillsHeading")}
+              skillNames={names}
+            />
+          ))}
+        </Box>
+
+        {/* Right column: remaining categories + Övrigt */}
+        <Box>
+          {rightCategories.map(([cat, names]) => (
+            <CategoryBlock
+              key={cat}
+              label={cat || t("resume.detail.skillsHeading")}
+              skillNames={names}
+            />
+          ))}
+
+          {hasOther && (
+            <Box sx={{ mt: rightCategories.length > 0 ? 1 : 0 }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1.5 }}>
+                {t("resume.detail.otherHeading")}
+              </Typography>
+
+              {degrees.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationDegrees")}
+                  </Typography>
+                  {degrees.map((d, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {d}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {certifications.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationCertifications")}
+                  </Typography>
+                  {certifications.map((c, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {c}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {languages.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationLanguages")}
+                  </Typography>
+                  {languages.map((l, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {l}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Export split button
 // ---------------------------------------------------------------------------
 
@@ -379,6 +529,12 @@ function ResumeDetailPage() {
     enabled: !!resume,
   });
 
+  const { data: education = [] } = useQuery({
+    queryKey: ["listEducation", resume?.employeeId],
+    queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
+    enabled: !!resume?.employeeId,
+  });
+
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
@@ -490,20 +646,13 @@ function ResumeDetailPage() {
             page={skillsPage}
             totalPages={totalPages}
           >
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-              {t("resume.detail.skillsHeading")}
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <List dense disablePadding>
-              {skills.map((skill) => (
-                <ListItem key={skill.id} disablePadding>
-                  <ListItemText
-                    primary={skill.name}
-                    secondary={skill.level ?? undefined}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            <SkillsPageContent
+              employeeName={employee?.name ?? ""}
+              skills={skills}
+              degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+              certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+              languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+            />
           </DocumentPage>
         )}
 
