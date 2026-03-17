@@ -122,7 +122,6 @@
       "assignmentPresent": "Nuvarande",
       "backButton": "Tillbaka till meritförteckningar",
       "export": {
-        "pdf": "Exportera PDF",
         "markdown": "Exportera Markdown",
         "exporting": "Exporterar…",
         "selectFormat": "Välj exportformat"

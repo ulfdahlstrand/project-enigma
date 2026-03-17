@@ -55,40 +55,26 @@ export const Route = createFileRoute("/resumes/$id")({
   component: ResumeDetailPage,
 });
 
-type ExportFormat = "pdf" | "markdown";
-const EXPORT_OPTIONS: ExportFormat[] = ["pdf", "markdown"];
-
-async function triggerDownload(format: ExportFormat, resumeId: string): Promise<void> {
-  if (format === "pdf") {
-    const result = await orpc.exportResumePdf({ resumeId });
-    const bytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = result.filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  } else {
-    const result = await orpc.exportResumeMarkdown({ resumeId });
-    const blob = new Blob([result.markdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = result.filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-}
+type ExportFormat = "markdown";
+const EXPORT_OPTIONS: ExportFormat[] = ["markdown"];
 
 function ExportSplitButton({ resumeId }: { resumeId: string }) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<ExportFormat>("pdf");
+  const [selected, setSelected] = useState<ExportFormat>("markdown");
   const anchorRef = useState<HTMLDivElement | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => triggerDownload(selected, resumeId),
+    mutationFn: async () => {
+      const result = await orpc.exportResumeMarkdown({ resumeId });
+      const blob = new Blob([result.markdown], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
   });
 
   const handleClick = () => mutation.mutate();
@@ -117,7 +103,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
                     <MenuItem
                       key={fmt}
                       selected={fmt === selected}
-                      onClick={() => { setSelected(fmt); setOpen(false); void triggerDownload(fmt, resumeId); }}
+                      onClick={() => { setSelected(fmt); setOpen(false); mutation.mutate(); }}
                     >
                       {t(`resume.detail.export.${fmt}`)}
                     </MenuItem>
