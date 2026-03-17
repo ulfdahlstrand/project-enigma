@@ -33,6 +33,14 @@ import {
   deleteAssignmentInputSchema,
   deleteAssignmentOutputSchema,
 } from "./assignments.js";
+import {
+  listEducationInputSchema,
+  listEducationOutputSchema,
+  createEducationInputSchema,
+  createEducationOutputSchema,
+  deleteEducationInputSchema,
+  deleteEducationOutputSchema,
+} from "./education.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -127,6 +135,22 @@ export {
 export type { Assignment } from "./assignments.js";
 
 // ---------------------------------------------------------------------------
+// Education schemas — re-exported from ./education
+// ---------------------------------------------------------------------------
+
+export {
+  educationTypeSchema,
+  educationSchema,
+  listEducationInputSchema,
+  listEducationOutputSchema,
+  createEducationInputSchema,
+  createEducationOutputSchema,
+  deleteEducationInputSchema,
+  deleteEducationOutputSchema,
+} from "./education.js";
+export type { Education, EducationType } from "./education.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -161,6 +185,9 @@ export const contract = oc.router({
   createAssignment: oc.input(createAssignmentInputSchema).output(createAssignmentOutputSchema),
   updateAssignment: oc.input(updateAssignmentInputSchema).output(updateAssignmentOutputSchema),
   deleteAssignment: oc.input(deleteAssignmentInputSchema).output(deleteAssignmentOutputSchema),
+  listEducation: oc.input(listEducationInputSchema).output(listEducationOutputSchema),
+  createEducation: oc.input(createEducationInputSchema).output(createEducationOutputSchema),
+  deleteEducation: oc.input(deleteEducationInputSchema).output(deleteEducationOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

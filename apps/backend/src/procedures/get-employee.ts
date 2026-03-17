@@ -27,6 +27,8 @@ export async function getEmployee(
   id: string;
   name: string;
   email: string;
+  title: string | null;
+  presentation: string[];
   createdAt: Date;
   updatedAt: Date;
 }> {
@@ -44,6 +46,8 @@ export async function getEmployee(
     id: row.id,
     name: row.name,
     email: row.email,
+    title: row.title,
+    presentation: row.presentation ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

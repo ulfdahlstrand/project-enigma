@@ -35,6 +35,8 @@ export const getEmployeeOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
+  title: z.string().nullable(),
+  presentation: z.array(z.string()),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
@@ -65,15 +67,24 @@ export const updateEmployeeInputSchema = z
     id: z.string().uuid(),
     name: z.string().optional(),
     email: z.string().email().optional(),
+    title: z.string().nullable().optional(),
+    presentation: z.array(z.string()).optional(),
   })
-  .refine((data) => data.name !== undefined || data.email !== undefined, {
-    message: "At least one of 'name' or 'email' must be provided",
-  });
+  .refine(
+    (data) =>
+      data.name !== undefined ||
+      data.email !== undefined ||
+      data.title !== undefined ||
+      data.presentation !== undefined,
+    { message: "At least one field must be provided" }
+  );
 
 export const updateEmployeeOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
+  title: z.string().nullable(),
+  presentation: z.array(z.string()),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });

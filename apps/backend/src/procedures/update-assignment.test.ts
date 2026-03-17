@@ -19,6 +19,7 @@ const UPDATED_ROW = {
   end_date: null,
   technologies: ["Go"],
   is_current: true,
+  keywords: null,
   created_at: new Date("2023-01-01T00:00:00.000Z"),
   updated_at: new Date("2023-06-01T00:00:00.000Z"),
 };

@@ -16,6 +16,9 @@ import { getAssignmentHandler } from "./procedures/get-assignment.js";
 import { createAssignmentHandler } from "./procedures/create-assignment.js";
 import { updateAssignmentHandler } from "./procedures/update-assignment.js";
 import { deleteAssignmentHandler } from "./procedures/delete-assignment.js";
+import { listEducationHandler } from "./procedures/list-education.js";
+import { createEducationHandler } from "./procedures/create-education.js";
+import { deleteEducationHandler } from "./procedures/delete-education.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -43,6 +46,9 @@ export const router = implement(contract).router({
   createAssignment: createAssignmentHandler,
   updateAssignment: updateAssignmentHandler,
   deleteAssignment: deleteAssignmentHandler,
+  listEducation: listEducationHandler,
+  createEducation: createEducationHandler,
+  deleteEducation: deleteEducationHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

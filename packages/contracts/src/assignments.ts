@@ -17,6 +17,7 @@ export const assignmentSchema = z.object({
   endDate: z.union([z.string(), z.date()]).nullable(),
   technologies: z.array(z.string()),
   isCurrent: z.boolean(),
+  keywords: z.string().nullable(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
@@ -55,6 +56,7 @@ export const createAssignmentInputSchema = z.object({
   endDate: z.string().nullable().optional(),
   technologies: z.array(z.string()).default([]),
   isCurrent: z.boolean().default(false),
+  keywords: z.string().nullable().optional(),
 });
 
 export const createAssignmentOutputSchema = assignmentSchema;
@@ -74,6 +76,7 @@ export const updateAssignmentInputSchema = z
     endDate: z.string().nullable().optional(),
     technologies: z.array(z.string()).optional(),
     isCurrent: z.boolean().optional(),
+    keywords: z.string().nullable().optional(),
   })
   .refine(
     (d) =>
@@ -84,7 +87,8 @@ export const updateAssignmentInputSchema = z
       d.endDate !== undefined ||
       d.technologies !== undefined ||
       d.isCurrent !== undefined ||
-      d.resumeId !== undefined,
+      d.resumeId !== undefined ||
+      d.keywords !== undefined,
     { message: "At least one field must be provided" }
   );
 
