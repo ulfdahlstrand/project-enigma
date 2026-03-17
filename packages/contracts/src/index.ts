@@ -9,6 +9,18 @@ import {
   updateEmployeeInputSchema,
   updateEmployeeOutputSchema,
 } from "./employees.js";
+import {
+  listCVsInputSchema,
+  listCVsOutputSchema,
+  getCVInputSchema,
+  getCVOutputSchema,
+  createCVInputSchema,
+  createCVOutputSchema,
+  updateCVInputSchema,
+  updateCVOutputSchema,
+  deleteCVInputSchema,
+  deleteCVOutputSchema,
+} from "./cvs.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -63,6 +75,27 @@ export {
 export type { Employee } from "./employees.js";
 
 // ---------------------------------------------------------------------------
+// CV schemas — re-exported from ./cvs
+// ---------------------------------------------------------------------------
+
+export {
+  cvSkillSchema,
+  cvSchema,
+  cvWithSkillsSchema,
+  listCVsInputSchema,
+  listCVsOutputSchema,
+  getCVInputSchema,
+  getCVOutputSchema,
+  createCVInputSchema,
+  createCVOutputSchema,
+  updateCVInputSchema,
+  updateCVOutputSchema,
+  deleteCVInputSchema,
+  deleteCVOutputSchema,
+} from "./cvs.js";
+export type { CVSkill, CV, CVWithSkills } from "./cvs.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -87,6 +120,11 @@ export const contract = oc.router({
   updateEmployee: oc
     .input(updateEmployeeInputSchema)
     .output(updateEmployeeOutputSchema),
+  listCVs: oc.input(listCVsInputSchema).output(listCVsOutputSchema),
+  getCV: oc.input(getCVInputSchema).output(getCVOutputSchema),
+  createCV: oc.input(createCVInputSchema).output(createCVOutputSchema),
+  updateCV: oc.input(updateCVInputSchema).output(updateCVOutputSchema),
+  deleteCV: oc.input(deleteCVInputSchema).output(deleteCVOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

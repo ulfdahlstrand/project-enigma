@@ -6,6 +6,11 @@ import { listEmployeesHandler } from "./procedures/list-employees.js";
 import { getEmployeeHandler } from "./procedures/get-employee.js";
 import { createEmployeeHandler } from "./procedures/create-employee.js";
 import { updateEmployeeHandler } from "./procedures/update-employee.js";
+import { listCVsHandler } from "./procedures/list-cvs.js";
+import { getCVHandler } from "./procedures/get-cv.js";
+import { createCVHandler } from "./procedures/create-cv.js";
+import { updateCVHandler } from "./procedures/update-cv.js";
+import { deleteCVHandler } from "./procedures/delete-cv.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -23,6 +28,11 @@ export const router = implement(contract).router({
   getEmployee: getEmployeeHandler,
   createEmployee: createEmployeeHandler,
   updateEmployee: updateEmployeeHandler,
+  listCVs: listCVsHandler,
+  getCV: getCVHandler,
+  createCV: createCVHandler,
+  updateCV: updateCVHandler,
+  deleteCV: deleteCVHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */
