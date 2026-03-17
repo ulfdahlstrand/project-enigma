@@ -74,6 +74,8 @@ export interface AssignmentTable {
   technologies: ColumnType<string[], string[], string[]>;
   is_current: Generated<boolean>;
   keywords: string | null;
+  type: string | null;
+  highlight: Generated<boolean>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

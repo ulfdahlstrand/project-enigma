@@ -24,6 +24,8 @@ function rowToAssignment(row: {
   technologies: string[];
   is_current: boolean;
   keywords: string | null;
+  type: string | null;
+  highlight: boolean;
   created_at: Date;
   updated_at: Date;
 }) {
@@ -39,6 +41,8 @@ function rowToAssignment(row: {
     technologies: row.technologies,
     isCurrent: row.is_current,
     keywords: row.keywords,
+    type: row.type,
+    highlight: row.highlight,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

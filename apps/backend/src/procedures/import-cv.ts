@@ -133,6 +133,8 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         is_current: isCurrent,
         technologies,
         keywords,
+        type: a.type ?? null,
+        highlight: a.highlight ?? false,
       })
       .execute();
 
@@ -182,6 +184,36 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .execute();
 
     educationCreated++;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 4. Import skills — clear existing and reimport from skills section
+  // ---------------------------------------------------------------------------
+
+  if (cvJson.skills) {
+    await db.deleteFrom("resume_skills").where("cv_id", "=", resumeId).execute();
+
+    let skillOrder = 0;
+    for (const [category, value] of Object.entries(cvJson.skills)) {
+      const names: string[] = Array.isArray(value)
+        ? (value as unknown[]).filter((v): v is string => typeof v === "string")
+        : typeof value === "string"
+        ? [value]
+        : [];
+
+      for (const name of names) {
+        if (!name.trim()) continue;
+        await db
+          .insertInto("resume_skills")
+          .values({
+            cv_id: resumeId,
+            name: name.trim(),
+            category,
+            sort_order: skillOrder++,
+          })
+          .execute();
+      }
+    }
   }
 
   return {

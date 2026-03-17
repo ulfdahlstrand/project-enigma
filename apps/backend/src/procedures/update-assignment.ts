@@ -21,6 +21,8 @@ export async function updateAssignment(db: Kysely<Database>, input: UpdateAssign
   if (input.technologies !== undefined) update.technologies = input.technologies;
   if (input.isCurrent !== undefined) update.is_current = input.isCurrent;
   if (input.keywords !== undefined) update.keywords = input.keywords;
+  if (input.type !== undefined) update.type = input.type;
+  if (input.highlight !== undefined) update.highlight = input.highlight;
 
   const row = await db
     .updateTable("assignments")
