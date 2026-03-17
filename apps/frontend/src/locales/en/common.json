@@ -120,7 +120,12 @@
       "assignmentsHeading": "Assignments",
       "noAssignments": "No assignments added yet.",
       "assignmentPresent": "Present",
-      "backButton": "Back to Resumes"
+      "backButton": "Back to Resumes",
+      "export": {
+        "markdown": "Export Markdown",
+        "exporting": "Exporting…",
+        "selectFormat": "Select export format"
+      }
     },
     "edit": {
       "pageTitle": "Edit Resume",

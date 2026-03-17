@@ -9,17 +9,25 @@ import Button from "@mui/material/Button";
  *       as direct JSX children.
  */
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import Box from "@mui/material/Box";
+import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Grow from "@mui/material/Grow";
+import MenuItem from "@mui/material/MenuItem";
+import MenuList from "@mui/material/MenuList";
+import Paper from "@mui/material/Paper";
+import Popper from "@mui/material/Popper";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -46,6 +54,69 @@ export const Route = createFileRoute("/resumes/$id")({
   },
   component: ResumeDetailPage,
 });
+
+type ExportFormat = "markdown";
+const EXPORT_OPTIONS: ExportFormat[] = ["markdown"];
+
+function ExportSplitButton({ resumeId }: { resumeId: string }) {
+  const { t } = useTranslation("common");
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<ExportFormat>("markdown");
+  const anchorRef = useState<HTMLDivElement | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const result = await orpc.exportResumeMarkdown({ resumeId });
+      const blob = new Blob([result.markdown], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+
+  const handleClick = () => mutation.mutate();
+  const handleToggle = () => setOpen((prev) => !prev);
+  const handleClose = () => setOpen(false);
+
+  const label = t(`resume.detail.export.${selected}`);
+
+  return (
+    <>
+      <ButtonGroup variant="contained" ref={(el) => { anchorRef[1](el); }} disabled={mutation.isPending}>
+        <Button onClick={handleClick}>
+          {mutation.isPending ? t("resume.detail.export.exporting") : label}
+        </Button>
+        <Button size="small" onClick={handleToggle} aria-label={t("resume.detail.export.selectFormat")}>
+          <ArrowDropDownIcon />
+        </Button>
+      </ButtonGroup>
+      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal>
+        {({ TransitionProps }) => (
+          <Grow {...TransitionProps}>
+            <Paper>
+              <ClickAwayListener onClickAway={handleClose}>
+                <MenuList autoFocusItem>
+                  {EXPORT_OPTIONS.map((fmt) => (
+                    <MenuItem
+                      key={fmt}
+                      selected={fmt === selected}
+                      onClick={() => { setSelected(fmt); setOpen(false); mutation.mutate(); }}
+                    >
+                      {t(`resume.detail.export.${fmt}`)}
+                    </MenuItem>
+                  ))}
+                </MenuList>
+              </ClickAwayListener>
+            </Paper>
+          </Grow>
+        )}
+      </Popper>
+    </>
+  );
+}
 
 function ResumeDetailPage() {
   const { t } = useTranslation("common");
@@ -187,7 +258,7 @@ function ResumeDetailPage() {
         </TableContainer>
       )}
 
-      <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+      <Box sx={{ display: "flex", gap: 2, mt: 3, flexWrap: "wrap" }}>
         <Button
           variant="contained"
           onClick={() =>
@@ -196,6 +267,7 @@ function ResumeDetailPage() {
         >
           {t("resume.detail.editButton")}
         </Button>
+        <ExportSplitButton resumeId={id} />
         <RouterButton
           variant="outlined"
           to="/assignments/new"
