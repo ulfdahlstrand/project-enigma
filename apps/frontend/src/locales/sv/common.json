@@ -79,6 +79,9 @@
       "noSkills": "Inga kompetenser tillagda.",
       "editButton": "Redigera",
       "addAssignment": "Lägg till uppdrag",
+      "assignmentsHeading": "Uppdrag",
+      "noAssignments": "Inga uppdrag tillagda.",
+      "assignmentPresent": "Nuvarande",
       "backButton": "Tillbaka till meritförteckningar"
     },
     "edit": {

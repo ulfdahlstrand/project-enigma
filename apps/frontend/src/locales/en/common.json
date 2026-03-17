@@ -79,6 +79,9 @@
       "noSkills": "No skills added yet.",
       "editButton": "Edit",
       "addAssignment": "Add Assignment",
+      "assignmentsHeading": "Assignments",
+      "noAssignments": "No assignments added yet.",
+      "assignmentPresent": "Present",
       "backButton": "Back to Resumes"
     },
     "edit": {
