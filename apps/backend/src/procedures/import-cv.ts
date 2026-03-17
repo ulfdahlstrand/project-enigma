@@ -1,7 +1,7 @@
 import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthContext } from "../auth/require-auth.js";
@@ -18,17 +18,22 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   // 1. Update employee title and presentation
   // ---------------------------------------------------------------------------
 
-  const set: { title?: string | null; presentation?: string[] } = {};
-  if (consultant.title) set.title = consultant.title;
-  if (consultant.presentation.length > 0) set.presentation = consultant.presentation;
-
-  if (Object.keys(set).length > 0) {
-    await db
-      .updateTable("employees")
-      .set(set)
-      .where("id", "=", employeeId)
-      .execute();
+  const updates: Array<Promise<unknown>> = [];
+  if (consultant.title) {
+    updates.push(
+      db.updateTable("employees").set({ title: consultant.title }).where("id", "=", employeeId).execute()
+    );
   }
+  if (consultant.presentation.length > 0) {
+    updates.push(
+      db
+        .updateTable("employees")
+        .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
+        .where("id", "=", employeeId)
+        .execute()
+    );
+  }
+  await Promise.all(updates);
 
   // ---------------------------------------------------------------------------
   // 2. Import assignments — skip duplicates (same employee + client + role + start)
@@ -38,13 +43,27 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   let assignmentsSkipped = 0;
 
   for (const a of assignments) {
-    const period = parsePeriod(a.period);
-    if (!period) {
-      assignmentsSkipped++;
-      continue;
-    }
+    const clientName = a.client.trim() || "Unknown";
 
-    const clientName = a.customer.trim() || "Unknown";
+    // Resolve dates — use explicit start_date/end_date if present, fall back to period
+    let startDate: string;
+    let endDate: string | null;
+    let isCurrent: boolean;
+
+    if (a.start_date) {
+      startDate = a.start_date;
+      endDate = a.end_date ?? null;
+      isCurrent = a.end_date === null;
+    } else {
+      const period = parsePeriod(a.period ?? "");
+      if (!period) {
+        assignmentsSkipped++;
+        continue;
+      }
+      startDate = period.startDate;
+      endDate = period.endDate;
+      isCurrent = period.isCurrent;
+    }
 
     // Duplicate check
     const existing = await db
@@ -53,7 +72,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .where("employee_id", "=", employeeId)
       .where("client_name", "=", clientName)
       .where("role", "=", a.role.trim())
-      .where("start_date", "=", period.startDate)
+      .where("start_date", "=", startDate)
       .executeTakeFirst();
 
     if (existing) {
@@ -61,11 +80,12 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       continue;
     }
 
-    const description = a.description_raw.filter(Boolean).join("\n\n");
-    const technologies = a.tekniker
-      ? a.tekniker.split(",").map((t) => t.trim()).filter(Boolean)
-      : [];
-    const keywords = a.nyckelord.trim() || null;
+    const description = [a.context, a.responsibilities, a.result]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const technologies = a.technologies.map((t) => t.trim()).filter(Boolean);
+    const keywords = a.keywords.join(", ") || null;
 
     await db
       .insertInto("assignments")
@@ -75,9 +95,9 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         client_name: clientName,
         role: a.role.trim(),
         description,
-        start_date: period.startDate,
-        end_date: period.endDate,
-        is_current: period.isCurrent,
+        start_date: startDate,
+        end_date: endDate,
+        is_current: isCurrent,
         technologies,
         keywords,
       })

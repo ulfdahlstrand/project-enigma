@@ -1,7 +1,7 @@
 import { implement } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthContext } from "../auth/require-auth.js";
@@ -31,11 +31,13 @@ export async function updateEmployee(
   createdAt: Date;
   updatedAt: Date;
 }> {
-  const set: { name?: string; email?: string; title?: string | null; presentation?: string[] } = {};
+  const set: { name?: string; email?: string; title?: string | null; presentation?: unknown } = {};
   if (updates.name !== undefined) set.name = updates.name;
   if (updates.email !== undefined) set.email = updates.email;
   if (updates.title !== undefined) set.title = updates.title;
-  if (updates.presentation !== undefined) set.presentation = updates.presentation;
+  if (updates.presentation !== undefined) {
+    set.presentation = sql`${JSON.stringify(updates.presentation)}::jsonb`;
+  }
 
   const row = await db
     .updateTable("employees")

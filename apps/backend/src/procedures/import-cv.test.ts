@@ -21,11 +21,13 @@ const BASE_CV_JSON = {
   assignments: [
     {
       role: "Senior Developer",
-      customer: "Acme Corp",
+      client: "Acme Corp",
       period: "Q1 2023 - Q4 2023",
-      description_raw: ["Built things.", "Improved performance."],
-      tekniker: "TypeScript, Node.js",
-      nyckelord: "backend",
+      context: "Built things.",
+      responsibilities: "Improved performance.",
+      result: "",
+      technologies: ["TypeScript", "Node.js"],
+      keywords: ["backend"],
     },
   ],
 };
@@ -122,25 +124,25 @@ describe("importCv — assignments", () => {
     expect(result.assignmentsCreated).toBe(0);
   });
 
-  it("joins description_raw paragraphs with double newline", async () => {
+  it("joins context/responsibilities/result with double newline", async () => {
     const db = buildDb();
     await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { description: string };
     expect(passedValues.description).toBe("Built things.\n\nImproved performance.");
   });
 
-  it("uses 'Unknown' when customer is empty", async () => {
+  it("uses 'Unknown' when client is empty", async () => {
     const db = buildDb();
     const cv = {
       ...BASE_CV_JSON,
-      assignments: [{ ...BASE_CV_JSON.assignments[0]!, customer: "   " }],
+      assignments: [{ ...BASE_CV_JSON.assignments[0]!, client: "   " }],
     };
     await importCv(db, { employeeId: EMP_ID, cvJson: cv });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { client_name: string };
     expect(passedValues.client_name).toBe("Unknown");
   });
 
-  it("splits tekniker into technologies array", async () => {
+  it("uses technologies array directly", async () => {
     const db = buildDb();
     await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { technologies: string[] };
