@@ -2,7 +2,8 @@ import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-ro
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -23,6 +24,19 @@ const searchSchema = z.object({
   resumeId: z.string().optional(),
 });
 
+const newAssignmentFormSchema = z.object({
+  clientName: z.string().min(1),
+  role: z.string().min(1),
+  description: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  isCurrent: z.boolean(),
+  technologiesRaw: z.string(),
+  keywords: z.string(),
+});
+
+type NewAssignmentFormValues = z.infer<typeof newAssignmentFormSchema>;
+
 export const Route = createFileRoute("/assignments/new")({
   validateSearch: searchSchema,
   beforeLoad: () => {
@@ -39,15 +53,19 @@ function NewAssignmentPage() {
   const queryClient = useQueryClient();
   const { employeeId, resumeId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string };
 
-  const [clientName, setClientName] = useState("");
-  const [role, setRole] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [isCurrent, setIsCurrent] = useState(false);
-  const [technologiesRaw, setTechnologiesRaw] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [saveError, setSaveError] = useState(false);
+  const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
+    resolver: zodResolver(newAssignmentFormSchema),
+    defaultValues: {
+      clientName: "",
+      role: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      isCurrent: false,
+      technologiesRaw: "",
+      keywords: "",
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: (input: Parameters<typeof orpc.createAssignment>[0]) =>
@@ -56,30 +74,25 @@ function NewAssignmentPage() {
       await queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY });
       void navigate({ to: "/assignments/$id", params: { id: data.id } });
     },
-    onError: () => {
-      setSaveError(true);
-    },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaveError(false);
+  const onSubmit = (data: NewAssignmentFormValues) => {
     if (!employeeId) return;
-    const technologies = technologiesRaw
+    const technologies = data.technologiesRaw
       .split(",")
-      .map((t) => t.trim())
+      .map((tech) => tech.trim())
       .filter(Boolean);
     mutation.mutate({
-      employeeId: employeeId ?? "",
+      employeeId,
       resumeId: resumeId ?? null,
-      clientName: clientName.trim(),
-      role: role.trim(),
-      description,
-      startDate,
-      endDate: endDate || null,
-      isCurrent,
+      clientName: data.clientName.trim(),
+      role: data.role.trim(),
+      description: data.description,
+      startDate: data.startDate,
+      endDate: data.endDate || null,
+      isCurrent: data.isCurrent,
       technologies,
-      keywords: keywords.trim() || null,
+      keywords: data.keywords.trim() || null,
     });
   };
 
@@ -89,7 +102,7 @@ function NewAssignmentPage() {
         {t("assignment.new.pageTitle")}
       </Typography>
 
-      {saveError && (
+      {mutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("assignment.new.saveError")}
         </Alert>
@@ -97,28 +110,25 @@ function NewAssignmentPage() {
 
       <Box
         component="form"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         noValidate
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <TextField
           label={t("assignment.new.clientNameLabel")}
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
+          {...register("clientName")}
           required
           fullWidth
         />
         <TextField
           label={t("assignment.new.roleLabel")}
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
+          {...register("role")}
           required
           fullWidth
         />
         <TextField
           label={t("assignment.new.descriptionLabel")}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          {...register("description")}
           multiline
           minRows={4}
           fullWidth
@@ -126,8 +136,7 @@ function NewAssignmentPage() {
         <TextField
           label={t("assignment.new.startDateLabel")}
           type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          {...register("startDate")}
           required
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
@@ -135,32 +144,35 @@ function NewAssignmentPage() {
         <TextField
           label={t("assignment.new.endDateLabel")}
           type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          {...register("endDate")}
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <TextField
           label={t("assignment.new.technologiesLabel")}
-          value={technologiesRaw}
-          onChange={(e) => setTechnologiesRaw(e.target.value)}
+          {...register("technologiesRaw")}
           fullWidth
           placeholder="React, TypeScript, Node.js"
         />
         <TextField
           label={t("assignment.new.keywordsLabel")}
-          value={keywords}
-          onChange={(e) => setKeywords(e.target.value)}
+          {...register("keywords")}
           fullWidth
         />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={isCurrent}
-              onChange={(e) => setIsCurrent(e.target.checked)}
+        <Controller
+          name="isCurrent"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={field.value}
+                  onChange={field.onChange}
+                />
+              }
+              label={t("assignment.new.isCurrentLabel")}
             />
-          }
-          label={t("assignment.new.isCurrentLabel")}
+          )}
         />
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button

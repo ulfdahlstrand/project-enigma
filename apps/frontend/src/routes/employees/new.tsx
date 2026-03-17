@@ -13,7 +13,9 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -44,45 +46,29 @@ function NewEmployeePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
+  const newEmployeeFormSchema = z.object({
+    name: z.string().min(1, t("employee.new.nameRequired")),
+    email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, t("employee.new.emailInvalid")),
+  });
+
+  type NewEmployeeFormValues = z.infer<typeof newEmployeeFormSchema>;
+
+  const { register, handleSubmit, formState: { errors } } = useForm<NewEmployeeFormValues>({
+    resolver: zodResolver(newEmployeeFormSchema),
+    defaultValues: { name: "", email: "" },
+  });
 
   const mutation = useMutation({
-    mutationFn: (input: { name: string; email: string }) =>
-      orpc.createEmployee(input),
+    mutationFn: (input: NewEmployeeFormValues) =>
+      orpc.createEmployee({ name: input.name.trim(), email: input.email.trim() }),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: LIST_EMPLOYEES_QUERY_KEY });
       await navigate({ to: "/employees/$id", params: { id: data.id } });
     },
   });
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    // Reset previous errors
-    setNameError(null);
-    setEmailError(null);
-
-    let hasError = false;
-
-    if (!name.trim()) {
-      setNameError(t("employee.new.nameRequired"));
-      hasError = true;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim() || !emailRegex.test(email)) {
-      setEmailError(t("employee.new.emailInvalid"));
-      hasError = true;
-    }
-
-    if (hasError) {
-      return;
-    }
-
-    mutation.mutate({ name: name.trim(), email: email.trim() });
+  const onSubmit = (data: NewEmployeeFormValues) => {
+    mutation.mutate(data);
   };
 
   return (
@@ -99,26 +85,24 @@ function NewEmployeePage() {
 
       <Box
         component="form"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         noValidate
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <TextField
           label={t("employee.new.nameLabel")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={nameError !== null}
-          helperText={nameError ?? ""}
+          {...register("name")}
+          error={!!errors.name}
+          helperText={errors.name?.message ?? ""}
           required
           fullWidth
         />
         <TextField
           label={t("employee.new.emailLabel")}
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={emailError !== null}
-          helperText={emailError ?? ""}
+          {...register("email")}
+          error={!!errors.email}
+          helperText={errors.email?.message ?? ""}
           required
           fullWidth
         />

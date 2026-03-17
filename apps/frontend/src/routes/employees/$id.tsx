@@ -11,7 +11,10 @@
 import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -39,15 +42,17 @@ export const Route = createFileRoute("/employees/$id")({
   component: EmployeeDetailPage,
 });
 
+const editEmployeeFormSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+});
+
+type EditEmployeeFormValues = z.infer<typeof editEmployeeFormSchema>;
+
 function EmployeeDetailPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ from: Route.fullPath });
   const queryClient = useQueryClient();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState(false);
 
   const queryKey = getEmployeeQueryKey(id);
 
@@ -62,39 +67,32 @@ function EmployeeDetailPage() {
     retry: false,
   });
 
-  // Sync local form state when the query resolves
+  const { register, handleSubmit, reset } = useForm<EditEmployeeFormValues>({
+    resolver: zodResolver(editEmployeeFormSchema),
+    defaultValues: { name: "", email: "" },
+  });
+
   useEffect(() => {
     if (employee) {
-      setName(employee.name);
-      setEmail(employee.email);
+      reset({ name: employee.name, email: employee.email });
     }
-  }, [employee]);
+  }, [employee, reset]);
 
   const mutation = useMutation({
-    mutationFn: (input: { name: string; email: string }) =>
-      orpc.updateEmployee({ id, ...input }),
+    mutationFn: (input: EditEmployeeFormValues) =>
+      orpc.updateEmployee({ id, name: input.name.trim(), email: input.email.trim() }),
     onSuccess: async () => {
-      setSaveError(false);
-      setSaveSuccess(true);
       await queryClient.invalidateQueries({ queryKey });
       await queryClient.invalidateQueries({
         queryKey: LIST_EMPLOYEES_QUERY_KEY,
       });
     },
-    onError: () => {
-      setSaveSuccess(false);
-      setSaveError(true);
-    },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaveSuccess(false);
-    setSaveError(false);
-    mutation.mutate({ name: name.trim(), email: email.trim() });
+  const onSubmit = (data: EditEmployeeFormValues) => {
+    mutation.mutate(data);
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
@@ -103,7 +101,6 @@ function EmployeeDetailPage() {
     );
   }
 
-  // Not-found or other error state
   if (isError) {
     const isNotFound =
       error != null &&
@@ -144,13 +141,13 @@ function EmployeeDetailPage() {
         </Button>
       </Box>
 
-      {saveSuccess && (
+      {mutation.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {t("employee.detail.saveSuccess")}
         </Alert>
       )}
 
-      {saveError && (
+      {mutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("employee.detail.saveError")}
         </Alert>
@@ -158,22 +155,20 @@ function EmployeeDetailPage() {
 
       <Box
         component="form"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         noValidate
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <TextField
           label={t("employee.detail.nameLabel")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          {...register("name")}
           required
           fullWidth
         />
         <TextField
           label={t("employee.detail.emailLabel")}
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          {...register("email")}
           required
           fullWidth
         />
