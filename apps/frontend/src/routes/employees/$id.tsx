@@ -1,3 +1,4 @@
+import Button from "@mui/material/Button";
 /**
  * /employees/:id route — displays and allows editing of a single employee's details.
  *
@@ -8,7 +9,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -17,7 +18,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
@@ -27,6 +27,7 @@ import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
 
 /**
@@ -197,22 +198,20 @@ function EmployeeDetailPage() {
           {t("employee.detail.pageTitle")}
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
+          <RouterButton
             variant="outlined"
-            component={Link}
             to="/employees/$id/import"
             params={{ id }}
           >
             {t("employee.detail.importCvButton")}
-          </Button>
-          <Button
+          </RouterButton>
+          <RouterButton
             variant="outlined"
-            component={Link}
             to="/resumes"
             search={{ employeeId: id }}
           >
             {t("employee.detail.viewResumes")}
-          </Button>
+          </RouterButton>
         </Box>
       </Box>
 

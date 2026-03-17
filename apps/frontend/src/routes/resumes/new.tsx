@@ -1,4 +1,5 @@
-import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
+import Button from "@mui/material/Button";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -6,11 +7,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useSearch } from "@tanstack/react-router";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 import { LIST_RESUMES_QUERY_KEY } from ".";
 
 const TOKEN_KEY = "cv-tool:id-token";
@@ -105,15 +106,14 @@ function NewResumePage() {
           >
             {t("resume.new.saveButton")}
           </Button>
-          <Button
+          <RouterButton
             variant="outlined"
-            component={Link}
             to="/resumes"
             search={employeeId ? { employeeId } : {}}
             aria-label={t("resume.new.cancel")}
           >
             {t("resume.new.cancel")}
-          </Button>
+          </RouterButton>
         </Box>
       </Box>
     </Box>

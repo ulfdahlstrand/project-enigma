@@ -38,6 +38,15 @@ import { LIST_EMPLOYEES_QUERY_KEY } from "../new";
 // Mock the oRPC client — prevents real network calls
 // ---------------------------------------------------------------------------
 
+vi.mock("../../../components/RouterButton", () => ({
+  default: React.forwardRef(function MockRouterButton(
+    { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown; params?: unknown },
+    ref: React.Ref<HTMLAnchorElement>
+  ) {
+    return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
+  }),
+}));
+
 vi.mock("../../../orpc-client", () => ({
   orpc: {
     getEmployee: vi.fn(),

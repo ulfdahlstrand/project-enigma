@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createUpdateResumeHandler, updateResume } from "./update-resume.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the updateResume procedure.
@@ -20,6 +21,8 @@ const UPDATED_RESUME_ROW = {
   summary: "Updated summary",
   language: "en",
   is_main: true,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-04-01T00:00:00.000Z"),
 };
@@ -94,9 +97,7 @@ describe("updateResume query function", () => {
       { employee_id: EMPLOYEE_ID_1 },
       UPDATED_RESUME_ROW
     );
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
-
-    const result = await updateResume(db, adminUser, {
+    const result = await updateResume(db, MOCK_ADMIN, {
       id: RESUME_ID,
       title: "Updated Backend Resume",
     });
@@ -114,10 +115,9 @@ describe("updateResume query function", () => {
       { employee_id: EMPLOYEE_ID_1 },
       undefined
     );
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
     await expect(
-      updateResume(db, adminUser, { id: RESUME_ID, title: "Ghost" })
+      updateResume(db, MOCK_ADMIN, { id: RESUME_ID, title: "Ghost" })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
@@ -129,9 +129,7 @@ describe("updateResume query function", () => {
       UPDATED_RESUME_ROW,
       EMPLOYEE_ID_1
     );
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
-
-    const result = await updateResume(db, consultantUser, { id: RESUME_ID, title: "Updated" });
+    const result = await updateResume(db, MOCK_CONSULTANT, { id: RESUME_ID, title: "Updated" });
 
     expect(result.id).toBe(RESUME_ID);
   });
@@ -143,10 +141,8 @@ describe("updateResume query function", () => {
       UPDATED_RESUME_ROW,
       EMPLOYEE_ID_2
     );
-    const consultantUser = { role: "consultant" as const, email: "other@example.com" };
-
     await expect(
-      updateResume(db, consultantUser, { id: RESUME_ID, title: "Hack" })
+      updateResume(db, MOCK_CONSULTANT_2, { id: RESUME_ID, title: "Hack" })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
@@ -157,9 +153,7 @@ describe("updateResume query function", () => {
       { employee_id: EMPLOYEE_ID_1 },
       UPDATED_RESUME_ROW
     );
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
-
-    const result = await updateResume(db, adminUser, { id: RESUME_ID, title: "Updated" });
+    const result = await updateResume(db, MOCK_ADMIN, { id: RESUME_ID, title: "Updated" });
 
     expect(result).toMatchObject({
       employeeId: EMPLOYEE_ID_1,
@@ -187,7 +181,7 @@ describe("createUpdateResumeHandler", () => {
     const result = await call(
       handler,
       { id: RESUME_ID, title: "Updated Backend Resume" },
-      { context: { user: { role: "admin", email: "admin@example.com" } } }
+      { context: { user: MOCK_ADMIN } }
     );
 
     expect(result.id).toBe(RESUME_ID);

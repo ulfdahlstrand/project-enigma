@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createListResumesHandler, listResumes } from "./list-resumes.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the listResumes procedure.
@@ -24,6 +25,8 @@ const RESUME_ROW_1 = {
   summary: "Experienced backend engineer",
   language: "en",
   is_main: true,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
 };
@@ -35,6 +38,8 @@ const RESUME_ROW_2 = {
   summary: null,
   language: "sv",
   is_main: false,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-02-01T00:00:00.000Z"),
   updated_at: new Date("2025-02-01T00:00:00.000Z"),
 };
@@ -90,9 +95,8 @@ function buildDbWithEmployeeLookup(resumeRows: unknown[], employeeId: string) {
 describe("listResumes query function", () => {
   it("returns all resumes for admin with no filters", async () => {
     const { db } = buildSelectMock([RESUME_ROW_1, RESUME_ROW_2]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await listResumes(db, adminUser, {});
+    const result = await listResumes(db, MOCK_ADMIN, {});
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
@@ -106,27 +110,24 @@ describe("listResumes query function", () => {
 
   it("returns empty array when no resumes exist", async () => {
     const { db } = buildSelectMock([]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await listResumes(db, adminUser, {});
+    const result = await listResumes(db, MOCK_ADMIN, {});
 
     expect(result).toEqual([]);
   });
 
   it("consultant only sees resumes belonging to their own employee record", async () => {
     const { db, resumeExecute } = buildDbWithEmployeeLookup([RESUME_ROW_1], EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
 
-    await listResumes(db, consultantUser, {});
+    await listResumes(db, MOCK_CONSULTANT, {});
 
     expect(resumeExecute).toHaveBeenCalledTimes(1);
   });
 
   it("maps DB snake_case fields to camelCase in output", async () => {
     const { db } = buildSelectMock([RESUME_ROW_1]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await listResumes(db, adminUser, {});
+    const result = await listResumes(db, MOCK_ADMIN, {});
 
     expect(result[0]).toMatchObject({
       employeeId: EMPLOYEE_ID_1,
@@ -149,7 +150,7 @@ describe("createListResumesHandler", () => {
     const handler = createListResumesHandler(db);
 
     const result = await call(handler, {}, {
-      context: { user: { role: "admin", email: "admin@example.com" } },
+      context: { user: MOCK_ADMIN },
     });
 
     expect(result).toHaveLength(2);
@@ -171,7 +172,7 @@ describe("createListResumesHandler", () => {
     const handler = createListResumesHandler(db);
 
     const result = await call(handler, {}, {
-      context: { user: { role: "consultant", email: "consultant@example.com" } },
+      context: { user: MOCK_CONSULTANT },
     });
 
     expect(result).toHaveLength(1);

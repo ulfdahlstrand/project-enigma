@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createListAssignmentsHandler, listAssignments } from "./list-assignments.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT } from "../test-helpers/mock-users.js";
 
 const EMP_ID = "550e8400-e29b-41d4-a716-446655440011";
 const ASSIGN_ID = "550e8400-e29b-41d4-a716-446655440031";
@@ -20,6 +21,8 @@ const ASSIGNMENT_ROW = {
   technologies: ["TypeScript", "React"],
   is_current: true,
   keywords: null,
+  type: null,
+  highlight: false,
   created_at: new Date("2023-01-01T00:00:00.000Z"),
   updated_at: new Date("2023-01-01T00:00:00.000Z"),
 };
@@ -69,7 +72,7 @@ function buildDbWithEmployeeLookup(assignRows: unknown[], employeeId: string) {
 describe("listAssignments query function", () => {
   it("returns all assignments for admin with no filters", async () => {
     const { db } = buildSelectMock([ASSIGNMENT_ROW]);
-    const result = await listAssignments(db, { role: "admin", email: "admin@example.com" }, {});
+    const result = await listAssignments(db, MOCK_ADMIN, {});
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       id: ASSIGN_ID,
@@ -81,13 +84,13 @@ describe("listAssignments query function", () => {
 
   it("returns empty array when no assignments exist", async () => {
     const { db } = buildSelectMock([]);
-    const result = await listAssignments(db, { role: "admin", email: "admin@example.com" }, {});
+    const result = await listAssignments(db, MOCK_ADMIN, {});
     expect(result).toEqual([]);
   });
 
   it("maps snake_case DB fields to camelCase", async () => {
     const { db } = buildSelectMock([ASSIGNMENT_ROW]);
-    const result = await listAssignments(db, { role: "admin", email: "admin@example.com" }, {});
+    const result = await listAssignments(db, MOCK_ADMIN, {});
     expect(result[0]).toMatchObject({ employeeId: EMP_ID, clientName: "Acme Corp", isCurrent: true });
     expect(result[0]).not.toHaveProperty("employee_id");
     expect(result[0]).not.toHaveProperty("client_name");
@@ -95,7 +98,7 @@ describe("listAssignments query function", () => {
 
   it("consultant only sees own assignments", async () => {
     const { db, execute } = buildDbWithEmployeeLookup([ASSIGNMENT_ROW], EMP_ID);
-    await listAssignments(db, { role: "consultant", email: "c@example.com" }, {});
+    await listAssignments(db, MOCK_CONSULTANT, {});
     expect(execute).toHaveBeenCalledTimes(1);
   });
 });
@@ -104,7 +107,7 @@ describe("createListAssignmentsHandler", () => {
   it("returns assignments for admin", async () => {
     const { db } = buildSelectMock([ASSIGNMENT_ROW]);
     const handler = createListAssignmentsHandler(db);
-    const result = await call(handler, {}, { context: { user: { role: "admin", email: "a@example.com" } } });
+    const result = await call(handler, {}, { context: { user: MOCK_ADMIN } });
     expect(result).toHaveLength(1);
   });
 

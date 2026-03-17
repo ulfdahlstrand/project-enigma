@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createGetResumeHandler, getResume } from "./get-resume.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the getResume procedure.
@@ -11,6 +12,7 @@ import { createGetResumeHandler, getResume } from "./get-resume.js";
 
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
+
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const SKILL_ID_1 = "550e8400-e29b-41d4-a716-446655440031";
 const SKILL_ID_2 = "550e8400-e29b-41d4-a716-446655440032";
@@ -22,6 +24,8 @@ const RESUME_ROW = {
   summary: "Experienced backend engineer",
   language: "en",
   is_main: true,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
 };
@@ -110,7 +114,7 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
 describe("getResume query function", () => {
   it("returns a resume with its skills array for an admin", async () => {
     const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     const result = await getResume(db, adminUser, RESUME_ID);
 
@@ -132,7 +136,7 @@ describe("getResume query function", () => {
 
   it("returns a resume with an empty skills array when no skills exist", async () => {
     const { db } = buildDbMock(RESUME_ROW, []);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     const result = await getResume(db, adminUser, RESUME_ID);
 
@@ -141,7 +145,7 @@ describe("getResume query function", () => {
 
   it("orders skills by sort_order ascending", async () => {
     const { db, skillsOrderBy } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     await getResume(db, adminUser, RESUME_ID);
 
@@ -150,7 +154,7 @@ describe("getResume query function", () => {
 
   it("throws NOT_FOUND when resume does not exist", async () => {
     const { db } = buildDbMock(undefined, []);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     await expect(getResume(db, adminUser, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
@@ -159,7 +163,7 @@ describe("getResume query function", () => {
 
   it("consultant can fetch their own resume", async () => {
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = MOCK_CONSULTANT;
 
     const result = await getResume(db, consultantUser, RESUME_ID);
 
@@ -169,7 +173,7 @@ describe("getResume query function", () => {
   it("throws FORBIDDEN when consultant tries to fetch another employee's resume", async () => {
     // Resume belongs to EMPLOYEE_ID_1 but consultant maps to EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_2);
-    const consultantUser = { role: "consultant" as const, email: "other@example.com" };
+    const consultantUser = MOCK_CONSULTANT_2;
 
     await expect(getResume(db, consultantUser, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
@@ -187,7 +191,7 @@ describe("createGetResumeHandler", () => {
     const handler = createGetResumeHandler(db);
 
     const result = await call(handler, { id: RESUME_ID }, {
-      context: { user: { role: "admin", email: "admin@example.com" } },
+      context: { user: MOCK_ADMIN },
     });
 
     expect(result.id).toBe(RESUME_ID);

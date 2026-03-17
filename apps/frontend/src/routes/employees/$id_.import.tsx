@@ -1,3 +1,4 @@
+import Button from "@mui/material/Button";
 /**
  * /employees/:id/import route — import CV JSON for an employee.
  *
@@ -10,13 +11,12 @@
  * Styling: MUI sx prop only.
  * i18n: all visible text via useTranslation("common").
  */
-import { createFileRoute, redirect, useParams, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import TextField from "@mui/material/TextField";
@@ -25,6 +25,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 import { LIST_ASSIGNMENTS_QUERY_KEY } from "../assignments";
 import { getEducationQueryKey } from "./$id";
 import { LIST_RESUMES_QUERY_KEY } from "../resumes";
@@ -96,15 +97,14 @@ function ImportCvPage() {
         <Typography variant="h4" component="h1">
           {t("employee.import.pageTitle")}
         </Typography>
-        <Button
+        <RouterButton
           variant="outlined"
-          component={Link}
           to="/employees/$id"
           params={{ id }}
           aria-label={t("employee.import.backButton")}
         >
           {t("employee.import.backButton")}
-        </Button>
+        </RouterButton>
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

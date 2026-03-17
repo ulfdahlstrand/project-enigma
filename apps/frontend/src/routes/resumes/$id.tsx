@@ -1,3 +1,4 @@
+import Button from "@mui/material/Button";
 /**
  * /resumes/$id route — read-only resume detail page with skills.
  *
@@ -7,12 +8,11 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, Link, redirect, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
@@ -28,6 +28,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import RouterButton from "../../components/RouterButton";
 
 /**
  * Query key factory for a single resume lookup.
@@ -195,17 +196,16 @@ function ResumeDetailPage() {
         >
           {t("resume.detail.editButton")}
         </Button>
-        <Button
+        <RouterButton
           variant="outlined"
-          component={Link}
           to="/assignments/new"
           search={{ resumeId: id, employeeId: resume?.employeeId }}
         >
           {t("resume.detail.addAssignment")}
-        </Button>
-        <Button component={Link} to="/resumes">
+        </RouterButton>
+        <RouterButton to="/resumes">
           {t("resume.detail.backButton")}
-        </Button>
+        </RouterButton>
       </Box>
     </Box>
   );

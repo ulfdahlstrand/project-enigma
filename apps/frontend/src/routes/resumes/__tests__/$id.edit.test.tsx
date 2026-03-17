@@ -81,6 +81,8 @@ const TEST_RESUME = {
   summary: "Initial summary text here.",
   language: "en",
   isMain: true,
+  consultantTitle: null,
+  presentation: [],
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
   skills: [
@@ -183,10 +185,12 @@ describe("Save — success", () => {
     await user.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockUpdateResume).toHaveBeenCalledWith({
-        id: TEST_RESUME_ID,
-        summary: TEST_RESUME.summary,
-      });
+      expect(mockUpdateResume).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: TEST_RESUME_ID,
+          summary: TEST_RESUME.summary,
+        })
+      );
     });
   });
 
@@ -204,10 +208,12 @@ describe("Save — success", () => {
     await user.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockUpdateResume).toHaveBeenCalledWith({
-        id: TEST_RESUME_ID,
-        summary: "New summary content",
-      });
+      expect(mockUpdateResume).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: TEST_RESUME_ID,
+          summary: "New summary content",
+        })
+      );
     });
   });
 

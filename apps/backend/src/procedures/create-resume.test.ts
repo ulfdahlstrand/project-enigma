@@ -4,6 +4,7 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { createCreateResumeHandler, createResume } from "./create-resume.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for the createResume procedure.
@@ -20,6 +21,8 @@ const NEW_RESUME_ROW = {
   summary: null,
   language: "en",
   is_main: false,
+  consultant_title: null,
+  presentation: [],
   created_at: new Date("2025-03-01T00:00:00.000Z"),
   updated_at: new Date("2025-03-01T00:00:00.000Z"),
 };
@@ -107,7 +110,7 @@ function buildDbWithMissingEmployee() {
 describe("createResume query function", () => {
   it("admin creates resume for any employee and returns resume with empty skills array", async () => {
     const { db, values } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -133,7 +136,7 @@ describe("createResume query function", () => {
 
   it("consultant creates resume for their own employee_id and succeeds", async () => {
     const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = MOCK_CONSULTANT;
 
     const result = await createResume(db, consultantUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -148,7 +151,7 @@ describe("createResume query function", () => {
   it("throws FORBIDDEN when consultant tries to create a resume for a different employee", async () => {
     // Consultant maps to EMPLOYEE_ID_1 but input.employeeId is EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = { role: "consultant" as const, email: "consultant@example.com" };
+    const consultantUser = MOCK_CONSULTANT;
 
     await expect(
       createResume(db, consultantUser, {
@@ -173,7 +176,7 @@ describe("createResume query function", () => {
       }
       return realSelectFrom.getMockImplementation()!(table);
     });
-    const consultantUser = { role: "consultant" as const, email: "ghost@example.com" };
+    const consultantUser = { ...MOCK_CONSULTANT, email: "ghost@example.com" };
 
     const result = await createResume(db, consultantUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -186,7 +189,7 @@ describe("createResume query function", () => {
 
   it("maps DB snake_case fields to camelCase in output", async () => {
     const { db } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = { role: "admin" as const, email: "admin@example.com" };
+    const adminUser = MOCK_ADMIN;
 
     const result = await createResume(db, adminUser, {
       employeeId: EMPLOYEE_ID_1,
@@ -217,7 +220,7 @@ describe("createCreateResumeHandler", () => {
     const result = await call(
       handler,
       { employeeId: EMPLOYEE_ID_1, title: "New Backend Resume", language: "en" },
-      { context: { user: { role: "admin", email: "admin@example.com" } } }
+      { context: { user: MOCK_ADMIN } }
     );
 
     expect(result.id).toBe(RESUME_ID);

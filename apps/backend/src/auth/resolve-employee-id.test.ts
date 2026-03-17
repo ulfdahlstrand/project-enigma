@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { resolveEmployeeId } from "./resolve-employee-id.js";
+import { MOCK_ADMIN, MOCK_CONSULTANT } from "../test-helpers/mock-users.js";
 
 // ---------------------------------------------------------------------------
 // Unit tests for resolveEmployeeId helper.
@@ -14,7 +14,6 @@ import { resolveEmployeeId } from "./resolve-employee-id.js";
 // ---------------------------------------------------------------------------
 
 const EMPLOYEE_ID = "550e8400-e29b-41d4-a716-446655440010";
-const CONSULTANT_EMAIL = "consultant@example.com";
 
 function buildSelectMock(row: unknown) {
   const executeTakeFirst = vi.fn().mockResolvedValue(row);
@@ -28,9 +27,8 @@ function buildSelectMock(row: unknown) {
 describe("resolveEmployeeId", () => {
   it("returns null for an admin user without querying the database", async () => {
     const { db, selectFrom } = buildSelectMock(undefined);
-    const user = { role: "admin" as const, email: "admin@example.com" };
 
-    const result = await resolveEmployeeId(db, user);
+    const result = await resolveEmployeeId(db, MOCK_ADMIN);
 
     expect(result).toBeNull();
     expect(selectFrom).not.toHaveBeenCalled();
@@ -38,16 +36,15 @@ describe("resolveEmployeeId", () => {
 
   it("returns the employee id for a consultant whose email matches an employee record", async () => {
     const { db } = buildSelectMock({ id: EMPLOYEE_ID });
-    const user = { role: "consultant" as const, email: CONSULTANT_EMAIL };
 
-    const result = await resolveEmployeeId(db, user);
+    const result = await resolveEmployeeId(db, MOCK_CONSULTANT);
 
     expect(result).toBe(EMPLOYEE_ID);
   });
 
   it("returns null for a consultant with no matching employee record", async () => {
     const { db } = buildSelectMock(undefined);
-    const user = { role: "consultant" as const, email: "unknown@example.com" };
+    const user = { ...MOCK_CONSULTANT, email: "unknown@example.com" };
 
     const result = await resolveEmployeeId(db, user);
     expect(result).toBeNull();
@@ -55,10 +52,9 @@ describe("resolveEmployeeId", () => {
 
   it("queries employees by the consultant's email", async () => {
     const { db, where } = buildSelectMock({ id: EMPLOYEE_ID });
-    const user = { role: "consultant" as const, email: CONSULTANT_EMAIL };
 
-    await resolveEmployeeId(db, user);
+    await resolveEmployeeId(db, MOCK_CONSULTANT);
 
-    expect(where).toHaveBeenCalledWith("email", "=", CONSULTANT_EMAIL);
+    expect(where).toHaveBeenCalledWith("email", "=", MOCK_CONSULTANT.email);
   });
 });
