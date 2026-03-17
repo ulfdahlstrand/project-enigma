@@ -15,25 +15,38 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   const { consultant, education, assignments } = cvJson;
 
   // ---------------------------------------------------------------------------
-  // 1. Update employee title and presentation
+  // 1. Update main resume's consultant_title and presentation (if one exists)
   // ---------------------------------------------------------------------------
 
-  const updates: Array<Promise<unknown>> = [];
-  if (consultant.title) {
-    updates.push(
-      db.updateTable("employees").set({ title: consultant.title }).where("id", "=", employeeId).execute()
-    );
+  const mainResume = await db
+    .selectFrom("resumes")
+    .select("id")
+    .where("employee_id", "=", employeeId)
+    .where("is_main", "=", true)
+    .executeTakeFirst();
+
+  if (mainResume) {
+    const resumeUpdates: Array<Promise<unknown>> = [];
+    if (consultant.title) {
+      resumeUpdates.push(
+        db
+          .updateTable("resumes")
+          .set({ consultant_title: consultant.title })
+          .where("id", "=", mainResume.id)
+          .execute()
+      );
+    }
+    if (consultant.presentation.length > 0) {
+      resumeUpdates.push(
+        db
+          .updateTable("resumes")
+          .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
+          .where("id", "=", mainResume.id)
+          .execute()
+      );
+    }
+    await Promise.all(resumeUpdates);
   }
-  if (consultant.presentation.length > 0) {
-    updates.push(
-      db
-        .updateTable("employees")
-        .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
-        .where("id", "=", employeeId)
-        .execute()
-    );
-  }
-  await Promise.all(updates);
 
   // ---------------------------------------------------------------------------
   // 2. Import assignments — skip duplicates (same employee + client + role + start)

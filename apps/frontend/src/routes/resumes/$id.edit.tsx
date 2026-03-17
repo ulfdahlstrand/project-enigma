@@ -1,5 +1,5 @@
 /**
- * /resumes/$id/edit route — resume editor form (summary + skills UI).
+ * /resumes/$id/edit route — resume editor form (consultant title, presentation, summary).
  *
  * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
  * Mutation: TanStack Query useMutation + oRPC client for updating the resume.
@@ -7,10 +7,6 @@
  * Styling: MUI sx prop only — no .css/.scss imports, no style={{ }} props.
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
- *
- * Note: skill CRUD via updateResume is not yet in the API. For now, updateResume only
- * saves `summary`. The skills UI is rendered for future use but save only calls
- * orpc.updateResume({ id, summary }).
  */
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +27,8 @@ import { getResumeQueryKey } from "./$id";
 const TOKEN_KEY = "cv-tool:id-token";
 
 const editResumeFormSchema = z.object({
+  consultantTitle: z.string(),
+  presentation: z.string(),
   summary: z.string(),
 });
 
@@ -64,18 +62,30 @@ function ResumeEditPage() {
 
   const { register, handleSubmit, reset } = useForm<EditResumeFormValues>({
     resolver: zodResolver(editResumeFormSchema),
-    defaultValues: { summary: "" },
+    defaultValues: { consultantTitle: "", presentation: "", summary: "" },
   });
 
   useEffect(() => {
     if (resume) {
-      reset({ summary: resume.summary ?? "" });
+      reset({
+        consultantTitle: resume.consultantTitle ?? "",
+        presentation: resume.presentation.join("\n\n"),
+        summary: resume.summary ?? "",
+      });
     }
   }, [resume, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: EditResumeFormValues) =>
-      orpc.updateResume({ id, summary: data.summary }),
+      orpc.updateResume({
+        id,
+        consultantTitle: data.consultantTitle.trim() || null,
+        presentation: data.presentation
+          .split(/\n\n+/)
+          .map((p) => p.trim())
+          .filter(Boolean),
+        summary: data.summary,
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
     },
@@ -120,6 +130,19 @@ function ResumeEditPage() {
         onSubmit={handleSubmit(onSubmit)}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
+        <TextField
+          label={t("resume.edit.consultantTitleLabel")}
+          {...register("consultantTitle")}
+          fullWidth
+        />
+        <TextField
+          label={t("resume.edit.presentationLabel")}
+          helperText={t("resume.edit.presentationHelper")}
+          {...register("presentation")}
+          multiline
+          minRows={4}
+          fullWidth
+        />
         <TextField
           label={t("resume.edit.summaryLabel")}
           {...register("summary")}

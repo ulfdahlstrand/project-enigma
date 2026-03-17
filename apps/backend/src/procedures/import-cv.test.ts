@@ -41,10 +41,14 @@ type MockDb = Kysely<Database> & {
   };
 };
 
+const MAIN_RESUME = { id: "resume-main-id" };
+
 function buildDb({
+  mainResume = undefined,
   existingAssignment = undefined,
   existingEducation = undefined,
 }: {
+  mainResume?: { id: string } | undefined;
   existingAssignment?: { id: string } | undefined;
   existingEducation?: { id: string } | undefined;
 } = {}): MockDb {
@@ -52,8 +56,9 @@ function buildDb({
   const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
   const insertInto = vi.fn().mockReturnValue({ values: insertValues });
 
-  // selectFrom chain for duplicate checks — first call is the assignment check
+  // selectFrom chain — call order: 1) main resume lookup, 2) assignment duplicate check, 3+) education duplicate checks
   const selectExecuteTakeFirst = vi.fn()
+    .mockResolvedValueOnce(mainResume)
     .mockResolvedValueOnce(existingAssignment)
     .mockResolvedValue(existingEducation);
 
@@ -172,16 +177,23 @@ describe("importCv — education", () => {
   });
 });
 
-describe("importCv — employee update", () => {
-  it("calls updateTable for employees when title is non-empty", async () => {
-    const db = buildDb();
+describe("importCv — resume update", () => {
+  it("calls updateTable for resumes when main resume exists and title is non-empty", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
     const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
-    expect(updateMock).toHaveBeenCalledWith("employees");
+    expect(updateMock).toHaveBeenCalledWith("resumes");
   });
 
-  it("skips employee update when title and presentation are empty", async () => {
-    const db = buildDb();
+  it("skips resume update when no main resume exists", async () => {
+    const db = buildDb({ mainResume: undefined });
+    await importCv(db, { employeeId: EMP_ID, cvJson: BASE_CV_JSON });
+    const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("skips resume update when title and presentation are empty", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
     const cv = {
       ...BASE_CV_JSON,
       consultant: { name: "Test", title: "", presentation: [] },

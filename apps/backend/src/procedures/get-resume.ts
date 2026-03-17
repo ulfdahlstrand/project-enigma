@@ -61,6 +61,8 @@ export async function getResume(
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
     title: resumeRow.title,
+    consultantTitle: resumeRow.consultant_title,
+    presentation: resumeRow.presentation ?? [],
     summary: resumeRow.summary,
     language: resumeRow.language,
     isMain: resumeRow.is_main,

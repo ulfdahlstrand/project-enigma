@@ -62,6 +62,8 @@ export async function listResumes(
     id: row.id,
     employeeId: row.employee_id,
     title: row.title,
+    consultantTitle: row.consultant_title,
+    presentation: row.presentation ?? [],
     summary: row.summary,
     language: row.language,
     isMain: row.is_main,
