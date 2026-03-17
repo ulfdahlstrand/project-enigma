@@ -55,11 +55,21 @@ export const Route = createFileRoute("/resumes/$id")({
   component: ResumeDetailPage,
 });
 
-type ExportFormat = "markdown" | "docx";
-const EXPORT_OPTIONS: ExportFormat[] = ["markdown", "docx"];
+type ExportFormat = "pdf" | "docx" | "markdown";
+const EXPORT_OPTIONS: ExportFormat[] = ["pdf", "docx", "markdown"];
 
 async function triggerDownload(format: ExportFormat, resumeId: string): Promise<void> {
-  if (format === "docx") {
+  if (format === "pdf") {
+    const result = await orpc.exportResumePdf({ resumeId });
+    const bytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = result.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } else if (format === "docx") {
     const result = await orpc.exportResumeDocx({ resumeId });
     const bytes = Uint8Array.from(atob(result.docx), (c) => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
@@ -84,7 +94,7 @@ async function triggerDownload(format: ExportFormat, resumeId: string): Promise<
 function ExportSplitButton({ resumeId }: { resumeId: string }) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<ExportFormat>("markdown");
+  const [selected, setSelected] = useState<ExportFormat>("pdf");
   const anchorRef = useState<HTMLDivElement | null>(null);
 
   const mutation = useMutation({

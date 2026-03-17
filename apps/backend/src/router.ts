@@ -21,6 +21,7 @@ import { createEducationHandler } from "./procedures/create-education.js";
 import { deleteEducationHandler } from "./procedures/delete-education.js";
 import { importCvHandler } from "./procedures/import-cv.js";
 import { exportResumeMarkdownHandler } from "./procedures/export-resume-markdown.js";
+import { exportResumePdfHandler } from "./procedures/export-resume-pdf.js";
 import { exportResumeDocxHandler } from "./procedures/export-resume-docx.js";
 
 /**
@@ -54,6 +55,7 @@ export const router = implement(contract).router({
   deleteEducation: deleteEducationHandler,
   importCv: importCvHandler,
   exportResumeMarkdown: exportResumeMarkdownHandler,
+  exportResumePdf: exportResumePdfHandler,
   exportResumeDocx: exportResumeDocxHandler,
 });
 
