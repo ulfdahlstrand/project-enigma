@@ -19,19 +19,10 @@ import type { ContractRouterClient } from "@orpc/contract";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { contract, type AppRouter } from "@cv-tool/contracts";
 
-const TOKEN_KEY = "cv-tool:id-token";
 const apiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
 
 const link = new OpenAPILink(contract, {
   url: apiUrl,
-  fetch: (request, init) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const headers = new Headers(request.headers);
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    return globalThis.fetch(new Request(request, { headers, ...init }));
-  },
 });
 
 export const orpc = createORPCClient<ContractRouterClient<AppRouter>>(link);

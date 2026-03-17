@@ -7,14 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo dev --ui=tui",
+    "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file .env up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
-    "docker:build": "docker compose -f docker/docker-compose.yml --env-file .env build",
-    "migrate": "npm run migrate --workspace=apps/backend"
+    "docker:build": "docker compose -f docker/docker-compose.yml --env-file .env build"
   },
   "devDependencies": {
     "turbo": "^2.0.0"

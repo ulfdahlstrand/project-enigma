@@ -13,10 +13,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mock react-i18next so tests are isolated from locale file loading.
-// mockLanguage is mutable so individual tests can set the starting locale.
 // ---------------------------------------------------------------------------
-const mockChangeLanguage = vi.fn();
-let mockLanguage = "en";
+const changeLanguageMock = vi.fn();
+const languageHolder = { current: "en" };
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
@@ -25,8 +24,11 @@ vi.mock("react-i18next", async (importOriginal) => {
     useTranslation: () => ({
       t: (key: string, fallback?: string) => fallback ?? key,
       i18n: {
-        changeLanguage: mockChangeLanguage,
-        language: mockLanguage,
+        changeLanguage: changeLanguageMock,
+        // Use a getter so tests can mutate languageHolder.current
+        get language() {
+          return languageHolder.current;
+        },
       },
     }),
   };
@@ -43,12 +45,12 @@ import { LanguageSelector } from "./LanguageSelector";
 
 describe("LanguageSelector (layout)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockLanguage = "en";
+    changeLanguageMock.mockClear();
+    languageHolder.current = "en";
   });
 
   it("renders a MenuItem for each supported language (en and sv)", async () => {
-    render(<LanguageSelector />);
+    render(React.createElement(LanguageSelector));
 
     // MUI Select renders a combobox; click it to open the dropdown
     const combobox = screen.getByRole("combobox");
@@ -63,7 +65,7 @@ describe("LanguageSelector (layout)", () => {
   });
 
   it("calls i18n.changeLanguage('sv') when the Swedish option is selected", async () => {
-    render(<LanguageSelector />);
+    render(React.createElement(LanguageSelector));
 
     // Open the dropdown
     const combobox = screen.getByRole("combobox");
@@ -78,12 +80,14 @@ describe("LanguageSelector (layout)", () => {
     expect(svOption).toBeDefined();
     await userEvent.click(svOption!);
 
-    expect(mockChangeLanguage).toHaveBeenCalledWith("sv");
+    expect(changeLanguageMock).toHaveBeenCalledWith("sv");
   });
 
   it("calls i18n.changeLanguage('en') when the English option is selected", async () => {
-    mockLanguage = "sv";
-    render(<LanguageSelector />);
+    // Start on Swedish so English is a genuine new selection
+    languageHolder.current = "sv";
+
+    render(React.createElement(LanguageSelector));
 
     // Open the dropdown
     const combobox = screen.getByRole("combobox");
@@ -98,6 +102,6 @@ describe("LanguageSelector (layout)", () => {
     expect(enOption).toBeDefined();
     await userEvent.click(enOption!);
 
-    expect(mockChangeLanguage).toHaveBeenCalledWith("en");
+    expect(changeLanguageMock).toHaveBeenCalledWith("en");
   });
 });

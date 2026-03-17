@@ -13,7 +13,6 @@ export default defineConfig(({ mode }) => {
       TanStackRouterVite({
         routesDirectory: "./src/routes",
         generatedRouteTree: "./src/route-tree.gen.ts",
-        routeFileIgnorePattern: "__tests__",
       }),
       react(),
     ],

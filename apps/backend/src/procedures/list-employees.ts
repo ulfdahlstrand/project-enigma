@@ -4,7 +4,6 @@ import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
-import { requireAuth, type AuthContext } from "../auth/require-auth.js";
 
 // ---------------------------------------------------------------------------
 // listEmployees — query logic
@@ -39,8 +38,7 @@ export async function fetchEmployees(
 // ---------------------------------------------------------------------------
 
 export const listEmployeesHandler = implement(contract.listEmployees).handler(
-  async ({ context }) => {
-    requireAuth(context as AuthContext);
+  async () => {
     return fetchEmployees();
   }
 );
@@ -56,8 +54,7 @@ export const listEmployeesHandler = implement(contract.listEmployees).handler(
  * @param db - Kysely instance to inject (real or mock).
  */
 export function createListEmployeesHandler(db: Kysely<Database>) {
-  return implement(contract.listEmployees).handler(async ({ context }) => {
-    requireAuth(context as AuthContext);
+  return implement(contract.listEmployees).handler(async () => {
     return fetchEmployees(db);
   });
 }

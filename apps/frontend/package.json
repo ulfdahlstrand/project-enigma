@@ -17,7 +17,6 @@
     "@mui/material": "^6.4.0",
     "@orpc/client": "^1.13.6",
     "@orpc/openapi-client": "^1.13.6",
-    "@react-oauth/google": "^0.13.4",
     "@tanstack/react-query": "^5.80.7",
     "@tanstack/react-router": "^1.121.5",
     "country-flag-icons": "^1.5.13",

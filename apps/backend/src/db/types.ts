@@ -16,53 +16,8 @@ export interface EmployeeTable {
   updated_at: Generated<Date>;
 }
 
-export type UserRole = "admin" | "consultant";
-
-export interface UserTable {
-  id: Generated<string>;
-  google_sub: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  created_at: Generated<Date>;
-}
-
-export type User = Selectable<UserTable>;
-export type NewUser = Insertable<UserTable>;
-
-export interface CvTable {
-  id: Generated<string>;
-  employee_id: string;
-  title: string;
-  summary: string | null;
-  language: Generated<string>;
-  is_main: Generated<boolean>;
-  created_at: Generated<Date>;
-  updated_at: Generated<Date>;
-}
-
-export type Cv = Selectable<CvTable>;
-export type NewCv = Insertable<CvTable>;
-export type CvUpdate = Updateable<CvTable>;
-
-export interface CvSkillTable {
-  id: Generated<string>;
-  cv_id: string;
-  name: string;
-  level: string | null;
-  category: string | null;
-  sort_order: Generated<number>;
-}
-
-export type CvSkill = Selectable<CvSkillTable>;
-export type NewCvSkill = Insertable<CvSkillTable>;
-export type CvSkillUpdate = Updateable<CvSkillTable>;
-
 export interface Database {
   employees: EmployeeTable;
-  users: UserTable;
-  cvs: CvTable;
-  cv_skills: CvSkillTable;
 }
 
 // ---------------------------------------------------------------------------

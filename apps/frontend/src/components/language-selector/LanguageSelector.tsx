@@ -56,7 +56,7 @@ export function LanguageSelector({
       value={currentLocale}
       onChange={handleChange}
       size="small"
-      inputProps={{ "aria-label": t("languageSelector.label", "Select language") }}
+      aria-label={t("languageSelector.label", "Select language")}
       sx={{
         color: "inherit",
         ".MuiOutlinedInput-notchedOutline": { border: 0 },
@@ -86,10 +86,9 @@ export function LanguageSelector({
                     display: "flex",
                     alignItems: "center",
                     flexShrink: 0,
-                    "& svg": { width: "100%", height: "100%" },
                   }}
                 >
-                  <FlagIcon aria-hidden="true" />
+                  <FlagIcon aria-hidden="true" width={24} height={16} />
                 </Box>
               )}
               {t(`languageSelector.${locale}`, locale.toUpperCase())}

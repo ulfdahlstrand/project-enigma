@@ -1,10 +1,5 @@
 {
   "welcome": "Welcome to CV Tool",
-  "auth": {
-    "signInWithGoogle": "Sign in with Google",
-    "signOut": "Sign out",
-    "loginError": "Sign-in failed. Please try again."
-  },
   "header": {
     "appName": "CV Tool"
   },

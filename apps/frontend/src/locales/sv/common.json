@@ -1,10 +1,5 @@
 {
   "welcome": "Välkommen till CV-verktyget",
-  "auth": {
-    "signInWithGoogle": "Logga in med Google",
-    "signOut": "Logga ut",
-    "loginError": "Inloggningen misslyckades. Försök igen."
-  },
   "header": {
     "appName": "CV-verktyget"
   },

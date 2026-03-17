@@ -3,10 +3,8 @@
  *
  * This is the placeholder home page. It demonstrates:
  * - TanStack Router file-based routing
- * - react-i18next translation (home.welcome key)
- * - MUI Typography for accessible heading
+ * - react-i18next translation (app.title key)
  */
-import { Typography } from "@mui/material";
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +17,7 @@ function HomePage() {
 
   return (
     <main>
-      <Typography variant="h4" component="h1">{t("home.welcome")}</Typography>
+      <h1>{t("app.title")}</h1>
       <p>{t("home.heading")}</p>
       <p>{t("home.description")}</p>
     </main>
