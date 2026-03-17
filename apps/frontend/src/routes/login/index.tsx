@@ -18,7 +18,7 @@ const TOKEN_KEY = "cv-tool:id-token";
 export const Route = createFileRoute("/login/")({
   beforeLoad: () => {
     if (localStorage.getItem(TOKEN_KEY)) {
-      throw redirect({ to: "/employee" });
+      throw redirect({ to: "/employees" });
     }
   },
   component: LoginPage,
@@ -55,7 +55,7 @@ export function LoginPage() {
         onSuccess={(response) => {
           if (response.credential) {
             setToken(response.credential);
-            void navigate({ to: "/employee" });
+            void navigate({ to: "/employees" });
           } else {
             setError(true);
           }

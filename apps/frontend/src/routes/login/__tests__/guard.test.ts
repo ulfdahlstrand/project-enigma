@@ -1,7 +1,7 @@
 /**
  * Route guard tests for the /login route.
  *
- * Verifies that the beforeLoad hook redirects already-authenticated users to /employee.
+ * Verifies that the beforeLoad hook redirects already-authenticated users to /employees.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -25,7 +25,7 @@ describe("login route — beforeLoad guard", () => {
     expect(() => (beforeLoad as any)({})).not.toThrow();
   });
 
-  it("throws redirect to /employee when a token is present in localStorage", () => {
+  it("throws redirect to /employees when a token is present in localStorage", () => {
     localStorage.setItem(TOKEN_KEY, "mock.id.token");
     const beforeLoad = Route.options.beforeLoad;
     expect(beforeLoad).toBeDefined();
@@ -38,6 +38,6 @@ describe("login route — beforeLoad guard", () => {
       thrown = e;
     }
     // TanStack Router redirect() throws a Response with options.to
-    expect((thrown as { options: { to: string } }).options.to).toBe("/employee");
+    expect((thrown as { options: { to: string } }).options.to).toBe("/employees");
   });
 });
