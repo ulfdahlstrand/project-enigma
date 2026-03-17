@@ -1,21 +1,22 @@
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
-// CV JSON import schemas
-//
-// These schemas describe the shape of the JSON file produced by the CV
-// extraction tooling (Codex). The `importCv` procedure accepts a parsed
-// CV JSON payload and an existing employee ID, then upserts/creates the
-// relevant records (assignments, education) in the database.
+// CV JSON import schemas — v3 format
 // ---------------------------------------------------------------------------
 
 const cvAssignmentSchema = z.object({
+  client: z.string(),
   role: z.string(),
-  customer: z.string(),
-  period: z.string(),
-  description_raw: z.array(z.string()),
-  tekniker: z.string(),
-  nyckelord: z.string(),
+  period: z.string().optional().default(""),
+  context: z.string().optional().default(""),
+  responsibilities: z.string().optional().default(""),
+  result: z.string().optional().default(""),
+  technologies: z.array(z.string()).default([]),
+  keywords: z.array(z.string()).default([]),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
+  type: z.string().optional(),
+  highlight: z.boolean().optional(),
 });
 
 const cvEducationSchema = z.object({
@@ -26,12 +27,14 @@ const cvEducationSchema = z.object({
 
 const cvConsultantSchema = z.object({
   name: z.string(),
-  title: z.string(),
-  presentation: z.array(z.string()),
-});
+  title: z.string().default(""),
+  presentation: z.array(z.string()).default([]),
+}).catchall(z.unknown());
 
 export const cvJsonSchema = z.object({
+  _meta: z.record(z.string(), z.unknown()).optional(),
   consultant: cvConsultantSchema,
+  skills: z.record(z.string(), z.unknown()).optional(),
   education: cvEducationSchema,
   assignments: z.array(cvAssignmentSchema),
 });

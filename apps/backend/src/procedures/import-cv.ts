@@ -43,13 +43,27 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   let assignmentsSkipped = 0;
 
   for (const a of assignments) {
-    const period = parsePeriod(a.period);
-    if (!period) {
-      assignmentsSkipped++;
-      continue;
-    }
+    const clientName = a.client.trim() || "Unknown";
 
-    const clientName = a.customer.trim() || "Unknown";
+    // Resolve dates — use explicit start_date/end_date if present, fall back to period
+    let startDate: string;
+    let endDate: string | null;
+    let isCurrent: boolean;
+
+    if (a.start_date) {
+      startDate = a.start_date;
+      endDate = a.end_date ?? null;
+      isCurrent = a.end_date === null;
+    } else {
+      const period = parsePeriod(a.period ?? "");
+      if (!period) {
+        assignmentsSkipped++;
+        continue;
+      }
+      startDate = period.startDate;
+      endDate = period.endDate;
+      isCurrent = period.isCurrent;
+    }
 
     // Duplicate check
     const existing = await db
@@ -58,7 +72,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .where("employee_id", "=", employeeId)
       .where("client_name", "=", clientName)
       .where("role", "=", a.role.trim())
-      .where("start_date", "=", period.startDate)
+      .where("start_date", "=", startDate)
       .executeTakeFirst();
 
     if (existing) {
@@ -66,11 +80,12 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       continue;
     }
 
-    const description = a.description_raw.filter(Boolean).join("\n\n");
-    const technologies = a.tekniker
-      ? a.tekniker.split(",").map((t) => t.trim()).filter(Boolean)
-      : [];
-    const keywords = a.nyckelord.trim() || null;
+    const description = [a.context, a.responsibilities, a.result]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const technologies = a.technologies.map((t) => t.trim()).filter(Boolean);
+    const keywords = a.keywords.join(", ") || null;
 
     await db
       .insertInto("assignments")
@@ -80,9 +95,9 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         client_name: clientName,
         role: a.role.trim(),
         description,
-        start_date: period.startDate,
-        end_date: period.endDate,
-        is_current: period.isCurrent,
+        start_date: startDate,
+        end_date: endDate,
+        is_current: isCurrent,
         technologies,
         keywords,
       })
