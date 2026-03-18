@@ -39,6 +39,7 @@ import {
   deleteEducationHandler,
 } from "./domains/education/index.js";
 import { importCvHandler } from "./domains/import/index.js";
+import { improveDescriptionHandler } from "./domains/ai/index.js";
 import {
   exportResumePdfHandler,
   exportResumeDocxHandler,
@@ -90,6 +91,7 @@ export const router = implement(contract).router({
   removeBranchAssignment: removeBranchAssignmentHandler,
   updateBranchAssignment: updateBranchAssignmentHandler,
   compareResumeCommits: compareResumeCommitsHandler,
+  improveDescription: improveDescriptionHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

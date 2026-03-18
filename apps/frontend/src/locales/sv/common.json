@@ -257,7 +257,15 @@
       "saveButton": "Spara",
       "saveSuccess": "Uppdraget sparades.",
       "saveError": "Det gick inte att spara uppdraget. Försök igen.",
-      "back": "Tillbaka till uppdrag"
+      "back": "Tillbaka till uppdrag",
+      "ai": {
+        "improveButton": "Förbättra med AI",
+        "improving": "Förbättrar...",
+        "improveError": "Det gick inte att förbättra beskrivningen. Försök igen.",
+        "acceptButton": "Acceptera",
+        "rejectButton": "Avvisa",
+        "previewLabel": "AI-förslag"
+      }
     }
   },
   "test": {

@@ -12,6 +12,7 @@
     "migrate": "node --env-file=.env --import tsx/esm src/db/migrate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@cv-tool/contracts": "*",
     "@orpc/openapi": "^1.13.6",
     "@orpc/server": "^1.13.6",

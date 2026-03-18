@@ -257,7 +257,15 @@
       "saveButton": "Save",
       "saveSuccess": "Assignment saved.",
       "saveError": "Failed to save assignment. Please try again.",
-      "back": "Back to assignments"
+      "back": "Back to assignments",
+      "ai": {
+        "improveButton": "Improve with AI",
+        "improving": "Improving...",
+        "improveError": "Failed to improve description. Please try again.",
+        "acceptButton": "Accept",
+        "rejectButton": "Reject",
+        "previewLabel": "AI suggestion"
+      }
     }
   },
   "test": {
