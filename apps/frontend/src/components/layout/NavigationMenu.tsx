@@ -12,7 +12,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { LanguageSelector } from "./LanguageSelector";
+import { UserMenu } from "./UserMenu";
 
 interface NavItem {
   labelKey: string;
@@ -69,11 +69,11 @@ export function NavigationMenu() {
         })}
       </List>
 
-      {/* Settings footer — pinned to bottom */}
+      {/* User profile footer — pinned to bottom */}
       <Box sx={{ mt: "auto" }}>
         <Divider />
-        <Box sx={{ p: 1.5 }}>
-          <LanguageSelector />
+        <Box sx={{ p: 0.75 }}>
+          <UserMenu />
         </Box>
       </Box>
     </Box>

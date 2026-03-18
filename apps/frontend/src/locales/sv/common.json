@@ -205,5 +205,14 @@
     "tableHeaderId": "ID",
     "tableHeaderName": "Namn",
     "tableHeaderNote": "Anteckning"
+  },
+  "userMenu": {
+    "language": "Språk",
+    "preferences": "Inställningar",
+    "helpAndFeedback": "Hjälp & feedback",
+    "signOut": "Logga ut"
+  },
+  "languageSelector": {
+    "label": "Välj språk"
   }
 }
