@@ -1,19 +1,19 @@
 import { implement, ORPCError } from "@orpc/server";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { contract } from "@cv-tool/contracts";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
-import { getAnthropicClient } from "../lib/anthropic-client.js";
+import { getOpenAIClient } from "../lib/openai-client.js";
 import { buildImproveDescriptionPrompt } from "../lib/prompts.js";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "gpt-4o";
 const MAX_TOKENS = 1024;
 
 /**
- * Pure function that calls the Anthropic API to improve a CV assignment description.
+ * Pure function that calls the OpenAI API to improve a CV assignment description.
  * Accepts the client as a parameter for testability.
  */
 export async function improveDescription(
-  client: Anthropic,
+  client: OpenAI,
   input: { description: string; role?: string | undefined; clientName?: string | undefined }
 ): Promise<{ improvedDescription: string }> {
   const { system, user } = buildImproveDescriptionPrompt({
@@ -22,37 +22,39 @@ export async function improveDescription(
     ...(input.clientName !== undefined && { clientName: input.clientName }),
   });
 
-  const response = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system,
-    messages: [{ role: "user", content: user }],
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
   });
 
-  const firstBlock = response.content[0];
-  if (!firstBlock || firstBlock.type !== "text") {
+  const text = response.choices[0]?.message?.content;
+  if (!text) {
     throw new ORPCError("INTERNAL_SERVER_ERROR", {
       message: "AI returned empty or unexpected content",
     });
   }
 
-  return { improvedDescription: firstBlock.text };
+  return { improvedDescription: text };
 }
 
 /**
- * oRPC handler using the production Anthropic client singleton.
+ * oRPC handler using the production OpenAI client singleton.
  */
 export const improveDescriptionHandler = implement(
   contract.improveDescription
 ).handler(async ({ input, context }) => {
   requireAuth(context as AuthContext);
-  return improveDescription(getAnthropicClient(), input);
+  return improveDescription(getOpenAIClient(), input);
 });
 
 /**
- * Factory for creating a handler with a injected Anthropic client (for tests).
+ * Factory for creating a handler with an injected OpenAI client (for tests).
  */
-export function createImproveDescriptionHandler(client: Anthropic) {
+export function createImproveDescriptionHandler(client: OpenAI) {
   return implement(contract.improveDescription).handler(
     async ({ input, context }) => {
       requireAuth(context as AuthContext);

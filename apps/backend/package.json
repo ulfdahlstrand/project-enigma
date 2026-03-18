@@ -12,7 +12,6 @@
     "migrate": "node --env-file=.env --import tsx/esm src/db/migrate.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
     "@cv-tool/contracts": "*",
     "@orpc/openapi": "^1.13.6",
     "@orpc/server": "^1.13.6",
@@ -20,6 +19,7 @@
     "docx": "^9.6.1",
     "google-auth-library": "^10.6.1",
     "kysely": "^0.27.4",
+    "openai": "^6.32.0",
     "pg": "^8.11.3",
     "postgres": "^3.4.5",
     "puppeteer": "^24.39.1",

@@ -1,21 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { improveDescription, createImproveDescriptionHandler } from "./improve.js";
 
 // ---------------------------------------------------------------------------
-// Mock Anthropic client factory
+// Mock OpenAI client factory
 // ---------------------------------------------------------------------------
 
-function buildClient(textContent: string | null): Anthropic {
-  const content =
-    textContent !== null
-      ? [{ type: "text" as const, text: textContent }]
-      : [];
-
-  const create = vi.fn().mockResolvedValue({ content });
-  return { messages: { create } } as unknown as Anthropic;
+function buildClient(text: string | null): OpenAI {
+  const message = text !== null ? { content: text } : { content: null };
+  const create = vi.fn().mockResolvedValue({ choices: [{ message }] });
+  return { chat: { completions: { create } } } as unknown as OpenAI;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,9 +39,9 @@ describe("improveDescription pure function", () => {
 
   it("passes role and clientName as context in the prompt when provided", async () => {
     const create = vi.fn().mockResolvedValue({
-      content: [{ type: "text", text: "Better description." }],
+      choices: [{ message: { content: "Better description." } }],
     });
-    const client = { messages: { create } } as unknown as Anthropic;
+    const client = { chat: { completions: { create } } } as unknown as OpenAI;
 
     await improveDescription(client, {
       description: "Built some stuff.",
@@ -54,10 +50,10 @@ describe("improveDescription pure function", () => {
     });
 
     expect(create).toHaveBeenCalledOnce();
-    const callArgs = create.mock.calls[0]?.[0] as { messages: Array<{ content: string }> };
-    const userContent = callArgs.messages[0]?.content ?? "";
-    expect(userContent).toContain("Senior Developer");
-    expect(userContent).toContain("Acme Corp");
+    const callArgs = create.mock.calls[0]?.[0] as { messages: Array<{ role: string; content: string }> };
+    const userMsg = callArgs.messages.find((m) => m.role === "user");
+    expect(userMsg?.content).toContain("Senior Developer");
+    expect(userMsg?.content).toContain("Acme Corp");
   });
 });
 
@@ -109,9 +105,9 @@ describe("createImproveDescriptionHandler", () => {
 
   it("passes role and clientName as context in the prompt when provided", async () => {
     const create = vi.fn().mockResolvedValue({
-      content: [{ type: "text", text: "Better description." }],
+      choices: [{ message: { content: "Better description." } }],
     });
-    const client = { messages: { create } } as unknown as Anthropic;
+    const client = { chat: { completions: { create } } } as unknown as OpenAI;
     const handler = createImproveDescriptionHandler(client);
 
     await call(
@@ -124,9 +120,9 @@ describe("createImproveDescriptionHandler", () => {
       { context: { user: { role: "admin", email: "a@example.com" } } }
     );
 
-    const callArgs = create.mock.calls[0]?.[0] as { messages: Array<{ content: string }> };
-    const userContent = callArgs.messages[0]?.content ?? "";
-    expect(userContent).toContain("Tech Lead");
-    expect(userContent).toContain("BigBank AB");
+    const callArgs = create.mock.calls[0]?.[0] as { messages: Array<{ role: string; content: string }> };
+    const userMsg = callArgs.messages.find((m) => m.role === "user");
+    expect(userMsg?.content).toContain("Tech Lead");
+    expect(userMsg?.content).toContain("BigBank AB");
   });
 });
