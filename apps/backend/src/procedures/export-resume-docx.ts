@@ -1,10 +1,10 @@
-import { implement, ORPCError } from "@orpc/server";
+import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
-import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
+import { buildExportData } from "../lib/build-export-data.js";
 import {
   Document,
   Paragraph,
@@ -12,17 +12,15 @@ import {
   HeadingLevel,
   Packer,
   BorderStyle,
-  AlignmentType,
 } from "docx";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fmtDate(d: Date | string | null | undefined): string {
+function fmtDate(d: string | null | undefined): string {
   if (!d) return "present";
-  const date = d instanceof Date ? d : new Date(d);
-  return date.toISOString().slice(0, 7);
+  return d.slice(0, 7); // YYYY-MM
 }
 
 function slug(s: string): string {
@@ -54,13 +52,6 @@ function boldLabel(label: string, value: string): Paragraph {
   });
 }
 
-function divider(): Paragraph {
-  return new Paragraph({
-    text: "",
-    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" } },
-  });
-}
-
 function empty(): Paragraph {
   return new Paragraph({ text: "" });
 }
@@ -72,53 +63,12 @@ function empty(): Paragraph {
 export async function exportResumeDocx(
   db: Kysely<Database>,
   user: AuthUser,
-  resumeId: string
+  resumeId: string,
+  commitId?: string
 ): Promise<{ docx: string; filename: string; referenceId: string }> {
-  const ownerEmployeeId = await resolveEmployeeId(db, user);
+  const data = await buildExportData(db, user, resumeId, commitId);
 
-  const resume = await db
-    .selectFrom("resumes")
-    .selectAll()
-    .where("id", "=", resumeId)
-    .executeTakeFirst();
-
-  if (!resume) throw new ORPCError("NOT_FOUND");
-  if (ownerEmployeeId !== null && resume.employee_id !== ownerEmployeeId) {
-    throw new ORPCError("FORBIDDEN");
-  }
-
-  const [employee, assignments, skills, education] = await Promise.all([
-    db
-      .selectFrom("employees")
-      .select(["id", "name", "email"])
-      .where("id", "=", resume.employee_id)
-      .executeTakeFirst(),
-    db
-      .selectFrom("assignments")
-      .selectAll()
-      .where("resume_id", "=", resumeId)
-      .orderBy("is_current", "desc")
-      .orderBy("end_date", "desc")
-      .orderBy("start_date", "desc")
-      .execute(),
-    db
-      .selectFrom("resume_skills")
-      .selectAll()
-      .where("cv_id", "=", resumeId)
-      .orderBy("sort_order", "asc")
-      .execute(),
-    db
-      .selectFrom("education")
-      .selectAll()
-      .where("employee_id", "=", resume.employee_id)
-      .orderBy("sort_order", "asc")
-      .execute(),
-  ]);
-
-  const name = employee?.name ?? "Unknown";
-  const consultantTitle = resume.consultant_title ?? "";
-  const presentation: string[] = (resume.presentation as string[] | null) ?? [];
-  const language = resume.language ?? "en";
+  const { name, consultantTitle, language, presentation, summary, skills, assignments, education } = data;
 
   const paragraphs: Paragraph[] = [];
 
@@ -126,10 +76,10 @@ export async function exportResumeDocx(
   const headerText = consultantTitle ? `${name} — ${consultantTitle}` : name;
   paragraphs.push(heading1(headerText));
 
-  if (employee?.email) {
+  if (data.email) {
     paragraphs.push(
       new Paragraph({
-        children: [new TextRun({ text: employee.email, color: "555555" })],
+        children: [new TextRun({ text: data.email, color: "555555" })],
       })
     );
   }
@@ -146,9 +96,9 @@ export async function exportResumeDocx(
   }
 
   // --- Summary ---
-  if (resume.summary) {
+  if (summary) {
     paragraphs.push(heading2("Summary"));
-    paragraphs.push(body(resume.summary));
+    paragraphs.push(body(summary));
     paragraphs.push(empty());
   }
 
@@ -159,8 +109,7 @@ export async function exportResumeDocx(
     for (const s of skills) {
       const cat = s.category ?? "General";
       const existing = byCategory.get(cat) ?? [];
-      existing.push(s.name);
-      byCategory.set(cat, existing);
+      byCategory.set(cat, [...existing, s.name]);
     }
     for (const [cat, names] of byCategory) {
       paragraphs.push(boldLabel(cat, names.join(", ")));
@@ -180,8 +129,7 @@ export async function exportResumeDocx(
         })
       );
       if (a.type) paragraphs.push(boldLabel("Type", a.type));
-      const techs = (a.technologies as string[]) ?? [];
-      if (techs.length > 0) paragraphs.push(boldLabel("Technologies", techs.join(", ")));
+      if (a.technologies.length > 0) paragraphs.push(boldLabel("Technologies", a.technologies.join(", ")));
       if (a.keywords) paragraphs.push(boldLabel("Keywords", a.keywords));
       if (a.description) paragraphs.push(body(a.description));
       paragraphs.push(empty());
@@ -222,10 +170,11 @@ export async function exportResumeDocx(
   const record = await db
     .insertInto("export_records")
     .values({
-      resume_id: resume.id,
-      employee_id: resume.employee_id,
+      resume_id: resumeId,
+      employee_id: data.employeeId,
       format: "docx",
       filename,
+      ...(data.commitId !== null ? { commit_id: data.commitId } : {}),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -245,14 +194,14 @@ export const exportResumeDocxHandler = implement(
   contract.exportResumeDocx
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return exportResumeDocx(getDb(), user, input.resumeId);
+  return exportResumeDocx(getDb(), user, input.resumeId, input.commitId);
 });
 
 export function createExportResumeDocxHandler(db: Kysely<Database>) {
   return implement(contract.exportResumeDocx).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return exportResumeDocx(db, user, input.resumeId);
+      return exportResumeDocx(db, user, input.resumeId, input.commitId);
     }
   );
 }

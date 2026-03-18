@@ -1,19 +1,18 @@
-import { implement, ORPCError } from "@orpc/server";
+import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
-import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
+import { buildExportData } from "../lib/build-export-data.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fmtDate(d: Date | string | null | undefined): string {
+function fmtDate(d: string | null | undefined): string {
   if (!d) return "present";
-  const date = d instanceof Date ? d : new Date(d);
-  return date.toISOString().slice(0, 7); // YYYY-MM
+  return d.slice(0, 7); // YYYY-MM
 }
 
 function slug(s: string): string {
@@ -27,78 +26,36 @@ function slug(s: string): string {
 export async function exportResumeMarkdown(
   db: Kysely<Database>,
   user: AuthUser,
-  resumeId: string
+  resumeId: string,
+  commitId?: string
 ): Promise<{ markdown: string; filename: string; referenceId: string }> {
-  const ownerEmployeeId = await resolveEmployeeId(db, user);
+  const data = await buildExportData(db, user, resumeId, commitId);
 
-  const resume = await db
-    .selectFrom("resumes")
-    .selectAll()
-    .where("id", "=", resumeId)
-    .executeTakeFirst();
-
-  if (!resume) throw new ORPCError("NOT_FOUND");
-  if (ownerEmployeeId !== null && resume.employee_id !== ownerEmployeeId) {
-    throw new ORPCError("FORBIDDEN");
-  }
-
-  const [employee, assignments, skills, education] = await Promise.all([
-    db
-      .selectFrom("employees")
-      .select(["id", "name", "email"])
-      .where("id", "=", resume.employee_id)
-      .executeTakeFirst(),
-    db
-      .selectFrom("assignments")
-      .selectAll()
-      .where("resume_id", "=", resumeId)
-      .orderBy("is_current", "desc")
-      .orderBy("end_date", "desc")
-      .orderBy("start_date", "desc")
-      .execute(),
-    db
-      .selectFrom("resume_skills")
-      .selectAll()
-      .where("cv_id", "=", resumeId)
-      .orderBy("sort_order", "asc")
-      .execute(),
-    db
-      .selectFrom("education")
-      .selectAll()
-      .where("employee_id", "=", resume.employee_id)
-      .orderBy("sort_order", "asc")
-      .execute(),
-  ]);
-
-  const name = employee?.name ?? "Unknown";
-  const consultantTitle = resume.consultant_title ?? "";
-  const presentation: string[] = (resume.presentation as string[] | null) ?? [];
-  const language = resume.language ?? "en";
+  const { name, email, consultantTitle, language, presentation, summary, skills, assignments, education } = data;
   const exportedAt = new Date().toISOString();
-
-  const lines: string[] = [];
-
   const filename = `${slug(name)}-${language}-cv.md`;
 
-  // Insert export record to get a reference_id (opaque identifier for the export)
   const record = await db
     .insertInto("export_records")
     .values({
-      resume_id: resume.id,
-      employee_id: resume.employee_id,
+      resume_id: resumeId,
+      employee_id: data.employeeId,
       format: "markdown",
       filename,
+      ...(data.commitId !== null ? { commit_id: data.commitId } : {}),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
 
   const referenceId = record.id;
+  const lines: string[] = [];
 
   // --- Frontmatter ---
   lines.push("---");
   lines.push(`reference_id: ${referenceId}`);
   lines.push(`language: ${language}`);
   lines.push(`exported_at: ${exportedAt}`);
+  if (data.commitId) lines.push(`commit_id: ${data.commitId}`);
   lines.push("---");
   lines.push("");
 
@@ -107,8 +64,8 @@ export async function exportResumeMarkdown(
   lines.push(`# ${header}`);
   lines.push("");
 
-  if (employee?.email) {
-    lines.push(`**Contact:** ${employee.email}`);
+  if (email) {
+    lines.push(`**Contact:** ${email}`);
     lines.push("");
   }
 
@@ -123,10 +80,10 @@ export async function exportResumeMarkdown(
   }
 
   // --- Summary ---
-  if (resume.summary) {
+  if (summary) {
     lines.push("## Summary");
     lines.push("");
-    lines.push(resume.summary);
+    lines.push(summary);
     lines.push("");
   }
 
@@ -138,8 +95,7 @@ export async function exportResumeMarkdown(
     for (const s of skills) {
       const cat = s.category ?? "General";
       const existing = byCategory.get(cat) ?? [];
-      existing.push(s.name);
-      byCategory.set(cat, existing);
+      byCategory.set(cat, [...existing, s.name]);
     }
     for (const [cat, names] of byCategory) {
       lines.push(`### ${cat}`);
@@ -154,15 +110,14 @@ export async function exportResumeMarkdown(
     lines.push("");
     for (const a of assignments) {
       const period = `${fmtDate(a.start_date)} – ${a.is_current ? "present" : fmtDate(a.end_date)}`;
-      const highlight = a.highlight ? " ⭐" : "";
-      lines.push(`### ${a.role} @ ${a.client_name} (${period})${highlight}`);
+      lines.push(`### ${a.role} @ ${a.client_name} (${period})`);
       lines.push("");
       if (a.type) {
         lines.push(`**Type:** ${a.type}`);
         lines.push("");
       }
-      if (a.technologies && (a.technologies as string[]).length > 0) {
-        lines.push(`**Technologies:** ${(a.technologies as string[]).join(", ")}`);
+      if (a.technologies.length > 0) {
+        lines.push(`**Technologies:** ${a.technologies.join(", ")}`);
         lines.push("");
       }
       if (a.keywords) {
@@ -214,14 +169,14 @@ export const exportResumeMarkdownHandler = implement(
   contract.exportResumeMarkdown
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return exportResumeMarkdown(getDb(), user, input.resumeId);
+  return exportResumeMarkdown(getDb(), user, input.resumeId, input.commitId);
 });
 
 export function createExportResumeMarkdownHandler(db: Kysely<Database>) {
   return implement(contract.exportResumeMarkdown).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return exportResumeMarkdown(db, user, input.resumeId);
+      return exportResumeMarkdown(db, user, input.resumeId, input.commitId);
     }
   );
 }
