@@ -13,8 +13,8 @@
   },
   "nav": {
     "home": "Home",
-    "test": "Test",
-    "employees": "Employees"
+    "employees": "Employees",
+    "resumes": "Resumes"
   },
   "employee": {
     "pageTitle": "Employees",
@@ -115,6 +115,10 @@
       "notFound": "Resume not found.",
       "skillsHeading": "Skills",
       "noSkills": "No skills added yet.",
+      "specialSkillsHeading": "Special skills",
+      "highlightedExperienceHeading": "Highlighted experience",
+      "otherHeading": "Other",
+      "consultantProfileLabel": "Consultant Profile",
       "editButton": "Edit",
       "addAssignment": "Add Assignment",
       "assignmentsHeading": "Assignments",
@@ -139,7 +143,16 @@
       "saving": "Saving…",
       "saveSuccess": "Resume saved.",
       "saveError": "Failed to save resume. Please try again.",
-      "backButton": "Back"
+      "backButton": "Back",
+      "skillsHeading": "Skills",
+      "skillNameLabel": "Skill name",
+      "skillLevelLabel": "Level (optional)",
+      "skillCategoryLabel": "Category (optional)",
+      "skillAddButton": "Add skill",
+      "skillAdding": "Adding…",
+      "skillDeleteButton": "Delete",
+      "skillAddError": "Failed to add skill. Please try again.",
+      "skillDeleteError": "Failed to delete skill. Please try again."
     }
   },
   "assignment": {

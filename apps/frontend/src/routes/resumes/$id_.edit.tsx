@@ -11,7 +11,7 @@
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,8 +19,11 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { orpc } from "../../orpc-client";
 import { getResumeQueryKey } from "./$id";
 
@@ -34,7 +37,7 @@ const editResumeFormSchema = z.object({
 
 type EditResumeFormValues = z.infer<typeof editResumeFormSchema>;
 
-export const Route = createFileRoute("/resumes/$id/edit")({
+export const Route = createFileRoute("/resumes/$id_/edit")({
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -45,7 +48,7 @@ export const Route = createFileRoute("/resumes/$id/edit")({
 
 function ResumeEditPage() {
   const { t } = useTranslation("common");
-  const { id } = useParams({ from: Route.fullPath });
+  const { id } = useParams({ strict: false }) as { id: string };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -168,6 +171,155 @@ function ResumeEditPage() {
             {t("resume.edit.backButton")}
           </Button>
         </Box>
+      </Box>
+
+      <Divider sx={{ my: 4 }} />
+
+      <SkillsEditor resumeId={id} skills={resume?.skills ?? []} queryKey={queryKey} />
+    </Box>
+  );
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  level: string | null;
+  category: string | null;
+}
+
+interface SkillsEditorProps {
+  resumeId: string;
+  skills: Skill[];
+  queryKey: readonly unknown[];
+}
+
+function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) {
+  const { t } = useTranslation("common");
+  const queryClient = useQueryClient();
+
+  const [skillName, setSkillName] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
+  const [skillCategory, setSkillCategory] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const addMutation = useMutation({
+    mutationFn: () =>
+      orpc.createResumeSkill({
+        cvId: resumeId,
+        name: skillName.trim(),
+        level: skillLevel.trim() || null,
+        category: skillCategory.trim() || null,
+      }),
+    onSuccess: async () => {
+      setSkillName("");
+      setSkillLevel("");
+      setSkillCategory("");
+      setAddError(null);
+      await queryClient.invalidateQueries({ queryKey });
+    },
+    onError: () => {
+      setAddError(t("resume.edit.skillAddError"));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (skillId: string) => orpc.deleteResumeSkill({ id: skillId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const handleAdd = () => {
+    if (!skillName.trim()) return;
+    addMutation.mutate();
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5" component="h2" gutterBottom>
+        {t("resume.edit.skillsHeading")}
+      </Typography>
+
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
+        {skills.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("resume.detail.noSkills")}
+          </Typography>
+        ) : (
+          skills.map((skill) => (
+            <Box
+              key={skill.id}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 0.75,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+              }}
+            >
+              <Typography sx={{ flex: 1, fontSize: "0.875rem" }}>{skill.name}</Typography>
+              {skill.category && (
+                <Typography variant="caption" color="text.secondary">
+                  {skill.category}
+                </Typography>
+              )}
+              {skill.level && (
+                <Typography variant="caption" color="text.secondary">
+                  {skill.level}
+                </Typography>
+              )}
+              <IconButton
+                size="small"
+                aria-label={t("resume.edit.skillDeleteButton")}
+                onClick={() => deleteMutation.mutate(skill.id)}
+                disabled={deleteMutation.isPending}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          ))
+        )}
+      </Box>
+
+      {addError && (
+        <Alert severity="error" sx={{ mb: 1 }}>
+          {addError}
+        </Alert>
+      )}
+
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <TextField
+          label={t("resume.edit.skillNameLabel")}
+          value={skillName}
+          onChange={(e) => setSkillName(e.target.value)}
+          size="small"
+          sx={{ flex: "1 1 180px" }}
+        />
+        <TextField
+          label={t("resume.edit.skillLevelLabel")}
+          value={skillLevel}
+          onChange={(e) => setSkillLevel(e.target.value)}
+          size="small"
+          sx={{ flex: "1 1 140px" }}
+        />
+        <TextField
+          label={t("resume.edit.skillCategoryLabel")}
+          value={skillCategory}
+          onChange={(e) => setSkillCategory(e.target.value)}
+          size="small"
+          sx={{ flex: "1 1 140px" }}
+        />
+        <Button
+          variant="contained"
+          onClick={handleAdd}
+          disabled={!skillName.trim() || addMutation.isPending}
+          size="medium"
+        >
+          {addMutation.isPending ? t("resume.edit.skillAdding") : t("resume.edit.skillAddButton")}
+        </Button>
       </Box>
     </Box>
   );

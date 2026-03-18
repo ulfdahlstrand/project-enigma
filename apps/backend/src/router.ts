@@ -19,6 +19,8 @@ import { deleteAssignmentHandler } from "./procedures/delete-assignment.js";
 import { listEducationHandler } from "./procedures/list-education.js";
 import { createEducationHandler } from "./procedures/create-education.js";
 import { deleteEducationHandler } from "./procedures/delete-education.js";
+import { createResumeSkillHandler } from "./procedures/create-resume-skill.js";
+import { deleteResumeSkillHandler } from "./procedures/delete-resume-skill.js";
 import { importCvHandler } from "./procedures/import-cv.js";
 import { exportResumeMarkdownHandler } from "./procedures/export-resume-markdown.js";
 import { exportResumePdfHandler } from "./procedures/export-resume-pdf.js";
@@ -45,6 +47,8 @@ export const router = implement(contract).router({
   createResume: createResumeHandler,
   updateResume: updateResumeHandler,
   deleteResume: deleteResumeHandler,
+  createResumeSkill: createResumeSkillHandler,
+  deleteResumeSkill: deleteResumeSkillHandler,
   listAssignments: listAssignmentsHandler,
   getAssignment: getAssignmentHandler,
   createAssignment: createAssignmentHandler,

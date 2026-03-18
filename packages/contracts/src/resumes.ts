@@ -102,6 +102,27 @@ export const deleteResumeInputSchema = z.object({ id: z.string().uuid() });
 export const deleteResumeOutputSchema = z.object({ deleted: z.literal(true) });
 
 // ---------------------------------------------------------------------------
+// createResumeSkill schemas
+// ---------------------------------------------------------------------------
+
+export const createResumeSkillInputSchema = z.object({
+  cvId: z.string().uuid(),
+  name: z.string().min(1),
+  level: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const createResumeSkillOutputSchema = resumeSkillSchema;
+
+// ---------------------------------------------------------------------------
+// deleteResumeSkill schemas
+// ---------------------------------------------------------------------------
+
+export const deleteResumeSkillInputSchema = z.object({ id: z.string().uuid() });
+export const deleteResumeSkillOutputSchema = z.object({ deleted: z.literal(true) });
+
+// ---------------------------------------------------------------------------
 // Inferred TypeScript types
 // ---------------------------------------------------------------------------
 

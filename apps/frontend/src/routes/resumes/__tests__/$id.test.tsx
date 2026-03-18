@@ -41,6 +41,8 @@ vi.mock("../../../orpc-client", () => ({
     getResume: vi.fn(),
     updateResume: vi.fn(),
     listAssignments: vi.fn(),
+    getEmployee: vi.fn(),
+    listEducation: vi.fn(),
   },
 }));
 
@@ -48,6 +50,8 @@ import { orpc } from "../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
 const mockListAssignments = orpc.listAssignments as ReturnType<typeof vi.fn>;
+const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
+const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -114,8 +118,12 @@ function renderPage() {
   return { ...result, queryClient };
 }
 
+const TEST_EMPLOYEE = { id: "emp-id-1", name: "Jane Doe", email: "jane@example.com" };
+
 beforeEach(() => {
   mockListAssignments.mockResolvedValue([]);
+  mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
+  mockListEducation.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -151,14 +159,16 @@ describe("Resume detail rendering", () => {
 
   it("renders the resume title as a heading", async () => {
     renderPage();
-    const title = await screen.findByText(TEST_RESUME.title);
-    expect(title).toBeInTheDocument();
+    // Title appears in both PageHeader and DocumentPage header — use findAllByText
+    const titles = await screen.findAllByText(TEST_RESUME.title);
+    expect(titles.length).toBeGreaterThan(0);
   });
 
   it("renders the language chip", async () => {
     renderPage();
-    const languageChip = await screen.findByText(TEST_RESUME.language);
-    expect(languageChip).toBeInTheDocument();
+    // Language chip appears in both PageHeader and DocumentPage header
+    const chips = await screen.findAllByText(TEST_RESUME.language.toUpperCase());
+    expect(chips.length).toBeGreaterThan(0);
   });
 
   it("renders the summary text", async () => {
@@ -173,36 +183,38 @@ describe("Resume detail rendering", () => {
 // ---------------------------------------------------------------------------
 
 describe("Skills list", () => {
-  it("renders skills heading", async () => {
+  it("renders the consultant profile label on the skills page", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    const heading = await screen.findByText(enCommon.resume.detail.skillsHeading);
-    expect(heading).toBeInTheDocument();
+    const label = await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
+    expect(label).toBeInTheDocument();
   });
 
   it("renders each skill name", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
+    // Wait for skills page to render, then query synchronously to avoid stale refs
+    await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
     for (const skill of TEST_RESUME.skills) {
-      const skillName = await screen.findByText(skill.name);
-      expect(skillName).toBeInTheDocument();
+      expect(screen.getByText(skill.name)).toBeInTheDocument();
     }
   });
 
-  it("renders each skill level", async () => {
+  it("renders skill categories as uppercase labels", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    for (const skill of TEST_RESUME.skills) {
-      const skillLevel = await screen.findByText(skill.level!);
-      expect(skillLevel).toBeInTheDocument();
-    }
+    // Categories are rendered toUpperCase in CategoryBlock
+    const programmingLabel = await screen.findByText("PROGRAMMING");
+    expect(programmingLabel).toBeInTheDocument();
+    expect(screen.getByText("FRONTEND")).toBeInTheDocument();
   });
 
-  it("renders 'no skills' message when skills array is empty", async () => {
+  it("does not render the skills page when skills array is empty", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME_NO_SKILLS);
     renderPage();
-    const noSkills = await screen.findByText(enCommon.resume.detail.noSkills);
-    expect(noSkills).toBeInTheDocument();
+    // Wait for resume to load, then verify skills page is absent
+    await screen.findByText(TEST_RESUME.title);
+    expect(screen.queryByText(enCommon.resume.detail.consultantProfileLabel)).toBeNull();
   });
 });
 
@@ -217,7 +229,7 @@ describe("Navigation", () => {
 
   it("renders an Edit button when data is loaded", async () => {
     renderPage();
-    await screen.findByText(TEST_RESUME.title);
+    await screen.findAllByText(TEST_RESUME.title);
     const editBtn = screen.getByRole("button", {
       name: enCommon.resume.detail.editButton,
     });
@@ -226,7 +238,7 @@ describe("Navigation", () => {
 
   it("renders a Back link to /resumes", async () => {
     renderPage();
-    await screen.findByText(TEST_RESUME.title);
+    await screen.findAllByText(TEST_RESUME.title);
     const backLink = screen.getByText(enCommon.resume.detail.backButton);
     expect(backLink).toBeInTheDocument();
   });
@@ -335,18 +347,18 @@ describe("Assignments section", () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
   });
 
-  it("renders the assignments heading", async () => {
-    mockListAssignments.mockResolvedValue([]);
+  it("renders the assignments heading when assignments exist", async () => {
+    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
-    await screen.findByText(TEST_RESUME.title);
-    expect(screen.getByText(enCommon.resume.detail.assignmentsHeading)).toBeInTheDocument();
+    const heading = await screen.findByText(enCommon.resume.detail.assignmentsHeading);
+    expect(heading).toBeInTheDocument();
   });
 
-  it("renders 'no assignments' message when list is empty", async () => {
+  it("does not render the assignments page when list is empty", async () => {
     mockListAssignments.mockResolvedValue([]);
     renderPage();
-    await screen.findByText(TEST_RESUME.title);
-    expect(screen.getByText(enCommon.resume.detail.noAssignments)).toBeInTheDocument();
+    await screen.findAllByText(TEST_RESUME.title);
+    expect(screen.queryByText(enCommon.resume.detail.assignmentsHeading)).toBeNull();
   });
 
   it("renders client name and role for each assignment", async () => {

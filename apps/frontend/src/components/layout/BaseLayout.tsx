@@ -1,35 +1,59 @@
 /**
- * BaseLayout component — the application shell shared by all routes.
+ * BaseLayout — Google Docs/Drive-inspired application shell.
  *
- * Renders Header at the top, a side NavigationMenu alongside the matched child
- * route via <Outlet />, and Footer at the bottom. Wired into TanStack Router's
- * __root.tsx so it persists across all client-side navigations without
- * unmounting.
- *
- * Layout uses MUI Box with flexbox to ensure the footer is pushed to the bottom
- * of the viewport when content is short, with the NavigationMenu positioned as
- * a persistent side column next to the main content area. Styling is applied
- * exclusively via MUI sx prop — no inline style objects or imported CSS files.
+ * Structure:
+ *   ┌──────────────────────────────────────┐
+ *   │  Header (white, sticky, full-width)  │
+ *   ├──────────┬───────────────────────────┤
+ *   │  Sidebar │  Content (gray bg)        │
+ *   │  (white) │                           │
+ *   └──────────┴───────────────────────────┘
  */
 import Box from "@mui/material/Box";
 import { Outlet } from "@tanstack/react-router";
-import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { NavigationMenu } from "./NavigationMenu";
+import { SIDEBAR_WIDTH } from "../../lib/theme";
 
 export function BaseLayout() {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Header />
+
       <Box sx={{ display: "flex", flexGrow: 1 }}>
-        <Box component="nav" sx={{ width: 200, flexShrink: 0 }}>
+        {/* White sidebar */}
+        <Box
+          component="nav"
+          sx={{
+            width: SIDEBAR_WIDTH,
+            flexShrink: 0,
+            bgcolor: "background.paper",
+            borderRight: "1px solid",
+            borderColor: "divider",
+            position: "fixed",
+            top: 56,
+            bottom: 0,
+            left: 0,
+            overflowY: "auto",
+            zIndex: 1100,
+          }}
+        >
           <NavigationMenu />
         </Box>
-        <Box component="main" sx={{ flexGrow: 1 }}>
+
+        {/* Gray content area */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            ml: `${SIDEBAR_WIDTH}px`,
+            bgcolor: "background.default",
+            minHeight: "calc(100vh - 56px)",
+          }}
+        >
           <Outlet />
         </Box>
       </Box>
-      <Footer />
     </Box>
   );
 }

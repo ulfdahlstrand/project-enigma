@@ -1,16 +1,19 @@
 import Button from "@mui/material/Button";
 /**
- * /resumes/$id route — read-only resume detail page with skills.
+ * /resumes/$id route — resume detail rendered as A4 document pages.
  *
- * Data fetching: TanStack Query useQuery + oRPC client (no direct fetch/axios).
- * Rendering: MUI components from @mui/material.
+ * Page 1 — Cover: employee name, consultant title, presentation paragraphs,
+ *   special-skills box (summary + top-5 highlighted assignments as bullets).
+ * Page 2 — Assignments: full assignments table (only if data exists).
+ *
+ * Data fetching: TanStack Query useQuery + oRPC client.
  * Styling: MUI sx prop only — no .css/.scss files, no style={{ }} props.
- * i18n: all visible text via useTranslation("common") — no plain string literals
- *       as direct JSX children.
+ * i18n: all visible text via useTranslation("common").
  */
 import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -18,16 +21,16 @@ import Box from "@mui/material/Box";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Divider from "@mui/material/Divider";
 import Grow from "@mui/material/Grow";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import CircularProgress from "@mui/material/CircularProgress";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
-import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -37,14 +40,22 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 import RouterButton from "../../components/RouterButton";
+import { PageHeader } from "../../components/layout/PageHeader";
 
-/**
- * Query key factory for a single resume lookup.
- * Exported so tests can assert against the exact key structure.
- */
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
 const TOKEN_KEY = "cv-tool:id-token";
+
+// A4 at 96 dpi
+const PAGE_WIDTH = 794;
+const PAGE_MIN_HEIGHT = 1123;
+const PAGE_MX = "80px";
+const PAGE_MY = "56px";
+const HEADER_HEIGHT = 52;
+const FOOTER_HEIGHT = 40;
+
+// How many assignments to show as bullets on the cover page
+const COVER_HIGHLIGHT_COUNT = 5;
 
 export const Route = createFileRoute("/resumes/$id")({
   beforeLoad: () => {
@@ -54,6 +65,347 @@ export const Route = createFileRoute("/resumes/$id")({
   },
   component: ResumeDetailPage,
 });
+
+// ---------------------------------------------------------------------------
+// DocumentPage shell — shared by all pages
+// ---------------------------------------------------------------------------
+
+interface DocumentPageProps {
+  children: ReactNode;
+  title: string;
+  language?: string | undefined;
+  page: number;
+  totalPages: number;
+  hideHeader?: boolean;
+}
+
+function DocumentPage({ children, title, language, page, totalPages, hideHeader = false }: DocumentPageProps) {
+  return (
+    <Paper
+      elevation={2}
+      sx={{
+        width: PAGE_WIDTH,
+        maxWidth: "100%",
+        minHeight: PAGE_MIN_HEIGHT,
+        border: "none",
+        borderRadius: "2px",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Header */}
+      {!hideHeader && (
+        <Box
+          sx={{
+            height: HEADER_HEIGHT,
+            flexShrink: 0,
+            borderBottom: "1px solid transparent",
+            px: PAGE_MX,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600, flexGrow: 1 }}>
+            {title}
+          </Typography>
+          {language && (
+            <Chip label={language.toUpperCase()} size="small" sx={{ fontSize: "0.7rem", height: 20 }} />
+          )}
+        </Box>
+      )}
+
+      {/* Body */}
+      <Box sx={{ flexGrow: 1, px: PAGE_MX, py: PAGE_MY, display: "flex", flexDirection: "column" }}>
+        {children}
+      </Box>
+
+      {/* Footer */}
+      <Box
+        sx={{
+          height: FOOTER_HEIGHT,
+          flexShrink: 0,
+          borderTop: "1px solid transparent",
+          px: PAGE_MX,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: "italic" }}>
+          sthlm tech
+        </Typography>
+        <Typography variant="caption" color="text.disabled">
+          {page} / {totalPages}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cover page content
+// ---------------------------------------------------------------------------
+
+interface CoverPageContentProps {
+  employeeName: string;
+  consultantTitle: string | null;
+  presentation: string[];
+  summary: string | null;
+  highlightedAssignments: Array<{ role: string; clientName: string }>;
+}
+
+function CoverPageContent({
+  employeeName,
+  consultantTitle,
+  presentation,
+  summary,
+  highlightedAssignments,
+}: CoverPageContentProps) {
+  const { t } = useTranslation("common");
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100%", pt: "200px" }}>
+      <Box>
+      {/* Name + title block */}
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h1"
+          component="h1"
+          sx={{ fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}
+        >
+          {employeeName}
+        </Typography>
+        {consultantTitle && (
+          <Typography
+            variant="h3"
+            component="p"
+            sx={{ fontWeight: 700, color: "text.primary", mt: 0.5 }}
+          >
+            {consultantTitle}
+          </Typography>
+        )}
+      </Box>
+
+      {/* Presentation paragraphs */}
+      {presentation.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          {presentation.map((para, i) => (
+            <Typography key={i} variant="body1" sx={{ mb: 1, textAlign: "justify" }}>
+              {para}
+            </Typography>
+          ))}
+        </Box>
+      )}
+
+      {/* Special skills + highlighted experience box */}
+      {(summary || highlightedAssignments.length > 0) && (
+        <Box
+          sx={{
+            bgcolor: "#F8F9FA",
+            border: "none",
+            borderRadius: 0,
+            px: 3,
+            py: 2.5,
+          }}
+        >
+          {summary && (
+            <Box sx={{ mb: highlightedAssignments.length > 0 ? 2.5 : 0 }}>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
+              >
+                {t("resume.detail.specialSkillsHeading").toUpperCase()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {summary}
+              </Typography>
+            </Box>
+          )}
+
+          {highlightedAssignments.length > 0 && (
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
+              >
+                {t("resume.detail.highlightedExperienceHeading").toUpperCase()}
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                {highlightedAssignments.map((a, i) => (
+                  <Typography
+                    key={i}
+                    component="li"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 0.25 }}
+                  >
+                    {a.role} hos {a.clientName}
+                  </Typography>
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Box>
+      )}
+      </Box>
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Skills page content
+// ---------------------------------------------------------------------------
+
+interface SkillsPageContentProps {
+  employeeName: string;
+  skills: Array<{ id: string; name: string; category: string | null }>;
+  degrees: string[];
+  certifications: string[];
+  languages: string[];
+}
+
+function SkillsPageContent({
+  employeeName,
+  skills,
+  degrees,
+  certifications,
+  languages,
+}: SkillsPageContentProps) {
+  const { t } = useTranslation("common");
+
+  // Group skills by category; null/empty category → key ""
+  const grouped = skills.reduce<Record<string, string[]>>((acc, skill) => {
+    const key = skill.category?.trim() || "";
+    return { ...acc, [key]: [...(acc[key] ?? []), skill.name] };
+  }, {});
+
+  const categories = Object.entries(grouped).sort(([a], [b]) => {
+    if (a === "") return 1;   // uncategorised to the end
+    if (b === "") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Split categories across two columns (~half each)
+  const mid = Math.ceil(categories.length / 2);
+  const leftCategories = categories.slice(0, mid);
+  const rightCategories = categories.slice(mid);
+
+  const hasOther = degrees.length > 0 || certifications.length > 0 || languages.length > 0;
+
+  const CategoryBlock = ({ label, skillNames }: { label: string; skillNames: string[] }) => (
+    <Box sx={{ mb: 2.5 }}>
+      <Box
+        sx={{
+          bgcolor: "#F1F3F4",
+          px: 1.5,
+          py: 0.75,
+          mb: 1,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block" }}
+        >
+          {label.toUpperCase()}
+        </Typography>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, fontSize: "0.75rem" }}>
+        {skillNames.join(", ")}
+      </Typography>
+    </Box>
+  );
+
+  return (
+    <Box>
+      {/* Name + "Konsultprofil" label */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h2" component="p" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.1 }}>
+          {employeeName}
+        </Typography>
+        <Typography variant="h3" color="text.primary">
+          {t("resume.detail.consultantProfileLabel")}
+        </Typography>
+      </Box>
+
+      {/* Two-column skill categories */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start" }}>
+        {/* Left column */}
+        <Box>
+          {leftCategories.map(([cat, names]) => (
+            <CategoryBlock
+              key={cat}
+              label={cat || t("resume.detail.skillsHeading")}
+              skillNames={names}
+            />
+          ))}
+        </Box>
+
+        {/* Right column: remaining categories + Övrigt */}
+        <Box>
+          {rightCategories.map(([cat, names]) => (
+            <CategoryBlock
+              key={cat}
+              label={cat || t("resume.detail.skillsHeading")}
+              skillNames={names}
+            />
+          ))}
+
+          {hasOther && (
+            <Box sx={{ mt: rightCategories.length > 0 ? 1 : 0 }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1.5 }}>
+                {t("resume.detail.otherHeading")}
+              </Typography>
+
+              {degrees.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationDegrees")}
+                  </Typography>
+                  {degrees.map((d, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {d}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {certifications.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationCertifications")}
+                  </Typography>
+                  {certifications.map((c, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {c}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {languages.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {t("employee.detail.educationLanguages")}
+                  </Typography>
+                  {languages.map((l, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary">
+                      {l}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Export split button
+// ---------------------------------------------------------------------------
 
 type ExportFormat = "pdf" | "docx" | "markdown";
 const EXPORT_OPTIONS: ExportFormat[] = ["pdf", "docx", "markdown"];
@@ -72,7 +424,9 @@ async function triggerDownload(format: ExportFormat, resumeId: string): Promise<
   } else if (format === "docx") {
     const result = await orpc.exportResumeDocx({ resumeId });
     const bytes = Uint8Array.from(atob(result.docx), (c) => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -97,23 +451,25 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
   const [selected, setSelected] = useState<ExportFormat>("pdf");
   const anchorRef = useState<HTMLDivElement | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: () => triggerDownload(selected, resumeId),
-  });
-
-  const handleClick = () => mutation.mutate();
-  const handleToggle = () => setOpen((prev) => !prev);
-  const handleClose = () => setOpen(false);
-
-  const label = t(`resume.detail.export.${selected}`);
+  const mutation = useMutation({ mutationFn: () => triggerDownload(selected, resumeId) });
 
   return (
     <>
-      <ButtonGroup variant="contained" ref={(el) => { anchorRef[1](el); }} disabled={mutation.isPending}>
-        <Button onClick={handleClick}>
-          {mutation.isPending ? t("resume.detail.export.exporting") : label}
+      <ButtonGroup
+        variant="outlined"
+        ref={(el) => { anchorRef[1](el); }}
+        disabled={mutation.isPending}
+      >
+        <Button onClick={() => mutation.mutate()}>
+          {mutation.isPending
+            ? t("resume.detail.export.exporting")
+            : t(`resume.detail.export.${selected}`)}
         </Button>
-        <Button size="small" onClick={handleToggle} aria-label={t("resume.detail.export.selectFormat")}>
+        <Button
+          size="small"
+          onClick={() => setOpen((p) => !p)}
+          aria-label={t("resume.detail.export.selectFormat")}
+        >
           <ArrowDropDownIcon />
         </Button>
       </ButtonGroup>
@@ -121,13 +477,17 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
         {({ TransitionProps }) => (
           <Grow {...TransitionProps}>
             <Paper>
-              <ClickAwayListener onClickAway={handleClose}>
+              <ClickAwayListener onClickAway={() => setOpen(false)}>
                 <MenuList autoFocusItem>
                   {EXPORT_OPTIONS.map((fmt) => (
                     <MenuItem
                       key={fmt}
                       selected={fmt === selected}
-                      onClick={() => { setSelected(fmt); setOpen(false); void triggerDownload(fmt, resumeId); }}
+                      onClick={() => {
+                        setSelected(fmt);
+                        setOpen(false);
+                        void triggerDownload(fmt, resumeId);
+                      }}
                     >
                       {t(`resume.detail.export.${fmt}`)}
                     </MenuItem>
@@ -142,28 +502,37 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
+
 function ResumeDetailPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ from: Route.fullPath });
   const navigate = useNavigate();
 
-  const queryKey = getResumeQueryKey(id);
-
-  const {
-    data: resume,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey,
+  const { data: resume, isLoading, isError, error } = useQuery({
+    queryKey: getResumeQueryKey(id),
     queryFn: () => orpc.getResume({ id }),
     retry: false,
+  });
+
+  const { data: employee } = useQuery({
+    queryKey: ["getEmployee", resume?.employeeId],
+    queryFn: () => orpc.getEmployee({ id: resume!.employeeId }),
+    enabled: !!resume?.employeeId,
   });
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["listAssignments", "resume", id],
     queryFn: () => orpc.listAssignments({ resumeId: id }),
     enabled: !!resume,
+  });
+
+  const { data: education = [] } = useQuery({
+    queryKey: ["listEducation", resume?.employeeId],
+    queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
+    enabled: !!resume?.employeeId,
   });
 
   if (isLoading) {
@@ -181,127 +550,170 @@ function ResumeDetailPage() {
       "code" in error &&
       (error as { code: unknown }).code === "NOT_FOUND";
 
-    if (isNotFound) {
-      return (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1">{t("resume.detail.notFound")}</Typography>
-        </Box>
-      );
-    }
-
     return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("resume.detail.error")}</Alert>
+      <Box sx={{ mt: 2, px: 3 }}>
+        {isNotFound ? (
+          <Typography variant="body1">{t("resume.detail.notFound")}</Typography>
+        ) : (
+          <Alert severity="error">{t("resume.detail.error")}</Alert>
+        )}
       </Box>
     );
   }
 
+  const resumeTitle = resume?.title ?? "";
+  const language = resume?.language;
+
+  // Sort: current assignments first, then by start date descending
+  const sortedAssignments = [...assignments].sort((a, b) => {
+    if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
+    return (b.startDate ?? "").toString().localeCompare((a.startDate ?? "").toString());
+  });
+
+  const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
+  const skills = resume?.skills ?? [];
+  const hasSkills = skills.length > 0;
+  const hasAssignments = assignments.length > 0;
+  const totalPages = 1 + (hasSkills ? 1 : 0) + (hasAssignments ? 1 : 0);
+  const skillsPage = hasSkills ? 2 : null;
+  const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
+
+  const toolbarActions = (
+    <>
+      <RouterButton variant="text" to="/resumes">
+        {t("resume.detail.backButton")}
+      </RouterButton>
+      <Button
+        variant="outlined"
+        onClick={() => void navigate({ to: "/resumes/$id/edit", params: { id } })}
+      >
+        {t("resume.detail.editButton")}
+      </Button>
+      <RouterButton
+        variant="outlined"
+        to="/assignments/new"
+        search={{ resumeId: id, employeeId: resume?.employeeId }}
+      >
+        {t("resume.detail.addAssignment")}
+      </RouterButton>
+      <ExportSplitButton resumeId={id} />
+    </>
+  );
+
   return (
-    <Box sx={{ p: 2, maxWidth: 720 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-        <Typography variant="h4" component="h1">
-          {resume?.title}
-        </Typography>
-        {resume?.language && (
-          <Chip label={resume.language} size="small" />
+    <Box>
+      <PageHeader
+        title={resumeTitle}
+        chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
+        actions={toolbarActions}
+      />
+
+      {/* Gray canvas */}
+      <Box
+        sx={{
+          bgcolor: "#F1F3F4",
+          minHeight: "calc(100vh - 56px)",
+          py: 4,
+          px: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 3,
+        }}
+      >
+        {/* Page 1 — Cover */}
+        <DocumentPage
+          title={resumeTitle}
+          language={language}
+          page={1}
+          totalPages={totalPages}
+          hideHeader
+        >
+          <CoverPageContent
+            employeeName={employee?.name ?? ""}
+            consultantTitle={resume?.consultantTitle ?? null}
+            presentation={resume?.presentation ?? []}
+            summary={resume?.summary ?? null}
+            highlightedAssignments={highlighted}
+          />
+        </DocumentPage>
+
+        {/* Page 2 — Skills */}
+        {hasSkills && skillsPage !== null && (
+          <DocumentPage
+            title={resumeTitle}
+            language={language}
+            page={skillsPage}
+            totalPages={totalPages}
+          >
+            <SkillsPageContent
+              employeeName={employee?.name ?? ""}
+              skills={skills}
+              degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+              certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+              languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+            />
+          </DocumentPage>
         )}
-      </Box>
 
-      {resume?.summary && (
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          {resume.summary}
-        </Typography>
-      )}
+        {/* Page 3 — Full assignments table */}
+        {hasAssignments && assignmentsPage !== null && (
+          <DocumentPage
+            title={resumeTitle}
+            language={language}
+            page={assignmentsPage}
+            totalPages={totalPages}
+          >
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+              {t("resume.detail.assignmentsHeading")}
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
 
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="h6" gutterBottom>
-        {t("resume.detail.skillsHeading")}
-      </Typography>
-
-      {resume?.skills && resume.skills.length === 0 ? (
-        <Typography variant="body2">{t("resume.detail.noSkills")}</Typography>
-      ) : (
-        <List dense>
-          {resume?.skills?.map((skill) => (
-            <ListItem key={skill.id} disablePadding>
-              <ListItemText
-                primary={skill.name}
-                secondary={skill.level ?? undefined}
-              />
-            </ListItem>
-          ))}
-        </List>
-      )}
-
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="h6" gutterBottom>
-        {t("resume.detail.assignmentsHeading")}
-      </Typography>
-
-      {assignments.length === 0 ? (
-        <Typography variant="body2">{t("resume.detail.noAssignments")}</Typography>
-      ) : (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
-                <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
-                <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
-                <TableCell>{t("assignment.tableHeaderStart").replace("Start", "End")}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {assignments.map((a) => (
-                <TableRow
-                  key={a.id}
-                  hover
-                  sx={{ cursor: "pointer" }}
-                  onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
-                >
-                  <TableCell>{a.clientName}</TableCell>
-                  <TableCell>{a.role}</TableCell>
-                  <TableCell>
-                    {typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}
-                  </TableCell>
-                  <TableCell>
-                    {a.isCurrent ? (
-                      <Chip label={t("resume.detail.assignmentPresent")} color="success" size="small" />
-                    ) : typeof a.endDate === "string" ? (
-                      a.endDate.slice(0, 10)
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Box sx={{ display: "flex", gap: 2, mt: 3, flexWrap: "wrap" }}>
-        <Button
-          variant="contained"
-          onClick={() =>
-            void navigate({ to: "/resumes/$id/edit", params: { id } })
-          }
-        >
-          {t("resume.detail.editButton")}
-        </Button>
-        <ExportSplitButton resumeId={id} />
-        <RouterButton
-          variant="outlined"
-          to="/assignments/new"
-          search={{ resumeId: id, employeeId: resume?.employeeId }}
-        >
-          {t("resume.detail.addAssignment")}
-        </RouterButton>
-        <RouterButton to="/resumes">
-          {t("resume.detail.backButton")}
-        </RouterButton>
+            <TableContainer>
+              <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
+                    <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
+                    <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
+                    <TableCell>{t("assignment.tableHeaderCurrent")}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {sortedAssignments.map((a) => (
+                    <TableRow
+                      key={a.id}
+                      hover
+                      sx={{ cursor: "pointer" }}
+                      onClick={() =>
+                        void navigate({ to: "/assignments/$id", params: { id: a.id } })
+                      }
+                    >
+                      <TableCell>{a.clientName}</TableCell>
+                      <TableCell>{a.role}</TableCell>
+                      <TableCell>
+                        {typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}
+                      </TableCell>
+                      <TableCell>
+                        {a.isCurrent ? (
+                          <Chip
+                            label={t("resume.detail.assignmentPresent")}
+                            color="success"
+                            size="small"
+                          />
+                        ) : typeof a.endDate === "string" ? (
+                          a.endDate.slice(0, 10)
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DocumentPage>
+        )}
       </Box>
     </Box>
   );
