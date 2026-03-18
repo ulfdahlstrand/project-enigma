@@ -205,5 +205,15 @@
     "tableHeaderId": "ID",
     "tableHeaderName": "Name",
     "tableHeaderNote": "Note"
+  },
+  "userMenu": {
+    "language": "Language",
+    "preferences": "Preferences",
+    "helpAndFeedback": "Help & feedback",
+    "signOut": "Sign out",
+    "darkMode": "Dark mode"
+  },
+  "languageSelector": {
+    "label": "Select language"
   }
 }

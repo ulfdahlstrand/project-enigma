@@ -20,8 +20,8 @@ describe("Header", () => {
     render(<Header />);
   });
 
-  it("renders a language selector dropdown", () => {
+  it("renders the app name", () => {
     render(<Header />);
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.getByText("App")).toBeInTheDocument();
   });
 });

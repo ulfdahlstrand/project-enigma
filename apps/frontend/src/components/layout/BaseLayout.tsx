@@ -36,6 +36,8 @@ export function BaseLayout() {
             left: 0,
             overflowY: "auto",
             zIndex: 1100,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <NavigationMenu />
