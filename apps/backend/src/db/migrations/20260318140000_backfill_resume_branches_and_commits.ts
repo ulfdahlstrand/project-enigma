@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 
 // ---------------------------------------------------------------------------
 // Migration: backfill_resume_branches_and_commits
@@ -9,43 +10,59 @@ import type { Kysely } from "kysely";
 //      (fields + skills — assignments are not yet linked via branch_assignments
 //      since per-branch assignment linking is introduced in Phase C).
 //
+// Uses raw SQL throughout to avoid coupling to the Kysely typed query builder
+// (migrations accept Kysely<unknown> which has no table type information).
+//
 // Idempotent: only processes resumes that have no branch yet.
 // ---------------------------------------------------------------------------
 
+interface ResumeRow {
+  resume_id: string;
+  title: string;
+  consultant_title: string | null;
+  presentation: string[];
+  summary: string | null;
+  language: string;
+}
+
+interface SkillRow {
+  name: string;
+  level: string | null;
+  category: string | null;
+  sort_order: number;
+}
+
+interface IdRow {
+  id: string;
+}
+
 export async function up(db: Kysely<unknown>): Promise<void> {
   // Fetch all resumes that have no branch yet
-  const resumes = await (db as Parameters<typeof up>[0])
-    .selectFrom("resumes as r")
-    .leftJoin("resume_branches as rb", "rb.resume_id", "r.id")
-    .select([
-      "r.id as resume_id",
-      "r.title",
-      "r.consultant_title",
-      "r.presentation",
-      "r.summary",
-      "r.language",
-    ])
-    .where("rb.id", "is", null)
-    .execute();
+  const resumes = await sql<ResumeRow>`
+    SELECT r.id AS resume_id, r.title, r.consultant_title, r.presentation,
+           r.summary, r.language
+    FROM resumes r
+    LEFT JOIN resume_branches rb ON rb.resume_id = r.id
+    WHERE rb.id IS NULL
+  `.execute(db);
 
-  if (resumes.length === 0) return;
+  if (resumes.rows.length === 0) return;
 
-  for (const resume of resumes) {
-    // Fetch skills for this resume
-    const skills = await (db as Parameters<typeof up>[0])
-      .selectFrom("resume_skills")
-      .select(["name", "level", "category", "sort_order"])
-      .where("cv_id", "=", resume.resume_id)
-      .orderBy("sort_order", "asc")
-      .execute();
+  for (const resume of resumes.rows) {
+    const skills = await sql<SkillRow>`
+      SELECT name, level, category, sort_order
+      FROM resume_skills
+      WHERE cv_id = ${resume.resume_id}
+      ORDER BY sort_order ASC
+    `.execute(db);
 
-    const content = {
+    const content = JSON.stringify({
       title: resume.title,
       consultantTitle: resume.consultant_title,
       presentation: resume.presentation ?? [],
       summary: resume.summary,
       language: resume.language,
-      skills: skills.map((s: { name: string; level: string | null; category: string | null; sort_order: number }) => ({
+      skills: skills.rows.map((s) => ({
         name: s.name,
         level: s.level,
         category: s.category,
@@ -55,58 +72,42 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       // introduced in Phase C. Existing assignment data remains queryable via
       // assignments.resume_id until that migration runs.
       assignments: [],
-    };
+    });
 
-    // Insert the main branch with head_commit_id temporarily null
-    const branch = await (db as Parameters<typeof up>[0])
-      .insertInto("resume_branches")
-      .values({
-        resume_id: resume.resume_id,
-        name: "main",
-        language: resume.language,
-        is_main: true,
-        head_commit_id: null,
-        forked_from_commit_id: null,
-        created_by: null,
-      })
-      .returning(["id"])
-      .executeTakeFirstOrThrow();
+    // Insert branch with head_commit_id temporarily null
+    const branchResult = await sql<IdRow>`
+      INSERT INTO resume_branches (resume_id, name, language, is_main, head_commit_id, forked_from_commit_id, created_by)
+      VALUES (${resume.resume_id}, 'main', ${resume.language}, true, NULL, NULL, NULL)
+      RETURNING id
+    `.execute(db);
 
-    // Insert the initial commit
-    const commit = await (db as Parameters<typeof up>[0])
-      .insertInto("resume_commits")
-      .values({
-        resume_id: resume.resume_id,
-        branch_id: branch.id,
-        parent_commit_id: null,
-        content: JSON.stringify(content),
-        message: "Initial version",
-        created_by: null,
-      })
-      .returning(["id"])
-      .executeTakeFirstOrThrow();
+    const branchId = branchResult.rows[0]?.id;
+    if (!branchId) throw new Error(`Failed to insert branch for resume ${resume.resume_id}`);
 
-    // Point the branch HEAD at the initial commit
-    await (db as Parameters<typeof up>[0])
-      .updateTable("resume_branches")
-      .set({ head_commit_id: commit.id })
-      .where("id", "=", branch.id)
-      .execute();
+    // Insert initial commit
+    const commitResult = await sql<IdRow>`
+      INSERT INTO resume_commits (resume_id, branch_id, parent_commit_id, content, message, created_by)
+      VALUES (${resume.resume_id}, ${branchId}, NULL, ${content}::jsonb, 'Initial version', NULL)
+      RETURNING id
+    `.execute(db);
+
+    const commitId = commitResult.rows[0]?.id;
+    if (!commitId) throw new Error(`Failed to insert commit for resume ${resume.resume_id}`);
+
+    // Point branch HEAD at the initial commit
+    await sql`
+      UPDATE resume_branches SET head_commit_id = ${commitId} WHERE id = ${branchId}
+    `.execute(db);
   }
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  // Remove all backfilled commits and branches (those with message = "Initial version"
-  // and no created_by). This is safe because Phase B introduces no user-created commits.
-  await (db as Parameters<typeof up>[0])
-    .deleteFrom("resume_commits")
-    .where("message", "=", "Initial version")
-    .where("created_by", "is", null)
-    .execute();
+  // Remove all backfilled commits and branches (message = "Initial version", no created_by).
+  await sql`
+    DELETE FROM resume_commits WHERE message = 'Initial version' AND created_by IS NULL
+  `.execute(db);
 
-  await (db as Parameters<typeof up>[0])
-    .deleteFrom("resume_branches")
-    .where("name", "=", "main")
-    .where("created_by", "is", null)
-    .execute();
+  await sql`
+    DELETE FROM resume_branches WHERE name = 'main' AND created_by IS NULL
+  `.execute(db);
 }
