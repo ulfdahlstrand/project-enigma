@@ -26,14 +26,16 @@ const mockForkMutateAsync = vi.fn();
 
 vi.mock("../../../../hooks/versioning", () => ({
   useResumeBranches: vi.fn(),
+  useResumeCommits: vi.fn(),
   useForkResumeBranch: () => ({
     mutateAsync: mockForkMutateAsync,
     isPending: false,
   }),
 }));
 
-import { useResumeBranches } from "../../../../hooks/versioning";
+import { useResumeBranches, useResumeCommits } from "../../../../hooks/versioning";
 const mockUseResumeBranches = useResumeBranches as ReturnType<typeof vi.fn>;
+const mockUseResumeCommits = useResumeCommits as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -81,6 +83,25 @@ const BRANCHES = [
   },
 ];
 
+const COMMITS = [
+  {
+    id: "commit-3",
+    resumeId: "resume-id-1",
+    branchId: "branch-id-1",
+    parentCommitId: null,
+    message: "Initial version",
+    createdAt: "2024-03-01T00:00:00Z",
+  },
+  {
+    id: "commit-4",
+    resumeId: "resume-id-1",
+    branchId: "branch-id-1",
+    parentCommitId: "commit-3",
+    message: "Updated skills",
+    createdAt: "2024-04-01T00:00:00Z",
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Render helper
 // ---------------------------------------------------------------------------
@@ -91,6 +112,11 @@ function renderPage() {
   const queryClient = buildTestQueryClient();
   return { ...renderWithProviders(<VariantsPage />, { queryClient }), queryClient };
 }
+
+beforeEach(() => {
+  // Safe defaults — each describe can override as needed
+  mockUseResumeCommits.mockReturnValue({ data: undefined });
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -128,6 +154,7 @@ describe("Error state", () => {
 describe("Branch list", () => {
   beforeEach(() => {
     mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false, isError: false });
+    mockUseResumeCommits.mockReturnValue({ data: COMMITS });
   });
 
   it("renders the page title", async () => {
@@ -188,6 +215,7 @@ describe("Empty state", () => {
 describe("Create variant dialog", () => {
   beforeEach(() => {
     mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false, isError: false });
+    mockUseResumeCommits.mockReturnValue({ data: COMMITS });
   });
 
   it("opens dialog when create button is clicked", async () => {
@@ -196,6 +224,33 @@ describe("Create variant dialog", () => {
     const createBtn = await screen.findByText(enCommon.resume.variants.createButton);
     await user.click(createBtn);
     expect(screen.getByText(enCommon.resume.variants.createDialog.title)).toBeInTheDocument();
+  });
+
+  it("shows the commit selector in the dialog", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const createBtn = await screen.findByText(enCommon.resume.variants.createButton);
+    await user.click(createBtn);
+    // The "based on" label should appear (MUI renders it in label + legend span)
+    const labels = screen.getAllByText(enCommon.resume.variants.createDialog.basedOnLabel);
+    expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it("disables the Create button when no name is entered", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const createBtn = await screen.findByText(enCommon.resume.variants.createButton);
+    await user.click(createBtn);
+    const confirmBtn = screen.getByRole("button", { name: enCommon.resume.variants.createDialog.create });
+    expect(confirmBtn).toBeDisabled();
+  });
+
+  it("disables the Create variant button when no commits exist", async () => {
+    mockUseResumeCommits.mockReturnValue({ data: [] });
+    renderPage();
+    await screen.findByText(enCommon.resume.variants.pageTitle);
+    const createBtn = screen.getByRole("button", { name: enCommon.resume.variants.createButton });
+    expect(createBtn).toBeDisabled();
   });
 
   it("calls forkResumeBranch when create is confirmed with a name", async () => {
@@ -209,11 +264,12 @@ describe("Create variant dialog", () => {
     const nameInput = screen.getByLabelText(enCommon.resume.variants.createDialog.nameLabel);
     await user.type(nameInput, "New Variant");
 
-    const confirmBtn = screen.getByText(enCommon.resume.variants.createDialog.create);
+    const confirmBtn = screen.getByRole("button", { name: enCommon.resume.variants.createDialog.create });
     await user.click(confirmBtn);
 
+    // openDialog() pre-selects commits[0].id (most recent)
     expect(mockForkMutateAsync).toHaveBeenCalledWith({
-      fromCommitId: "commit-1",
+      fromCommitId: COMMITS[0].id,
       name: "New Variant",
       resumeId: "resume-id-1",
     });
@@ -240,6 +296,7 @@ describe("Create variant dialog", () => {
 describe("Back button", () => {
   it("navigates to /resumes/$id when back button is clicked", async () => {
     mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false, isError: false });
+    mockUseResumeCommits.mockReturnValue({ data: COMMITS });
     const user = userEvent.setup();
     renderPage();
 

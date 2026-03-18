@@ -181,7 +181,11 @@
         "cancel": "Avbryt",
         "create": "Skapa",
         "creating": "Skapar…",
-        "error": "Det gick inte att skapa varianten. Försök igen."
+        "error": "Det gick inte att skapa varianten. Försök igen.",
+        "basedOnLabel": "Baseras på sparad version",
+        "basedOnPlaceholder": "Välj en version",
+        "noVersions": "Inga sparade versioner hittades. Spara en version först.",
+        "versionDefault": "(inget meddelande)"
       }
     },
     "compare": {

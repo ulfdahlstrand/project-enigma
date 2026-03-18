@@ -181,7 +181,11 @@
         "cancel": "Cancel",
         "create": "Create",
         "creating": "Creating…",
-        "error": "Failed to create variant. Please try again."
+        "error": "Failed to create variant. Please try again.",
+        "basedOnLabel": "Based on saved version",
+        "basedOnPlaceholder": "Select a version",
+        "noVersions": "No saved versions found. Save a version first.",
+        "versionDefault": "(no message)"
       }
     },
     "compare": {

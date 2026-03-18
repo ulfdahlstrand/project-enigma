@@ -19,7 +19,11 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -28,7 +32,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useResumeBranches, useForkResumeBranch } from "../../../../hooks/versioning";
+import { useResumeBranches, useResumeCommits, useForkResumeBranch } from "../../../../hooks/versioning";
 
 const TOKEN_KEY = "cv-tool:id-token";
 
@@ -51,21 +55,40 @@ function VariantsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [selectedCommitId, setSelectedCommitId] = useState("");
   const [forkError, setForkError] = useState<string | null>(null);
 
-  const headCommitId = branches?.find((b) => b.isMain)?.headCommitId ?? null;
+  const mainBranchId = branches?.find((b) => b.isMain)?.id ?? "";
+  const { data: commits } = useResumeCommits(mainBranchId);
+
+  function commitLabel(id: string): string {
+    const c = commits?.find((x) => x.id === id);
+    if (!c) return id;
+    const date = typeof c.createdAt === "string"
+      ? new Date(c.createdAt).toLocaleString()
+      : c.createdAt.toLocaleString();
+    return c.message ? `${c.message} (${date})` : `${t("resume.variants.createDialog.versionDefault")} (${date})`;
+  }
+
+  function openDialog() {
+    // Pre-select the most recent commit when opening the dialog
+    const headCommitId = commits?.[0]?.id ?? "";
+    setSelectedCommitId(headCommitId);
+    setNewName("");
+    setForkError(null);
+    setDialogOpen(true);
+  }
 
   async function handleCreate() {
-    if (!headCommitId || !newName.trim()) return;
+    if (!selectedCommitId || !newName.trim()) return;
     setForkError(null);
     try {
       await forkMutation.mutateAsync({
-        fromCommitId: headCommitId,
+        fromCommitId: selectedCommitId,
         name: newName.trim(),
         resumeId,
       });
       setDialogOpen(false);
-      setNewName("");
     } catch {
       setForkError(t("resume.variants.createDialog.error"));
     }
@@ -101,8 +124,8 @@ function VariantsPage() {
         </Typography>
         <Button
           variant="contained"
-          disabled={!headCommitId}
-          onClick={() => setDialogOpen(true)}
+          disabled={!commits?.length}
+          onClick={openDialog}
         >
           {t("resume.variants.createButton")}
         </Button>
@@ -160,7 +183,7 @@ function VariantsPage() {
         </TableContainer>
       )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
         <DialogContent>
           {forkError && (
@@ -174,8 +197,26 @@ function VariantsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             fullWidth
-            sx={{ mt: 1 }}
+            sx={{ mt: 1, mb: 2 }}
           />
+          {commits && commits.length > 0 ? (
+            <FormControl fullWidth size="small">
+              <InputLabel>{t("resume.variants.createDialog.basedOnLabel")}</InputLabel>
+              <Select
+                value={selectedCommitId}
+                label={t("resume.variants.createDialog.basedOnLabel")}
+                onChange={(e) => setSelectedCommitId(e.target.value)}
+              >
+                {commits.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {commitLabel(c.id)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <Alert severity="info">{t("resume.variants.createDialog.noVersions")}</Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>
@@ -183,7 +224,7 @@ function VariantsPage() {
           </Button>
           <Button
             variant="contained"
-            disabled={!newName.trim() || forkMutation.isPending}
+            disabled={!newName.trim() || !selectedCommitId || forkMutation.isPending}
             onClick={() => void handleCreate()}
           >
             {forkMutation.isPending
