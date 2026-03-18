@@ -215,5 +215,11 @@
   },
   "languageSelector": {
     "label": "Select language"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "description": "Select a section from the navigation to get started.",
+    "signInPrompt": "Sign in to get started",
+    "signInButton": "Sign in with Google"
   }
 }

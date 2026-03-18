@@ -215,5 +215,11 @@
   },
   "languageSelector": {
     "label": "Välj språk"
+  },
+  "home": {
+    "welcome": "Välkommen",
+    "description": "Välj ett avsnitt i navigeringen för att komma igång.",
+    "signInPrompt": "Logga in för att komma igång",
+    "signInButton": "Logga in med Google"
   }
 }
