@@ -57,6 +57,14 @@ import {
   exportResumeDocxInputSchema,
   exportResumeDocxOutputSchema,
 } from "./export-resume.js";
+import {
+  saveResumeVersionInputSchema,
+  saveResumeVersionOutputSchema,
+  getResumeCommitInputSchema,
+  getResumeCommitOutputSchema,
+  listResumeCommitsInputSchema,
+  listResumeCommitsOutputSchema,
+} from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -203,12 +211,20 @@ export {
   resumeCommitAssignmentSchema,
   resumeCommitContentSchema,
   resumeCommitSchema,
+  resumeCommitSummarySchema,
   resumeBranchSchema,
   branchAssignmentSchema,
+  saveResumeVersionInputSchema,
+  saveResumeVersionOutputSchema,
+  getResumeCommitInputSchema,
+  getResumeCommitOutputSchema,
+  listResumeCommitsInputSchema,
+  listResumeCommitsOutputSchema,
 } from "./resume-versions.js";
 export type {
   ResumeCommitContent,
   ResumeCommit,
+  ResumeCommitSummary,
   ResumeBranch,
   BranchAssignment,
 } from "./resume-versions.js";
@@ -263,6 +279,15 @@ export const contract = oc.router({
   exportResumeDocx: oc
     .input(exportResumeDocxInputSchema)
     .output(exportResumeDocxOutputSchema),
+  saveResumeVersion: oc
+    .input(saveResumeVersionInputSchema)
+    .output(saveResumeVersionOutputSchema),
+  getResumeCommit: oc
+    .input(getResumeCommitInputSchema)
+    .output(getResumeCommitOutputSchema),
+  listResumeCommits: oc
+    .input(listResumeCommitsInputSchema)
+    .output(listResumeCommitsOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
