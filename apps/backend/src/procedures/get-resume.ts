@@ -37,9 +37,25 @@ export async function getResume(
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   const resumeRow = await db
-    .selectFrom("resumes")
-    .selectAll()
-    .where("id", "=", id)
+    .selectFrom("resumes as r")
+    .leftJoin("resume_branches as rb", (join) =>
+      join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
+    )
+    .select([
+      "r.id",
+      "r.employee_id",
+      "r.title",
+      "r.consultant_title",
+      "r.presentation",
+      "r.summary",
+      "r.language",
+      "r.is_main",
+      "r.created_at",
+      "r.updated_at",
+      "rb.id as branch_id",
+      "rb.head_commit_id",
+    ])
+    .where("r.id", "=", id)
     .executeTakeFirst();
 
   if (resumeRow === undefined) {
@@ -66,6 +82,8 @@ export async function getResume(
     summary: resumeRow.summary,
     language: resumeRow.language,
     isMain: resumeRow.is_main,
+    mainBranchId: resumeRow.branch_id ?? null,
+    headCommitId: resumeRow.head_commit_id ?? null,
     createdAt: resumeRow.created_at,
     updatedAt: resumeRow.updated_at,
     skills: skillRows.map((s) => ({

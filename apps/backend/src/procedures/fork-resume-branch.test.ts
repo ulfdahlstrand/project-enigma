@@ -23,6 +23,7 @@ const COMMIT_ROW = {
   resume_id: RESUME_ID,
   source_branch_id: SOURCE_BRANCH_ID,
   employee_id: EMPLOYEE_ID_1,
+  source_language: "sv",
 };
 
 const NEW_BRANCH_ROW = {
@@ -65,11 +66,12 @@ function buildDbMock(opts: {
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
-  // Commit + resume join query
+  // Commit + resume join + source branch leftJoin (for language)
   const commitExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedCommit);
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
-  const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
+  const commitLeftJoin = vi.fn().mockReturnValue({ select: commitSelect });
+  const commitInnerJoin = vi.fn().mockReturnValue({ leftJoin: commitLeftJoin });
 
   // Branch insert (inside transaction)
   const branchInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(newBranchRow);
@@ -140,6 +142,27 @@ describe("forkResumeBranch", () => {
     expect(result.headCommitId).toBe(COMMIT_ID);
     expect(result.forkedFromCommitId).toBe(COMMIT_ID);
     expect(result.isMain).toBe(false);
+  });
+
+  it("inherits language from the source branch", async () => {
+    const { db, branchInsertValues } = buildDbMock();
+
+    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
+
+    expect(branchInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "sv" })
+    );
+  });
+
+  it("falls back to 'en' language when source branch has no language", async () => {
+    const commitWithNoLanguage = { ...COMMIT_ROW, source_language: null };
+    const { db, branchInsertValues } = buildDbMock({ commitRow: commitWithNoLanguage });
+
+    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
+
+    expect(branchInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "en" })
+    );
   });
 
   it("copies branch_assignments from the source branch to the new branch", async () => {

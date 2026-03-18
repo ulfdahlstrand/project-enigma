@@ -40,15 +40,17 @@ export async function forkResumeBranch(
 ): Promise<ForkResumeBranchOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Fetch commit + resume for ownership check
+  // Fetch commit + resume for ownership check; join source branch for language inheritance
   const commit = await db
     .selectFrom("resume_commits as rc")
     .innerJoin("resumes as r", "r.id", "rc.resume_id")
+    .leftJoin("resume_branches as src_rb", "src_rb.id", "rc.branch_id")
     .select([
       "rc.id",
       "rc.resume_id",
       "rc.branch_id as source_branch_id",
       "r.employee_id",
+      "src_rb.language as source_language",
     ])
     .where("rc.id", "=", input.fromCommitId)
     .executeTakeFirst();
@@ -68,7 +70,7 @@ export async function forkResumeBranch(
       .values({
         resume_id: commit.resume_id,
         name: input.name,
-        language: "en", // will be overridden by snapshot content on first save
+        language: commit.source_language ?? "en",
         is_main: false,
         head_commit_id: input.fromCommitId,
         forked_from_commit_id: input.fromCommitId,

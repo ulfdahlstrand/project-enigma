@@ -17,7 +17,10 @@ const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID_1 = "550e8400-e29b-41d4-a716-446655440021";
 const RESUME_ID_2 = "550e8400-e29b-41d4-a716-446655440022";
+const BRANCH_ID_1 = "550e8400-e29b-41d4-a716-446655440031";
+const COMMIT_ID_1 = "550e8400-e29b-41d4-a716-446655440041";
 
+// Resume rows now include branch_id and head_commit_id from the LEFT JOIN
 const RESUME_ROW_1 = {
   id: RESUME_ID_1,
   employee_id: EMPLOYEE_ID_1,
@@ -29,6 +32,8 @@ const RESUME_ROW_1 = {
   presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
+  branch_id: BRANCH_ID_1,
+  head_commit_id: COMMIT_ID_1,
 };
 
 const RESUME_ROW_2 = {
@@ -42,6 +47,8 @@ const RESUME_ROW_2 = {
   presentation: [],
   created_at: new Date("2025-02-01T00:00:00.000Z"),
   updated_at: new Date("2025-02-01T00:00:00.000Z"),
+  branch_id: null,
+  head_commit_id: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -49,18 +56,18 @@ const RESUME_ROW_2 = {
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock Kysely fluent SELECT chain that supports optional where()
- * clauses (list-resumes conditionally calls where() for filters).
+ * Builds a mock Kysely fluent chain that handles the LEFT JOIN query:
+ * selectFrom("resumes as r") → leftJoin → select → where? → execute
  */
 function buildSelectMock(rows: unknown[]) {
   const execute = vi.fn().mockResolvedValue(rows);
-  // where() returns another chainable object ending in execute
   const whereChain = { execute, where: vi.fn() };
   whereChain.where.mockReturnValue(whereChain);
-  const selectAll = vi.fn().mockReturnValue({ execute, where: whereChain.where });
-  const selectFrom = vi.fn().mockReturnValue({ selectAll });
+  const select = vi.fn().mockReturnValue({ execute, where: whereChain.where });
+  const leftJoin = vi.fn().mockReturnValue({ select });
+  const selectFrom = vi.fn().mockReturnValue({ leftJoin });
   const db = { selectFrom } as unknown as Kysely<Database>;
-  return { db, selectFrom, selectAll, execute, where: whereChain.where };
+  return { db, selectFrom, leftJoin, select, execute, where: whereChain.where };
 }
 
 /** Builds a mock for the employees lookup used by resolveEmployeeId. */
@@ -71,17 +78,16 @@ function buildDbWithEmployeeLookup(resumeRows: unknown[], employeeId: string) {
     where: vi.fn(),
   };
   resumeWhereChain.where.mockReturnValue(resumeWhereChain);
-  const selectAll = vi.fn().mockReturnValue({ execute: resumeExecute, where: resumeWhereChain.where });
+  const resumeSelect = vi.fn().mockReturnValue({ execute: resumeExecute, where: resumeWhereChain.where });
+  const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "employees") {
-      return { select: empSelect };
-    }
-    return { selectAll };
+    if (table === "employees") return { select: empSelect };
+    return { leftJoin: resumeLeftJoin };
   });
 
   const db = { selectFrom } as unknown as Kysely<Database>;
@@ -114,6 +120,26 @@ describe("listResumes query function", () => {
     const result = await listResumes(db, MOCK_ADMIN, {});
 
     expect(result).toEqual([]);
+  });
+
+  it("includes mainBranchId and headCommitId from the LEFT JOIN", async () => {
+    const { db } = buildSelectMock([RESUME_ROW_1]);
+
+    const result = await listResumes(db, MOCK_ADMIN, {});
+
+    expect(result[0]).toMatchObject({
+      mainBranchId: BRANCH_ID_1,
+      headCommitId: COMMIT_ID_1,
+    });
+  });
+
+  it("returns null for mainBranchId and headCommitId when no branch exists", async () => {
+    const { db } = buildSelectMock([RESUME_ROW_2]);
+
+    const result = await listResumes(db, MOCK_ADMIN, {});
+
+    expect(result[0]?.mainBranchId).toBeNull();
+    expect(result[0]?.headCommitId).toBeNull();
   });
 
   it("consultant only sees resumes belonging to their own employee record", async () => {
