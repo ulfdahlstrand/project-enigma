@@ -65,6 +65,23 @@ const SOURCE_ASSIGNMENTS = [
   { assignment_id: "550e8400-e29b-41d4-a716-446655440051", highlight: true, sort_order: 0 },
 ];
 
+const FRESH_ASSIGNMENT_ROWS = [
+  {
+    assignment_id: "550e8400-e29b-41d4-a716-446655440051",
+    client_name: "Acme Corp",
+    role: "Developer",
+    description: "Built things",
+    start_date: new Date("2023-01-01"),
+    end_date: null,
+    technologies: ["TypeScript"],
+    is_current: true,
+    keywords: null,
+    type: null,
+    highlight: true,
+    sort_order: 0,
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -74,6 +91,7 @@ function buildDbMock(opts: {
   newBranchRow?: unknown;
   initialCommitRow?: unknown;
   sourceAssignments?: unknown[];
+  freshAssignmentRows?: unknown[];
   employeeId?: string | null;
 } = {}) {
   const {
@@ -81,6 +99,7 @@ function buildDbMock(opts: {
     newBranchRow = NEW_BRANCH_ROW,
     initialCommitRow = INITIAL_COMMIT_ROW,
     sourceAssignments = SOURCE_ASSIGNMENTS,
+    freshAssignmentRows = FRESH_ASSIGNMENT_ROWS,
     employeeId = null,
   } = opts;
 
@@ -103,10 +122,17 @@ function buildDbMock(opts: {
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
 
-  // Source assignments query (inside transaction)
+  // Source assignments query — plain branch_assignments select (copy step)
   const assignmentsExecute = vi.fn().mockResolvedValue(sourceAssignments);
   const assignmentsWhere = vi.fn().mockReturnValue({ execute: assignmentsExecute });
   const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere });
+
+  // Fresh assignments query — branch_assignments as ba innerJoin assignments (content build step)
+  const freshAssignmentsExecute = vi.fn().mockResolvedValue(freshAssignmentRows);
+  const freshAssignmentsOrderBy = vi.fn().mockReturnValue({ execute: freshAssignmentsExecute });
+  const freshAssignmentsWhere = vi.fn().mockReturnValue({ orderBy: freshAssignmentsOrderBy });
+  const freshAssignmentsSelect = vi.fn().mockReturnValue({ where: freshAssignmentsWhere });
+  const freshAssignmentsInnerJoin = vi.fn().mockReturnValue({ select: freshAssignmentsSelect });
 
   // Copy assignments insert (inside transaction)
   const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
@@ -131,7 +157,10 @@ function buildDbMock(opts: {
   });
 
   const trxSelectFrom = vi.fn().mockImplementation((table: string) => {
+    // Plain branch_assignments → copy step (select/where/execute)
     if (table === "branch_assignments") return { select: assignmentsSelect };
+    // Aliased branch_assignments as ba → fresh content build step (innerJoin chain)
+    if (table === "branch_assignments as ba") return { innerJoin: freshAssignmentsInnerJoin };
     return {};
   });
 
@@ -197,16 +226,27 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("copies snapshot content from the forked commit into the initial commit", async () => {
+  it("builds initial commit content from fresh branch_assignments (not stale JSONB)", async () => {
     const { db, commitInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 
-    expect(commitInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: JSON.stringify(COMMIT_CONTENT),
-      })
-    );
+    const call = commitInsertValues.mock.calls[0][0] as { content: string };
+    const content = JSON.parse(call.content) as { assignments: { assignmentId: string; clientName: string }[] };
+    expect(content.assignments).toHaveLength(1);
+    expect(content.assignments[0].assignmentId).toBe(FRESH_ASSIGNMENT_ROWS[0].assignment_id);
+    expect(content.assignments[0].clientName).toBe(FRESH_ASSIGNMENT_ROWS[0].client_name);
+  });
+
+  it("initial commit content preserves scalar fields from the source commit", async () => {
+    const { db, commitInsertValues } = buildDbMock();
+
+    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
+
+    const call = commitInsertValues.mock.calls[0][0] as { content: string };
+    const content = JSON.parse(call.content) as { title: string; summary: string };
+    expect(content.title).toBe(COMMIT_CONTENT.title);
+    expect(content.summary).toBe(COMMIT_CONTENT.summary);
   });
 
   it("advances branch head_commit_id to the initial commit", async () => {

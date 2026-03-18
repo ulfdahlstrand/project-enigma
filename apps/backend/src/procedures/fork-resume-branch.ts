@@ -3,7 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database } from "../db/types.js";
+import type { Database, ResumeCommitContent } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
 import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
@@ -103,6 +103,49 @@ export async function forkResumeBranch(
       }
     }
 
+    // Build fresh content: use source commit fields but read assignments from the
+    // newly copied branch_assignments (the source commit JSONB may have assignments: []
+    // if it predates the per-branch assignment linking migration).
+    const freshAssignmentRows = await trx
+      .selectFrom("branch_assignments as ba")
+      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
+      .select([
+        "a.id as assignment_id",
+        "a.client_name",
+        "a.role",
+        "a.description",
+        "a.start_date",
+        "a.end_date",
+        "a.technologies",
+        "a.is_current",
+        "a.keywords",
+        "a.type",
+        "ba.highlight",
+        "ba.sort_order",
+      ])
+      .where("ba.branch_id", "=", branch.id)
+      .orderBy("ba.sort_order", "asc")
+      .execute();
+
+    const sourceContent = commit.content as ResumeCommitContent;
+    const freshContent: ResumeCommitContent = {
+      ...sourceContent,
+      assignments: freshAssignmentRows.map((a) => ({
+        assignmentId: a.assignment_id,
+        clientName: a.client_name,
+        role: a.role,
+        description: a.description,
+        startDate: a.start_date instanceof Date ? a.start_date.toISOString() : String(a.start_date),
+        endDate: a.end_date instanceof Date ? a.end_date.toISOString() : (a.end_date ? String(a.end_date) : null),
+        technologies: a.technologies ?? [],
+        isCurrent: a.is_current,
+        keywords: a.keywords,
+        type: a.type,
+        highlight: a.highlight,
+        sortOrder: a.sort_order,
+      })),
+    };
+
     // Create an initial commit on the new branch, linked to the forked commit as parent
     const initialCommit = await trx
       .insertInto("resume_commits")
@@ -110,7 +153,7 @@ export async function forkResumeBranch(
         resume_id: commit.resume_id,
         branch_id: branch.id,
         parent_commit_id: input.fromCommitId,
-        content: JSON.stringify(commit.content),
+        content: JSON.stringify(freshContent),
         message: "",
         created_by: user.id,
       })
