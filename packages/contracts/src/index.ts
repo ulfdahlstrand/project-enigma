@@ -254,6 +254,12 @@ export type {
   ResumeCommitSummary,
   ResumeBranch,
   BranchAssignment,
+  DiffStatus,
+  ResumeDiffScalars,
+  SkillDiffEntry,
+  AssignmentDiffEntry,
+  ResumeDiff,
+  CompareResumeCommitsOutput,
 } from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
