@@ -96,3 +96,41 @@ export const branchAssignmentSchema = z.object({
 });
 
 export type BranchAssignment = z.infer<typeof branchAssignmentSchema>;
+
+// ---------------------------------------------------------------------------
+// saveResumeVersion schemas
+// ---------------------------------------------------------------------------
+
+export const saveResumeVersionInputSchema = z.object({
+  branchId: z.string().uuid(),
+  message: z.string().optional(),
+});
+
+export const saveResumeVersionOutputSchema = resumeCommitSchema;
+
+// ---------------------------------------------------------------------------
+// getResumeCommit schemas
+// ---------------------------------------------------------------------------
+
+export const getResumeCommitInputSchema = z.object({
+  commitId: z.string().uuid(),
+});
+
+export const getResumeCommitOutputSchema = resumeCommitSchema;
+
+// ---------------------------------------------------------------------------
+// listResumeCommits schemas
+//
+// Returns a lightweight summary per commit (no content JSONB) for use in
+// history lists. Use getResumeCommit to fetch full content for a single entry.
+// ---------------------------------------------------------------------------
+
+export const resumeCommitSummarySchema = resumeCommitSchema.omit({ content: true });
+
+export type ResumeCommitSummary = z.infer<typeof resumeCommitSummarySchema>;
+
+export const listResumeCommitsInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const listResumeCommitsOutputSchema = z.array(resumeCommitSummarySchema);
