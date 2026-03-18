@@ -49,6 +49,7 @@ export async function forkResumeBranch(
       "rc.id",
       "rc.resume_id",
       "rc.branch_id as source_branch_id",
+      "rc.content",
       "r.employee_id",
       "src_rb.language as source_language",
     ])
@@ -63,8 +64,8 @@ export async function forkResumeBranch(
     throw new ORPCError("FORBIDDEN");
   }
 
-  // Create the new branch and copy assignments atomically
-  const newBranch = await db.transaction().execute(async (trx) => {
+  // Create the new branch, copy assignments, and create an initial commit atomically
+  const { branch: newBranch, initialCommitId } = await db.transaction().execute(async (trx) => {
     const branch = await trx
       .insertInto("resume_branches")
       .values({
@@ -102,7 +103,28 @@ export async function forkResumeBranch(
       }
     }
 
-    return branch;
+    // Create an initial commit on the new branch, linked to the forked commit as parent
+    const initialCommit = await trx
+      .insertInto("resume_commits")
+      .values({
+        resume_id: commit.resume_id,
+        branch_id: branch.id,
+        parent_commit_id: input.fromCommitId,
+        content: JSON.stringify(commit.content),
+        message: "",
+        created_by: user.id,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // Advance the branch head to the new initial commit
+    await trx
+      .updateTable("resume_branches")
+      .set({ head_commit_id: initialCommit.id })
+      .where("id", "=", branch.id)
+      .execute();
+
+    return { branch, initialCommitId: initialCommit.id };
   });
 
   return {
@@ -111,7 +133,7 @@ export async function forkResumeBranch(
     name: newBranch.name,
     language: newBranch.language,
     isMain: newBranch.is_main,
-    headCommitId: newBranch.head_commit_id,
+    headCommitId: initialCommitId,
     forkedFromCommitId: newBranch.forked_from_commit_id,
     createdBy: newBranch.created_by,
     createdAt: newBranch.created_at,
