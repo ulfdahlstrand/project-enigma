@@ -143,7 +143,16 @@
       "saving": "Sparar…",
       "saveSuccess": "Meritförteckning sparad.",
       "saveError": "Kunde inte spara meritförteckning. Försök igen.",
-      "backButton": "Tillbaka"
+      "backButton": "Tillbaka",
+      "skillsHeading": "Kompetenser",
+      "skillNameLabel": "Kompetensnamn",
+      "skillLevelLabel": "Nivå (valfritt)",
+      "skillCategoryLabel": "Kategori (valfritt)",
+      "skillAddButton": "Lägg till",
+      "skillAdding": "Lägger till…",
+      "skillDeleteButton": "Ta bort",
+      "skillAddError": "Det gick inte att lägga till kompetensen. Försök igen.",
+      "skillDeleteError": "Det gick inte att ta bort kompetensen. Försök igen."
     }
   },
   "assignment": {

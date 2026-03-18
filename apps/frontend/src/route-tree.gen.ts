@@ -21,7 +21,7 @@ import { Route as EmployeesNewRouteImport } from './routes/employees/new'
 import { Route as EmployeesIdRouteImport } from './routes/employees/$id'
 import { Route as AssignmentsNewRouteImport } from './routes/assignments/new'
 import { Route as AssignmentsIdRouteImport } from './routes/assignments/$id'
-import { Route as ResumesIdEditRouteImport } from './routes/resumes/$id.edit'
+import { Route as ResumesIdEditRouteImport } from './routes/resumes/$id_.edit'
 import { Route as EmployeesIdImportRouteImport } from './routes/employees/$id_.import'
 
 const IndexRoute = IndexRouteImport.update({
@@ -85,9 +85,9 @@ const AssignmentsIdRoute = AssignmentsIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResumesIdEditRoute = ResumesIdEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => ResumesIdRoute,
+  id: '/resumes/$id_/edit',
+  path: '/resumes/$id/edit',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmployeesIdImportRoute = EmployeesIdImportRouteImport.update({
   id: '/employees/$id_/import',
@@ -101,7 +101,7 @@ export interface FileRoutesByFullPath {
   '/assignments/new': typeof AssignmentsNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRouteWithChildren
+  '/resumes/$id': typeof ResumesIdRoute
   '/resumes/new': typeof ResumesNewRoute
   '/assignments/': typeof AssignmentsIndexRoute
   '/employees/': typeof EmployeesIndexRoute
@@ -117,7 +117,7 @@ export interface FileRoutesByTo {
   '/assignments/new': typeof AssignmentsNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRouteWithChildren
+  '/resumes/$id': typeof ResumesIdRoute
   '/resumes/new': typeof ResumesNewRoute
   '/assignments': typeof AssignmentsIndexRoute
   '/employees': typeof EmployeesIndexRoute
@@ -134,7 +134,7 @@ export interface FileRoutesById {
   '/assignments/new': typeof AssignmentsNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRouteWithChildren
+  '/resumes/$id': typeof ResumesIdRoute
   '/resumes/new': typeof ResumesNewRoute
   '/assignments/': typeof AssignmentsIndexRoute
   '/employees/': typeof EmployeesIndexRoute
@@ -142,7 +142,7 @@ export interface FileRoutesById {
   '/resumes/': typeof ResumesIndexRoute
   '/test/': typeof TestIndexRoute
   '/employees/$id_/import': typeof EmployeesIdImportRoute
-  '/resumes/$id/edit': typeof ResumesIdEditRoute
+  '/resumes/$id_/edit': typeof ResumesIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -192,7 +192,7 @@ export interface FileRouteTypes {
     | '/resumes/'
     | '/test/'
     | '/employees/$id_/import'
-    | '/resumes/$id/edit'
+    | '/resumes/$id_/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,7 +201,7 @@ export interface RootRouteChildren {
   AssignmentsNewRoute: typeof AssignmentsNewRoute
   EmployeesIdRoute: typeof EmployeesIdRoute
   EmployeesNewRoute: typeof EmployeesNewRoute
-  ResumesIdRoute: typeof ResumesIdRouteWithChildren
+  ResumesIdRoute: typeof ResumesIdRoute
   ResumesNewRoute: typeof ResumesNewRoute
   AssignmentsIndexRoute: typeof AssignmentsIndexRoute
   EmployeesIndexRoute: typeof EmployeesIndexRoute
@@ -209,6 +209,7 @@ export interface RootRouteChildren {
   ResumesIndexRoute: typeof ResumesIndexRoute
   TestIndexRoute: typeof TestIndexRoute
   EmployeesIdImportRoute: typeof EmployeesIdImportRoute
+  ResumesIdEditRoute: typeof ResumesIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -297,12 +298,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssignmentsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/resumes/$id/edit': {
-      id: '/resumes/$id/edit'
-      path: '/edit'
+    '/resumes/$id_/edit': {
+      id: '/resumes/$id_/edit'
+      path: '/resumes/$id/edit'
       fullPath: '/resumes/$id/edit'
       preLoaderRoute: typeof ResumesIdEditRouteImport
-      parentRoute: typeof ResumesIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/employees/$id_/import': {
       id: '/employees/$id_/import'
@@ -314,25 +315,13 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ResumesIdRouteChildren {
-  ResumesIdEditRoute: typeof ResumesIdEditRoute
-}
-
-const ResumesIdRouteChildren: ResumesIdRouteChildren = {
-  ResumesIdEditRoute: ResumesIdEditRoute,
-}
-
-const ResumesIdRouteWithChildren = ResumesIdRoute._addFileChildren(
-  ResumesIdRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssignmentsIdRoute: AssignmentsIdRoute,
   AssignmentsNewRoute: AssignmentsNewRoute,
   EmployeesIdRoute: EmployeesIdRoute,
   EmployeesNewRoute: EmployeesNewRoute,
-  ResumesIdRoute: ResumesIdRouteWithChildren,
+  ResumesIdRoute: ResumesIdRoute,
   ResumesNewRoute: ResumesNewRoute,
   AssignmentsIndexRoute: AssignmentsIndexRoute,
   EmployeesIndexRoute: EmployeesIndexRoute,
@@ -340,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResumesIndexRoute: ResumesIndexRoute,
   TestIndexRoute: TestIndexRoute,
   EmployeesIdImportRoute: EmployeesIdImportRoute,
+  ResumesIdEditRoute: ResumesIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

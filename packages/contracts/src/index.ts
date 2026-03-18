@@ -20,6 +20,10 @@ import {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
+  createResumeSkillInputSchema,
+  createResumeSkillOutputSchema,
+  deleteResumeSkillInputSchema,
+  deleteResumeSkillOutputSchema,
 } from "./resumes.js";
 import {
   listAssignmentsInputSchema,
@@ -124,6 +128,10 @@ export {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
+  createResumeSkillInputSchema,
+  createResumeSkillOutputSchema,
+  deleteResumeSkillInputSchema,
+  deleteResumeSkillOutputSchema,
 } from "./resumes.js";
 export type { ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
@@ -216,6 +224,8 @@ export const contract = oc.router({
   createResume: oc.input(createResumeInputSchema).output(createResumeOutputSchema),
   updateResume: oc.input(updateResumeInputSchema).output(updateResumeOutputSchema),
   deleteResume: oc.input(deleteResumeInputSchema).output(deleteResumeOutputSchema),
+  createResumeSkill: oc.input(createResumeSkillInputSchema).output(createResumeSkillOutputSchema),
+  deleteResumeSkill: oc.input(deleteResumeSkillInputSchema).output(deleteResumeSkillOutputSchema),
   listAssignments: oc.input(listAssignmentsInputSchema).output(listAssignmentsOutputSchema),
   getAssignment: oc.input(getAssignmentInputSchema).output(getAssignmentOutputSchema),
   createAssignment: oc.input(createAssignmentInputSchema).output(createAssignmentOutputSchema),

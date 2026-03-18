@@ -20,7 +20,7 @@ import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../test-utils/render";
-import { Route } from "../$id.edit";
+import { Route } from "../$id_.edit";
 
 // ---------------------------------------------------------------------------
 // Mock oRPC client

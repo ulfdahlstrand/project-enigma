@@ -143,7 +143,16 @@
       "saving": "Saving…",
       "saveSuccess": "Resume saved.",
       "saveError": "Failed to save resume. Please try again.",
-      "backButton": "Back"
+      "backButton": "Back",
+      "skillsHeading": "Skills",
+      "skillNameLabel": "Skill name",
+      "skillLevelLabel": "Level (optional)",
+      "skillCategoryLabel": "Category (optional)",
+      "skillAddButton": "Add skill",
+      "skillAdding": "Adding…",
+      "skillDeleteButton": "Delete",
+      "skillAddError": "Failed to add skill. Please try again.",
+      "skillDeleteError": "Failed to delete skill. Please try again."
     }
   },
   "assignment": {
