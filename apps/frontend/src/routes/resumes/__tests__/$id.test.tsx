@@ -41,6 +41,8 @@ vi.mock("../../../orpc-client", () => ({
     getResume: vi.fn(),
     updateResume: vi.fn(),
     listAssignments: vi.fn(),
+    listResumeBranches: vi.fn(),
+    getResumeCommit: vi.fn(),
     getEmployee: vi.fn(),
     listEducation: vi.fn(),
   },
@@ -50,6 +52,7 @@ import { orpc } from "../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
 const mockListAssignments = orpc.listAssignments as ReturnType<typeof vi.fn>;
+const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
 
@@ -65,6 +68,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useParams: () => ({ id: TEST_RESUME_ID }),
+    useSearch: () => ({}),
+    useNavigate: () => vi.fn(),
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -120,8 +125,19 @@ function renderPage() {
 
 const TEST_EMPLOYEE = { id: "emp-id-1", name: "Jane Doe", email: "jane@example.com" };
 
+const MAIN_BRANCH = {
+  id: "branch-main-1",
+  resumeId: TEST_RESUME_ID,
+  name: "main",
+  isMain: true,
+  language: "en",
+  headCommitId: "commit-1",
+  createdAt: "2024-01-01T00:00:00Z",
+};
+
 beforeEach(() => {
   mockListAssignments.mockResolvedValue([]);
+  mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
 });

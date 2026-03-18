@@ -10,7 +10,8 @@ import Button from "@mui/material/Button";
  * Styling: MUI sx prop only — no .css/.scss files, no style={{ }} props.
  * i18n: all visible text via useTranslation("common").
  */
-import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
+import { z } from "zod";
+import { createFileRoute, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -39,6 +40,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
+import { resumeBranchesKey } from "../../hooks/versioning";
 import RouterButton from "../../components/RouterButton";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SaveVersionButton } from "../../components/SaveVersionButton";
@@ -60,6 +62,9 @@ const FOOTER_HEIGHT = 40;
 const COVER_HIGHLIGHT_COUNT = 5;
 
 export const Route = createFileRoute("/resumes/$id")({
+  validateSearch: z.object({
+    branchId: z.string().optional(),
+  }),
   beforeLoad: () => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       throw redirect({ to: "/login" });
@@ -511,6 +516,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
 function ResumeDetailPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ from: Route.fullPath });
+  const { branchId: selectedBranchId } = useSearch({ from: Route.fullPath });
   const navigate = useNavigate();
 
   const { data: resume, isLoading, isError, error } = useQuery({
@@ -519,16 +525,35 @@ function ResumeDetailPage() {
     retry: false,
   });
 
+  const { data: branches } = useQuery({
+    queryKey: resumeBranchesKey(id),
+    queryFn: () => orpc.listResumeBranches({ resumeId: id }),
+    enabled: !!resume,
+  });
+
+  const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
+  const activeBranchId = selectedBranchId ?? mainBranchId ?? null;
+  const activeBranch = branches?.find((b) => b.id === activeBranchId);
+
+  // When a non-main branch is active, load its head commit snapshot
+  const isSnapshotMode = activeBranchId !== null && activeBranchId !== mainBranchId && activeBranch?.headCommitId != null;
+
+  const { data: branchCommit } = useQuery({
+    queryKey: ["getResumeCommit", activeBranch?.headCommitId],
+    queryFn: () => orpc.getResumeCommit({ commitId: activeBranch!.headCommitId! }),
+    enabled: isSnapshotMode,
+  });
+
   const { data: employee } = useQuery({
     queryKey: ["getEmployee", resume?.employeeId],
     queryFn: () => orpc.getEmployee({ id: resume!.employeeId }),
     enabled: !!resume?.employeeId,
   });
 
-  const { data: assignments = [] } = useQuery({
+  const { data: liveAssignments = [] } = useQuery({
     queryKey: ["listAssignments", "resume", id],
     queryFn: () => orpc.listAssignments({ resumeId: id }),
-    enabled: !!resume,
+    enabled: !!resume && !isSnapshotMode,
   });
 
   const { data: education = [] } = useQuery({
@@ -536,6 +561,18 @@ function ResumeDetailPage() {
     queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
     enabled: !!resume?.employeeId,
   });
+
+  // Assignments: use snapshot when non-main branch, otherwise live
+  const assignments = isSnapshotMode && branchCommit
+    ? branchCommit.content.assignments.map((a) => ({
+        id: a.assignmentId,
+        clientName: a.clientName,
+        role: a.role,
+        startDate: a.startDate,
+        endDate: a.endDate ?? null,
+        isCurrent: a.endDate == null,
+      }))
+    : liveAssignments;
 
   if (isLoading) {
     return (
@@ -563,8 +600,13 @@ function ResumeDetailPage() {
     );
   }
 
-  const resumeTitle = resume?.title ?? "";
-  const language = resume?.language;
+  // Use snapshot fields when a non-main branch is active, otherwise live resume fields
+  const snapshotContent = isSnapshotMode ? branchCommit?.content : null;
+  const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
+  const language = snapshotContent?.language ?? resume?.language;
+  const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
+  const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
+  const summary = snapshotContent?.summary ?? resume?.summary ?? null;
 
   // Sort: current assignments first, then by start date descending
   const sortedAssignments = [...assignments].sort((a, b) => {
@@ -573,21 +615,21 @@ function ResumeDetailPage() {
   });
 
   const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
-  const skills = resume?.skills ?? [];
+  const skills = snapshotContent?.skills
+    ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null }))
+    : (resume?.skills ?? []);
   const hasSkills = skills.length > 0;
   const hasAssignments = assignments.length > 0;
   const totalPages = 1 + (hasSkills ? 1 : 0) + (hasAssignments ? 1 : 0);
   const skillsPage = hasSkills ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
-  const mainBranchId = resume?.mainBranchId ?? null;
-
   const toolbarActions = (
     <>
       <RouterButton variant="text" to="/resumes">
         {t("resume.detail.backButton")}
       </RouterButton>
-      <VariantSwitcher resumeId={id} currentBranchId={mainBranchId} />
+      <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       <Button
         variant="outlined"
         onClick={() => void navigate({ to: "/resumes/$id/edit", params: { id } })}
@@ -601,7 +643,7 @@ function ResumeDetailPage() {
       >
         {t("resume.detail.addAssignment")}
       </RouterButton>
-      {mainBranchId && <SaveVersionButton branchId={mainBranchId} />}
+      {mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
       <ExportSplitButton resumeId={id} />
     </>
   );
@@ -637,9 +679,9 @@ function ResumeDetailPage() {
         >
           <CoverPageContent
             employeeName={employee?.name ?? ""}
-            consultantTitle={resume?.consultantTitle ?? null}
-            presentation={resume?.presentation ?? []}
-            summary={resume?.summary ?? null}
+            consultantTitle={consultantTitle}
+            presentation={presentation}
+            summary={summary}
             highlightedAssignments={highlighted}
           />
         </DocumentPage>

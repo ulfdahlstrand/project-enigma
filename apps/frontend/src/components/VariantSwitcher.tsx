@@ -38,8 +38,11 @@ export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherPr
         onChange={(e) => {
           const selectedBranchId = e.target.value;
           if (selectedBranchId !== currentBranchId) {
-            // Navigate to the resume — future work: pass branchId as search param
-            void navigate({ to: "/resumes/$id", params: { id: resumeId } });
+            void navigate({
+              to: "/resumes/$id",
+              params: { id: resumeId },
+              search: { branchId: selectedBranchId },
+            });
           }
         }}
       >

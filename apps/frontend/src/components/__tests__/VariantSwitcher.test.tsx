@@ -136,6 +136,7 @@ describe("Branch selection", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id",
       params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-2" },
     });
   });
 
