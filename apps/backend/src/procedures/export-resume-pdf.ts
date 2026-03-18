@@ -1,10 +1,10 @@
-import { implement, ORPCError } from "@orpc/server";
+import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
 import { getDb } from "../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../auth/require-auth.js";
-import { resolveEmployeeId } from "../auth/resolve-employee-id.js";
+import { buildExportData } from "../lib/build-export-data.js";
 import puppeteer from "puppeteer";
 
 // ---------------------------------------------------------------------------
@@ -165,64 +165,22 @@ function buildHtml(data: {
 export async function exportResumePdf(
   db: Kysely<Database>,
   user: AuthUser,
-  resumeId: string
+  resumeId: string,
+  commitId?: string
 ): Promise<{ pdf: string; filename: string; referenceId: string }> {
-  const ownerEmployeeId = await resolveEmployeeId(db, user);
+  const data = await buildExportData(db, user, resumeId, commitId);
 
-  const resume = await db
-    .selectFrom("resumes")
-    .selectAll()
-    .where("id", "=", resumeId)
-    .executeTakeFirst();
-
-  if (!resume) throw new ORPCError("NOT_FOUND");
-  if (ownerEmployeeId !== null && resume.employee_id !== ownerEmployeeId) {
-    throw new ORPCError("FORBIDDEN");
-  }
-
-  const [employee, assignments, skills, education] = await Promise.all([
-    db
-      .selectFrom("employees")
-      .select(["id", "name", "email"])
-      .where("id", "=", resume.employee_id)
-      .executeTakeFirst(),
-    db
-      .selectFrom("assignments")
-      .selectAll()
-      .where("resume_id", "=", resumeId)
-      .orderBy("is_current", "desc")
-      .orderBy("end_date", "desc")
-      .orderBy("start_date", "desc")
-      .execute(),
-    db
-      .selectFrom("resume_skills")
-      .selectAll()
-      .where("cv_id", "=", resumeId)
-      .orderBy("sort_order", "asc")
-      .execute(),
-    db
-      .selectFrom("education")
-      .selectAll()
-      .where("employee_id", "=", resume.employee_id)
-      .orderBy("sort_order", "asc")
-      .execute(),
-  ]);
-
-  const name = employee?.name ?? "Unknown";
-  const language = resume.language ?? "en";
+  const { name, language } = data;
 
   const html = buildHtml({
     name,
-    consultantTitle: resume.consultant_title ?? "",
-    email: employee?.email,
-    presentation: (resume.presentation as string[] | null) ?? [],
-    summary: resume.summary,
-    skills,
-    assignments: assignments.map((a) => ({
-      ...a,
-      technologies: (a.technologies as string[]) ?? [],
-    })),
-    education,
+    consultantTitle: data.consultantTitle,
+    email: data.email,
+    presentation: data.presentation,
+    summary: data.summary,
+    skills: data.skills,
+    assignments: data.assignments,
+    education: data.education,
   });
 
   const browser = await puppeteer.launch({
@@ -246,10 +204,11 @@ export async function exportResumePdf(
   const record = await db
     .insertInto("export_records")
     .values({
-      resume_id: resume.id,
-      employee_id: resume.employee_id,
+      resume_id: resumeId,
+      employee_id: data.employeeId,
       format: "pdf",
       filename,
+      ...(data.commitId !== null ? { commit_id: data.commitId } : {}),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -269,14 +228,14 @@ export const exportResumePdfHandler = implement(
   contract.exportResumePdf
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return exportResumePdf(getDb(), user, input.resumeId);
+  return exportResumePdf(getDb(), user, input.resumeId, input.commitId);
 });
 
 export function createExportResumePdfHandler(db: Kysely<Database>) {
   return implement(contract.exportResumePdf).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return exportResumePdf(db, user, input.resumeId);
+      return exportResumePdf(db, user, input.resumeId, input.commitId);
     }
   );
 }
