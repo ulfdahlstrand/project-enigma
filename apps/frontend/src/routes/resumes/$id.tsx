@@ -202,7 +202,7 @@ function CoverPageContent({
       {(summary || highlightedAssignments.length > 0) && (
         <Box
           sx={{
-            bgcolor: "#F8F9FA",
+            bgcolor: "action.hover",
             border: "none",
             borderRadius: 0,
             px: 3,
@@ -297,7 +297,7 @@ function SkillsPageContent({
     <Box sx={{ mb: 2.5 }}>
       <Box
         sx={{
-          bgcolor: "#F1F3F4",
+          bgcolor: "action.hover",
           px: 1.5,
           py: 0.75,
           mb: 1,
@@ -611,7 +611,7 @@ function ResumeDetailPage() {
       {/* Gray canvas */}
       <Box
         sx={{
-          bgcolor: "#F1F3F4",
+          bgcolor: "background.default",
           minHeight: "calc(100vh - 56px)",
           py: 4,
           px: 2,
