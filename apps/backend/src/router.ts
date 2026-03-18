@@ -1,40 +1,49 @@
 import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
-import { healthHandler } from "./procedures/health.js";
-import { listTestEntriesHandler } from "./procedures/list-test-entries.js";
-import { listEmployeesHandler } from "./procedures/list-employees.js";
-import { getEmployeeHandler } from "./procedures/get-employee.js";
-import { createEmployeeHandler } from "./procedures/create-employee.js";
-import { updateEmployeeHandler } from "./procedures/update-employee.js";
-import { listResumesHandler } from "./procedures/list-resumes.js";
-import { getResumeHandler } from "./procedures/get-resume.js";
-import { createResumeHandler } from "./procedures/create-resume.js";
-import { updateResumeHandler } from "./procedures/update-resume.js";
-import { deleteResumeHandler } from "./procedures/delete-resume.js";
-import { listAssignmentsHandler } from "./procedures/list-assignments.js";
-import { getAssignmentHandler } from "./procedures/get-assignment.js";
-import { createAssignmentHandler } from "./procedures/create-assignment.js";
-import { updateAssignmentHandler } from "./procedures/update-assignment.js";
-import { deleteAssignmentHandler } from "./procedures/delete-assignment.js";
-import { listEducationHandler } from "./procedures/list-education.js";
-import { createEducationHandler } from "./procedures/create-education.js";
-import { deleteEducationHandler } from "./procedures/delete-education.js";
-import { createResumeSkillHandler } from "./procedures/create-resume-skill.js";
-import { deleteResumeSkillHandler } from "./procedures/delete-resume-skill.js";
-import { importCvHandler } from "./procedures/import-cv.js";
-import { exportResumeMarkdownHandler } from "./procedures/export-resume-markdown.js";
-import { exportResumePdfHandler } from "./procedures/export-resume-pdf.js";
-import { exportResumeDocxHandler } from "./procedures/export-resume-docx.js";
-import { saveResumeVersionHandler } from "./procedures/save-resume-version.js";
-import { getResumeCommitHandler } from "./procedures/get-resume-commit.js";
-import { listResumeCommitsHandler } from "./procedures/list-resume-commits.js";
-import { forkResumeBranchHandler } from "./procedures/fork-resume-branch.js";
-import { listResumeBranchesHandler } from "./procedures/list-resume-branches.js";
-import { listBranchAssignmentsHandler } from "./procedures/list-branch-assignments.js";
-import { addBranchAssignmentHandler } from "./procedures/add-branch-assignment.js";
-import { removeBranchAssignmentHandler } from "./procedures/remove-branch-assignment.js";
-import { updateBranchAssignmentHandler } from "./procedures/update-branch-assignment.js";
-import { compareResumeCommitsHandler } from "./procedures/compare-resume-commits.js";
+import { healthHandler, listTestEntriesHandler } from "./infra/index.js";
+import {
+  listEmployeesHandler,
+  getEmployeeHandler,
+  createEmployeeHandler,
+  updateEmployeeHandler,
+} from "./domains/employee/index.js";
+import {
+  listResumesHandler,
+  getResumeHandler,
+  createResumeHandler,
+  updateResumeHandler,
+  deleteResumeHandler,
+  createResumeSkillHandler,
+  deleteResumeSkillHandler,
+  forkResumeBranchHandler,
+  listResumeBranchesHandler,
+  saveResumeVersionHandler,
+  getResumeCommitHandler,
+  listResumeCommitsHandler,
+  compareResumeCommitsHandler,
+  addBranchAssignmentHandler,
+  removeBranchAssignmentHandler,
+  updateBranchAssignmentHandler,
+  listBranchAssignmentsHandler,
+} from "./domains/resume/index.js";
+import {
+  listAssignmentsHandler,
+  getAssignmentHandler,
+  createAssignmentHandler,
+  updateAssignmentHandler,
+  deleteAssignmentHandler,
+} from "./domains/assignment/index.js";
+import {
+  listEducationHandler,
+  createEducationHandler,
+  deleteEducationHandler,
+} from "./domains/education/index.js";
+import { importCvHandler } from "./domains/import/index.js";
+import {
+  exportResumePdfHandler,
+  exportResumeDocxHandler,
+  exportResumeMarkdownHandler,
+} from "./domains/export/index.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
