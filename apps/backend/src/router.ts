@@ -34,6 +34,7 @@ import { listBranchAssignmentsHandler } from "./procedures/list-branch-assignmen
 import { addBranchAssignmentHandler } from "./procedures/add-branch-assignment.js";
 import { removeBranchAssignmentHandler } from "./procedures/remove-branch-assignment.js";
 import { updateBranchAssignmentHandler } from "./procedures/update-branch-assignment.js";
+import { compareResumeCommitsHandler } from "./procedures/compare-resume-commits.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -79,6 +80,7 @@ export const router = implement(contract).router({
   addBranchAssignment: addBranchAssignmentHandler,
   removeBranchAssignment: removeBranchAssignmentHandler,
   updateBranchAssignment: updateBranchAssignmentHandler,
+  compareResumeCommits: compareResumeCommitsHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */
