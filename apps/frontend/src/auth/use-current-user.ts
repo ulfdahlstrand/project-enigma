@@ -35,10 +35,11 @@ export function useCurrentUser(): CurrentUser | null {
     if (!token) return null;
     const payload = decodeJwtPayload(token);
     if (!payload) return null;
+    const picture = typeof payload.picture === "string" ? payload.picture : undefined;
     return {
       name: typeof payload.name === "string" ? payload.name : "User",
       email: typeof payload.email === "string" ? payload.email : "",
-      picture: typeof payload.picture === "string" ? payload.picture : undefined,
+      ...(picture !== undefined && { picture }),
     };
   }, [token]);
 }

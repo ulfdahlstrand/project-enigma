@@ -33,7 +33,7 @@ import { LanguageSelector } from "./LanguageSelector";
 
 function stringAvatar(name: string): string {
   const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  if (parts.length >= 2) return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
   return name.slice(0, 2).toUpperCase();
 }
 
@@ -80,7 +80,7 @@ export function UserMenu() {
         }}
       >
         <Avatar
-          src={user?.picture}
+          {...(user?.picture ? { src: user.picture } : {})}
           alt={displayName}
           sx={{ width: 32, height: 32, fontSize: "0.75rem", bgcolor: "#1a73e8" }}
         >
