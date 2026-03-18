@@ -153,6 +153,70 @@
       "skillDeleteButton": "Ta bort",
       "skillAddError": "Det gick inte att lägga till kompetensen. Försök igen.",
       "skillDeleteError": "Det gick inte att ta bort kompetensen. Försök igen."
+    },
+    "history": {
+      "pageTitle": "Versionshistorik",
+      "loading": "Laddar historik…",
+      "error": "Kunde inte ladda historik.",
+      "empty": "Inga sparade versioner ännu.",
+      "tableHeaderMessage": "Meddelande",
+      "tableHeaderSavedAt": "Sparad",
+      "tableHeaderSavedBy": "Sparad av",
+      "defaultMessage": "(inget meddelande)",
+      "previewButton": "Förhandsgranska"
+    },
+    "variants": {
+      "pageTitle": "Varianter",
+      "loading": "Laddar varianter…",
+      "error": "Kunde inte ladda varianter.",
+      "empty": "Inga varianter hittades.",
+      "tableHeaderName": "Namn",
+      "tableHeaderLanguage": "Språk",
+      "tableHeaderLastSaved": "Senast sparad",
+      "mainBadge": "Huvud",
+      "createButton": "Skapa variant",
+      "createDialog": {
+        "title": "Skapa ny variant",
+        "nameLabel": "Variantnamn",
+        "cancel": "Avbryt",
+        "create": "Skapa",
+        "creating": "Skapar…",
+        "error": "Det gick inte att skapa varianten. Försök igen.",
+        "basedOnLabel": "Baseras på sparad version",
+        "basedOnPlaceholder": "Välj en version",
+        "noVersions": "Inga sparade versioner hittades. Spara en version först.",
+        "versionDefault": "(inget meddelande)"
+      }
+    },
+    "compare": {
+      "pageTitle": "Jämför versioner",
+      "loading": "Laddar…",
+      "error": "Kunde inte ladda diff.",
+      "versionALabel": "Version A",
+      "versionBLabel": "Version B",
+      "selectPlaceholder": "Välj en version",
+      "noChanges": "Inga skillnader mellan de valda versionerna.",
+      "scalarsHeading": "Resuméfält",
+      "skillsHeading": "Kompetenser",
+      "assignmentsHeading": "Uppdrag",
+      "before": "Innan",
+      "after": "Efter",
+      "statusAdded": "Tillagd",
+      "statusRemoved": "Borttagen",
+      "statusModified": "Ändrad"
+    },
+    "saveVersion": {
+      "button": "Spara version",
+      "dialogTitle": "Spara version",
+      "messagePlaceholder": "Valfritt meddelande…",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "success": "Version sparad.",
+      "error": "Det gick inte att spara versionen. Försök igen."
+    },
+    "variantSwitcher": {
+      "label": "Variant"
     }
   },
   "assignment": {

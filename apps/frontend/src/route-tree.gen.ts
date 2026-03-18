@@ -23,6 +23,9 @@ import { Route as AssignmentsNewRouteImport } from './routes/assignments/new'
 import { Route as AssignmentsIdRouteImport } from './routes/assignments/$id'
 import { Route as ResumesIdEditRouteImport } from './routes/resumes/$id_.edit'
 import { Route as EmployeesIdImportRouteImport } from './routes/employees/$id_.import'
+import { Route as ResumesIdVariantsIndexRouteImport } from './routes/resumes/$id_/variants/index'
+import { Route as ResumesIdHistoryIndexRouteImport } from './routes/resumes/$id_/history/index'
+import { Route as ResumesIdCompareIndexRouteImport } from './routes/resumes/$id_/compare/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +97,21 @@ const EmployeesIdImportRoute = EmployeesIdImportRouteImport.update({
   path: '/employees/$id/import',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResumesIdVariantsIndexRoute = ResumesIdVariantsIndexRouteImport.update({
+  id: '/resumes/$id_/variants/',
+  path: '/resumes/$id/variants/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResumesIdHistoryIndexRoute = ResumesIdHistoryIndexRouteImport.update({
+  id: '/resumes/$id_/history/',
+  path: '/resumes/$id/history/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResumesIdCompareIndexRoute = ResumesIdCompareIndexRouteImport.update({
+  id: '/resumes/$id_/compare/',
+  path: '/resumes/$id/compare/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +128,9 @@ export interface FileRoutesByFullPath {
   '/test/': typeof TestIndexRoute
   '/employees/$id/import': typeof EmployeesIdImportRoute
   '/resumes/$id/edit': typeof ResumesIdEditRoute
+  '/resumes/$id/compare/': typeof ResumesIdCompareIndexRoute
+  '/resumes/$id/history/': typeof ResumesIdHistoryIndexRoute
+  '/resumes/$id/variants/': typeof ResumesIdVariantsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +147,9 @@ export interface FileRoutesByTo {
   '/test': typeof TestIndexRoute
   '/employees/$id/import': typeof EmployeesIdImportRoute
   '/resumes/$id/edit': typeof ResumesIdEditRoute
+  '/resumes/$id/compare': typeof ResumesIdCompareIndexRoute
+  '/resumes/$id/history': typeof ResumesIdHistoryIndexRoute
+  '/resumes/$id/variants': typeof ResumesIdVariantsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +167,9 @@ export interface FileRoutesById {
   '/test/': typeof TestIndexRoute
   '/employees/$id_/import': typeof EmployeesIdImportRoute
   '/resumes/$id_/edit': typeof ResumesIdEditRoute
+  '/resumes/$id_/compare/': typeof ResumesIdCompareIndexRoute
+  '/resumes/$id_/history/': typeof ResumesIdHistoryIndexRoute
+  '/resumes/$id_/variants/': typeof ResumesIdVariantsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +188,9 @@ export interface FileRouteTypes {
     | '/test/'
     | '/employees/$id/import'
     | '/resumes/$id/edit'
+    | '/resumes/$id/compare/'
+    | '/resumes/$id/history/'
+    | '/resumes/$id/variants/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +207,9 @@ export interface FileRouteTypes {
     | '/test'
     | '/employees/$id/import'
     | '/resumes/$id/edit'
+    | '/resumes/$id/compare'
+    | '/resumes/$id/history'
+    | '/resumes/$id/variants'
   id:
     | '__root__'
     | '/'
@@ -193,6 +226,9 @@ export interface FileRouteTypes {
     | '/test/'
     | '/employees/$id_/import'
     | '/resumes/$id_/edit'
+    | '/resumes/$id_/compare/'
+    | '/resumes/$id_/history/'
+    | '/resumes/$id_/variants/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +246,9 @@ export interface RootRouteChildren {
   TestIndexRoute: typeof TestIndexRoute
   EmployeesIdImportRoute: typeof EmployeesIdImportRoute
   ResumesIdEditRoute: typeof ResumesIdEditRoute
+  ResumesIdCompareIndexRoute: typeof ResumesIdCompareIndexRoute
+  ResumesIdHistoryIndexRoute: typeof ResumesIdHistoryIndexRoute
+  ResumesIdVariantsIndexRoute: typeof ResumesIdVariantsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +351,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeesIdImportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/resumes/$id_/variants/': {
+      id: '/resumes/$id_/variants/'
+      path: '/resumes/$id/variants'
+      fullPath: '/resumes/$id/variants/'
+      preLoaderRoute: typeof ResumesIdVariantsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resumes/$id_/history/': {
+      id: '/resumes/$id_/history/'
+      path: '/resumes/$id/history'
+      fullPath: '/resumes/$id/history/'
+      preLoaderRoute: typeof ResumesIdHistoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resumes/$id_/compare/': {
+      id: '/resumes/$id_/compare/'
+      path: '/resumes/$id/compare'
+      fullPath: '/resumes/$id/compare/'
+      preLoaderRoute: typeof ResumesIdCompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -330,6 +390,9 @@ const rootRouteChildren: RootRouteChildren = {
   TestIndexRoute: TestIndexRoute,
   EmployeesIdImportRoute: EmployeesIdImportRoute,
   ResumesIdEditRoute: ResumesIdEditRoute,
+  ResumesIdCompareIndexRoute: ResumesIdCompareIndexRoute,
+  ResumesIdHistoryIndexRoute: ResumesIdHistoryIndexRoute,
+  ResumesIdVariantsIndexRoute: ResumesIdVariantsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

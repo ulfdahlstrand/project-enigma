@@ -153,6 +153,70 @@
       "skillDeleteButton": "Delete",
       "skillAddError": "Failed to add skill. Please try again.",
       "skillDeleteError": "Failed to delete skill. Please try again."
+    },
+    "history": {
+      "pageTitle": "Version History",
+      "loading": "Loading history…",
+      "error": "Failed to load history.",
+      "empty": "No saved versions yet.",
+      "tableHeaderMessage": "Message",
+      "tableHeaderSavedAt": "Saved",
+      "tableHeaderSavedBy": "Saved by",
+      "defaultMessage": "(no message)",
+      "previewButton": "Preview"
+    },
+    "variants": {
+      "pageTitle": "Variants",
+      "loading": "Loading variants…",
+      "error": "Failed to load variants.",
+      "empty": "No variants found.",
+      "tableHeaderName": "Name",
+      "tableHeaderLanguage": "Language",
+      "tableHeaderLastSaved": "Last saved",
+      "mainBadge": "Main",
+      "createButton": "Create variant",
+      "createDialog": {
+        "title": "Create new variant",
+        "nameLabel": "Variant name",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating…",
+        "error": "Failed to create variant. Please try again.",
+        "basedOnLabel": "Based on saved version",
+        "basedOnPlaceholder": "Select a version",
+        "noVersions": "No saved versions found. Save a version first.",
+        "versionDefault": "(no message)"
+      }
+    },
+    "compare": {
+      "pageTitle": "Compare Versions",
+      "loading": "Loading…",
+      "error": "Failed to load diff.",
+      "versionALabel": "Version A",
+      "versionBLabel": "Version B",
+      "selectPlaceholder": "Select a version",
+      "noChanges": "No differences between the selected versions.",
+      "scalarsHeading": "Resume fields",
+      "skillsHeading": "Skills",
+      "assignmentsHeading": "Assignments",
+      "before": "Before",
+      "after": "After",
+      "statusAdded": "Added",
+      "statusRemoved": "Removed",
+      "statusModified": "Modified"
+    },
+    "saveVersion": {
+      "button": "Save version",
+      "dialogTitle": "Save version",
+      "messagePlaceholder": "Optional message…",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "success": "Version saved.",
+      "error": "Failed to save version. Please try again."
+    },
+    "variantSwitcher": {
+      "label": "Variant"
     }
   },
   "assignment": {
