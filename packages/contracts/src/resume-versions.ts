@@ -159,3 +159,76 @@ export const listResumeBranchesInputSchema = z.object({
 });
 
 export const listResumeBranchesOutputSchema = z.array(resumeBranchSchema);
+
+// ---------------------------------------------------------------------------
+// Diff engine schemas
+//
+// Used by compareResumeCommits to describe what changed between two commits.
+// ---------------------------------------------------------------------------
+
+export const diffStatusSchema = z.enum(["added", "removed", "modified", "unchanged"]);
+
+export type DiffStatus = z.infer<typeof diffStatusSchema>;
+
+/** A single field that changed: the value before and after. */
+function fieldChange<T extends z.ZodTypeAny>(schema: T) {
+  return z.object({ before: schema, after: schema });
+}
+
+/** Scalar fields that may have changed between two commits. Only present when changed. */
+export const resumeDiffScalarsSchema = z.object({
+  title: fieldChange(z.string()).optional(),
+  consultantTitle: fieldChange(z.string().nullable()).optional(),
+  presentation: fieldChange(z.array(z.string())).optional(),
+  summary: fieldChange(z.string().nullable()).optional(),
+  language: fieldChange(z.string()).optional(),
+});
+
+export type ResumeDiffScalars = z.infer<typeof resumeDiffScalarsSchema>;
+
+/** Diff entry for a single skill (keyed by name). */
+export const skillDiffEntrySchema = z.object({
+  status: diffStatusSchema,
+  name: z.string(),
+  before: resumeCommitSkillSchema.optional(),
+  after: resumeCommitSkillSchema.optional(),
+});
+
+export type SkillDiffEntry = z.infer<typeof skillDiffEntrySchema>;
+
+/** Diff entry for a single assignment (keyed by assignmentId). */
+export const assignmentDiffEntrySchema = z.object({
+  status: diffStatusSchema,
+  assignmentId: z.string().uuid(),
+  before: resumeCommitAssignmentSchema.optional(),
+  after: resumeCommitAssignmentSchema.optional(),
+});
+
+export type AssignmentDiffEntry = z.infer<typeof assignmentDiffEntrySchema>;
+
+/** Full structural diff between two resume commit snapshots. */
+export const resumeDiffSchema = z.object({
+  scalars: resumeDiffScalarsSchema,
+  skills: z.array(skillDiffEntrySchema),
+  assignments: z.array(assignmentDiffEntrySchema),
+  hasChanges: z.boolean(),
+});
+
+export type ResumeDiff = z.infer<typeof resumeDiffSchema>;
+
+// ---------------------------------------------------------------------------
+// compareResumeCommits schemas
+// ---------------------------------------------------------------------------
+
+export const compareResumeCommitsInputSchema = z.object({
+  baseCommitId: z.string().uuid(),
+  headCommitId: z.string().uuid(),
+});
+
+export const compareResumeCommitsOutputSchema = z.object({
+  baseCommitId: z.string().uuid(),
+  headCommitId: z.string().uuid(),
+  diff: resumeDiffSchema,
+});
+
+export type CompareResumeCommitsOutput = z.infer<typeof compareResumeCommitsOutputSchema>;

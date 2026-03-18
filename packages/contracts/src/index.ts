@@ -68,6 +68,8 @@ import {
   forkResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
+  compareResumeCommitsInputSchema,
+  compareResumeCommitsOutputSchema,
 } from "./resume-versions.js";
 import {
   listBranchAssignmentsInputSchema,
@@ -238,6 +240,13 @@ export {
   forkResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
+  compareResumeCommitsInputSchema,
+  compareResumeCommitsOutputSchema,
+  diffStatusSchema,
+  resumeDiffScalarsSchema,
+  skillDiffEntrySchema,
+  assignmentDiffEntrySchema,
+  resumeDiffSchema,
 } from "./resume-versions.js";
 export type {
   ResumeCommitContent,
@@ -245,6 +254,12 @@ export type {
   ResumeCommitSummary,
   ResumeBranch,
   BranchAssignment,
+  DiffStatus,
+  ResumeDiffScalars,
+  SkillDiffEntry,
+  AssignmentDiffEntry,
+  ResumeDiff,
+  CompareResumeCommitsOutput,
 } from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
@@ -341,6 +356,9 @@ export const contract = oc.router({
   updateBranchAssignment: oc
     .input(updateBranchAssignmentInputSchema)
     .output(updateBranchAssignmentOutputSchema),
+  compareResumeCommits: oc
+    .input(compareResumeCommitsInputSchema)
+    .output(compareResumeCommitsOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
