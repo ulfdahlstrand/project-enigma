@@ -105,16 +105,115 @@ export interface ExportRecordTable {
   format: string;
   filename: string;
   exported_at: Generated<Date>;
+  commit_id: string | null;
 }
 
 export type ExportRecord = Selectable<ExportRecordTable>;
 export type NewExportRecord = Insertable<ExportRecordTable>;
+
+// ---------------------------------------------------------------------------
+// Resume versioning tables
+// ---------------------------------------------------------------------------
+
+/**
+ * Full content snapshot stored in resume_commits.content (JSONB).
+ * Captures everything needed to render or export the resume at a point in time.
+ */
+export interface ResumeCommitContent {
+  title: string;
+  consultantTitle: string | null;
+  presentation: string[];
+  summary: string | null;
+  language: string;
+  skills: Array<{
+    name: string;
+    level: string | null;
+    category: string | null;
+    sortOrder: number;
+  }>;
+  assignments: Array<{
+    assignmentId: string;
+    clientName: string;
+    role: string;
+    description: string;
+    startDate: string;
+    endDate: string | null;
+    technologies: string[];
+    isCurrent: boolean;
+    keywords: string | null;
+    type: string | null;
+    highlight: boolean;
+    sortOrder: number | null;
+  }>;
+}
+
+/**
+ * Immutable snapshot of a resume branch at a point in time — analogous to a
+ * git commit. Once inserted, a row is never updated.
+ */
+export interface ResumeCommitTable {
+  id: Generated<string>;
+  resume_id: string;
+  /** Which branch this commit belongs to. SET NULL if the branch is deleted. */
+  branch_id: string | null;
+  /** Points to the previous commit on this branch. NULL for the initial commit. */
+  parent_commit_id: string | null;
+  /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
+  content: ColumnType<ResumeCommitContent, string, string>;
+  message: Generated<string>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export type ResumeCommit = Selectable<ResumeCommitTable>;
+export type NewResumeCommit = Insertable<ResumeCommitTable>;
+
+/**
+ * Named variant of a resume — analogous to a git branch. Holds a pointer to
+ * the HEAD commit and optionally the commit it was forked from.
+ */
+export interface ResumeBranchTable {
+  id: Generated<string>;
+  resume_id: string;
+  name: string;
+  language: string;
+  is_main: Generated<boolean>;
+  /** Latest commit on this branch. NULL for a freshly created empty branch. */
+  head_commit_id: string | null;
+  /** The commit this branch was forked from. NULL for the original main branch. */
+  forked_from_commit_id: string | null;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export type ResumeBranch = Selectable<ResumeBranchTable>;
+export type NewResumeBranch = Insertable<ResumeBranchTable>;
+export type ResumeBranchUpdate = Updateable<ResumeBranchTable>;
+
+/**
+ * Per-branch assignment linking. Each branch maintains its own curated list of
+ * assignments independently of other branches on the same resume.
+ */
+export interface BranchAssignmentTable {
+  id: Generated<string>;
+  branch_id: string;
+  assignment_id: string;
+  highlight: Generated<boolean>;
+  sort_order: number | null;
+}
+
+export type BranchAssignment = Selectable<BranchAssignmentTable>;
+export type NewBranchAssignment = Insertable<BranchAssignmentTable>;
+export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
 
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
+  resume_commits: ResumeCommitTable;
+  resume_branches: ResumeBranchTable;
+  branch_assignments: BranchAssignmentTable;
   assignments: AssignmentTable;
   education: EducationTable;
   export_records: ExportRecordTable;

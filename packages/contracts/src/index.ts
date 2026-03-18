@@ -195,6 +195,25 @@ export {
 } from "./export-resume.js";
 
 // ---------------------------------------------------------------------------
+// Resume versioning schemas — re-exported from ./resume-versions
+// ---------------------------------------------------------------------------
+
+export {
+  resumeCommitSkillSchema,
+  resumeCommitAssignmentSchema,
+  resumeCommitContentSchema,
+  resumeCommitSchema,
+  resumeBranchSchema,
+  branchAssignmentSchema,
+} from "./resume-versions.js";
+export type {
+  ResumeCommitContent,
+  ResumeCommit,
+  ResumeBranch,
+  BranchAssignment,
+} from "./resume-versions.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
