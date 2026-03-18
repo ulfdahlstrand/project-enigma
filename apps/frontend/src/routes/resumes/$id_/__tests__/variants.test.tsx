@@ -269,7 +269,7 @@ describe("Create variant dialog", () => {
 
     // openDialog() pre-selects commits[0].id (most recent)
     expect(mockForkMutateAsync).toHaveBeenCalledWith({
-      fromCommitId: COMMITS[0].id,
+      fromCommitId: COMMITS[0]!.id,
       name: "New Variant",
       resumeId: "resume-id-1",
     });
