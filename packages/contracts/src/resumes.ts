@@ -28,6 +28,10 @@ export const resumeSchema = z.object({
   summary: z.string().nullable(),
   language: z.string(),
   isMain: z.boolean(),
+  /** ID of the main branch for this resume. Omitted when branch data is not fetched. */
+  mainBranchId: z.string().uuid().nullable().optional(),
+  /** HEAD commit ID of the main branch. Omitted when branch data is not fetched. */
+  headCommitId: z.string().uuid().nullable().optional(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
