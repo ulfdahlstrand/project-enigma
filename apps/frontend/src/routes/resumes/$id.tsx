@@ -41,6 +41,8 @@ import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 import RouterButton from "../../components/RouterButton";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { SaveVersionButton } from "../../components/SaveVersionButton";
+import { VariantSwitcher } from "../../components/VariantSwitcher";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -578,11 +580,14 @@ function ResumeDetailPage() {
   const skillsPage = hasSkills ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
+  const mainBranchId = resume?.mainBranchId ?? null;
+
   const toolbarActions = (
     <>
       <RouterButton variant="text" to="/resumes">
         {t("resume.detail.backButton")}
       </RouterButton>
+      <VariantSwitcher resumeId={id} currentBranchId={mainBranchId} />
       <Button
         variant="outlined"
         onClick={() => void navigate({ to: "/resumes/$id/edit", params: { id } })}
@@ -596,6 +601,7 @@ function ResumeDetailPage() {
       >
         {t("resume.detail.addAssignment")}
       </RouterButton>
+      {mainBranchId && <SaveVersionButton branchId={mainBranchId} />}
       <ExportSplitButton resumeId={id} />
     </>
   );
