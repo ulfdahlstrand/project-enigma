@@ -5,13 +5,15 @@
  * Nav items at top, language selector pinned to the bottom (Slack pattern).
  */
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../auth/auth-context";
 import { UserMenu } from "./UserMenu";
 
 interface NavItem {
@@ -28,6 +30,8 @@ const NAV_ITEMS: NavItem[] = [
 export function NavigationMenu() {
   const { t } = useTranslation("common");
   const { location } = useRouterState();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
@@ -73,11 +77,23 @@ export function NavigationMenu() {
         })}
       </List>
 
-      {/* User profile footer — pinned to bottom */}
+      {/* Footer — pinned to bottom */}
       <Box sx={{ mt: "auto" }}>
         <Divider />
         <Box sx={{ p: 0.75 }}>
-          <UserMenu />
+          {isAuthenticated ? (
+            <UserMenu />
+          ) : (
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => void navigate({ to: "/login" })}
+              sx={{ justifyContent: "flex-start", pl: 1.5 }}
+            >
+              {t("auth.signInWithGoogle")}
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>
