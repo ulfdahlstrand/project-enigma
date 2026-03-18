@@ -18,14 +18,16 @@ import ListItemText from "@mui/material/ListItemText";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
+import Switch from "@mui/material/Switch";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import LogoutIcon from "@mui/icons-material/Logout";
-import SettingsIcon from "@mui/icons-material/Settings";
 import TranslateIcon from "@mui/icons-material/Translate";
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../../auth/auth-context";
+import { useColorMode } from "../../lib/color-mode-context";
 import { useCurrentUser } from "../../auth/use-current-user";
 import { LanguageSelector } from "./LanguageSelector";
 
@@ -38,6 +40,7 @@ function stringAvatar(name: string): string {
 export function UserMenu() {
   const { t } = useTranslation("common");
   const { clearToken } = useAuth();
+  const { mode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
   const user = useCurrentUser();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -72,7 +75,7 @@ export function UserMenu() {
           py: 1,
           borderRadius: 2,
           cursor: "pointer",
-          "&:hover": { bgcolor: "#F1F3F4" },
+          "&:hover": { bgcolor: "action.hover" },
           minWidth: 0,
         }}
       >
@@ -89,7 +92,7 @@ export function UserMenu() {
             sx={{
               fontSize: "0.8125rem",
               fontWeight: 500,
-              color: "#202124",
+              color: "text.primary",
               lineHeight: 1.3,
               whiteSpace: "nowrap",
               overflow: "hidden",
@@ -102,7 +105,7 @@ export function UserMenu() {
             <Typography
               sx={{
                 fontSize: "0.6875rem",
-                color: "#5F6368",
+                color: "text.secondary",
                 lineHeight: 1.3,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -136,7 +139,7 @@ export function UserMenu() {
         {/* Language row */}
         <MenuItem disableRipple sx={{ gap: 1, "&:hover": { bgcolor: "transparent" }, cursor: "default" }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <TranslateIcon fontSize="small" sx={{ color: "#5F6368" }} />
+            <TranslateIcon fontSize="small" sx={{ color: "text.secondary" }} />
           </ListItemIcon>
           <ListItemText
             primary={t("userMenu.language")}
@@ -148,21 +151,34 @@ export function UserMenu() {
 
         <Divider sx={{ my: 0.5 }} />
 
-        {/* Placeholder: Preferences */}
-        <MenuItem onClick={handleClose} sx={{ gap: 1 }}>
-          <ListItemIcon sx={{ minWidth: 32 }}>
-            <SettingsIcon fontSize="small" sx={{ color: "#5F6368" }} />
-          </ListItemIcon>
-          <ListItemText
-            primary={t("userMenu.preferences")}
-            primaryTypographyProps={{ fontSize: "0.8125rem" }}
+        {/* Dark mode toggle */}
+        <MenuItem
+          onClick={toggleColorMode}
+          disableRipple={false}
+          sx={{ gap: 1, justifyContent: "space-between" }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <DarkModeIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            </ListItemIcon>
+            <ListItemText
+              primary={t("userMenu.darkMode")}
+              primaryTypographyProps={{ fontSize: "0.8125rem" }}
+            />
+          </Box>
+          <Switch
+            checked={mode === "dark"}
+            size="small"
+            onChange={toggleColorMode}
+            onClick={(e) => e.stopPropagation()}
+            inputProps={{ "aria-label": t("userMenu.darkMode") }}
           />
         </MenuItem>
 
         {/* Placeholder: Help & feedback */}
         <MenuItem onClick={handleClose} sx={{ gap: 1 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <HelpOutlineIcon fontSize="small" sx={{ color: "#5F6368" }} />
+            <HelpOutlineIcon fontSize="small" sx={{ color: "text.secondary" }} />
           </ListItemIcon>
           <ListItemText
             primary={t("userMenu.helpAndFeedback")}
@@ -175,7 +191,7 @@ export function UserMenu() {
         {/* Sign out */}
         <MenuItem onClick={handleSignOut} sx={{ gap: 1 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <LogoutIcon fontSize="small" sx={{ color: "#5F6368" }} />
+            <LogoutIcon fontSize="small" sx={{ color: "text.secondary" }} />
           </ListItemIcon>
           <ListItemText
             primary={t("userMenu.signOut")}

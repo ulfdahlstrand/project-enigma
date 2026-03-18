@@ -210,7 +210,8 @@
     "language": "Language",
     "preferences": "Preferences",
     "helpAndFeedback": "Help & feedback",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "darkMode": "Dark mode"
   },
   "languageSelector": {
     "label": "Select language"

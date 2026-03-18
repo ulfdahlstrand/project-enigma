@@ -49,9 +49,13 @@ export function NavigationMenu() {
                   mr: 2,
                   pl: 2,
                   py: 0.75,
-                  bgcolor: isActive ? "#e8f0fe" : "transparent",
+                  bgcolor: isActive
+                    ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
+                    : "transparent",
                   "&:hover": {
-                    bgcolor: isActive ? "#e8f0fe" : "#F1F3F4",
+                    bgcolor: isActive
+                      ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
+                      : "action.hover",
                   },
                 }}
               >
@@ -60,7 +64,7 @@ export function NavigationMenu() {
                   primaryTypographyProps={{
                     fontSize: "0.875rem",
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? "#1a73e8" : "#202124",
+                    color: isActive ? "primary.main" : "text.primary",
                   }}
                 />
               </ListItemButton>

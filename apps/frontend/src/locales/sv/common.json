@@ -210,7 +210,8 @@
     "language": "Språk",
     "preferences": "Inställningar",
     "helpAndFeedback": "Hjälp & feedback",
-    "signOut": "Logga ut"
+    "signOut": "Logga ut",
+    "darkMode": "Mörkt läge"
   },
   "languageSelector": {
     "label": "Välj språk"
