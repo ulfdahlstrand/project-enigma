@@ -28,6 +28,12 @@ import { exportResumeDocxHandler } from "./procedures/export-resume-docx.js";
 import { saveResumeVersionHandler } from "./procedures/save-resume-version.js";
 import { getResumeCommitHandler } from "./procedures/get-resume-commit.js";
 import { listResumeCommitsHandler } from "./procedures/list-resume-commits.js";
+import { forkResumeBranchHandler } from "./procedures/fork-resume-branch.js";
+import { listResumeBranchesHandler } from "./procedures/list-resume-branches.js";
+import { listBranchAssignmentsHandler } from "./procedures/list-branch-assignments.js";
+import { addBranchAssignmentHandler } from "./procedures/add-branch-assignment.js";
+import { removeBranchAssignmentHandler } from "./procedures/remove-branch-assignment.js";
+import { updateBranchAssignmentHandler } from "./procedures/update-branch-assignment.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -67,6 +73,12 @@ export const router = implement(contract).router({
   saveResumeVersion: saveResumeVersionHandler,
   getResumeCommit: getResumeCommitHandler,
   listResumeCommits: listResumeCommitsHandler,
+  forkResumeBranch: forkResumeBranchHandler,
+  listResumeBranches: listResumeBranchesHandler,
+  listBranchAssignments: listBranchAssignmentsHandler,
+  addBranchAssignment: addBranchAssignmentHandler,
+  removeBranchAssignment: removeBranchAssignmentHandler,
+  updateBranchAssignment: updateBranchAssignmentHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

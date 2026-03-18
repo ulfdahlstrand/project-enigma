@@ -14,9 +14,12 @@ const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
-const SKILL_ID_1 = "550e8400-e29b-41d4-a716-446655440031";
-const SKILL_ID_2 = "550e8400-e29b-41d4-a716-446655440032";
+const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
+const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
+const SKILL_ID_1 = "550e8400-e29b-41d4-a716-446655440051";
+const SKILL_ID_2 = "550e8400-e29b-41d4-a716-446655440052";
 
+// Resume row now includes branch_id and head_commit_id from the LEFT JOIN
 const RESUME_ROW = {
   id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
@@ -28,6 +31,8 @@ const RESUME_ROW = {
   presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
+  branch_id: BRANCH_ID,
+  head_commit_id: COMMIT_ID,
 };
 
 const SKILL_ROW_1 = {
@@ -53,11 +58,8 @@ const SKILL_ROW_2 = {
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock Kysely instance that handles both the resume lookup and skills
- * lookup that getResume performs.
- *
- * @param resumeRow  - The resume row to return (undefined = not found).
- * @param skillRows  - The skill rows to return.
+ * Builds a mock Kysely instance that handles both the resume LEFT JOIN lookup
+ * and the skills query that getResume performs.
  */
 function buildDbMock(resumeRow: unknown, skillRows: unknown[]) {
   // Skills query chain: selectAll → where → orderBy → execute
@@ -66,16 +68,15 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[]) {
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // Resume query chain: selectAll → where → executeTakeFirst
+  // Resume query chain with LEFT JOIN: leftJoin → select → where → executeTakeFirst
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
-  const resumeSelectAll = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "resume_skills") {
-      return { selectAll: skillsSelectAll };
-    }
-    return { selectAll: resumeSelectAll };
+    if (table === "resume_skills") return { selectAll: skillsSelectAll };
+    return { leftJoin: resumeLeftJoin };
   });
 
   const db = { selectFrom } as unknown as Kysely<Database>;
@@ -91,7 +92,8 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
 
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
-  const resumeSelectAll = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
@@ -100,7 +102,7 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_skills") return { selectAll: skillsSelectAll };
-    return { selectAll: resumeSelectAll };
+    return { leftJoin: resumeLeftJoin };
   });
 
   const db = { selectFrom } as unknown as Kysely<Database>;
@@ -114,9 +116,8 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
 describe("getResume query function", () => {
   it("returns a resume with its skills array for an admin", async () => {
     const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = MOCK_ADMIN;
 
-    const result = await getResume(db, adminUser, RESUME_ID);
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(result).toMatchObject({
       id: RESUME_ID,
@@ -134,48 +135,61 @@ describe("getResume query function", () => {
     });
   });
 
+  it("includes mainBranchId and headCommitId from the LEFT JOIN", async () => {
+    const { db } = buildDbMock(RESUME_ROW, []);
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+
+    expect(result.mainBranchId).toBe(BRANCH_ID);
+    expect(result.headCommitId).toBe(COMMIT_ID);
+  });
+
+  it("returns null for mainBranchId and headCommitId when no branch exists", async () => {
+    const nobranchRow = { ...RESUME_ROW, branch_id: null, head_commit_id: null };
+    const { db } = buildDbMock(nobranchRow, []);
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+
+    expect(result.mainBranchId).toBeNull();
+    expect(result.headCommitId).toBeNull();
+  });
+
   it("returns a resume with an empty skills array when no skills exist", async () => {
     const { db } = buildDbMock(RESUME_ROW, []);
-    const adminUser = MOCK_ADMIN;
 
-    const result = await getResume(db, adminUser, RESUME_ID);
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(result.skills).toEqual([]);
   });
 
   it("orders skills by sort_order ascending", async () => {
     const { db, skillsOrderBy } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-    const adminUser = MOCK_ADMIN;
 
-    await getResume(db, adminUser, RESUME_ID);
+    await getResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(skillsOrderBy).toHaveBeenCalledWith("sort_order", "asc");
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
     const { db } = buildDbMock(undefined, []);
-    const adminUser = MOCK_ADMIN;
 
-    await expect(getResume(db, adminUser, RESUME_ID)).rejects.toSatisfy(
+    await expect(getResume(db, MOCK_ADMIN, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
 
   it("consultant can fetch their own resume", async () => {
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_1);
-    const consultantUser = MOCK_CONSULTANT;
 
-    const result = await getResume(db, consultantUser, RESUME_ID);
+    const result = await getResume(db, MOCK_CONSULTANT, RESUME_ID);
 
     expect(result.id).toBe(RESUME_ID);
   });
 
   it("throws FORBIDDEN when consultant tries to fetch another employee's resume", async () => {
-    // Resume belongs to EMPLOYEE_ID_1 but consultant maps to EMPLOYEE_ID_2
     const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_2);
-    const consultantUser = MOCK_CONSULTANT_2;
 
-    await expect(getResume(db, consultantUser, RESUME_ID)).rejects.toSatisfy(
+    await expect(getResume(db, MOCK_CONSULTANT_2, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
   });
@@ -196,6 +210,7 @@ describe("createGetResumeHandler", () => {
 
     expect(result.id).toBe(RESUME_ID);
     expect(result.skills).toHaveLength(1);
+    expect(result.mainBranchId).toBe(BRANCH_ID);
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {

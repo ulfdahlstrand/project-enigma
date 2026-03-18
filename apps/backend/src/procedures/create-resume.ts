@@ -17,7 +17,8 @@ type CreateResumeInput = z.infer<typeof createResumeInputSchema>;
 type CreateResumeOutput = z.infer<typeof createResumeOutputSchema>;
 
 /**
- * Inserts a new resume record and returns the created resume with an empty skills array.
+ * Creates a new resume with an initial main branch and empty root commit,
+ * all within a single transaction.
  *
  * Access rules:
  *   - Admins can create resumes for any employee.
@@ -41,28 +42,83 @@ export async function createResume(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const row = await db
-    .insertInto("resumes")
-    .values({
-      employee_id: input.employeeId,
-      title: input.title,
-      language: input.language ?? "en",
-      summary: input.summary ?? null,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  const language = input.language ?? "en";
+
+  const { resume, branch } = await db.transaction().execute(async (trx) => {
+    // 1. Insert the resume
+    const newResume = await trx
+      .insertInto("resumes")
+      .values({
+        employee_id: input.employeeId,
+        title: input.title,
+        language,
+        summary: input.summary ?? null,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // 2. Create the main branch
+    const newBranch = await trx
+      .insertInto("resume_branches")
+      .values({
+        resume_id: newResume.id,
+        name: "main",
+        language,
+        is_main: true,
+        head_commit_id: null,
+        forked_from_commit_id: null,
+        created_by: user.id,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // 3. Create the root commit (empty snapshot)
+    const initialContent = JSON.stringify({
+      title: newResume.title,
+      consultantTitle: newResume.consultant_title,
+      presentation: newResume.presentation ?? [],
+      summary: newResume.summary,
+      language,
+      skills: [],
+      assignments: [],
+    });
+
+    const rootCommit = await trx
+      .insertInto("resume_commits")
+      .values({
+        resume_id: newResume.id,
+        branch_id: newBranch.id,
+        parent_commit_id: null,
+        content: initialContent,
+        message: "initial",
+        created_by: user.id,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // 4. Advance branch HEAD to the root commit
+    await trx
+      .updateTable("resume_branches")
+      .set({ head_commit_id: rootCommit.id })
+      .where("id", "=", newBranch.id)
+      .execute();
+
+    return { resume: newResume, branch: { ...newBranch, head_commit_id: rootCommit.id } };
+  });
 
   return {
-    id: row.id,
-    employeeId: row.employee_id,
-    title: row.title,
-    consultantTitle: row.consultant_title,
-    presentation: row.presentation ?? [],
-    summary: row.summary,
-    language: row.language,
-    isMain: row.is_main,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: resume.id,
+    employeeId: resume.employee_id,
+    title: resume.title,
+    consultantTitle: resume.consultant_title,
+    presentation: resume.presentation ?? [],
+    summary: resume.summary,
+    language: resume.language,
+    isMain: resume.is_main,
+    mainBranchId: branch.id,
+    headCommitId: branch.head_commit_id,
+    createdAt: resume.created_at,
+    updatedAt: resume.updated_at,
     skills: [],
   };
 }

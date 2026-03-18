@@ -64,7 +64,21 @@ import {
   getResumeCommitOutputSchema,
   listResumeCommitsInputSchema,
   listResumeCommitsOutputSchema,
+  forkResumeBranchInputSchema,
+  forkResumeBranchOutputSchema,
+  listResumeBranchesInputSchema,
+  listResumeBranchesOutputSchema,
 } from "./resume-versions.js";
+import {
+  listBranchAssignmentsInputSchema,
+  listBranchAssignmentsOutputSchema,
+  addBranchAssignmentInputSchema,
+  addBranchAssignmentOutputSchema,
+  removeBranchAssignmentInputSchema,
+  removeBranchAssignmentOutputSchema,
+  updateBranchAssignmentInputSchema,
+  updateBranchAssignmentOutputSchema,
+} from "./branch-assignments.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -220,6 +234,10 @@ export {
   getResumeCommitOutputSchema,
   listResumeCommitsInputSchema,
   listResumeCommitsOutputSchema,
+  forkResumeBranchInputSchema,
+  forkResumeBranchOutputSchema,
+  listResumeBranchesInputSchema,
+  listResumeBranchesOutputSchema,
 } from "./resume-versions.js";
 export type {
   ResumeCommitContent,
@@ -228,6 +246,23 @@ export type {
   ResumeBranch,
   BranchAssignment,
 } from "./resume-versions.js";
+
+// ---------------------------------------------------------------------------
+// Branch assignment schemas — re-exported from ./branch-assignments
+// ---------------------------------------------------------------------------
+
+export {
+  branchAssignmentItemSchema,
+  listBranchAssignmentsInputSchema,
+  listBranchAssignmentsOutputSchema,
+  addBranchAssignmentInputSchema,
+  addBranchAssignmentOutputSchema,
+  removeBranchAssignmentInputSchema,
+  removeBranchAssignmentOutputSchema,
+  updateBranchAssignmentInputSchema,
+  updateBranchAssignmentOutputSchema,
+} from "./branch-assignments.js";
+export type { BranchAssignmentItem } from "./branch-assignments.js";
 
 // ---------------------------------------------------------------------------
 // Router contract
@@ -288,6 +323,24 @@ export const contract = oc.router({
   listResumeCommits: oc
     .input(listResumeCommitsInputSchema)
     .output(listResumeCommitsOutputSchema),
+  forkResumeBranch: oc
+    .input(forkResumeBranchInputSchema)
+    .output(forkResumeBranchOutputSchema),
+  listResumeBranches: oc
+    .input(listResumeBranchesInputSchema)
+    .output(listResumeBranchesOutputSchema),
+  listBranchAssignments: oc
+    .input(listBranchAssignmentsInputSchema)
+    .output(listBranchAssignmentsOutputSchema),
+  addBranchAssignment: oc
+    .input(addBranchAssignmentInputSchema)
+    .output(addBranchAssignmentOutputSchema),
+  removeBranchAssignment: oc
+    .input(removeBranchAssignmentInputSchema)
+    .output(removeBranchAssignmentOutputSchema),
+  updateBranchAssignment: oc
+    .input(updateBranchAssignmentInputSchema)
+    .output(updateBranchAssignmentOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

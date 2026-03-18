@@ -134,3 +134,28 @@ export const listResumeCommitsInputSchema = z.object({
 });
 
 export const listResumeCommitsOutputSchema = z.array(resumeCommitSummarySchema);
+
+// ---------------------------------------------------------------------------
+// forkResumeBranch schemas
+//
+// Creates a new branch forked from a specific commit. The new branch's HEAD
+// starts at the forked commit (inheriting its full resume snapshot), and its
+// branch_assignments are copied from the source branch.
+// ---------------------------------------------------------------------------
+
+export const forkResumeBranchInputSchema = z.object({
+  fromCommitId: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export const forkResumeBranchOutputSchema = resumeBranchSchema;
+
+// ---------------------------------------------------------------------------
+// listResumeBranches schemas
+// ---------------------------------------------------------------------------
+
+export const listResumeBranchesInputSchema = z.object({
+  resumeId: z.string().uuid(),
+});
+
+export const listResumeBranchesOutputSchema = z.array(resumeBranchSchema);

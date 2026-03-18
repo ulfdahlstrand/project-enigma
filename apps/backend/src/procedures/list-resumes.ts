@@ -38,21 +38,39 @@ export async function listResumes(
   // Determine ownership constraint
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  let query = db.selectFrom("resumes").selectAll();
+  let query = db
+    .selectFrom("resumes as r")
+    .leftJoin("resume_branches as rb", (join) =>
+      join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
+    )
+    .select([
+      "r.id",
+      "r.employee_id",
+      "r.title",
+      "r.consultant_title",
+      "r.presentation",
+      "r.summary",
+      "r.language",
+      "r.is_main",
+      "r.created_at",
+      "r.updated_at",
+      "rb.id as branch_id",
+      "rb.head_commit_id",
+    ]);
 
   if (ownerEmployeeId !== null) {
     // Consultant: scope to their own employee, but still allow language filter
-    query = query.where("employee_id", "=", ownerEmployeeId);
+    query = query.where("r.employee_id", "=", ownerEmployeeId);
     if (input.language !== undefined) {
-      query = query.where("language", "=", input.language);
+      query = query.where("r.language", "=", input.language);
     }
   } else {
     // Admin: apply optional filters from input
     if (input.employeeId !== undefined) {
-      query = query.where("employee_id", "=", input.employeeId);
+      query = query.where("r.employee_id", "=", input.employeeId);
     }
     if (input.language !== undefined) {
-      query = query.where("language", "=", input.language);
+      query = query.where("r.language", "=", input.language);
     }
   }
 
@@ -67,6 +85,8 @@ export async function listResumes(
     summary: row.summary,
     language: row.language,
     isMain: row.is_main,
+    mainBranchId: row.branch_id ?? null,
+    headCommitId: row.head_commit_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));

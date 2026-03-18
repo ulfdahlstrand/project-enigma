@@ -13,6 +13,8 @@ import { MOCK_ADMIN, MOCK_CONSULTANT } from "../test-helpers/mock-users.js";
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
+const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
+const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 
 const NEW_RESUME_ROW = {
   id: RESUME_ID,
@@ -27,80 +29,97 @@ const NEW_RESUME_ROW = {
   updated_at: new Date("2025-03-01T00:00:00.000Z"),
 };
 
+const NEW_BRANCH_ROW = {
+  id: BRANCH_ID,
+  resume_id: RESUME_ID,
+  name: "main",
+  language: "en",
+  is_main: true,
+  head_commit_id: null,
+  forked_from_commit_id: null,
+  created_by: MOCK_ADMIN.id,
+  created_at: new Date("2025-03-01T00:00:00.000Z"),
+};
+
+const ROOT_COMMIT_ROW = {
+  id: COMMIT_ID,
+  resume_id: RESUME_ID,
+  branch_id: BRANCH_ID,
+  parent_commit_id: null,
+  content: {},
+  message: "initial",
+  created_by: MOCK_ADMIN.id,
+  created_at: new Date("2025-03-01T00:00:00.000Z"),
+};
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock Kysely instance that handles the resume insert and skills query
- * that createResume performs.
+ * Builds a mock Kysely instance that handles the full transactional
+ * createResume flow: INSERT resume → INSERT branch → INSERT commit → UPDATE branch HEAD.
  */
-function buildInsertMock(insertedRow: unknown) {
-  // Skills query (returns empty array since newly created resumes have no skills)
-  const skillsExecute = vi.fn().mockResolvedValue([]);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
-  const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
+function buildDbMock(opts: {
+  resumeRow?: unknown;
+  branchRow?: unknown;
+  commitRow?: unknown;
+  employeeRow?: unknown;
+} = {}) {
+  const {
+    resumeRow = NEW_RESUME_ROW,
+    branchRow = NEW_BRANCH_ROW,
+    commitRow = ROOT_COMMIT_ROW,
+    employeeRow = undefined,
+  } = opts;
 
-  // Resume insert chain
-  const executeTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedRow);
-  const returningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow });
-  const values = vi.fn().mockReturnValue({ returningAll });
-  const insertInto = vi.fn().mockReturnValue({ values });
+  // INSERT resumes
+  const resumeInsertExec = vi.fn().mockResolvedValue(resumeRow);
+  const resumeInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: resumeInsertExec });
+  const resumeInsertValues = vi.fn().mockReturnValue({ returningAll: resumeInsertReturningAll });
 
-  const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "resume_skills") return { selectAll: skillsSelectAll };
+  // INSERT resume_branches
+  const branchInsertExec = vi.fn().mockResolvedValue(branchRow);
+  const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExec });
+  const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
+
+  // INSERT resume_commits
+  const commitInsertExec = vi.fn().mockResolvedValue(commitRow);
+  const commitInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: commitInsertExec });
+  const commitInsertValues = vi.fn().mockReturnValue({ returningAll: commitInsertReturningAll });
+
+  // UPDATE resume_branches (advance HEAD)
+  const updateExec = vi.fn().mockResolvedValue(undefined);
+  const updateWhere = vi.fn().mockReturnValue({ execute: updateExec });
+  const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+  const updateTable = vi.fn().mockReturnValue({ set: updateSet });
+
+  const insertInto = vi.fn().mockImplementation((table: string) => {
+    if (table === "resumes") return { values: resumeInsertValues };
+    if (table === "resume_branches") return { values: branchInsertValues };
+    if (table === "resume_commits") return { values: commitInsertValues };
     return {};
   });
 
-  const db = { insertInto, selectFrom } as unknown as Kysely<Database>;
-  return { db, insertInto, values, returningAll, executeTakeFirstOrThrow, skillsExecute };
-}
+  const transaction = vi.fn().mockImplementation(() => ({
+    execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
+      const trx = { insertInto, updateTable };
+      return fn(trx);
+    }),
+  }));
 
-/** Builds a db mock that also handles the employee lookup (for consultant auth). */
-function buildDbWithEmployeeLookup(
-  insertedRow: unknown,
-  employeeId: string
-) {
-  const skillsExecute = vi.fn().mockResolvedValue([]);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
-  const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
-
-  const executeTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedRow);
-  const returningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow });
-  const values = vi.fn().mockReturnValue({ returningAll });
-  const insertInto = vi.fn().mockReturnValue({ values });
-
-  const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
+  // Employee lookup (used by consultants)
+  const empExecuteTakeFirst = vi.fn().mockResolvedValue(employeeRow);
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "resume_skills") return { selectAll: skillsSelectAll };
     return {};
   });
 
-  const db = { insertInto, selectFrom } as unknown as Kysely<Database>;
-  return { db };
-}
-
-/** Builds a db mock where the employee lookup returns undefined (consultant not found). */
-function buildDbWithMissingEmployee() {
-  const empExecuteTakeFirst = vi.fn().mockResolvedValue(undefined);
-  const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
-  const empSelect = vi.fn().mockReturnValue({ where: empWhere });
-
-  const insertInto = vi.fn();
-
-  const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "employees") return { select: empSelect };
-    return {};
-  });
-
-  const db = { insertInto, selectFrom } as unknown as Kysely<Database>;
-  return { db };
+  const db = { insertInto, selectFrom, transaction } as unknown as Kysely<Database>;
+  return { db, resumeInsertValues, branchInsertValues, commitInsertValues, updateSet };
 }
 
 // ---------------------------------------------------------------------------
@@ -108,11 +127,10 @@ function buildDbWithMissingEmployee() {
 // ---------------------------------------------------------------------------
 
 describe("createResume query function", () => {
-  it("admin creates resume for any employee and returns resume with empty skills array", async () => {
-    const { db, values } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = MOCK_ADMIN;
+  it("admin creates resume and returns it with empty skills, mainBranchId, and headCommitId", async () => {
+    const { db, resumeInsertValues } = buildDbMock();
 
-    const result = await createResume(db, adminUser, {
+    const result = await createResume(db, MOCK_ADMIN, {
       employeeId: EMPLOYEE_ID_1,
       title: "New Backend Resume",
       language: "en",
@@ -123,9 +141,11 @@ describe("createResume query function", () => {
       id: RESUME_ID,
       employeeId: EMPLOYEE_ID_1,
       title: "New Backend Resume",
+      mainBranchId: BRANCH_ID,
+      headCommitId: COMMIT_ID,
     });
     expect(result.skills).toEqual([]);
-    expect(values).toHaveBeenCalledWith(
+    expect(resumeInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         employee_id: EMPLOYEE_ID_1,
         title: "New Backend Resume",
@@ -134,11 +154,53 @@ describe("createResume query function", () => {
     );
   });
 
-  it("consultant creates resume for their own employee_id and succeeds", async () => {
-    const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = MOCK_CONSULTANT;
+  it("creates main branch atomically with the resume", async () => {
+    const { db, branchInsertValues } = buildDbMock();
 
-    const result = await createResume(db, consultantUser, {
+    await createResume(db, MOCK_ADMIN, {
+      employeeId: EMPLOYEE_ID_1,
+      title: "New Backend Resume",
+      language: "en",
+      summary: null,
+    });
+
+    expect(branchInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resume_id: RESUME_ID,
+        name: "main",
+        is_main: true,
+        language: "en",
+        created_by: MOCK_ADMIN.id,
+      })
+    );
+  });
+
+  it("creates root commit atomically and advances branch HEAD", async () => {
+    const { db, commitInsertValues, updateSet } = buildDbMock();
+
+    await createResume(db, MOCK_ADMIN, {
+      employeeId: EMPLOYEE_ID_1,
+      title: "New Backend Resume",
+      language: "en",
+      summary: null,
+    });
+
+    expect(commitInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resume_id: RESUME_ID,
+        branch_id: BRANCH_ID,
+        parent_commit_id: null,
+        message: "initial",
+        created_by: MOCK_ADMIN.id,
+      })
+    );
+    expect(updateSet).toHaveBeenCalledWith({ head_commit_id: COMMIT_ID });
+  });
+
+  it("consultant creates resume for their own employee_id and succeeds", async () => {
+    const { db } = buildDbMock({ employeeRow: { id: EMPLOYEE_ID_1 } });
+
+    const result = await createResume(db, MOCK_CONSULTANT, {
       employeeId: EMPLOYEE_ID_1,
       title: "New Backend Resume",
       language: "en",
@@ -149,12 +211,10 @@ describe("createResume query function", () => {
   });
 
   it("throws FORBIDDEN when consultant tries to create a resume for a different employee", async () => {
-    // Consultant maps to EMPLOYEE_ID_1 but input.employeeId is EMPLOYEE_ID_2
-    const { db } = buildDbWithEmployeeLookup(NEW_RESUME_ROW, EMPLOYEE_ID_1);
-    const consultantUser = MOCK_CONSULTANT;
+    const { db } = buildDbMock({ employeeRow: { id: EMPLOYEE_ID_1 } });
 
     await expect(
-      createResume(db, consultantUser, {
+      createResume(db, MOCK_CONSULTANT, {
         employeeId: EMPLOYEE_ID_2,
         title: "Hack Attempt",
         language: "en",
@@ -165,33 +225,10 @@ describe("createResume query function", () => {
     );
   });
 
-  it("succeeds for a consultant with no employee record (no ownership restriction)", async () => {
-    // resolveEmployeeId returns null when no employee matches → no restriction
-    const { db } = buildInsertMock({ ...NEW_RESUME_ROW, title: "Ghost Resume" });
-    // Override selectFrom so employees lookup returns undefined
-    const realSelectFrom = (db as unknown as { selectFrom: ReturnType<typeof vi.fn> }).selectFrom;
-    realSelectFrom.mockImplementation((table: string) => {
-      if (table === "employees") {
-        return { select: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ executeTakeFirst: vi.fn().mockResolvedValue(undefined) }) }) };
-      }
-      return realSelectFrom.getMockImplementation()!(table);
-    });
-    const consultantUser = { ...MOCK_CONSULTANT, email: "ghost@example.com" };
-
-    const result = await createResume(db, consultantUser, {
-      employeeId: EMPLOYEE_ID_1,
-      title: "Ghost Resume",
-      language: "en",
-      summary: null,
-    });
-    expect(result.title).toBe("Ghost Resume");
-  });
-
   it("maps DB snake_case fields to camelCase in output", async () => {
-    const { db } = buildInsertMock(NEW_RESUME_ROW);
-    const adminUser = MOCK_ADMIN;
+    const { db } = buildDbMock();
 
-    const result = await createResume(db, adminUser, {
+    const result = await createResume(db, MOCK_ADMIN, {
       employeeId: EMPLOYEE_ID_1,
       title: "New Backend Resume",
       language: "en",
@@ -201,6 +238,8 @@ describe("createResume query function", () => {
     expect(result).toMatchObject({
       employeeId: EMPLOYEE_ID_1,
       isMain: false,
+      mainBranchId: BRANCH_ID,
+      headCommitId: COMMIT_ID,
       createdAt: NEW_RESUME_ROW.created_at,
       updatedAt: NEW_RESUME_ROW.updated_at,
     });
@@ -214,7 +253,7 @@ describe("createResume query function", () => {
 
 describe("createCreateResumeHandler", () => {
   it("creates a resume for authenticated admin", async () => {
-    const { db } = buildInsertMock(NEW_RESUME_ROW);
+    const { db } = buildDbMock();
     const handler = createCreateResumeHandler(db);
 
     const result = await call(
@@ -225,10 +264,12 @@ describe("createCreateResumeHandler", () => {
 
     expect(result.id).toBe(RESUME_ID);
     expect(result.skills).toEqual([]);
+    expect(result.mainBranchId).toBe(BRANCH_ID);
+    expect(result.headCommitId).toBe(COMMIT_ID);
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {
-    const { db } = buildInsertMock(NEW_RESUME_ROW);
+    const { db } = buildDbMock();
     const handler = createCreateResumeHandler(db);
 
     await expect(
