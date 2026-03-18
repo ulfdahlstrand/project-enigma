@@ -24,6 +24,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import TranslateIcon from "@mui/icons-material/Translate";
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
+import { useAuth } from "../../auth/auth-context";
 import { useCurrentUser } from "../../auth/use-current-user";
 import { LanguageSelector } from "./LanguageSelector";
 
@@ -35,12 +37,20 @@ function stringAvatar(name: string): string {
 
 export function UserMenu() {
   const { t } = useTranslation("common");
+  const { clearToken } = useAuth();
+  const navigate = useNavigate();
   const user = useCurrentUser();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
 
   const handleOpen = (e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
+
+  const handleSignOut = () => {
+    handleClose();
+    clearToken();
+    void navigate({ to: "/login" });
+  };
 
   const displayName = user?.name ?? "User";
   const displayEmail = user?.email ?? "";
@@ -163,7 +173,7 @@ export function UserMenu() {
         <Divider sx={{ my: 0.5 }} />
 
         {/* Sign out */}
-        <MenuItem onClick={handleClose} sx={{ gap: 1 }}>
+        <MenuItem onClick={handleSignOut} sx={{ gap: 1 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <LogoutIcon fontSize="small" sx={{ color: "#5F6368" }} />
           </ListItemIcon>
