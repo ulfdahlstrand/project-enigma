@@ -709,7 +709,7 @@ function ResumeDetailPage() {
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
   const saveVersion = useMutation({
-    mutationFn: (branchId: string) => orpc.saveResumeVersion({ branchId }),
+    mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) });
       if (activeBranch?.headCommitId) {
@@ -726,10 +726,8 @@ function ResumeDetailPage() {
       summary: draftSummary.trim() || null,
     };
     if (isSnapshotMode && activeBranchId) {
-      const branchId = activeBranchId;
-      updateResume.mutate(patch, {
-        onSuccess: () => saveVersion.mutate(branchId),
-      });
+      // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
+      saveVersion.mutate({ branchId: activeBranchId, ...patch });
     } else {
       updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
     }

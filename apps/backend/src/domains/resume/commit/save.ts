@@ -98,9 +98,9 @@ export async function saveResumeVersion(
 
   const content: ResumeCommitContent = {
     title: branch.title,
-    consultantTitle: branch.consultant_title,
-    presentation: branch.presentation ?? [],
-    summary: branch.summary,
+    consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : branch.consultant_title,
+    presentation: input.presentation ?? branch.presentation ?? [],
+    summary: "summary" in input ? input.summary ?? null : branch.summary,
     language: branch.language,
     skills: skillRows.map((s) => ({
       name: s.name,
