@@ -131,6 +131,9 @@
         "docx": "Export Word",
         "exporting": "Exporting…",
         "selectFormat": "Select export format"
+      },
+      "ai": {
+        "improvePresentation": "Improve presentation with AI"
       }
     },
     "edit": {
@@ -277,6 +280,35 @@
     "tableHeaderId": "ID",
     "tableHeaderName": "Name",
     "tableHeaderNote": "Note"
+  },
+  "aiAssistant": {
+    "drawerTitle": "AI Assistant",
+    "inputPlaceholder": "Ask the AI for help…",
+    "sendButton": "Send",
+    "sending": "Sending…",
+    "emptyConversation": "Start the conversation by typing a message below.",
+    "errorSending": "Failed to send message. Please try again.",
+    "errorLoading": "Failed to load conversation. Please try again.",
+    "errorCreating": "Failed to start conversation. Please try again.",
+    "applyChanges": "Apply changes",
+    "historyTab": "History",
+    "chatTab": "Chat",
+    "newConversation": "New conversation",
+    "conversationListEmpty": "No previous conversations for this content.",
+    "statusActive": "Active",
+    "statusClosed": "Closed",
+    "conversationStarted": "Started {{date}}",
+    "suggestion": "Suggested text",
+    "diff": {
+      "title": "Review suggested changes",
+      "apply": "Apply",
+      "keepEditing": "Keep editing",
+      "discard": "Discard",
+      "sideBySide": "Side by side",
+      "unified": "Unified",
+      "original": "Original",
+      "suggested": "Suggested"
+    }
   },
   "userMenu": {
     "language": "Language",

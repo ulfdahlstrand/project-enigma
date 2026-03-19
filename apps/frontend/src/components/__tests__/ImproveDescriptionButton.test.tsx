@@ -3,15 +3,12 @@
  *
  * Acceptance criteria:
  *   - Renders the improve button
- *   - Shows spinner while pending
- *   - Shows AI suggestion and accept/reject buttons on success
- *   - Accept calls onAccept with improved text and clears the preview
- *   - Reject clears the preview
- *   - Shows error alert on failure
+ *   - Clicking it calls openAssistant with correct entity info, system prompt, and callbacks
+ *   - Does NOT render inline preview states (those are handled inside the panel)
  */
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../locales/en/common.json";
@@ -19,29 +16,39 @@ import { renderWithProviders } from "../../test-utils/render";
 import { ImproveDescriptionButton } from "../ImproveDescriptionButton";
 
 // ---------------------------------------------------------------------------
-// Mock orpc client
+// Mock AI assistant context
 // ---------------------------------------------------------------------------
 
-const mockImproveDescription = vi.fn();
+const mockOpenAssistant = vi.fn();
 
-vi.mock("../../orpc-client", () => ({
-  orpc: {
-    improveDescription: (...args: unknown[]) => mockImproveDescription(...args),
-  },
-}));
+vi.mock("../../lib/ai-assistant-context", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ai-assistant-context")>();
+  return {
+    ...actual,
+    useAIAssistantContext: () => ({
+      openAssistant: mockOpenAssistant,
+      isOpen: false,
+      closeAssistant: vi.fn(),
+    }),
+  };
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 // ---------------------------------------------------------------------------
 // Render helper
 // ---------------------------------------------------------------------------
 
-function renderButton(
-  props: {
-    description?: string;
-    role?: string;
-    clientName?: string;
-    onAccept?: (text: string) => void;
-  } = {}
-) {
+const ASSIGNMENT_ID = "550e8400-e29b-41d4-a716-446655440001";
+
+function renderButton(props: {
+  description?: string;
+  role?: string;
+  clientName?: string;
+  onAccept?: (text: string) => void;
+} = {}) {
   const {
     description = "Original description.",
     role,
@@ -51,6 +58,7 @@ function renderButton(
 
   return renderWithProviders(
     <ImproveDescriptionButton
+      assignmentId={ASSIGNMENT_ID}
       description={description}
       role={role}
       clientName={clientName}
@@ -59,15 +67,11 @@ function renderButton(
   );
 }
 
-afterEach(() => {
-  vi.clearAllMocks();
-});
-
 // ---------------------------------------------------------------------------
-// Button renders
+// Tests
 // ---------------------------------------------------------------------------
 
-describe("Button rendering", () => {
+describe("ImproveDescriptionButton", () => {
   it("renders the improve button", () => {
     renderButton();
     expect(
@@ -77,150 +81,51 @@ describe("Button rendering", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not show AI suggestion preview initially", () => {
-    renderButton();
-    expect(
-      screen.queryByLabelText(enCommon.assignment.detail.ai.previewLabel)
-    ).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Pending state
-// ---------------------------------------------------------------------------
-
-describe("Pending state", () => {
-  it("shows spinner and disables button while pending", async () => {
-    // Never resolve so we can observe pending state
-    mockImproveDescription.mockReturnValue(new Promise(() => {}));
+  it("calls openAssistant with correct entityType and entityId when clicked", async () => {
     const user = userEvent.setup();
-    renderButton();
+    renderButton({ description: "My description." });
 
     await user.click(
-      screen.getByRole("button", {
-        name: new RegExp(enCommon.assignment.detail.ai.improveButton),
-      })
+      screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
-    const button = screen.getByRole("button", {
-      name: new RegExp(enCommon.assignment.detail.ai.improving),
-    });
-    expect(button).toBeDisabled();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(mockOpenAssistant).toHaveBeenCalledOnce();
+    const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(args.entityType).toBe("assignment");
+    expect(args.entityId).toBe(ASSIGNMENT_ID);
   });
-});
 
-// ---------------------------------------------------------------------------
-// Success state
-// ---------------------------------------------------------------------------
-
-describe("Success state", () => {
-  it("shows AI suggestion and accept/reject buttons on success", async () => {
-    mockImproveDescription.mockResolvedValue({
-      improvedDescription: "Improved text from AI.",
-    });
+  it("passes originalContent to openAssistant", async () => {
     const user = userEvent.setup();
-    renderButton();
+    renderButton({ description: "Some original text." });
 
     await user.click(
-      screen.getByRole("button", {
-        name: new RegExp(enCommon.assignment.detail.ai.improveButton),
-      })
+      screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText(enCommon.assignment.detail.ai.previewLabel)
-      ).toBeInTheDocument()
-    );
-
-    expect(screen.getByDisplayValue("Improved text from AI.")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: enCommon.assignment.detail.ai.acceptButton })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: enCommon.assignment.detail.ai.rejectButton })
-    ).toBeInTheDocument();
+    const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(args.originalContent).toBe("Some original text.");
   });
 
-  it("calls onAccept with the improved text when Accept is clicked", async () => {
-    mockImproveDescription.mockResolvedValue({
-      improvedDescription: "Improved text from AI.",
-    });
+  it("passes onAccept callback to openAssistant", async () => {
     const onAccept = vi.fn();
     const user = userEvent.setup();
     renderButton({ onAccept });
 
     await user.click(
-      screen.getByRole("button", {
-        name: new RegExp(enCommon.assignment.detail.ai.improveButton),
-      })
+      screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText(enCommon.assignment.detail.ai.previewLabel)
-      ).toBeInTheDocument()
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: enCommon.assignment.detail.ai.acceptButton })
-    );
-
-    expect(onAccept).toHaveBeenCalledWith("Improved text from AI.");
-    expect(
-      screen.queryByLabelText(enCommon.assignment.detail.ai.previewLabel)
-    ).toBeNull();
+    const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(typeof args.onAccept).toBe("function");
+    (args.onAccept as (text: string) => void)("improved text");
+    expect(onAccept).toHaveBeenCalledWith("improved text");
   });
 
-  it("clears the preview when Reject is clicked", async () => {
-    mockImproveDescription.mockResolvedValue({
-      improvedDescription: "Improved text from AI.",
-    });
-    const user = userEvent.setup();
+  it("does not render inline preview states", () => {
     renderButton();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: new RegExp(enCommon.assignment.detail.ai.improveButton),
-      })
-    );
-
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText(enCommon.assignment.detail.ai.previewLabel)
-      ).toBeInTheDocument()
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: enCommon.assignment.detail.ai.rejectButton })
-    );
-
-    expect(
-      screen.queryByLabelText(enCommon.assignment.detail.ai.previewLabel)
-    ).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Error state
-// ---------------------------------------------------------------------------
-
-describe("Error state", () => {
-  it("shows error alert on failure", async () => {
-    mockImproveDescription.mockRejectedValue(new Error("API error"));
-    const user = userEvent.setup();
-    renderButton();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: new RegExp(enCommon.assignment.detail.ai.improveButton),
-      })
-    );
-
-    const errorAlert = await screen.findByText(
-      enCommon.assignment.detail.ai.improveError
-    );
-    expect(errorAlert).toBeInTheDocument();
+    expect(screen.queryByLabelText(enCommon.assignment.detail.ai.previewLabel)).toBeNull();
+    expect(screen.queryByRole("button", { name: enCommon.assignment.detail.ai.acceptButton })).toBeNull();
+    expect(screen.queryByRole("button", { name: enCommon.assignment.detail.ai.rejectButton })).toBeNull();
   });
 });

@@ -85,6 +85,18 @@ import {
   improveDescriptionInputSchema,
   improveDescriptionOutputSchema,
 } from "./ai.js";
+import {
+  createAIConversationInputSchema,
+  createAIConversationOutputSchema,
+  sendAIMessageInputSchema,
+  sendAIMessageOutputSchema,
+  getAIConversationInputSchema,
+  getAIConversationOutputSchema,
+  listAIConversationsInputSchema,
+  listAIConversationsOutputSchema,
+  closeAIConversationInputSchema,
+  closeAIConversationOutputSchema,
+} from "./ai-conversations.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -294,6 +306,41 @@ export {
 export type { ImproveDescriptionInput, ImproveDescriptionOutput } from "./ai.js";
 
 // ---------------------------------------------------------------------------
+// AI conversation schemas — re-exported from ./ai-conversations
+// ---------------------------------------------------------------------------
+
+export {
+  aiMessageRoleSchema,
+  aiConversationSchema,
+  aiMessageSchema,
+  createAIConversationInputSchema,
+  createAIConversationOutputSchema,
+  sendAIMessageInputSchema,
+  sendAIMessageOutputSchema,
+  getAIConversationInputSchema,
+  getAIConversationOutputSchema,
+  listAIConversationsInputSchema,
+  listAIConversationsOutputSchema,
+  closeAIConversationInputSchema,
+  closeAIConversationOutputSchema,
+} from "./ai-conversations.js";
+export type {
+  AIConversation,
+  AIMessage,
+  AIMessageRole,
+  CreateAIConversationInput,
+  CreateAIConversationOutput,
+  SendAIMessageInput,
+  SendAIMessageOutput,
+  GetAIConversationInput,
+  GetAIConversationOutput,
+  ListAIConversationsInput,
+  ListAIConversationsOutput,
+  CloseAIConversationInput,
+  CloseAIConversationOutput,
+} from "./ai-conversations.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -377,6 +424,26 @@ export const contract = oc.router({
     .route({ method: "POST", path: "/ai/improve-description" })
     .input(improveDescriptionInputSchema)
     .output(improveDescriptionOutputSchema),
+  createAIConversation: oc
+    .route({ method: "POST", path: "/ai/conversations" })
+    .input(createAIConversationInputSchema)
+    .output(createAIConversationOutputSchema),
+  sendAIMessage: oc
+    .route({ method: "POST", path: "/ai/conversations/message" })
+    .input(sendAIMessageInputSchema)
+    .output(sendAIMessageOutputSchema),
+  getAIConversation: oc
+    .route({ method: "GET", path: "/ai/conversations/{conversationId}" })
+    .input(getAIConversationInputSchema)
+    .output(getAIConversationOutputSchema),
+  listAIConversations: oc
+    .route({ method: "GET", path: "/ai/conversations" })
+    .input(listAIConversationsInputSchema)
+    .output(listAIConversationsOutputSchema),
+  closeAIConversation: oc
+    .route({ method: "POST", path: "/ai/conversations/close" })
+    .input(closeAIConversationInputSchema)
+    .output(closeAIConversationOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

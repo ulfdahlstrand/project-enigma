@@ -131,6 +131,9 @@
         "docx": "Exportera Word",
         "exporting": "Exporterar…",
         "selectFormat": "Välj exportformat"
+      },
+      "ai": {
+        "improvePresentation": "Förbättra presentation med AI"
       }
     },
     "edit": {
@@ -277,6 +280,35 @@
     "tableHeaderId": "ID",
     "tableHeaderName": "Namn",
     "tableHeaderNote": "Anteckning"
+  },
+  "aiAssistant": {
+    "drawerTitle": "AI-assistent",
+    "inputPlaceholder": "Skriv ett meddelande till AI:n…",
+    "sendButton": "Skicka",
+    "sending": "Skickar…",
+    "emptyConversation": "Starta konversationen genom att skriva ett meddelande nedan.",
+    "errorSending": "Misslyckades med att skicka meddelande. Försök igen.",
+    "errorLoading": "Misslyckades med att ladda konversationen. Försök igen.",
+    "errorCreating": "Misslyckades med att starta konversationen. Försök igen.",
+    "applyChanges": "Tillämpa ändringar",
+    "historyTab": "Historik",
+    "chatTab": "Chatt",
+    "newConversation": "Ny konversation",
+    "conversationListEmpty": "Inga tidigare konversationer för detta innehåll.",
+    "statusActive": "Aktiv",
+    "statusClosed": "Stängd",
+    "conversationStarted": "Startad {{date}}",
+    "suggestion": "Föreslagen text",
+    "diff": {
+      "title": "Granska föreslagna ändringar",
+      "apply": "Tillämpa",
+      "keepEditing": "Fortsätt redigera",
+      "discard": "Avvisa",
+      "sideBySide": "Sida vid sida",
+      "unified": "Samlad vy",
+      "original": "Original",
+      "suggested": "Förslag"
+    }
   },
   "userMenu": {
     "language": "Språk",

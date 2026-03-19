@@ -28,6 +28,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { theme } from "../lib/theme";
 import enCommon from "../locales/en/common.json";
+import { AIAssistantProvider } from "../lib/ai-assistant-context";
 
 // ---------------------------------------------------------------------------
 // i18n instance used by all tests — real locale file, synchronous init
@@ -90,7 +91,9 @@ export function renderWithProviders(
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <QueryClientProvider client={queryClient}>
-          <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
+          <AIAssistantProvider>
+            <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
+          </AIAssistantProvider>
         </QueryClientProvider>
       </ThemeProvider>
     );
