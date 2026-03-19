@@ -48,6 +48,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { SaveVersionButton } from "../../components/SaveVersionButton";
 import { VariantSwitcher } from "../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../components/ai-assistant/ImprovePresentationFab";
+import { SkillsEditor } from "../../components/SkillsEditor";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -316,7 +317,7 @@ function CoverPageContent({
 
 interface SkillsPageContentProps {
   employeeName: string;
-  skills: Array<{ id: string; name: string; category: string | null }>;
+  skills: Array<{ id: string; name: string; category: string | null; sortOrder?: number }>;
   degrees: string[];
   certifications: string[];
   languages: string[];
@@ -332,16 +333,28 @@ function SkillsPageContent({
   const { t } = useTranslation("common");
 
   // Group skills by category; null/empty category → key ""
-  const grouped = skills.reduce<Record<string, string[]>>((acc, skill) => {
+  // Track min sortOrder per category to preserve user-defined ordering
+  const grouped = skills.reduce<Record<string, { names: string[]; minSortOrder: number }>>((acc, skill) => {
     const key = skill.category?.trim() || "";
-    return { ...acc, [key]: [...(acc[key] ?? []), skill.name] };
+    const so = skill.sortOrder ?? 0;
+    const existing = acc[key];
+    return {
+      ...acc,
+      [key]: {
+        names: [...(existing?.names ?? []), skill.name],
+        minSortOrder: existing ? Math.min(existing.minSortOrder, so) : so,
+      },
+    };
   }, {});
 
-  const categories = Object.entries(grouped).sort(([a], [b]) => {
-    if (a === "") return 1;   // uncategorised to the end
-    if (b === "") return -1;
-    return a.localeCompare(b);
-  });
+  const categories = Object.entries(grouped)
+    .sort(([a, aData], [b, bData]) => {
+      if (a === "") return 1;   // uncategorised to the end
+      if (b === "") return -1;
+      const diff = aData.minSortOrder - bData.minSortOrder;
+      return diff !== 0 ? diff : a.localeCompare(b);
+    })
+    .map(([label, { names }]) => [label, names] as [string, string[]]);
 
   // Split categories across two columns (~half each)
   const mid = Math.ceil(categories.length / 2);
@@ -711,12 +724,13 @@ function ResumeDetailPage() {
 
   const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
   const skills = snapshotContent?.skills
-    ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null }))
+    ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
     : (resume?.skills ?? []);
   const hasSkills = skills.length > 0;
+  const showSkillsPage = hasSkills || (isEditing && !isSnapshotMode);
   const hasAssignments = assignments.length > 0;
-  const totalPages = 1 + (hasSkills ? 1 : 0) + (hasAssignments ? 1 : 0);
-  const skillsPage = hasSkills ? 2 : null;
+  const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);
+  const skillsPage = showSkillsPage ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
   const handleSave = () => {
@@ -824,20 +838,28 @@ function ResumeDetailPage() {
         </DocumentPage>
 
         {/* Page 2 — Skills */}
-        {hasSkills && skillsPage !== null && (
+        {showSkillsPage && skillsPage !== null && (
           <DocumentPage
             title={resumeTitle}
             language={language}
             page={skillsPage}
             totalPages={totalPages}
           >
-            <SkillsPageContent
-              employeeName={employee?.name ?? ""}
-              skills={skills}
-              degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-              certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-              languages={education.filter((e) => e.type === "language").map((e) => e.value)}
-            />
+            {isEditing && !isSnapshotMode ? (
+              <SkillsEditor
+                resumeId={id}
+                skills={resume?.skills ?? []}
+                queryKey={getResumeQueryKey(id)}
+              />
+            ) : (
+              <SkillsPageContent
+                employeeName={employee?.name ?? ""}
+                skills={skills}
+                degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+                certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+                languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+              />
+            )}
           </DocumentPage>
         )}
 

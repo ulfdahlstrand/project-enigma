@@ -120,6 +120,29 @@ export const createResumeSkillInputSchema = z.object({
 export const createResumeSkillOutputSchema = resumeSkillSchema;
 
 // ---------------------------------------------------------------------------
+// updateResumeSkill schemas
+// ---------------------------------------------------------------------------
+
+export const updateResumeSkillInputSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().min(1).optional(),
+    level: z.string().nullable().optional(),
+    category: z.string().nullable().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .refine(
+    (d) =>
+      d.name !== undefined ||
+      d.level !== undefined ||
+      d.category !== undefined ||
+      d.sortOrder !== undefined,
+    { message: "At least one field must be provided" }
+  );
+
+export const updateResumeSkillOutputSchema = resumeSkillSchema;
+
+// ---------------------------------------------------------------------------
 // deleteResumeSkill schemas
 // ---------------------------------------------------------------------------
 
