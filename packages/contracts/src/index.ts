@@ -80,6 +80,8 @@ import {
   removeBranchAssignmentOutputSchema,
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
+  listBranchAssignmentsFullInputSchema,
+  listBranchAssignmentsFullOutputSchema,
 } from "./branch-assignments.js";
 import {
   improveDescriptionInputSchema,
@@ -292,8 +294,10 @@ export {
   removeBranchAssignmentOutputSchema,
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
+  listBranchAssignmentsFullInputSchema,
+  listBranchAssignmentsFullOutputSchema,
 } from "./branch-assignments.js";
-export type { BranchAssignmentItem } from "./branch-assignments.js";
+export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
 
 // ---------------------------------------------------------------------------
 // AI schemas — re-exported from ./ai
@@ -417,6 +421,9 @@ export const contract = oc.router({
   updateBranchAssignment: oc
     .input(updateBranchAssignmentInputSchema)
     .output(updateBranchAssignmentOutputSchema),
+  listBranchAssignmentsFull: oc
+    .input(listBranchAssignmentsFullInputSchema)
+    .output(listBranchAssignmentsFullOutputSchema),
   compareResumeCommits: oc
     .input(compareResumeCommitsInputSchema)
     .output(compareResumeCommitsOutputSchema),

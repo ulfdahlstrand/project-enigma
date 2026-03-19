@@ -601,9 +601,9 @@ function ResumeDetailPage() {
   });
 
   const { data: liveAssignments = [] } = useQuery({
-    queryKey: ["listAssignments", "resume", id],
-    queryFn: () => orpc.listAssignments({ resumeId: id }),
-    enabled: !!resume && !isSnapshotMode,
+    queryKey: ["listBranchAssignmentsFull", activeBranchId],
+    queryFn: () => orpc.listBranchAssignmentsFull({ branchId: activeBranchId! }),
+    enabled: !!activeBranchId,
   });
 
   const { data: education = [] } = useQuery({
@@ -657,17 +657,8 @@ function ResumeDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
-  // Assignments: use snapshot when non-main branch, otherwise live
-  const assignments = isSnapshotMode && branchCommit
-    ? branchCommit.content.assignments.map((a) => ({
-        id: a.assignmentId,
-        clientName: a.clientName,
-        role: a.role,
-        startDate: a.startDate,
-        endDate: a.endDate ?? null,
-        isCurrent: a.endDate == null,
-      }))
-    : liveAssignments;
+  // Assignments always come from the live branch_assignments join — same source for all branches
+  const assignments = liveAssignments;
 
   if (isLoading) {
     return (
@@ -763,7 +754,7 @@ function ResumeDetailPage() {
             search={{
               resumeId: id,
               employeeId: resume?.employeeId,
-              ...(isSnapshotMode && activeBranchId ? { branchId: activeBranchId } : {}),
+              ...(activeBranchId ? { branchId: activeBranchId } : {}),
             }}
           >
             {t("resume.detail.addAssignment")}

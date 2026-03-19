@@ -25,6 +25,7 @@ import {
   removeBranchAssignmentHandler,
   updateBranchAssignmentHandler,
   listBranchAssignmentsHandler,
+  listBranchAssignmentsFullHandler,
 } from "./domains/resume/index.js";
 import {
   listAssignmentsHandler,
@@ -94,6 +95,7 @@ export const router = implement(contract).router({
   forkResumeBranch: forkResumeBranchHandler,
   listResumeBranches: listResumeBranchesHandler,
   listBranchAssignments: listBranchAssignmentsHandler,
+  listBranchAssignmentsFull: listBranchAssignmentsFullHandler,
   addBranchAssignment: addBranchAssignmentHandler,
   removeBranchAssignment: removeBranchAssignmentHandler,
   updateBranchAssignment: updateBranchAssignmentHandler,

@@ -70,13 +70,8 @@ function NewAssignmentPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (input: Parameters<typeof orpc.createAssignment>[0]) => {
-      const assignment = await orpc.createAssignment(input);
-      if (branchId) {
-        await orpc.addBranchAssignment({ branchId, assignmentId: assignment.id });
-      }
-      return assignment;
-    },
+    mutationFn: (input: Parameters<typeof orpc.createAssignment>[0]) =>
+      orpc.createAssignment(input),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY });
       if (branchId && resumeId) {
@@ -95,8 +90,9 @@ function NewAssignmentPage() {
       .filter(Boolean);
     mutation.mutate({
       employeeId,
-      // When adding to a branch, don't link to the main resume
+      // branchId links atomically via branch_assignments; resumeId kept for main-branch backward compat
       resumeId: branchId ? null : (resumeId ?? null),
+      branchId: branchId ?? undefined,
       clientName: data.clientName.trim(),
       role: data.role.trim(),
       description: data.description,

@@ -51,6 +51,8 @@ export const getAssignmentOutputSchema = assignmentSchema;
 export const createAssignmentInputSchema = z.object({
   employeeId: z.string().uuid(),
   resumeId: z.string().uuid().nullable().optional(),
+  /** When provided, atomically links the new assignment to this branch via branch_assignments. */
+  branchId: z.string().uuid().optional(),
   clientName: z.string().min(1),
   role: z.string().min(1),
   description: z.string().default(""),
