@@ -12,9 +12,9 @@ import Button from "@mui/material/Button";
  */
 import { z } from "zod";
 import { createFileRoute, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import type { ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useLayoutEffect } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -45,6 +45,7 @@ import RouterButton from "../../components/RouterButton";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SaveVersionButton } from "../../components/SaveVersionButton";
 import { VariantSwitcher } from "../../components/VariantSwitcher";
+import { ImprovePresentationFab } from "../../components/ai-assistant/ImprovePresentationFab";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -160,6 +161,7 @@ interface CoverPageContentProps {
   presentation: string[];
   summary: string | null;
   highlightedAssignments: Array<{ role: string; clientName: string }>;
+  presentationRef?: RefObject<HTMLDivElement | null>;
 }
 
 function CoverPageContent({
@@ -168,6 +170,7 @@ function CoverPageContent({
   presentation,
   summary,
   highlightedAssignments,
+  presentationRef,
 }: CoverPageContentProps) {
   const { t } = useTranslation("common");
 
@@ -196,7 +199,7 @@ function CoverPageContent({
 
       {/* Presentation paragraphs */}
       {presentation.length > 0 && (
-        <Box sx={{ mb: 3 }}>
+        <Box {...(presentationRef && { ref: presentationRef })} sx={{ mb: 3 }}>
           {presentation.map((para, i) => (
             <Typography key={i} variant="body1" sx={{ mb: 1, textAlign: "justify" }}>
               {para}
@@ -518,6 +521,7 @@ function ResumeDetailPage() {
   const { id } = useParams({ from: Route.fullPath });
   const { branchId: selectedBranchId } = useSearch({ from: Route.fullPath });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: resume, isLoading, isError, error } = useQuery({
     queryKey: getResumeQueryKey(id),
@@ -561,6 +565,26 @@ function ResumeDetailPage() {
     queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
     enabled: !!resume?.employeeId,
   });
+
+  const updateResume = useMutation({
+    mutationFn: (patch: { presentation: string[] }) =>
+      orpc.updateResume({ id, ...patch }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+    },
+  });
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const presentationRef = useRef<HTMLDivElement>(null);
+  const [fabTop, setFabTop] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!presentationRef.current || !canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const presRect = presentationRef.current.getBoundingClientRect();
+    setFabTop(presRect.top - canvasRect.top);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee, resume, branchCommit]);
 
   // Assignments: use snapshot when non-main branch, otherwise live
   const assignments = isSnapshotMode && branchCommit
@@ -658,7 +682,9 @@ function ResumeDetailPage() {
 
       {/* Gray canvas */}
       <Box
+        ref={canvasRef}
         sx={{
+          position: "relative",
           bgcolor: "background.default",
           minHeight: "calc(100vh - 56px)",
           py: 4,
@@ -683,6 +709,7 @@ function ResumeDetailPage() {
             presentation={presentation}
             summary={summary}
             highlightedAssignments={highlighted}
+            presentationRef={presentationRef}
           />
         </DocumentPage>
 
@@ -702,6 +729,24 @@ function ResumeDetailPage() {
               languages={education.filter((e) => e.type === "language").map((e) => e.value)}
             />
           </DocumentPage>
+        )}
+
+        {/* AI improvement FAB — sits to the right of the document at presentation height */}
+        {presentation.length > 0 && (
+          <ImprovePresentationFab
+            resumeId={id}
+            presentation={presentation}
+            consultantTitle={consultantTitle}
+            employeeName={employee?.name}
+            top={fabTop}
+            onAccept={(improved) => {
+              const paragraphs = improved
+                .split(/\n\n+/)
+                .map((p) => p.trim())
+                .filter(Boolean);
+              updateResume.mutate({ presentation: paragraphs });
+            }}
+          />
         )}
 
         {/* Page 3 — Full assignments table */}

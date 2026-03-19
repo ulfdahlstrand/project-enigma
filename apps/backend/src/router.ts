@@ -39,7 +39,14 @@ import {
   deleteEducationHandler,
 } from "./domains/education/index.js";
 import { importCvHandler } from "./domains/import/index.js";
-import { improveDescriptionHandler } from "./domains/ai/index.js";
+import {
+  improveDescriptionHandler,
+  createAIConversationHandler,
+  sendAIMessageHandler,
+  getAIConversationHandler,
+  listAIConversationsHandler,
+  closeAIConversationHandler,
+} from "./domains/ai/index.js";
 import {
   exportResumePdfHandler,
   exportResumeDocxHandler,
@@ -92,6 +99,11 @@ export const router = implement(contract).router({
   updateBranchAssignment: updateBranchAssignmentHandler,
   compareResumeCommits: compareResumeCommitsHandler,
   improveDescription: improveDescriptionHandler,
+  createAIConversation: createAIConversationHandler,
+  sendAIMessage: sendAIMessageHandler,
+  getAIConversation: getAIConversationHandler,
+  listAIConversations: listAIConversationsHandler,
+  closeAIConversation: closeAIConversationHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

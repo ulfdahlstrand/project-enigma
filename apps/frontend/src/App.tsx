@@ -24,6 +24,8 @@ import { ColorModeProvider, useColorMode } from "./lib/color-mode-context";
 import { queryClient } from "./query-client";
 import { router } from "./router";
 import { AuthProvider } from "./auth/auth-context";
+import { AIAssistantProvider } from "./lib/ai-assistant-context";
+import { AIAssistantDrawer } from "./components/ai-assistant/AIAssistantDrawer";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
@@ -35,7 +37,10 @@ function ThemedApp() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <AIAssistantProvider>
+          <RouterProvider router={router} />
+          <AIAssistantDrawer />
+        </AIAssistantProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

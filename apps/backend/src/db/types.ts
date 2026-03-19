@@ -206,6 +206,38 @@ export type BranchAssignment = Selectable<BranchAssignmentTable>;
 export type NewBranchAssignment = Insertable<BranchAssignmentTable>;
 export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
 
+// ---------------------------------------------------------------------------
+// AI assistant tables
+// ---------------------------------------------------------------------------
+
+export type AIMessageRole = "user" | "assistant";
+
+export interface AIConversationTable {
+  id: Generated<string>;
+  created_by: string;
+  entity_type: string;
+  entity_id: string;
+  system_prompt: Generated<string>;
+  title: string | null;
+  is_closed: Generated<boolean>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type AIConversation = Selectable<AIConversationTable>;
+export type NewAIConversation = Insertable<AIConversationTable>;
+
+export interface AIMessageTable {
+  id: Generated<string>;
+  conversation_id: string;
+  role: AIMessageRole;
+  content: string;
+  created_at: Generated<Date>;
+}
+
+export type AIMessage = Selectable<AIMessageTable>;
+export type NewAIMessage = Insertable<AIMessageTable>;
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
@@ -217,6 +249,8 @@ export interface Database {
   assignments: AssignmentTable;
   education: EducationTable;
   export_records: ExportRecordTable;
+  ai_conversations: AIConversationTable;
+  ai_messages: AIMessageTable;
 }
 
 // ---------------------------------------------------------------------------

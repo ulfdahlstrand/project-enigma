@@ -207,6 +207,7 @@ function AssignmentDetailPage() {
           fullWidth
         />
         <ImproveDescriptionButton
+          assignmentId={id}
           description={watchedDescription}
           role={watchedRole}
           clientName={watchedClientName}
