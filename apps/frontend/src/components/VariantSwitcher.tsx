@@ -15,6 +15,7 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { useResumeBranches } from "../hooks/versioning";
+import RouterButton from "./RouterButton";
 
 interface VariantSwitcherProps {
   resumeId: string;
@@ -27,36 +28,48 @@ export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherPr
   const navigate = useNavigate();
   const { data: branches } = useResumeBranches(resumeId);
 
-  if (!branches || branches.length <= 1) return null;
+  if (!branches) return null;
 
   return (
-    <FormControl size="small" sx={{ minWidth: 180 }}>
-      <InputLabel>{t("resume.variantSwitcher.label")}</InputLabel>
-      <Select
-        value={currentBranchId ?? ""}
-        label={t("resume.variantSwitcher.label")}
-        onChange={(e) => {
-          const selectedBranchId = e.target.value;
-          if (selectedBranchId !== currentBranchId) {
-            void navigate({
-              to: "/resumes/$id",
-              params: { id: resumeId },
-              search: { branchId: selectedBranchId },
-            });
-          }
-        }}
+    <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
+      {branches.length > 1 && (
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel>{t("resume.variantSwitcher.label")}</InputLabel>
+          <Select
+            value={currentBranchId ?? ""}
+            label={t("resume.variantSwitcher.label")}
+            onChange={(e) => {
+              const selectedBranchId = e.target.value;
+              if (selectedBranchId !== currentBranchId) {
+                void navigate({
+                  to: "/resumes/$id",
+                  params: { id: resumeId },
+                  search: { branchId: selectedBranchId },
+                });
+              }
+            }}
+          >
+            {branches.map((branch) => (
+              <MenuItem key={branch.id} value={branch.id}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {branch.name}
+                  {branch.isMain && (
+                    <Chip label={t("resume.variants.mainBadge")} size="small" color="primary" />
+                  )}
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+      <RouterButton
+        variant="outlined"
+        size="small"
+        to="/resumes/$id/variants/"
+        params={{ id: resumeId }}
       >
-        {branches.map((branch) => (
-          <MenuItem key={branch.id} value={branch.id}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {branch.name}
-              {branch.isMain && (
-                <Chip label={t("resume.variants.mainBadge")} size="small" color="primary" />
-              )}
-            </Box>
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+        {t("resume.variantSwitcher.manageVariants")}
+      </RouterButton>
+    </Box>
   );
 }

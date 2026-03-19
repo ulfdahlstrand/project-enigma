@@ -126,10 +126,17 @@ function VariantsPage() {
           variant="contained"
           disabled={!commits?.length}
           onClick={openDialog}
+          title={!commits?.length ? t("resume.variants.createButtonDisabledTooltip") : undefined}
         >
           {t("resume.variants.createButton")}
         </Button>
       </Box>
+
+      {commits !== undefined && commits.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {t("resume.variants.noVersionsWarning")}
+        </Alert>
+      )}
 
       {!branches || branches.length === 0 ? (
         <Typography variant="body1">{t("resume.variants.empty")}</Typography>
@@ -215,7 +222,9 @@ function VariantsPage() {
               </Select>
             </FormControl>
           ) : (
-            <Alert severity="info">{t("resume.variants.createDialog.noVersions")}</Alert>
+            <Alert severity="info">
+              {t("resume.variants.createDialog.noVersions")}
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>

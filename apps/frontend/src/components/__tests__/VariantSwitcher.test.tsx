@@ -3,7 +3,7 @@
  *
  * Acceptance criteria:
  *   - Returns null when branches is undefined
- *   - Returns null when there is only one branch
+ *   - Shows "Manage variants" link even with only one branch
  *   - Renders dropdown when there are multiple branches
  *   - Shows branch names as options
  *   - Navigates to /resumes/$id when a different branch is selected
@@ -40,12 +40,14 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    Link: React.forwardRef(function MockLink(
-      { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
-      ref: React.Ref<HTMLAnchorElement>
-    ) {
-      return <a href={to} ref={ref} {...props}>{children}</a>;
-    }),
+    createLink: (Comp: React.ComponentType<React.AnchorHTMLAttributes<HTMLAnchorElement>>) =>
+      React.forwardRef(function MockRouterLink(
+        { to, params, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; params?: Record<string, string> },
+        ref: React.Ref<HTMLAnchorElement>
+      ) {
+        const href = to && params ? Object.entries(params).reduce((s, [k, v]) => s.replace(`$${k}`, v), to) : to;
+        return <Comp href={href} ref={ref as never} {...props}>{children}</Comp>;
+      }),
   };
 });
 
@@ -88,11 +90,19 @@ describe("Hidden state", () => {
     const { container } = renderSwitcher();
     expect(container.firstChild).toBeNull();
   });
+});
 
-  it("renders nothing when there is only one branch", () => {
+describe("Single branch state", () => {
+  it("shows manage variants link when there is only one branch", () => {
     mockUseResumeBranches.mockReturnValue({ data: ONE_BRANCH });
-    const { container } = renderSwitcher();
-    expect(container.firstChild).toBeNull();
+    renderSwitcher();
+    expect(screen.getByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
+  });
+
+  it("does not render the dropdown when there is only one branch", () => {
+    mockUseResumeBranches.mockReturnValue({ data: ONE_BRANCH });
+    renderSwitcher();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
 
@@ -113,6 +123,12 @@ describe("Visible state", () => {
     mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
     renderSwitcher();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("shows manage variants link alongside the dropdown", () => {
+    mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
+    renderSwitcher();
+    expect(screen.getByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
   });
 });
 

@@ -184,6 +184,8 @@
       "tableHeaderLastSaved": "Last saved",
       "mainBadge": "Main",
       "createButton": "Create variant",
+      "createButtonDisabledTooltip": "Save a version on the resume page first",
+      "noVersionsWarning": "No saved versions yet. Go back to the resume and click \"Save version\" before creating a variant.",
       "createDialog": {
         "title": "Create new variant",
         "nameLabel": "Variant name",
@@ -225,7 +227,8 @@
       "error": "Failed to save version. Please try again."
     },
     "variantSwitcher": {
-      "label": "Variant"
+      "label": "Variant",
+      "manageVariants": "Manage variants"
     }
   },
   "assignment": {

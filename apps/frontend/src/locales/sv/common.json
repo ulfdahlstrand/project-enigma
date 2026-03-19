@@ -184,6 +184,8 @@
       "tableHeaderLastSaved": "Senast sparad",
       "mainBadge": "Huvud",
       "createButton": "Skapa variant",
+      "createButtonDisabledTooltip": "Spara en version på meritförteckningssidan först",
+      "noVersionsWarning": "Inga sparade versioner ännu. Gå tillbaka till meritförteckningen och klicka på \"Spara version\" innan du skapar en variant.",
       "createDialog": {
         "title": "Skapa ny variant",
         "nameLabel": "Variantnamn",
@@ -225,7 +227,8 @@
       "error": "Det gick inte att spara versionen. Försök igen."
     },
     "variantSwitcher": {
-      "label": "Variant"
+      "label": "Variant",
+      "manageVariants": "Hantera varianter"
     }
   },
   "assignment": {
