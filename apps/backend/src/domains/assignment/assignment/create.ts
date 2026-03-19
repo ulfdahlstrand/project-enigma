@@ -17,7 +17,6 @@ export async function createAssignment(db: Kysely<Database>, input: CreateAssign
         .insertInto("assignments")
         .values({
           employee_id: input.employeeId,
-          resume_id: input.resumeId ?? null,
           client_name: input.clientName,
           role: input.role,
           description: input.description ?? "",
@@ -45,7 +44,6 @@ export async function createAssignment(db: Kysely<Database>, input: CreateAssign
     .insertInto("assignments")
     .values({
       employee_id: input.employeeId,
-      resume_id: input.resumeId ?? null,
       client_name: input.clientName,
       role: input.role,
       description: input.description ?? "",

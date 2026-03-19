@@ -44,7 +44,6 @@ export async function listBranchAssignmentsFull(
     .select([
       "a.id",
       "a.employee_id",
-      "a.resume_id",
       "a.client_name",
       "a.role",
       "a.description",
@@ -67,7 +66,6 @@ export async function listBranchAssignmentsFull(
   return rows.map((row) => ({
     id: row.id,
     employeeId: row.employee_id,
-    resumeId: row.resume_id,
     clientName: row.client_name,
     role: row.role,
     description: row.description,

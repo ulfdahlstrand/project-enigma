@@ -60,12 +60,15 @@ async function buildFromLive(
       .where("id", "=", employeeId)
       .executeTakeFirst(),
     db
-      .selectFrom("assignments")
-      .selectAll()
-      .where("resume_id", "=", resumeId)
-      .orderBy("is_current", "desc")
-      .orderBy("end_date", "desc")
-      .orderBy("start_date", "desc")
+      .selectFrom("branch_assignments as ba")
+      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
+      .innerJoin("resume_branches as rb", "rb.id", "ba.branch_id")
+      .selectAll("a")
+      .where("rb.resume_id", "=", resumeId)
+      .where("rb.is_main", "=", true)
+      .orderBy("a.is_current", "desc")
+      .orderBy("a.end_date", "desc")
+      .orderBy("a.start_date", "desc")
       .execute(),
     db
       .selectFrom("resume_skills")

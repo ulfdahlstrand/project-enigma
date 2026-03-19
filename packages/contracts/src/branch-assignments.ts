@@ -84,7 +84,6 @@ export const listBranchAssignmentsFullInputSchema = z.object({
 const fullAssignmentSchema = z.object({
   id: z.string().uuid(),
   employeeId: z.string().uuid(),
-  resumeId: z.string().uuid().nullable(),
   clientName: z.string(),
   role: z.string(),
   description: z.string(),
