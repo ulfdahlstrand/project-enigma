@@ -48,6 +48,8 @@ import {
 import {
   importCvInputSchema,
   importCvOutputSchema,
+  parseCvDocxInputSchema,
+  parseCvDocxOutputSchema,
 } from "./import-cv.js";
 import {
   exportResumeMarkdownInputSchema,
@@ -220,6 +222,8 @@ export {
   cvJsonSchema,
   importCvInputSchema,
   importCvOutputSchema,
+  parseCvDocxInputSchema,
+  parseCvDocxOutputSchema,
 } from "./import-cv.js";
 export type { CvJson } from "./import-cv.js";
 
@@ -385,6 +389,7 @@ export const contract = oc.router({
   createEducation: oc.input(createEducationInputSchema).output(createEducationOutputSchema),
   deleteEducation: oc.input(deleteEducationInputSchema).output(deleteEducationOutputSchema),
   importCv: oc.input(importCvInputSchema).output(importCvOutputSchema),
+  parseCvDocx: oc.input(parseCvDocxInputSchema).output(parseCvDocxOutputSchema),
   exportResumeMarkdown: oc
     .input(exportResumeMarkdownInputSchema)
     .output(exportResumeMarkdownOutputSchema),

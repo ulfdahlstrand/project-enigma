@@ -39,7 +39,7 @@ import {
   createEducationHandler,
   deleteEducationHandler,
 } from "./domains/education/index.js";
-import { importCvHandler } from "./domains/import/index.js";
+import { importCvHandler, parseCvDocxHandler } from "./domains/import/index.js";
 import {
   improveDescriptionHandler,
   createAIConversationHandler,
@@ -86,6 +86,7 @@ export const router = implement(contract).router({
   createEducation: createEducationHandler,
   deleteEducation: deleteEducationHandler,
   importCv: importCvHandler,
+  parseCvDocx: parseCvDocxHandler,
   exportResumeMarkdown: exportResumeMarkdownHandler,
   exportResumePdf: exportResumePdfHandler,
   exportResumeDocx: exportResumeDocxHandler,

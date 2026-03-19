@@ -87,7 +87,10 @@
       "educationSkipped": "Education entries skipped (duplicates): {{count}}",
       "languageLabel": "CV language",
       "languageSv": "Swedish",
-      "languageEn": "English"
+      "languageEn": "English",
+      "uploadDocxButton": "Parse DOCX",
+      "parsingDocx": "Parsing…",
+      "docxError": "Failed to parse DOCX. Please try again."
     }
   },
   "resume": {

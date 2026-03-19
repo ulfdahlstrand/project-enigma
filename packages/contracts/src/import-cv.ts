@@ -58,3 +58,16 @@ export const importCvOutputSchema = z.object({
   educationCreated: z.number(),
   educationSkipped: z.number(),
 });
+
+// ---------------------------------------------------------------------------
+// parseCvDocx input / output
+// ---------------------------------------------------------------------------
+
+export const parseCvDocxInputSchema = z.object({
+  docxBase64: z.string(),
+  language: z.string().default("en"),
+});
+
+export const parseCvDocxOutputSchema = z.object({
+  cvJson: cvJsonSchema,
+});
