@@ -65,7 +65,7 @@ export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherPr
       <RouterButton
         variant="outlined"
         size="small"
-        to="/resumes/$id/variants/"
+        to="/resumes/$id/variants"
         params={{ id: resumeId }}
       >
         {t("resume.variantSwitcher.manageVariants")}

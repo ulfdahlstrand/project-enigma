@@ -41,13 +41,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...actual,
     useNavigate: () => mockNavigate,
     createLink: (Comp: React.ComponentType<React.AnchorHTMLAttributes<HTMLAnchorElement>>) =>
-      React.forwardRef(function MockRouterLink(
-        { to, params, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; params?: Record<string, string> },
-        ref: React.Ref<HTMLAnchorElement>
-      ) {
+      function MockRouterLink({ to, params, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; params?: Record<string, string> }) {
         const href = to && params ? Object.entries(params).reduce((s, [k, v]) => s.replace(`$${k}`, v), to) : to;
-        return <Comp href={href} ref={ref as never} {...props}>{children}</Comp>;
-      }),
+        return <Comp href={href} {...props}>{children}</Comp>;
+      },
   };
 });
 
