@@ -81,6 +81,10 @@ import {
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
 } from "./branch-assignments.js";
+import {
+  improveDescriptionInputSchema,
+  improveDescriptionOutputSchema,
+} from "./ai.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -280,6 +284,16 @@ export {
 export type { BranchAssignmentItem } from "./branch-assignments.js";
 
 // ---------------------------------------------------------------------------
+// AI schemas — re-exported from ./ai
+// ---------------------------------------------------------------------------
+
+export {
+  improveDescriptionInputSchema,
+  improveDescriptionOutputSchema,
+} from "./ai.js";
+export type { ImproveDescriptionInput, ImproveDescriptionOutput } from "./ai.js";
+
+// ---------------------------------------------------------------------------
 // Router contract
 //
 // Defines the shape of every procedure (input + output schemas) without any
@@ -359,6 +373,10 @@ export const contract = oc.router({
   compareResumeCommits: oc
     .input(compareResumeCommitsInputSchema)
     .output(compareResumeCommitsOutputSchema),
+  improveDescription: oc
+    .route({ method: "POST", path: "/ai/improve-description" })
+    .input(improveDescriptionInputSchema)
+    .output(improveDescriptionOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

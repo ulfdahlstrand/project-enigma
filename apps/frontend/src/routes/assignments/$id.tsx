@@ -15,6 +15,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../orpc-client";
 import { LIST_ASSIGNMENTS_QUERY_KEY } from ".";
+import { ImproveDescriptionButton } from "../../components/ImproveDescriptionButton";
 
 export const getAssignmentQueryKey = (id: string) =>
   ["getAssignment", id] as const;
@@ -56,7 +57,7 @@ function AssignmentDetailPage() {
     retry: false,
   });
 
-  const { register, handleSubmit, reset, control } = useForm<EditAssignmentFormValues>({
+  const { register, handleSubmit, reset, control, setValue, watch } = useForm<EditAssignmentFormValues>({
     resolver: zodResolver(editAssignmentFormSchema),
     defaultValues: {
       clientName: "",
@@ -69,6 +70,10 @@ function AssignmentDetailPage() {
       keywords: "",
     },
   });
+
+  const watchedDescription = watch("description");
+  const watchedRole = watch("role");
+  const watchedClientName = watch("clientName");
 
   useEffect(() => {
     if (assignment) {
@@ -200,6 +205,12 @@ function AssignmentDetailPage() {
           multiline
           minRows={4}
           fullWidth
+        />
+        <ImproveDescriptionButton
+          description={watchedDescription}
+          role={watchedRole}
+          clientName={watchedClientName}
+          onAccept={(improvedText) => setValue("description", improvedText)}
         />
         <TextField
           label={t("assignment.detail.startDateLabel")}
