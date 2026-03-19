@@ -138,9 +138,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       continue;
     }
 
-    const description = [a.context, a.responsibilities, a.result]
-      .filter(Boolean)
-      .join("\n\n");
+    const description = a.description ?? "";
 
     const technologies = a.technologies.map((t) => t.trim()).filter(Boolean);
     const keywords = a.keywords.join(", ") || null;

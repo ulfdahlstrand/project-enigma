@@ -17,9 +17,7 @@ const VALID_CV_JSON = {
       client: "Acme",
       role: "Developer",
       period: "2022-2023",
-      context: "Built things",
-      responsibilities: "Everything",
-      result: "Success",
+      description: "Built things\n\nEverything\n\nSuccess",
       technologies: ["TypeScript"],
       keywords: ["backend"],
     },
@@ -85,23 +83,21 @@ describe("parseCvDocx", () => {
     );
   });
 
-  it("coerces array result/context/responsibilities fields to strings", async () => {
-    const withArrayFields = {
+  it("coerces array description field to string", async () => {
+    const withArrayDescription = {
       ...VALID_CV_JSON,
       assignments: [
         {
           ...VALID_CV_JSON.assignments[0],
-          context: ["paragraph one", "paragraph two"],
-          responsibilities: ["did this", "did that"],
-          result: ["outcome one", "outcome two"],
+          description: ["paragraph one", "paragraph two"],
         },
       ],
     };
-    const client = buildOpenAIMock(JSON.stringify(withArrayFields));
+    const client = buildOpenAIMock(JSON.stringify(withArrayDescription));
     const result = await parseCvDocx(client, { docxBase64: "dGVzdA==", language: "en" });
-    expect(typeof result.cvJson.assignments[0]!.context).toBe("string");
-    expect(result.cvJson.assignments[0]!.context).toContain("paragraph one");
-    expect(result.cvJson.assignments[0]!.result).toContain("outcome two");
+    expect(typeof result.cvJson.assignments[0]!.description).toBe("string");
+    expect(result.cvJson.assignments[0]!.description).toContain("paragraph one");
+    expect(result.cvJson.assignments[0]!.description).toContain("paragraph two");
   });
 
   it("throws when AI returns JSON that does not match cvJsonSchema", async () => {

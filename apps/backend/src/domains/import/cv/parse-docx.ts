@@ -20,22 +20,16 @@ Output schema (return ONLY this JSON, no markdown, no explanation):
     "client": string,
     "role": string,
     "period": string,
-    "context": string,
-    "responsibilities": string,
-    "result": string,
+    "description": string,
     "technologies": string[],
     "keywords": string[]
   }]
 }
 
 CRITICAL RULES — violating any of these is an error:
-1. COPY TEXT VERBATIM. Every word in context/responsibilities/result must come directly from the document. Do NOT summarize, condense, or rephrase.
+1. COPY TEXT VERBATIM. Every word in description must come directly from the document. Do NOT summarize, condense, or rephrase.
 2. Extract EVERY assignment. Do not skip or merge any.
-3. Assignment text is split into three fields by content, not by length:
-   - "context": copy the opening paragraph(s) that describe the company and background situation
-   - "responsibilities": copy the middle paragraph(s) that describe what the consultant did
-   - "result": copy the closing paragraph(s) or sentences about outcomes/results (often starts with "Resultatet..." or "Efter...")
-   - If the description cannot be clearly split, put the full text in "context" and leave the others empty
+3. "description": copy ALL body paragraphs for the assignment verbatim as one string (paragraphs separated by \n\n). Exclude the TEKNIKER and NYCKELORD lines.
 4. "technologies": split the TEKNIKER: line into individual items (comma-separated). Copy each item exactly.
 5. "keywords": split the NYCKELORD: line into individual items. Copy each item exactly.
 6. skills: copy category names and items exactly as they appear in the document.
@@ -65,9 +59,7 @@ function normalizeAiOutput(raw: unknown): unknown {
       const aObj = a as Record<string, unknown>;
       return {
         ...aObj,
-        context: arrayToString(aObj.context),
-        responsibilities: arrayToString(aObj.responsibilities),
-        result: arrayToString(aObj.result),
+        description: arrayToString(aObj.description),
       };
     }),
   };

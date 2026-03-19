@@ -24,9 +24,7 @@ const BASE_CV_JSON = {
       role: "Senior Developer",
       client: "Acme Corp",
       period: "Q1 2023 - Q4 2023",
-      context: "Built things.",
-      responsibilities: "Improved performance.",
-      result: "",
+      description: "Built things.\n\nImproved performance.",
       technologies: ["TypeScript", "Node.js"],
       keywords: ["backend"],
     },
@@ -147,7 +145,7 @@ describe("importCv — assignments", () => {
     expect(result.assignmentsCreated).toBe(0);
   });
 
-  it("joins context/responsibilities/result with double newline", async () => {
+  it("passes description directly to the assignment insert", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { description: string };
