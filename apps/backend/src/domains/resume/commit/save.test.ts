@@ -226,6 +226,41 @@ describe("saveResumeVersion", () => {
     ).resolves.toBeDefined();
   });
 
+  it("uses content overrides when provided, ignoring live resume fields", async () => {
+    const { db, insertValues } = buildDbMock();
+
+    await saveResumeVersion(db, MOCK_ADMIN, {
+      branchId: BRANCH_ID,
+      consultantTitle: "Principal Engineer",
+      presentation: ["Overridden paragraph"],
+      summary: "Overridden summary",
+    });
+
+    const callArg = insertValues.mock.calls[0][0];
+    const content = JSON.parse(callArg.content);
+
+    expect(content.consultantTitle).toBe("Principal Engineer");
+    expect(content.presentation).toEqual(["Overridden paragraph"]);
+    expect(content.summary).toBe("Overridden summary");
+    // Non-overridden fields still come from live resume
+    expect(content.title).toBe("Senior Engineer");
+    expect(content.language).toBe("en");
+  });
+
+  it("allows setting consultantTitle to null via override", async () => {
+    const { db, insertValues } = buildDbMock({
+      branchRow: { ...BRANCH_ROW, consultant_title: "Old Title" },
+    });
+
+    await saveResumeVersion(db, MOCK_ADMIN, {
+      branchId: BRANCH_ID,
+      consultantTitle: null,
+    });
+
+    const content = JSON.parse(insertValues.mock.calls[0][0].content);
+    expect(content.consultantTitle).toBeNull();
+  });
+
   it("throws FORBIDDEN when consultant tries to save another employee's branch", async () => {
     const { db } = buildDbMock({ employeeId: EMPLOYEE_ID_2 });
 

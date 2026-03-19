@@ -104,6 +104,12 @@ export type BranchAssignment = z.infer<typeof branchAssignmentSchema>;
 export const saveResumeVersionInputSchema = z.object({
   branchId: z.string().uuid(),
   message: z.string().optional(),
+  /** Optional content overrides — when provided, these values are stored in the
+   *  commit instead of reading from the live resume record. Use this when saving
+   *  branch-specific edits without touching the main resume. */
+  consultantTitle: z.string().nullable().optional(),
+  presentation: z.array(z.string()).optional(),
+  summary: z.string().nullable().optional(),
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
