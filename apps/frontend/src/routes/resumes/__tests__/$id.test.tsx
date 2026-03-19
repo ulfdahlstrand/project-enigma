@@ -40,7 +40,7 @@ vi.mock("../../../orpc-client", () => ({
     listResumes: vi.fn(),
     getResume: vi.fn(),
     updateResume: vi.fn(),
-    listAssignments: vi.fn(),
+    listBranchAssignmentsFull: vi.fn(),
     listResumeBranches: vi.fn(),
     getResumeCommit: vi.fn(),
     getEmployee: vi.fn(),
@@ -51,7 +51,7 @@ vi.mock("../../../orpc-client", () => ({
 import { orpc } from "../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
-const mockListAssignments = orpc.listAssignments as ReturnType<typeof vi.fn>;
+const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
@@ -136,7 +136,7 @@ const MAIN_BRANCH = {
 };
 
 beforeEach(() => {
-  mockListAssignments.mockResolvedValue([]);
+  mockListBranchAssignmentsFull.mockResolvedValue([]);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
@@ -364,32 +364,40 @@ describe("Assignments section", () => {
   });
 
   it("renders the assignments heading when assignments exist", async () => {
-    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
+    mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
     const heading = await screen.findByText(enCommon.resume.detail.assignmentsHeading);
     expect(heading).toBeInTheDocument();
   });
 
   it("does not render the assignments page when list is empty", async () => {
-    mockListAssignments.mockResolvedValue([]);
+    mockListBranchAssignmentsFull.mockResolvedValue([]);
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
     expect(screen.queryByText(enCommon.resume.detail.assignmentsHeading)).toBeNull();
   });
 
-  it("renders client name and role for each assignment", async () => {
-    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
+  it("renders role heading for each assignment", async () => {
+    mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
-    await screen.findByText("Acme Corp");
-    expect(screen.getByText("Senior Developer")).toBeInTheDocument();
-    expect(screen.getByText("Beta Inc")).toBeInTheDocument();
+    // Role is rendered as a heading in the full card view
+    await screen.findByText("Senior Developer");
     expect(screen.getByText("Tech Lead")).toBeInTheDocument();
   });
 
-  it("renders 'Present' chip for current assignment", async () => {
-    mockListAssignments.mockResolvedValue(TEST_ASSIGNMENTS);
+  it("renders client name in the subtitle for each assignment", async () => {
+    mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
-    await screen.findByText("Beta Inc");
-    expect(screen.getByText(enCommon.resume.detail.assignmentPresent)).toBeInTheDocument();
+    await screen.findByText("Senior Developer");
+    // Client name appears as part of subtitle text node
+    expect(screen.getAllByText(/Acme Corp/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Beta Inc/).length).toBeGreaterThan(0);
+  });
+
+  it("renders 'Present' in the subtitle for current assignment", async () => {
+    mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
+    renderPage();
+    await screen.findByText("Tech Lead");
+    expect(screen.getByText(new RegExp(enCommon.resume.detail.assignmentPresent))).toBeInTheDocument();
   });
 });
