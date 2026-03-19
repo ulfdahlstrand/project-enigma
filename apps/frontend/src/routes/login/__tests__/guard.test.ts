@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Route } from "..";
 
-const TOKEN_KEY = "cv-tool:id-token";
+const TOKEN_KEY = "cv-tool:has-session";
 
 describe("login route — beforeLoad guard", () => {
   beforeEach(() => {

@@ -237,6 +237,26 @@ export interface AIMessageTable {
 export type AIMessage = Selectable<AIMessageTable>;
 export type NewAIMessage = Insertable<AIMessageTable>;
 
+// ---------------------------------------------------------------------------
+// user_sessions table
+// ---------------------------------------------------------------------------
+
+export interface UserSessionTable {
+  id: Generated<string>;
+  user_id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  logged_in_at: Generated<Date>;
+  last_seen_at: Generated<Date>;
+  expires_at: Date;
+  refresh_token_hash: string | null;
+  revoked_at: Date | null;
+}
+
+export type UserSession = Selectable<UserSessionTable>;
+export type NewUserSession = Insertable<UserSessionTable>;
+export type UserSessionUpdate = Updateable<UserSessionTable>;
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
@@ -250,6 +270,7 @@ export interface Database {
   export_records: ExportRecordTable;
   ai_conversations: AIConversationTable;
   ai_messages: AIMessageTable;
+  user_sessions: UserSessionTable;
 }
 
 // ---------------------------------------------------------------------------

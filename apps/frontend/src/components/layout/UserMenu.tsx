@@ -39,7 +39,7 @@ function stringAvatar(name: string): string {
 
 export function UserMenu() {
   const { t } = useTranslation("common");
-  const { clearToken } = useAuth();
+  const { logout } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
   const user = useCurrentUser();
@@ -51,8 +51,7 @@ export function UserMenu() {
 
   const handleSignOut = () => {
     handleClose();
-    clearToken();
-    void navigate({ to: "/login" });
+    void logout().then(() => navigate({ to: "/login" }));
   };
 
   const displayName = user?.name ?? "User";

@@ -13,25 +13,51 @@
  * variable. No URL is hardcoded. If VITE_API_URL is unset, the client is created
  * with an empty base URL — API calls will fail with a network error, but the
  * application will not crash on startup.
+ *
+ * Auth: the access token is read from the module-level token store (set by
+ * AuthContext). On a 401 response the client attempts a silent refresh once
+ * before propagating the error.
  */
 import { createORPCClient } from "@orpc/client";
 import type { ContractRouterClient } from "@orpc/contract";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { contract, type AppRouter } from "@cv-tool/contracts";
+import { getStoredToken, setStoredToken } from "./auth/token-store";
 
-const TOKEN_KEY = "cv-tool:id-token";
 const apiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
+
+async function fetchWithAuth(request: Request, init?: RequestInit): Promise<Response> {
+  const token = getStoredToken();
+  const headers = new Headers(request.headers);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await globalThis.fetch(new Request(request, { headers, ...init }));
+
+  // On 401: attempt one silent refresh then retry
+  if (res.status === 401) {
+    const refreshRes = await globalThis.fetch(`${apiUrl}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (refreshRes.ok) {
+      const data = (await refreshRes.json()) as { accessToken: string };
+      setStoredToken(data.accessToken);
+      const retryHeaders = new Headers(request.headers);
+      retryHeaders.set("Authorization", `Bearer ${data.accessToken}`);
+      return globalThis.fetch(new Request(request, { headers: retryHeaders, ...init }));
+    }
+    // Refresh failed — clear token so UI reflects logged-out state
+    setStoredToken(null);
+  }
+
+  return res;
+}
 
 const link = new OpenAPILink(contract, {
   url: apiUrl,
-  fetch: (request, init) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const headers = new Headers(request.headers);
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    return globalThis.fetch(new Request(request, { headers, ...init }));
-  },
+  fetch: fetchWithAuth,
 });
 
 export const orpc = createORPCClient<ContractRouterClient<AppRouter>>(link);
