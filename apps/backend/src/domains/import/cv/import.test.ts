@@ -6,6 +6,7 @@ import type { Database } from "../../../db/types.js";
 import { importCv, createImportCvHandler } from "./import.js";
 
 const EMP_ID = "550e8400-e29b-41d4-a716-446655440011";
+const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 const BASE_CV_JSON = {
   consultant: {
@@ -38,6 +39,7 @@ type MockDb = Kysely<Database> & {
     insertExecuteTakeFirstOrThrow: ReturnType<typeof vi.fn>;
     updateExecute: ReturnType<typeof vi.fn>;
     selectExecuteTakeFirst: ReturnType<typeof vi.fn>;
+    selectExecuteTakeFirstOrThrow: ReturnType<typeof vi.fn>;
     insertValues: ReturnType<typeof vi.fn>;
   };
 };
@@ -54,17 +56,21 @@ function buildDb({
   existingEducation?: { id: string } | undefined;
 } = {}): MockDb {
   const insertExecute = vi.fn().mockResolvedValue(undefined);
-  // Used when creating a new resume: .returning("id").executeTakeFirstOrThrow()
-  const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue({ id: "new-resume-id" });
+  // Used when creating a new resume OR when creating assignment in transaction
+  const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue({ id: "new-id" });
   const insertReturning = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: insertExecuteTakeFirstOrThrow });
   const insertValues = vi.fn().mockReturnValue({ execute: insertExecute, returning: insertReturning });
   const insertInto = vi.fn().mockReturnValue({ values: insertValues });
 
-  // selectFrom chain — call order: 1) main resume lookup, 2) assignment duplicate check, 3+) education duplicate checks
+  // selectFrom chain
+  // Call order: 1) main resume lookup (executeTakeFirst), 2) assignment duplicate check (executeTakeFirst), 3+) education
   const selectExecuteTakeFirst = vi.fn()
     .mockResolvedValueOnce(mainResume)
     .mockResolvedValueOnce(existingAssignment)
     .mockResolvedValue(existingEducation);
+
+  // Used for main branch lookup (executeTakeFirstOrThrow)
+  const selectExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue({ id: BRANCH_ID });
 
   const selectWhere = vi.fn();
   const selectSelect = vi.fn();
@@ -72,6 +78,7 @@ function buildDb({
     select: selectSelect,
     where: selectWhere,
     executeTakeFirst: selectExecuteTakeFirst,
+    executeTakeFirstOrThrow: selectExecuteTakeFirstOrThrow,
   };
   selectWhere.mockReturnValue(selectChain);
   selectSelect.mockReturnValue(selectChain);
@@ -89,12 +96,19 @@ function buildDb({
   updateSet.mockReturnValue(updateChain);
   const updateTable = vi.fn().mockReturnValue(updateChain);
 
-  return {
+  const db = {
     selectFrom,
     insertInto,
     updateTable,
-    _mocks: { insertExecute, insertExecuteTakeFirstOrThrow, updateExecute, selectExecuteTakeFirst, insertValues },
+    _mocks: { insertExecute, insertExecuteTakeFirstOrThrow, updateExecute, selectExecuteTakeFirst, selectExecuteTakeFirstOrThrow, insertValues },
   } as unknown as MockDb;
+
+  // Transactions: pass the same mock db as trx so insert mocks work
+  (db as unknown as { transaction: () => unknown }).transaction = vi.fn().mockReturnValue({
+    execute: (fn: (trx: typeof db) => Promise<unknown>) => fn(db),
+  });
+
+  return db;
 }
 
 describe("importCv — assignments", () => {
@@ -157,6 +171,17 @@ describe("importCv — assignments", () => {
     const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { technologies: string[] };
     expect(passedValues.technologies).toEqual(["TypeScript", "Node.js"]);
   });
+
+  it("links new assignments to branch_assignments via transaction", async () => {
+    const db = buildDb({ mainResume: MAIN_RESUME });
+    await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
+    // Find the branch_assignments insert call
+    const branchAssignCall = db._mocks.insertValues.mock.calls.find(
+      (call) => (call[0] as { branch_id?: string }).branch_id !== undefined
+    )?.[0] as { branch_id: string; assignment_id: string } | undefined;
+    expect(branchAssignCall?.branch_id).toBe(BRANCH_ID);
+    expect(branchAssignCall?.assignment_id).toBeDefined();
+  });
 });
 
 describe("importCv — education", () => {
@@ -198,13 +223,14 @@ describe("importCv — resume", () => {
     expect(result.resumeCreated).toBe(true);
   });
 
-  it("links new assignments to the resume id", async () => {
+  it("does not set resume_id on assignment inserts", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    const passedValues = db._mocks.insertValues.mock.calls.find(
-      (call) => (call[0] as { resume_id?: string }).resume_id !== undefined
-    )?.[0] as { resume_id: string } | undefined;
-    expect(passedValues?.resume_id).toBe(MAIN_RESUME.id);
+    const assignmentInsert = db._mocks.insertValues.mock.calls.find(
+      (call) => (call[0] as { client_name?: string }).client_name !== undefined
+    )?.[0] as Record<string, unknown> | undefined;
+    expect(assignmentInsert).toBeDefined();
+    expect(assignmentInsert?.resume_id).toBeUndefined();
   });
 
   it("skips title/presentation update when title and presentation are empty", async () => {

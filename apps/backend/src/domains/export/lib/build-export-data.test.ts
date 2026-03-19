@@ -146,13 +146,16 @@ function buildDbMock(opts: {
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // Assignments chain
+  // Assignments chain — now via branch_assignments join
   const assignExec = vi.fn().mockResolvedValue(assignmentRows);
   const assignOrderBy3 = vi.fn().mockReturnValue({ execute: assignExec });
   const assignOrderBy2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy3 });
   const assignOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignOrderBy2 });
-  const assignWhere = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
-  const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere });
+  const assignWhere2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
+  const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2, orderBy: assignOrderBy1 });
+  const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere1 });
+  const assignInnerJoin2 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
+  const assignInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: assignInnerJoin2 });
 
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);
@@ -165,7 +168,7 @@ function buildDbMock(opts: {
     if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
     if (table === "resume_commits") return { select: commitSelect };
     if (table === "resume_skills") return { selectAll: skillsSelect };
-    if (table === "assignments") return { selectAll: assignSelectAll };
+    if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
     if (table === "education") return { selectAll: eduSelectAll };
     throw new Error(`Unexpected table: ${table}`);
   });

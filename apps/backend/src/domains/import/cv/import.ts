@@ -68,10 +68,33 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .executeTakeFirstOrThrow();
     resumeId = newResume.id;
     resumeCreated = true;
+
+    // Create the main branch for the new resume so assignments can be linked
+    await db
+      .insertInto("resume_branches")
+      .values({
+        resume_id: resumeId,
+        name: "main",
+        language,
+        is_main: true,
+      })
+      .execute();
   }
 
   // ---------------------------------------------------------------------------
-  // 2. Import assignments — skip duplicates (same employee + client + role + start)
+  // 2. Resolve the main branch for this resume (needed to link assignments)
+  // ---------------------------------------------------------------------------
+
+  const mainBranch = await db
+    .selectFrom("resume_branches")
+    .select("id")
+    .where("resume_id", "=", resumeId)
+    .where("is_main", "=", true)
+    .executeTakeFirstOrThrow();
+
+  // ---------------------------------------------------------------------------
+  // 3. Import assignments — skip duplicates (same employee + client + role + start)
+  //    Each new assignment is atomically linked to the main branch via branch_assignments.
   // ---------------------------------------------------------------------------
 
   let assignmentsCreated = 0;
@@ -100,7 +123,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       isCurrent = period.isCurrent;
     }
 
-    // Duplicate check
+    // Duplicate check — assignment already exists for this employee
     const existing = await db
       .selectFrom("assignments")
       .select("id")
@@ -122,29 +145,36 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     const technologies = a.technologies.map((t) => t.trim()).filter(Boolean);
     const keywords = a.keywords.join(", ") || null;
 
-    await db
-      .insertInto("assignments")
-      .values({
-        employee_id: employeeId,
-        resume_id: resumeId,
-        client_name: clientName,
-        role: a.role.trim(),
-        description,
-        start_date: startDate,
-        end_date: endDate,
-        is_current: isCurrent,
-        technologies,
-        keywords,
-        type: a.type ?? null,
-        highlight: a.highlight ?? false,
-      })
-      .execute();
+    await db.transaction().execute(async (trx) => {
+      const newAssignment = await trx
+        .insertInto("assignments")
+        .values({
+          employee_id: employeeId,
+          client_name: clientName,
+          role: a.role.trim(),
+          description,
+          start_date: startDate,
+          end_date: endDate,
+          is_current: isCurrent,
+          technologies,
+          keywords,
+          type: a.type ?? null,
+          highlight: a.highlight ?? false,
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+
+      await trx
+        .insertInto("branch_assignments")
+        .values({ branch_id: mainBranch.id, assignment_id: newAssignment.id })
+        .execute();
+    });
 
     assignmentsCreated++;
   }
 
   // ---------------------------------------------------------------------------
-  // 3. Import education — skip duplicates (same employee + type + value)
+  // 4. Import education — skip duplicates (same employee + type + value)
   // ---------------------------------------------------------------------------
 
   let educationCreated = 0;
@@ -189,7 +219,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   }
 
   // ---------------------------------------------------------------------------
-  // 4. Import skills — clear existing and reimport from skills section
+  // 5. Import skills — clear existing and reimport from skills section
   // ---------------------------------------------------------------------------
 
   if (cvJson.skills) {

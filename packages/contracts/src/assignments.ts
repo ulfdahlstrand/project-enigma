@@ -9,7 +9,6 @@ import { z } from "zod";
 export const assignmentSchema = z.object({
   id: z.string().uuid(),
   employeeId: z.string().uuid(),
-  resumeId: z.string().uuid().nullable(),
   clientName: z.string(),
   role: z.string(),
   description: z.string(),
@@ -32,7 +31,6 @@ export type Assignment = z.infer<typeof assignmentSchema>;
 
 export const listAssignmentsInputSchema = z.object({
   employeeId: z.string().uuid().optional(),
-  resumeId: z.string().uuid().optional(),
 });
 
 export const listAssignmentsOutputSchema = z.array(assignmentSchema);
@@ -50,7 +48,6 @@ export const getAssignmentOutputSchema = assignmentSchema;
 
 export const createAssignmentInputSchema = z.object({
   employeeId: z.string().uuid(),
-  resumeId: z.string().uuid().nullable().optional(),
   /** When provided, atomically links the new assignment to this branch via branch_assignments. */
   branchId: z.string().uuid().optional(),
   clientName: z.string().min(1),
@@ -74,7 +71,6 @@ export const createAssignmentOutputSchema = assignmentSchema;
 export const updateAssignmentInputSchema = z
   .object({
     id: z.string().uuid(),
-    resumeId: z.string().uuid().nullable().optional(),
     clientName: z.string().min(1).optional(),
     role: z.string().min(1).optional(),
     description: z.string().optional(),
@@ -95,7 +91,6 @@ export const updateAssignmentInputSchema = z
       d.endDate !== undefined ||
       d.technologies !== undefined ||
       d.isCurrent !== undefined ||
-      d.resumeId !== undefined ||
       d.keywords !== undefined ||
       d.type !== undefined ||
       d.highlight !== undefined,

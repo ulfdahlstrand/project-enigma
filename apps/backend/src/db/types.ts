@@ -65,7 +65,6 @@ export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
 export interface AssignmentTable {
   id: Generated<string>;
   employee_id: string;
-  resume_id: string | null;
   client_name: string;
   role: string;
   description: Generated<string>;

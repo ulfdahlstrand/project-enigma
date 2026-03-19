@@ -30,10 +30,6 @@ export async function listAssignments(
     }
   }
 
-  if (input.resumeId !== undefined) {
-    query = query.where("resume_id", "=", input.resumeId);
-  }
-
   const rows = await query
     .orderBy("is_current", "desc")
     .orderBy(sql`end_date DESC NULLS FIRST`)

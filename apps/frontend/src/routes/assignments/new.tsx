@@ -90,8 +90,6 @@ function NewAssignmentPage() {
       .filter(Boolean);
     mutation.mutate({
       employeeId,
-      // branchId links atomically via branch_assignments; resumeId kept for main-branch backward compat
-      resumeId: branchId ? null : (resumeId ?? null),
       branchId: branchId ?? undefined,
       clientName: data.clientName.trim(),
       role: data.role.trim(),

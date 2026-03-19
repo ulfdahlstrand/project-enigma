@@ -12,7 +12,6 @@ type UpdateAssignmentInput = z.infer<typeof updateAssignmentInputSchema>;
 
 export async function updateAssignment(db: Kysely<Database>, input: UpdateAssignmentInput) {
   const update: AssignmentUpdate = {};
-  if (input.resumeId !== undefined) update.resume_id = input.resumeId;
   if (input.clientName !== undefined) update.client_name = input.clientName;
   if (input.role !== undefined) update.role = input.role;
   if (input.description !== undefined) update.description = input.description;

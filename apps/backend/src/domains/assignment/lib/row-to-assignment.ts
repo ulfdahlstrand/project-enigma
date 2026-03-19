@@ -1,7 +1,6 @@
 export function rowToAssignment(row: {
   id: string;
   employee_id: string;
-  resume_id: string | null;
   client_name: string;
   role: string;
   description: string;
@@ -18,7 +17,6 @@ export function rowToAssignment(row: {
   return {
     id: row.id,
     employeeId: row.employee_id,
-    resumeId: row.resume_id,
     clientName: row.client_name,
     role: row.role,
     description: row.description,
