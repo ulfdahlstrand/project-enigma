@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -81,6 +81,26 @@ describe("LoginPage", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    // Mock fetch: silent refresh (mount) returns 401, login returns 200
+    let callCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // First call = silent refresh on mount → fail gracefully
+        return Promise.resolve(new Response(null, { status: 401 }));
+      }
+      // Subsequent calls = login
+      return Promise.resolve(
+        new Response(JSON.stringify({ accessToken: "access.token.value" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renders the app name heading", () => {
@@ -95,19 +115,21 @@ describe("LoginPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("stores the token in localStorage on successful login", async () => {
+  it("sets the session flag in localStorage on successful login", async () => {
     renderLogin();
     await act(async () => {
       screen.getByRole("button", { name: /sign in with google/i }).click();
     });
-    expect(localStorage.getItem("cv-tool:id-token")).toBe("mock.id.token");
+    expect(localStorage.getItem("cv-tool:has-session")).toBe("1");
   });
 
-  it("navigates to /employee after successful login", async () => {
+  it("navigates to /employees after successful login", async () => {
     renderLogin();
     await act(async () => {
       screen.getByRole("button", { name: /sign in with google/i }).click();
     });
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" });
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" })
+    );
   });
 });

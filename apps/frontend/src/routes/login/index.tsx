@@ -1,8 +1,10 @@
 /**
  * /login route — public page for Google OAuth sign-in.
  *
- * On successful authentication the Google ID token is stored in localStorage
- * via AuthContext and the user is redirected to /employee.
+ * On successful authentication the backend issues a short-lived JWT (access
+ * token) and sets an HttpOnly refresh-token cookie. The access token is kept
+ * in React state via AuthContext; only a session-presence flag is stored in
+ * localStorage so the route guard can redirect quickly.
  */
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { GoogleLogin } from "@react-oauth/google";
@@ -13,11 +15,11 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../../auth/auth-context";
 
-const TOKEN_KEY = "cv-tool:id-token";
+const SESSION_FLAG_KEY = "cv-tool:has-session";
 
 export const Route = createFileRoute("/login/")({
   beforeLoad: () => {
-    if (localStorage.getItem(TOKEN_KEY)) {
+    if (localStorage.getItem(SESSION_FLAG_KEY)) {
       throw redirect({ to: "/employees" });
     }
   },
@@ -26,7 +28,7 @@ export const Route = createFileRoute("/login/")({
 
 export function LoginPage() {
   const { t } = useTranslation("common");
-  const { setToken } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
 
@@ -54,8 +56,9 @@ export function LoginPage() {
       <GoogleLogin
         onSuccess={(response) => {
           if (response.credential) {
-            setToken(response.credential);
-            void navigate({ to: "/employees" });
+            login(response.credential)
+              .then(() => navigate({ to: "/employees" }))
+              .catch(() => setError(true));
           } else {
             setError(true);
           }
