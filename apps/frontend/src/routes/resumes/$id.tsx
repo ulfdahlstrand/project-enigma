@@ -13,8 +13,9 @@ import Button from "@mui/material/Button";
 import { z } from "zod";
 import { createFileRoute, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import type { ReactNode, RefObject } from "react";
+import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -162,6 +163,13 @@ interface CoverPageContentProps {
   summary: string | null;
   highlightedAssignments: Array<{ role: string; clientName: string }>;
   presentationRef?: RefObject<HTMLDivElement | null>;
+  isEditing?: boolean;
+  draftTitle?: string;
+  draftPresentation?: string;
+  draftSummary?: string;
+  onDraftTitleChange?: (v: string) => void;
+  onDraftPresentationChange?: (v: string) => void;
+  onDraftSummaryChange?: (v: string) => void;
 }
 
 function CoverPageContent({
@@ -171,6 +179,13 @@ function CoverPageContent({
   summary,
   highlightedAssignments,
   presentationRef,
+  isEditing = false,
+  draftTitle = "",
+  draftPresentation = "",
+  draftSummary = "",
+  onDraftTitleChange,
+  onDraftPresentationChange,
+  onDraftSummaryChange,
 }: CoverPageContentProps) {
   const { t } = useTranslation("common");
 
@@ -186,7 +201,15 @@ function CoverPageContent({
         >
           {employeeName}
         </Typography>
-        {consultantTitle && (
+        {isEditing ? (
+          <TextField
+            value={draftTitle}
+            onChange={(e) => onDraftTitleChange?.(e.target.value)}
+            variant="standard"
+            fullWidth
+            sx={{ mt: 0.5, "& input": { fontWeight: 700, fontSize: "1.25rem" } }}
+          />
+        ) : consultantTitle ? (
           <Typography
             variant="h3"
             component="p"
@@ -194,11 +217,22 @@ function CoverPageContent({
           >
             {consultantTitle}
           </Typography>
-        )}
+        ) : null}
       </Box>
 
       {/* Presentation paragraphs */}
-      {presentation.length > 0 && (
+      {isEditing ? (
+        <TextField
+          value={draftPresentation}
+          onChange={(e) => onDraftPresentationChange?.(e.target.value)}
+          multiline
+          minRows={4}
+          fullWidth
+          variant="outlined"
+          sx={{ mb: 3 }}
+          {...(presentationRef && { inputRef: presentationRef })}
+        />
+      ) : presentation.length > 0 ? (
         <Box {...(presentationRef && { ref: presentationRef })} sx={{ mb: 3 }}>
           {presentation.map((para, i) => (
             <Typography key={i} variant="body1" sx={{ mb: 1, textAlign: "justify" }}>
@@ -206,10 +240,10 @@ function CoverPageContent({
             </Typography>
           ))}
         </Box>
-      )}
+      ) : null}
 
       {/* Special skills + highlighted experience box */}
-      {(summary || highlightedAssignments.length > 0) && (
+      {(isEditing || summary || highlightedAssignments.length > 0) && (
         <Box
           sx={{
             bgcolor: "action.hover",
@@ -219,7 +253,7 @@ function CoverPageContent({
             py: 2.5,
           }}
         >
-          {summary && (
+          {(isEditing || summary) && (
             <Box sx={{ mb: highlightedAssignments.length > 0 ? 2.5 : 0 }}>
               <Typography
                 variant="caption"
@@ -227,9 +261,21 @@ function CoverPageContent({
               >
                 {t("resume.detail.specialSkillsHeading").toUpperCase()}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {summary}
-              </Typography>
+              {isEditing ? (
+                <TextField
+                  value={draftSummary}
+                  onChange={(e) => onDraftSummaryChange?.(e.target.value)}
+                  multiline
+                  minRows={2}
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {summary}
+                </Typography>
+              )}
             </Box>
           )}
 
@@ -566,8 +612,13 @@ function ResumeDetailPage() {
     enabled: !!resume?.employeeId,
   });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftPresentation, setDraftPresentation] = useState("");
+  const [draftSummary, setDraftSummary] = useState("");
+
   const updateResume = useMutation({
-    mutationFn: (patch: { presentation: string[] }) =>
+    mutationFn: (patch: { presentation?: string[]; consultantTitle?: string | null; summary?: string | null }) =>
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
@@ -584,7 +635,16 @@ function ResumeDetailPage() {
     const presRect = presentationRef.current.getBoundingClientRect();
     setFabTop(presRect.top - canvasRect.top);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee, resume, branchCommit]);
+  }, [employee, resume, branchCommit, isEditing]);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraftTitle(consultantTitle ?? "");
+      setDraftPresentation(presentation.join("\n\n"));
+      setDraftSummary(summary ?? "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
 
   // Assignments: use snapshot when non-main branch, otherwise live
   const assignments = isSnapshotMode && branchCommit
@@ -648,27 +708,70 @@ function ResumeDetailPage() {
   const skillsPage = hasSkills ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
+  const saveVersion = useMutation({
+    mutationFn: (branchId: string) => orpc.saveResumeVersion({ branchId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) });
+      if (activeBranch?.headCommitId) {
+        await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
+      }
+      setIsEditing(false);
+    },
+  });
+
+  const handleSave = () => {
+    const patch = {
+      consultantTitle: draftTitle.trim() || null,
+      presentation: draftPresentation.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
+      summary: draftSummary.trim() || null,
+    };
+    if (isSnapshotMode && activeBranchId) {
+      const branchId = activeBranchId;
+      updateResume.mutate(patch, {
+        onSuccess: () => saveVersion.mutate(branchId),
+      });
+    } else {
+      updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+    }
+  };
+
   const toolbarActions = (
     <>
       <RouterButton variant="text" to="/resumes">
         {t("resume.detail.backButton")}
       </RouterButton>
       <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
-      <Button
-        variant="outlined"
-        onClick={() => void navigate({ to: "/resumes/$id/edit", params: { id } })}
-      >
-        {t("resume.detail.editButton")}
-      </Button>
-      <RouterButton
-        variant="outlined"
-        to="/assignments/new"
-        search={{ resumeId: id, employeeId: resume?.employeeId }}
-      >
-        {t("resume.detail.addAssignment")}
-      </RouterButton>
-      {mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
-      <ExportSplitButton resumeId={id} />
+      {isEditing ? (
+        <>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={updateResume.isPending || saveVersion.isPending}
+          >
+            {updateResume.isPending || saveVersion.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
+          </Button>
+          <Button variant="outlined" onClick={() => setIsEditing(false)}>
+            {t("resume.edit.backButton")}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="outlined" onClick={() => setIsEditing(true)}>
+            {t("resume.detail.editButton")}
+          </Button>
+          {!isSnapshotMode && (
+            <RouterButton
+              variant="outlined"
+              to="/assignments/new"
+              search={{ resumeId: id, employeeId: resume?.employeeId }}
+            >
+              {t("resume.detail.addAssignment")}
+            </RouterButton>
+          )}
+        </>
+      )}
+      {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
+      {!isEditing && <ExportSplitButton resumeId={id} />}
     </>
   );
 
@@ -710,6 +813,13 @@ function ResumeDetailPage() {
             summary={summary}
             highlightedAssignments={highlighted}
             presentationRef={presentationRef}
+            isEditing={isEditing}
+            draftTitle={draftTitle}
+            draftPresentation={draftPresentation}
+            draftSummary={draftSummary}
+            onDraftTitleChange={setDraftTitle}
+            onDraftPresentationChange={setDraftPresentation}
+            onDraftSummaryChange={setDraftSummary}
           />
         </DocumentPage>
 
@@ -732,7 +842,7 @@ function ResumeDetailPage() {
         )}
 
         {/* AI improvement FAB — sits to the right of the document at presentation height */}
-        {presentation.length > 0 && (
+        {!isEditing && presentation.length > 0 && (
           <ImprovePresentationFab
             resumeId={id}
             presentation={presentation}
