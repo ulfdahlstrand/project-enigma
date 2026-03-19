@@ -143,6 +143,12 @@
       "assignmentTechnologies": "Technologies"
     },
     "edit": {
+      "assignment": {
+        "editButton": "Edit",
+        "cancelButton": "Cancel",
+        "saving": "Saving…",
+        "saveError": "Failed to save assignment. Please try again."
+      },
       "pageTitle": "Edit Resume",
       "consultantTitleLabel": "Consultant title",
       "presentationLabel": "Presentation",
