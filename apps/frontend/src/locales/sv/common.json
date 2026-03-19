@@ -143,6 +143,12 @@
       "assignmentTechnologies": "Teknologier"
     },
     "edit": {
+      "assignment": {
+        "editButton": "Redigera",
+        "cancelButton": "Avbryt",
+        "saving": "Sparar…",
+        "saveError": "Det gick inte att spara uppdraget. Försök igen."
+      },
       "pageTitle": "Redigera meritförteckning",
       "consultantTitleLabel": "Konsulttitel",
       "presentationLabel": "Presentation",

@@ -49,6 +49,7 @@ import { SaveVersionButton } from "../../components/SaveVersionButton";
 import { VariantSwitcher } from "../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../components/ai-assistant/ImprovePresentationFab";
 import { SkillsEditor } from "../../components/SkillsEditor";
+import { AssignmentEditor } from "../../components/AssignmentEditor";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -895,7 +896,13 @@ function ResumeDetailPage() {
               </Typography>
               <Divider sx={{ mb: 2 }} />
 
-              {showFullAssignments ? (
+              {isEditing && !isSnapshotMode ? (
+                <AssignmentEditor
+                  assignments={sortedAssignments}
+                  queryKey={["listBranchAssignmentsFull", activeBranchId]}
+                  canvasEl={canvasRef.current}
+                />
+              ) : showFullAssignments ? (
                 /* Full document-style view */
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {sortedAssignments.map((a) => {
@@ -1030,6 +1037,7 @@ function ResumeDetailPage() {
                 </TableContainer>
               )}
             </DocumentPage>
+
           </Box>
         )}
 
