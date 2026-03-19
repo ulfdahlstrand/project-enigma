@@ -9,37 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TestIndexRouteImport } from './routes/test/index'
-import { Route as ResumesIndexRouteImport } from './routes/resumes/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
-import { Route as EmployeesIndexRouteImport } from './routes/employees/index'
-import { Route as AssignmentsIndexRouteImport } from './routes/assignments/index'
-import { Route as ResumesNewRouteImport } from './routes/resumes/new'
-import { Route as ResumesIdRouteImport } from './routes/resumes/$id'
-import { Route as EmployeesNewRouteImport } from './routes/employees/new'
-import { Route as EmployeesIdRouteImport } from './routes/employees/$id'
-import { Route as AssignmentsNewRouteImport } from './routes/assignments/new'
-import { Route as AssignmentsIdRouteImport } from './routes/assignments/$id'
-import { Route as ResumesIdEditRouteImport } from './routes/resumes/$id_.edit'
-import { Route as EmployeesIdImportRouteImport } from './routes/employees/$id_.import'
-import { Route as ResumesIdVariantsIndexRouteImport } from './routes/resumes/$id_/variants/index'
-import { Route as ResumesIdHistoryIndexRouteImport } from './routes/resumes/$id_/history/index'
-import { Route as ResumesIdCompareIndexRouteImport } from './routes/resumes/$id_/compare/index'
+import { Route as AuthenticatedTestIndexRouteImport } from './routes/_authenticated/test/index'
+import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authenticated/resumes/index'
+import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees/index'
+import { Route as AuthenticatedAssignmentsIndexRouteImport } from './routes/_authenticated/assignments/index'
+import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authenticated/resumes/new'
+import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authenticated/resumes/$id'
+import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
+import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
+import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
+import { Route as AuthenticatedAssignmentsIdRouteImport } from './routes/_authenticated/assignments/$id'
+import { Route as AuthenticatedResumesIdEditRouteImport } from './routes/_authenticated/resumes/$id_.edit'
+import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
+import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
+import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes/_authenticated/resumes/$id_/history/index'
+import { Route as AuthenticatedResumesIdCompareIndexRouteImport } from './routes/_authenticated/resumes/$id_/compare/index'
 
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestIndexRoute = TestIndexRouteImport.update({
-  id: '/test/',
-  path: '/test/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesIndexRoute = ResumesIndexRouteImport.update({
-  id: '/resumes/',
-  path: '/resumes/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginIndexRoute = LoginIndexRouteImport.update({
@@ -47,134 +42,158 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
   path: '/login/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmployeesIndexRoute = EmployeesIndexRouteImport.update({
-  id: '/employees/',
-  path: '/employees/',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedTestIndexRoute = AuthenticatedTestIndexRouteImport.update({
+  id: '/test/',
+  path: '/test/',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AssignmentsIndexRoute = AssignmentsIndexRouteImport.update({
-  id: '/assignments/',
-  path: '/assignments/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesNewRoute = ResumesNewRouteImport.update({
+const AuthenticatedResumesIndexRoute =
+  AuthenticatedResumesIndexRouteImport.update({
+    id: '/resumes/',
+    path: '/resumes/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployeesIndexRoute =
+  AuthenticatedEmployeesIndexRouteImport.update({
+    id: '/employees/',
+    path: '/employees/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAssignmentsIndexRoute =
+  AuthenticatedAssignmentsIndexRouteImport.update({
+    id: '/assignments/',
+    path: '/assignments/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesNewRoute = AuthenticatedResumesNewRouteImport.update({
   id: '/resumes/new',
   path: '/resumes/new',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ResumesIdRoute = ResumesIdRouteImport.update({
+const AuthenticatedResumesIdRoute = AuthenticatedResumesIdRouteImport.update({
   id: '/resumes/$id',
   path: '/resumes/$id',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const EmployeesNewRoute = EmployeesNewRouteImport.update({
-  id: '/employees/new',
-  path: '/employees/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmployeesIdRoute = EmployeesIdRouteImport.update({
-  id: '/employees/$id',
-  path: '/employees/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssignmentsNewRoute = AssignmentsNewRouteImport.update({
-  id: '/assignments/new',
-  path: '/assignments/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssignmentsIdRoute = AssignmentsIdRouteImport.update({
-  id: '/assignments/$id',
-  path: '/assignments/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesIdEditRoute = ResumesIdEditRouteImport.update({
-  id: '/resumes/$id_/edit',
-  path: '/resumes/$id/edit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmployeesIdImportRoute = EmployeesIdImportRouteImport.update({
-  id: '/employees/$id_/import',
-  path: '/employees/$id/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesIdVariantsIndexRoute = ResumesIdVariantsIndexRouteImport.update({
-  id: '/resumes/$id_/variants/',
-  path: '/resumes/$id/variants/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesIdHistoryIndexRoute = ResumesIdHistoryIndexRouteImport.update({
-  id: '/resumes/$id_/history/',
-  path: '/resumes/$id/history/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResumesIdCompareIndexRoute = ResumesIdCompareIndexRouteImport.update({
-  id: '/resumes/$id_/compare/',
-  path: '/resumes/$id/compare/',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedEmployeesNewRoute =
+  AuthenticatedEmployeesNewRouteImport.update({
+    id: '/employees/new',
+    path: '/employees/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployeesIdRoute =
+  AuthenticatedEmployeesIdRouteImport.update({
+    id: '/employees/$id',
+    path: '/employees/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAssignmentsNewRoute =
+  AuthenticatedAssignmentsNewRouteImport.update({
+    id: '/assignments/new',
+    path: '/assignments/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAssignmentsIdRoute =
+  AuthenticatedAssignmentsIdRouteImport.update({
+    id: '/assignments/$id',
+    path: '/assignments/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdEditRoute =
+  AuthenticatedResumesIdEditRouteImport.update({
+    id: '/resumes/$id_/edit',
+    path: '/resumes/$id/edit',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployeesIdImportRoute =
+  AuthenticatedEmployeesIdImportRouteImport.update({
+    id: '/employees/$id_/import',
+    path: '/employees/$id/import',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdVariantsIndexRoute =
+  AuthenticatedResumesIdVariantsIndexRouteImport.update({
+    id: '/resumes/$id_/variants/',
+    path: '/resumes/$id/variants/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdHistoryIndexRoute =
+  AuthenticatedResumesIdHistoryIndexRouteImport.update({
+    id: '/resumes/$id_/history/',
+    path: '/resumes/$id/history/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdCompareIndexRoute =
+  AuthenticatedResumesIdCompareIndexRouteImport.update({
+    id: '/resumes/$id_/compare/',
+    path: '/resumes/$id/compare/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assignments/$id': typeof AssignmentsIdRoute
-  '/assignments/new': typeof AssignmentsNewRoute
-  '/employees/$id': typeof EmployeesIdRoute
-  '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRoute
-  '/resumes/new': typeof ResumesNewRoute
-  '/assignments/': typeof AssignmentsIndexRoute
-  '/employees/': typeof EmployeesIndexRoute
   '/login/': typeof LoginIndexRoute
-  '/resumes/': typeof ResumesIndexRoute
-  '/test/': typeof TestIndexRoute
-  '/employees/$id/import': typeof EmployeesIdImportRoute
-  '/resumes/$id/edit': typeof ResumesIdEditRoute
-  '/resumes/$id/compare/': typeof ResumesIdCompareIndexRoute
-  '/resumes/$id/history/': typeof ResumesIdHistoryIndexRoute
-  '/resumes/$id/variants/': typeof ResumesIdVariantsIndexRoute
+  '/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
+  '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/employees/$id': typeof AuthenticatedEmployeesIdRoute
+  '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/resumes/$id': typeof AuthenticatedResumesIdRoute
+  '/resumes/new': typeof AuthenticatedResumesNewRoute
+  '/assignments/': typeof AuthenticatedAssignmentsIndexRoute
+  '/employees/': typeof AuthenticatedEmployeesIndexRoute
+  '/resumes/': typeof AuthenticatedResumesIndexRoute
+  '/test/': typeof AuthenticatedTestIndexRoute
+  '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/resumes/$id/edit': typeof AuthenticatedResumesIdEditRoute
+  '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
+  '/resumes/$id/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
+  '/resumes/$id/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assignments/$id': typeof AssignmentsIdRoute
-  '/assignments/new': typeof AssignmentsNewRoute
-  '/employees/$id': typeof EmployeesIdRoute
-  '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRoute
-  '/resumes/new': typeof ResumesNewRoute
-  '/assignments': typeof AssignmentsIndexRoute
-  '/employees': typeof EmployeesIndexRoute
   '/login': typeof LoginIndexRoute
-  '/resumes': typeof ResumesIndexRoute
-  '/test': typeof TestIndexRoute
-  '/employees/$id/import': typeof EmployeesIdImportRoute
-  '/resumes/$id/edit': typeof ResumesIdEditRoute
-  '/resumes/$id/compare': typeof ResumesIdCompareIndexRoute
-  '/resumes/$id/history': typeof ResumesIdHistoryIndexRoute
-  '/resumes/$id/variants': typeof ResumesIdVariantsIndexRoute
+  '/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
+  '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/employees/$id': typeof AuthenticatedEmployeesIdRoute
+  '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/resumes/$id': typeof AuthenticatedResumesIdRoute
+  '/resumes/new': typeof AuthenticatedResumesNewRoute
+  '/assignments': typeof AuthenticatedAssignmentsIndexRoute
+  '/employees': typeof AuthenticatedEmployeesIndexRoute
+  '/resumes': typeof AuthenticatedResumesIndexRoute
+  '/test': typeof AuthenticatedTestIndexRoute
+  '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/resumes/$id/edit': typeof AuthenticatedResumesIdEditRoute
+  '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
+  '/resumes/$id/history': typeof AuthenticatedResumesIdHistoryIndexRoute
+  '/resumes/$id/variants': typeof AuthenticatedResumesIdVariantsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/assignments/$id': typeof AssignmentsIdRoute
-  '/assignments/new': typeof AssignmentsNewRoute
-  '/employees/$id': typeof EmployeesIdRoute
-  '/employees/new': typeof EmployeesNewRoute
-  '/resumes/$id': typeof ResumesIdRoute
-  '/resumes/new': typeof ResumesNewRoute
-  '/assignments/': typeof AssignmentsIndexRoute
-  '/employees/': typeof EmployeesIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login/': typeof LoginIndexRoute
-  '/resumes/': typeof ResumesIndexRoute
-  '/test/': typeof TestIndexRoute
-  '/employees/$id_/import': typeof EmployeesIdImportRoute
-  '/resumes/$id_/edit': typeof ResumesIdEditRoute
-  '/resumes/$id_/compare/': typeof ResumesIdCompareIndexRoute
-  '/resumes/$id_/history/': typeof ResumesIdHistoryIndexRoute
-  '/resumes/$id_/variants/': typeof ResumesIdVariantsIndexRoute
+  '/_authenticated/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
+  '/_authenticated/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
+  '/_authenticated/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/_authenticated/resumes/$id': typeof AuthenticatedResumesIdRoute
+  '/_authenticated/resumes/new': typeof AuthenticatedResumesNewRoute
+  '/_authenticated/assignments/': typeof AuthenticatedAssignmentsIndexRoute
+  '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
+  '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
+  '/_authenticated/test/': typeof AuthenticatedTestIndexRoute
+  '/_authenticated/employees/$id_/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/_authenticated/resumes/$id_/edit': typeof AuthenticatedResumesIdEditRoute
+  '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
+  '/_authenticated/resumes/$id_/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
+  '/_authenticated/resumes/$id_/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login/'
     | '/assignments/$id'
     | '/assignments/new'
     | '/employees/$id'
@@ -183,7 +202,6 @@ export interface FileRouteTypes {
     | '/resumes/new'
     | '/assignments/'
     | '/employees/'
-    | '/login/'
     | '/resumes/'
     | '/test/'
     | '/employees/$id/import'
@@ -194,6 +212,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/assignments/$id'
     | '/assignments/new'
     | '/employees/$id'
@@ -202,7 +221,6 @@ export interface FileRouteTypes {
     | '/resumes/new'
     | '/assignments'
     | '/employees'
-    | '/login'
     | '/resumes'
     | '/test'
     | '/employees/$id/import'
@@ -213,65 +231,45 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/assignments/$id'
-    | '/assignments/new'
-    | '/employees/$id'
-    | '/employees/new'
-    | '/resumes/$id'
-    | '/resumes/new'
-    | '/assignments/'
-    | '/employees/'
+    | '/_authenticated'
     | '/login/'
-    | '/resumes/'
-    | '/test/'
-    | '/employees/$id_/import'
-    | '/resumes/$id_/edit'
-    | '/resumes/$id_/compare/'
-    | '/resumes/$id_/history/'
-    | '/resumes/$id_/variants/'
+    | '/_authenticated/assignments/$id'
+    | '/_authenticated/assignments/new'
+    | '/_authenticated/employees/$id'
+    | '/_authenticated/employees/new'
+    | '/_authenticated/resumes/$id'
+    | '/_authenticated/resumes/new'
+    | '/_authenticated/assignments/'
+    | '/_authenticated/employees/'
+    | '/_authenticated/resumes/'
+    | '/_authenticated/test/'
+    | '/_authenticated/employees/$id_/import'
+    | '/_authenticated/resumes/$id_/edit'
+    | '/_authenticated/resumes/$id_/compare/'
+    | '/_authenticated/resumes/$id_/history/'
+    | '/_authenticated/resumes/$id_/variants/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssignmentsIdRoute: typeof AssignmentsIdRoute
-  AssignmentsNewRoute: typeof AssignmentsNewRoute
-  EmployeesIdRoute: typeof EmployeesIdRoute
-  EmployeesNewRoute: typeof EmployeesNewRoute
-  ResumesIdRoute: typeof ResumesIdRoute
-  ResumesNewRoute: typeof ResumesNewRoute
-  AssignmentsIndexRoute: typeof AssignmentsIndexRoute
-  EmployeesIndexRoute: typeof EmployeesIndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginIndexRoute: typeof LoginIndexRoute
-  ResumesIndexRoute: typeof ResumesIndexRoute
-  TestIndexRoute: typeof TestIndexRoute
-  EmployeesIdImportRoute: typeof EmployeesIdImportRoute
-  ResumesIdEditRoute: typeof ResumesIdEditRoute
-  ResumesIdCompareIndexRoute: typeof ResumesIdCompareIndexRoute
-  ResumesIdHistoryIndexRoute: typeof ResumesIdHistoryIndexRoute
-  ResumesIdVariantsIndexRoute: typeof ResumesIdVariantsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test/': {
-      id: '/test/'
-      path: '/test'
-      fullPath: '/test/'
-      preLoaderRoute: typeof TestIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/resumes/': {
-      id: '/resumes/'
-      path: '/resumes'
-      fullPath: '/resumes/'
-      preLoaderRoute: typeof ResumesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login/': {
@@ -281,118 +279,161 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/employees/': {
-      id: '/employees/'
+    '/_authenticated/test/': {
+      id: '/_authenticated/test/'
+      path: '/test'
+      fullPath: '/test/'
+      preLoaderRoute: typeof AuthenticatedTestIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/resumes/': {
+      id: '/_authenticated/resumes/'
+      path: '/resumes'
+      fullPath: '/resumes/'
+      preLoaderRoute: typeof AuthenticatedResumesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/employees/': {
+      id: '/_authenticated/employees/'
       path: '/employees'
       fullPath: '/employees/'
-      preLoaderRoute: typeof EmployeesIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedEmployeesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/assignments/': {
-      id: '/assignments/'
+    '/_authenticated/assignments/': {
+      id: '/_authenticated/assignments/'
       path: '/assignments'
       fullPath: '/assignments/'
-      preLoaderRoute: typeof AssignmentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedAssignmentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/new': {
-      id: '/resumes/new'
+    '/_authenticated/resumes/new': {
+      id: '/_authenticated/resumes/new'
       path: '/resumes/new'
       fullPath: '/resumes/new'
-      preLoaderRoute: typeof ResumesNewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/$id': {
-      id: '/resumes/$id'
+    '/_authenticated/resumes/$id': {
+      id: '/_authenticated/resumes/$id'
       path: '/resumes/$id'
       fullPath: '/resumes/$id'
-      preLoaderRoute: typeof ResumesIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/employees/new': {
-      id: '/employees/new'
+    '/_authenticated/employees/new': {
+      id: '/_authenticated/employees/new'
       path: '/employees/new'
       fullPath: '/employees/new'
-      preLoaderRoute: typeof EmployeesNewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedEmployeesNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/employees/$id': {
-      id: '/employees/$id'
+    '/_authenticated/employees/$id': {
+      id: '/_authenticated/employees/$id'
       path: '/employees/$id'
       fullPath: '/employees/$id'
-      preLoaderRoute: typeof EmployeesIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedEmployeesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/assignments/new': {
-      id: '/assignments/new'
+    '/_authenticated/assignments/new': {
+      id: '/_authenticated/assignments/new'
       path: '/assignments/new'
       fullPath: '/assignments/new'
-      preLoaderRoute: typeof AssignmentsNewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedAssignmentsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/assignments/$id': {
-      id: '/assignments/$id'
+    '/_authenticated/assignments/$id': {
+      id: '/_authenticated/assignments/$id'
       path: '/assignments/$id'
       fullPath: '/assignments/$id'
-      preLoaderRoute: typeof AssignmentsIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedAssignmentsIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/$id_/edit': {
-      id: '/resumes/$id_/edit'
+    '/_authenticated/resumes/$id_/edit': {
+      id: '/_authenticated/resumes/$id_/edit'
       path: '/resumes/$id/edit'
       fullPath: '/resumes/$id/edit'
-      preLoaderRoute: typeof ResumesIdEditRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/employees/$id_/import': {
-      id: '/employees/$id_/import'
+    '/_authenticated/employees/$id_/import': {
+      id: '/_authenticated/employees/$id_/import'
       path: '/employees/$id/import'
       fullPath: '/employees/$id/import'
-      preLoaderRoute: typeof EmployeesIdImportRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedEmployeesIdImportRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/$id_/variants/': {
-      id: '/resumes/$id_/variants/'
+    '/_authenticated/resumes/$id_/variants/': {
+      id: '/_authenticated/resumes/$id_/variants/'
       path: '/resumes/$id/variants'
       fullPath: '/resumes/$id/variants/'
-      preLoaderRoute: typeof ResumesIdVariantsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesIdVariantsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/$id_/history/': {
-      id: '/resumes/$id_/history/'
+    '/_authenticated/resumes/$id_/history/': {
+      id: '/_authenticated/resumes/$id_/history/'
       path: '/resumes/$id/history'
       fullPath: '/resumes/$id/history/'
-      preLoaderRoute: typeof ResumesIdHistoryIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesIdHistoryIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/resumes/$id_/compare/': {
-      id: '/resumes/$id_/compare/'
+    '/_authenticated/resumes/$id_/compare/': {
+      id: '/_authenticated/resumes/$id_/compare/'
       path: '/resumes/$id/compare'
       fullPath: '/resumes/$id/compare/'
-      preLoaderRoute: typeof ResumesIdCompareIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedResumesIdCompareIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAssignmentsIdRoute: typeof AuthenticatedAssignmentsIdRoute
+  AuthenticatedAssignmentsNewRoute: typeof AuthenticatedAssignmentsNewRoute
+  AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
+  AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
+  AuthenticatedResumesIdRoute: typeof AuthenticatedResumesIdRoute
+  AuthenticatedResumesNewRoute: typeof AuthenticatedResumesNewRoute
+  AuthenticatedAssignmentsIndexRoute: typeof AuthenticatedAssignmentsIndexRoute
+  AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
+  AuthenticatedResumesIndexRoute: typeof AuthenticatedResumesIndexRoute
+  AuthenticatedTestIndexRoute: typeof AuthenticatedTestIndexRoute
+  AuthenticatedEmployeesIdImportRoute: typeof AuthenticatedEmployeesIdImportRoute
+  AuthenticatedResumesIdEditRoute: typeof AuthenticatedResumesIdEditRoute
+  AuthenticatedResumesIdCompareIndexRoute: typeof AuthenticatedResumesIdCompareIndexRoute
+  AuthenticatedResumesIdHistoryIndexRoute: typeof AuthenticatedResumesIdHistoryIndexRoute
+  AuthenticatedResumesIdVariantsIndexRoute: typeof AuthenticatedResumesIdVariantsIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAssignmentsIdRoute: AuthenticatedAssignmentsIdRoute,
+  AuthenticatedAssignmentsNewRoute: AuthenticatedAssignmentsNewRoute,
+  AuthenticatedEmployeesIdRoute: AuthenticatedEmployeesIdRoute,
+  AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
+  AuthenticatedResumesIdRoute: AuthenticatedResumesIdRoute,
+  AuthenticatedResumesNewRoute: AuthenticatedResumesNewRoute,
+  AuthenticatedAssignmentsIndexRoute: AuthenticatedAssignmentsIndexRoute,
+  AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,
+  AuthenticatedResumesIndexRoute: AuthenticatedResumesIndexRoute,
+  AuthenticatedTestIndexRoute: AuthenticatedTestIndexRoute,
+  AuthenticatedEmployeesIdImportRoute: AuthenticatedEmployeesIdImportRoute,
+  AuthenticatedResumesIdEditRoute: AuthenticatedResumesIdEditRoute,
+  AuthenticatedResumesIdCompareIndexRoute:
+    AuthenticatedResumesIdCompareIndexRoute,
+  AuthenticatedResumesIdHistoryIndexRoute:
+    AuthenticatedResumesIdHistoryIndexRoute,
+  AuthenticatedResumesIdVariantsIndexRoute:
+    AuthenticatedResumesIdVariantsIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssignmentsIdRoute: AssignmentsIdRoute,
-  AssignmentsNewRoute: AssignmentsNewRoute,
-  EmployeesIdRoute: EmployeesIdRoute,
-  EmployeesNewRoute: EmployeesNewRoute,
-  ResumesIdRoute: ResumesIdRoute,
-  ResumesNewRoute: ResumesNewRoute,
-  AssignmentsIndexRoute: AssignmentsIndexRoute,
-  EmployeesIndexRoute: EmployeesIndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginIndexRoute: LoginIndexRoute,
-  ResumesIndexRoute: ResumesIndexRoute,
-  TestIndexRoute: TestIndexRoute,
-  EmployeesIdImportRoute: EmployeesIdImportRoute,
-  ResumesIdEditRoute: ResumesIdEditRoute,
-  ResumesIdCompareIndexRoute: ResumesIdCompareIndexRoute,
-  ResumesIdHistoryIndexRoute: ResumesIdHistoryIndexRoute,
-  ResumesIdVariantsIndexRoute: ResumesIdVariantsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
