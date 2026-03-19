@@ -134,7 +134,10 @@
       },
       "ai": {
         "improvePresentation": "Improve presentation with AI"
-      }
+      },
+      "assignmentToggleFull": "Show full assignment details",
+      "assignmentToggleSummary": "Show compact assignment list",
+      "assignmentTechnologies": "Technologies"
     },
     "edit": {
       "pageTitle": "Edit Resume",

@@ -19,16 +19,17 @@ import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import Box from "@mui/material/Box";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
 import Grow from "@mui/material/Grow";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import CircularProgress from "@mui/material/CircularProgress";
+import Fab from "@mui/material/Fab";
+import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -636,17 +637,25 @@ function ResumeDetailPage() {
     },
   });
 
+  const [showFullAssignments, setShowFullAssignments] = useState(true);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const presentationRef = useRef<HTMLDivElement>(null);
+  const assignmentsSectionRef = useRef<HTMLDivElement>(null);
   const [fabTop, setFabTop] = useState(0);
+  const [assignmentsFabTop, setAssignmentsFabTop] = useState(0);
 
   useLayoutEffect(() => {
-    if (!presentationRef.current || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const presRect = presentationRef.current.getBoundingClientRect();
-    setFabTop(presRect.top - canvasRect.top);
+    if (presentationRef.current) {
+      setFabTop(presentationRef.current.getBoundingClientRect().top - canvasRect.top);
+    }
+    if (assignmentsSectionRef.current) {
+      setAssignmentsFabTop(assignmentsSectionRef.current.getBoundingClientRect().top - canvasRect.top);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee, resume, branchCommit, isEditing]);
+  }, [employee, resume, branchCommit, isEditing, liveAssignments]);
 
   useEffect(() => {
     if (isEditing) {
@@ -850,63 +859,190 @@ function ResumeDetailPage() {
           />
         )}
 
-        {/* Page 3 — Full assignments table */}
+        {/* Page 3 — Assignments (compact table or full card view) */}
         {hasAssignments && assignmentsPage !== null && (
-          <DocumentPage
-            title={resumeTitle}
-            language={language}
-            page={assignmentsPage}
-            totalPages={totalPages}
-          >
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-              {t("resume.detail.assignmentsHeading")}
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
+          <Box ref={assignmentsSectionRef} sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <DocumentPage
+              title={resumeTitle}
+              language={language}
+              page={assignmentsPage}
+              totalPages={totalPages}
+            >
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                {t("resume.detail.assignmentsHeading")}
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
 
-            <TableContainer>
-              <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
-                    <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
-                    <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
-                    <TableCell>{t("assignment.tableHeaderCurrent")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sortedAssignments.map((a) => (
-                    <TableRow
-                      key={a.id}
-                      hover
-                      sx={{ cursor: "pointer" }}
-                      onClick={() =>
-                        void navigate({ to: "/assignments/$id", params: { id: a.id } })
-                      }
-                    >
-                      <TableCell>{a.clientName}</TableCell>
-                      <TableCell>{a.role}</TableCell>
-                      <TableCell>
-                        {typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}
-                      </TableCell>
-                      <TableCell>
-                        {a.isCurrent ? (
-                          <Chip
-                            label={t("resume.detail.assignmentPresent")}
-                            color="success"
-                            size="small"
-                          />
-                        ) : typeof a.endDate === "string" ? (
-                          a.endDate.slice(0, 10)
-                        ) : (
-                          "—"
+              {showFullAssignments ? (
+                /* Full document-style view */
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {sortedAssignments.map((a) => {
+                    const toQuarter = (d: string | Date) => {
+                      const date = typeof d === "string" ? new Date(d) : d;
+                      return `Q${Math.ceil((date.getMonth() + 1) / 3)} ${date.getFullYear()}`;
+                    };
+                    const startQ = a.startDate ? toQuarter(a.startDate) : "";
+                    const endQ = a.isCurrent
+                      ? t("resume.detail.assignmentPresent")
+                      : a.endDate
+                      ? toQuarter(a.endDate)
+                      : "—";
+                    const technologies = ("technologies" in a && Array.isArray(a.technologies))
+                      ? a.technologies as string[]
+                      : [];
+                    const keywords = ("keywords" in a && typeof a.keywords === "string" && a.keywords)
+                      ? a.keywords
+                      : "";
+                    const description = ("description" in a && typeof a.description === "string")
+                      ? a.description
+                      : "";
+                    const paragraphs = description.split(/\n+/).filter(Boolean);
+
+                    return (
+                      <Box
+                        key={a.id}
+                        onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
+                        sx={{ cursor: "pointer", "&:hover": { opacity: 0.85 } }}
+                      >
+                        {/* Role heading */}
+                        <Typography
+                          variant="h6"
+                          component="h3"
+                          sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", mb: 0.5 }}
+                        >
+                          {a.role}
+                        </Typography>
+
+                        {/* Client + period subtitle */}
+                        <Typography variant="subtitle1" sx={{ fontWeight: 400, mb: 1.5 }}>
+                          {a.clientName} {startQ} – {endQ}
+                        </Typography>
+
+                        {/* Description paragraphs */}
+                        {paragraphs.length > 0 ? (
+                          <Box sx={{ mb: 2 }}>
+                            {paragraphs.map((para, i) => (
+                              <Typography
+                                key={i}
+                                variant="body2"
+                                sx={{ textAlign: "justify", mb: i < paragraphs.length - 1 ? 1.5 : 0 }}
+                              >
+                                {para}
+                              </Typography>
+                            ))}
+                          </Box>
+                        ) : null}
+
+                        {/* Technologies + keywords box */}
+                        {(technologies.length > 0 || keywords) && (
+                          <Box
+                            sx={{
+                              bgcolor: "action.hover",
+                              border: "none",
+                              borderRadius: 0,
+                              px: 1.5,
+                              py: 1,
+                              mt: 2,
+                            }}
+                          >
+                            {technologies.length > 0 && (
+                              <Typography variant="body2" sx={{ mb: keywords ? 0.5 : 0 }}>
+                                <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                                  {t("resume.detail.assignmentTechnologies")}:{" "}
+                                </Box>
+                                {technologies.join(", ")}
+                              </Typography>
+                            )}
+                            {keywords && (
+                              <Typography variant="body2">
+                                <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                                  {t("assignment.new.keywordsLabel")}:{" "}
+                                </Box>
+                                {keywords}
+                              </Typography>
+                            )}
+                          </Box>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </DocumentPage>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ) : (
+                /* Compact table view */
+                <TableContainer>
+                  <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
+                        <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
+                        <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
+                        <TableCell>{t("assignment.tableHeaderCurrent")}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sortedAssignments.map((a) => (
+                        <TableRow
+                          key={a.id}
+                          hover
+                          sx={{ cursor: "pointer" }}
+                          onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
+                        >
+                          <TableCell>{a.clientName}</TableCell>
+                          <TableCell>{a.role}</TableCell>
+                          <TableCell>
+                            {typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}
+                          </TableCell>
+                          <TableCell>
+                            {a.isCurrent ? (
+                              <Chip label={t("resume.detail.assignmentPresent")} color="success" size="small" />
+                            ) : typeof a.endDate === "string" ? (
+                              a.endDate.slice(0, 10)
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </DocumentPage>
+          </Box>
+        )}
+
+        {/* Assignments view toggle FAB — sits to the right of the assignments section */}
+        {hasAssignments && !isEditing && (
+          <Tooltip
+            title={showFullAssignments
+              ? t("resume.detail.assignmentToggleSummary")
+              : t("resume.detail.assignmentToggleFull")}
+            placement="left"
+          >
+            <Fab
+              size="small"
+              aria-label={showFullAssignments
+                ? t("resume.detail.assignmentToggleSummary")
+                : t("resume.detail.assignmentToggleFull")}
+              onClick={() => setShowFullAssignments((v) => !v)}
+              sx={{
+                position: "absolute",
+                left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
+                top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
+                zIndex: 10,
+                bgcolor: "transparent",
+                color: "action.active",
+                boxShadow: 0,
+                opacity: 0.5,
+                transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+                "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+              }}
+            >
+              {showFullAssignments
+                ? <FormatListBulletedIcon fontSize="small" />
+                : <ViewAgendaIcon fontSize="small" />}
+            </Fab>
+          </Tooltip>
         )}
       </Box>
     </Box>

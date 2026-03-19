@@ -180,7 +180,6 @@ export function AIAssistantChat() {
     entityType,
     entityId,
     systemPrompt,
-    conversationTitle,
     kickoffMessage,
     originalContent,
     activeConversationId,

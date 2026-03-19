@@ -121,7 +121,7 @@
       "consultantProfileLabel": "Konsultprofil",
       "editButton": "Redigera",
       "addAssignment": "Lägg till uppdrag",
-      "assignmentsHeading": "Uppdrag",
+      "assignmentsHeading": "Urval av kvalifikationer",
       "noAssignments": "Inga uppdrag tillagda.",
       "assignmentPresent": "Nuvarande",
       "backButton": "Tillbaka till meritförteckningar",
@@ -134,7 +134,10 @@
       },
       "ai": {
         "improvePresentation": "Förbättra presentation med AI"
-      }
+      },
+      "assignmentToggleFull": "Visa fullständiga uppdragsdetaljer",
+      "assignmentToggleSummary": "Visa kompakt uppdragslista",
+      "assignmentTechnologies": "Teknologier"
     },
     "edit": {
       "pageTitle": "Redigera meritförteckning",
