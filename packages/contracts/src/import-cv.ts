@@ -8,9 +8,7 @@ const cvAssignmentSchema = z.object({
   client: z.string(),
   role: z.string(),
   period: z.string().optional().default(""),
-  context: z.string().optional().default(""),
-  responsibilities: z.string().optional().default(""),
-  result: z.string().optional().default(""),
+  description: z.string().optional().default(""),
   technologies: z.array(z.string()).default([]),
   keywords: z.array(z.string()).default([]),
   start_date: z.string().nullable().optional(),
@@ -57,4 +55,17 @@ export const importCvOutputSchema = z.object({
   assignmentsSkipped: z.number(),
   educationCreated: z.number(),
   educationSkipped: z.number(),
+});
+
+// ---------------------------------------------------------------------------
+// parseCvDocx input / output
+// ---------------------------------------------------------------------------
+
+export const parseCvDocxInputSchema = z.object({
+  docxBase64: z.string(),
+  language: z.string().default("en"),
+});
+
+export const parseCvDocxOutputSchema = z.object({
+  cvJson: cvJsonSchema,
 });

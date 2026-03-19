@@ -45,11 +45,13 @@ function ImportCvPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ strict: false }) as { id: string };
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const [jsonText, setJsonText] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [language, setLanguage] = useState<"sv" | "en">("sv");
+  const [docxError, setDocxError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
@@ -65,6 +67,20 @@ function ImportCvPage() {
     },
   });
 
+  const docxMutation = useMutation({
+    mutationFn: (docxBase64: string) =>
+      orpc.parseCvDocx({ docxBase64, language }),
+    onSuccess: (data) => {
+      setJsonText(JSON.stringify(data.cvJson, null, 2));
+      setDocxError(null);
+      setParseError(null);
+      mutation.reset();
+    },
+    onError: () => {
+      setDocxError(t("employee.import.docxError"));
+    },
+  });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -76,6 +92,24 @@ function ImportCvPage() {
     };
     reader.readAsText(file);
     // Reset input so the same file can be re-uploaded
+    e.target.value = "";
+  };
+
+  const handleDocxUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const arrayBuffer = event.target?.result as ArrayBuffer;
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]!);
+      }
+      const base64 = btoa(binary);
+      docxMutation.mutate(base64);
+    };
+    reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
@@ -114,6 +148,12 @@ function ImportCvPage() {
       {parseError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {parseError}
+        </Alert>
+      )}
+
+      {docxError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDocxError(null)}>
+          {docxError}
         </Alert>
       )}
 
@@ -196,12 +236,29 @@ function ImportCvPage() {
         >
           {t("employee.import.uploadButton")}
         </Button>
+        <Button
+          variant="outlined"
+          onClick={() => docxInputRef.current?.click()}
+          disabled={docxMutation.isPending}
+          aria-label={t("employee.import.uploadDocxButton")}
+        >
+          {docxMutation.isPending
+            ? t("employee.import.parsingDocx")
+            : t("employee.import.uploadDocxButton")}
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
           accept=".json,application/json"
           style={{ display: "none" }}
           onChange={handleFileUpload}
+        />
+        <input
+          ref={docxInputRef}
+          type="file"
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          style={{ display: "none" }}
+          onChange={handleDocxUpload}
         />
       </Box>
     </Box>

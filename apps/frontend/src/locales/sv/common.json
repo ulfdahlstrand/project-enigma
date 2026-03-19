@@ -87,7 +87,10 @@
       "educationSkipped": "Utbildningsposter hoppades över (dubbletter): {{count}}",
       "languageLabel": "CV-språk",
       "languageSv": "Svenska",
-      "languageEn": "Engelska"
+      "languageEn": "Engelska",
+      "uploadDocxButton": "Tolka DOCX",
+      "parsingDocx": "Tolkar…",
+      "docxError": "Kunde inte tolka DOCX-filen. Försök igen."
     }
   },
   "resume": {
