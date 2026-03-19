@@ -625,6 +625,17 @@ function ResumeDetailPage() {
     },
   });
 
+  const saveVersion = useMutation({
+    mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) });
+      if (activeBranch?.headCommitId) {
+        await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
+      }
+      setIsEditing(false);
+    },
+  });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const presentationRef = useRef<HTMLDivElement>(null);
   const [fabTop, setFabTop] = useState(0);
@@ -708,17 +719,6 @@ function ResumeDetailPage() {
   const skillsPage = hasSkills ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
-  const saveVersion = useMutation({
-    mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) });
-      if (activeBranch?.headCommitId) {
-        await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
-      }
-      setIsEditing(false);
-    },
-  });
-
   const handleSave = () => {
     const patch = {
       consultantTitle: draftTitle.trim() || null,
@@ -757,15 +757,17 @@ function ResumeDetailPage() {
           <Button variant="outlined" onClick={() => setIsEditing(true)}>
             {t("resume.detail.editButton")}
           </Button>
-          {!isSnapshotMode && (
-            <RouterButton
-              variant="outlined"
-              to="/assignments/new"
-              search={{ resumeId: id, employeeId: resume?.employeeId }}
-            >
-              {t("resume.detail.addAssignment")}
-            </RouterButton>
-          )}
+          <RouterButton
+            variant="outlined"
+            to="/assignments/new"
+            search={{
+              resumeId: id,
+              employeeId: resume?.employeeId,
+              ...(isSnapshotMode && activeBranchId ? { branchId: activeBranchId } : {}),
+            }}
+          >
+            {t("resume.detail.addAssignment")}
+          </RouterButton>
         </>
       )}
       {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}

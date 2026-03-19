@@ -23,6 +23,7 @@ const TOKEN_KEY = "cv-tool:id-token";
 const searchSchema = z.object({
   employeeId: z.string().optional(),
   resumeId: z.string().optional(),
+  branchId: z.string().optional(),
 });
 
 const newAssignmentFormSchema = z.object({
@@ -52,7 +53,7 @@ function NewAssignmentPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { employeeId, resumeId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string };
+  const { employeeId, resumeId, branchId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string; branchId?: string };
 
   const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
     resolver: zodResolver(newAssignmentFormSchema),
@@ -69,11 +70,20 @@ function NewAssignmentPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (input: Parameters<typeof orpc.createAssignment>[0]) =>
-      orpc.createAssignment(input),
+    mutationFn: async (input: Parameters<typeof orpc.createAssignment>[0]) => {
+      const assignment = await orpc.createAssignment(input);
+      if (branchId) {
+        await orpc.addBranchAssignment({ branchId, assignmentId: assignment.id });
+      }
+      return assignment;
+    },
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY });
-      void navigate({ to: "/assignments/$id", params: { id: data.id } });
+      if (branchId && resumeId) {
+        void navigate({ to: "/resumes/$id", params: { id: resumeId }, search: { branchId } });
+      } else {
+        void navigate({ to: "/assignments/$id", params: { id: data.id } });
+      }
     },
   });
 
@@ -85,7 +95,8 @@ function NewAssignmentPage() {
       .filter(Boolean);
     mutation.mutate({
       employeeId,
-      resumeId: resumeId ?? null,
+      // When adding to a branch, don't link to the main resume
+      resumeId: branchId ? null : (resumeId ?? null),
       clientName: data.clientName.trim(),
       role: data.role.trim(),
       description: data.description,
