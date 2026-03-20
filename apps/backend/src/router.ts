@@ -29,10 +29,7 @@ import {
   listBranchAssignmentsFullHandler,
 } from "./domains/resume/index.js";
 import {
-  listAssignmentsHandler,
-  getAssignmentHandler,
   createAssignmentHandler,
-  updateAssignmentHandler,
   deleteAssignmentHandler,
 } from "./domains/assignment/index.js";
 import {
@@ -79,10 +76,7 @@ export const router = implement(contract).router({
   createResumeSkill: createResumeSkillHandler,
   updateResumeSkill: updateResumeSkillHandler,
   deleteResumeSkill: deleteResumeSkillHandler,
-  listAssignments: listAssignmentsHandler,
-  getAssignment: getAssignmentHandler,
   createAssignment: createAssignmentHandler,
-  updateAssignment: updateAssignmentHandler,
   deleteAssignment: deleteAssignmentHandler,
   listEducation: listEducationHandler,
   createEducation: createEducationHandler,

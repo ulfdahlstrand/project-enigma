@@ -15,13 +15,11 @@ import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as AuthenticatedTestIndexRouteImport } from './routes/_authenticated/test/index'
 import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authenticated/resumes/index'
 import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees/index'
-import { Route as AuthenticatedAssignmentsIndexRouteImport } from './routes/_authenticated/assignments/index'
 import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authenticated/resumes/new'
 import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authenticated/resumes/$id'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
 import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
 import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
-import { Route as AuthenticatedAssignmentsIdRouteImport } from './routes/_authenticated/assignments/$id'
 import { Route as AuthenticatedResumesIdEditRouteImport } from './routes/_authenticated/resumes/$id_.edit'
 import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
 import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
@@ -59,12 +57,6 @@ const AuthenticatedEmployeesIndexRoute =
     path: '/employees/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAssignmentsIndexRoute =
-  AuthenticatedAssignmentsIndexRouteImport.update({
-    id: '/assignments/',
-    path: '/assignments/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedResumesNewRoute = AuthenticatedResumesNewRouteImport.update({
   id: '/resumes/new',
   path: '/resumes/new',
@@ -91,12 +83,6 @@ const AuthenticatedAssignmentsNewRoute =
   AuthenticatedAssignmentsNewRouteImport.update({
     id: '/assignments/new',
     path: '/assignments/new',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAssignmentsIdRoute =
-  AuthenticatedAssignmentsIdRouteImport.update({
-    id: '/assignments/$id',
-    path: '/assignments/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedResumesIdEditRoute =
@@ -133,13 +119,11 @@ const AuthenticatedResumesIdCompareIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login/': typeof LoginIndexRoute
-  '/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
   '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/resumes/new': typeof AuthenticatedResumesNewRoute
-  '/assignments/': typeof AuthenticatedAssignmentsIndexRoute
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/resumes/': typeof AuthenticatedResumesIndexRoute
   '/test/': typeof AuthenticatedTestIndexRoute
@@ -152,13 +136,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginIndexRoute
-  '/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
   '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/resumes/new': typeof AuthenticatedResumesNewRoute
-  '/assignments': typeof AuthenticatedAssignmentsIndexRoute
   '/employees': typeof AuthenticatedEmployeesIndexRoute
   '/resumes': typeof AuthenticatedResumesIndexRoute
   '/test': typeof AuthenticatedTestIndexRoute
@@ -173,13 +155,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login/': typeof LoginIndexRoute
-  '/_authenticated/assignments/$id': typeof AuthenticatedAssignmentsIdRoute
   '/_authenticated/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/_authenticated/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/_authenticated/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/_authenticated/resumes/new': typeof AuthenticatedResumesNewRoute
-  '/_authenticated/assignments/': typeof AuthenticatedAssignmentsIndexRoute
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
   '/_authenticated/test/': typeof AuthenticatedTestIndexRoute
@@ -194,13 +174,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login/'
-    | '/assignments/$id'
     | '/assignments/new'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
     | '/resumes/new'
-    | '/assignments/'
     | '/employees/'
     | '/resumes/'
     | '/test/'
@@ -213,13 +191,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/assignments/$id'
     | '/assignments/new'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
     | '/resumes/new'
-    | '/assignments'
     | '/employees'
     | '/resumes'
     | '/test'
@@ -233,13 +209,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login/'
-    | '/_authenticated/assignments/$id'
     | '/_authenticated/assignments/new'
     | '/_authenticated/employees/$id'
     | '/_authenticated/employees/new'
     | '/_authenticated/resumes/$id'
     | '/_authenticated/resumes/new'
-    | '/_authenticated/assignments/'
     | '/_authenticated/employees/'
     | '/_authenticated/resumes/'
     | '/_authenticated/test/'
@@ -300,13 +274,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployeesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/assignments/': {
-      id: '/_authenticated/assignments/'
-      path: '/assignments'
-      fullPath: '/assignments/'
-      preLoaderRoute: typeof AuthenticatedAssignmentsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/resumes/new': {
       id: '/_authenticated/resumes/new'
       path: '/resumes/new'
@@ -340,13 +307,6 @@ declare module '@tanstack/react-router' {
       path: '/assignments/new'
       fullPath: '/assignments/new'
       preLoaderRoute: typeof AuthenticatedAssignmentsNewRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/assignments/$id': {
-      id: '/_authenticated/assignments/$id'
-      path: '/assignments/$id'
-      fullPath: '/assignments/$id'
-      preLoaderRoute: typeof AuthenticatedAssignmentsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/resumes/$id_/edit': {
@@ -388,13 +348,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedAssignmentsIdRoute: typeof AuthenticatedAssignmentsIdRoute
   AuthenticatedAssignmentsNewRoute: typeof AuthenticatedAssignmentsNewRoute
   AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
   AuthenticatedResumesIdRoute: typeof AuthenticatedResumesIdRoute
   AuthenticatedResumesNewRoute: typeof AuthenticatedResumesNewRoute
-  AuthenticatedAssignmentsIndexRoute: typeof AuthenticatedAssignmentsIndexRoute
   AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
   AuthenticatedResumesIndexRoute: typeof AuthenticatedResumesIndexRoute
   AuthenticatedTestIndexRoute: typeof AuthenticatedTestIndexRoute
@@ -406,13 +364,11 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAssignmentsIdRoute: AuthenticatedAssignmentsIdRoute,
   AuthenticatedAssignmentsNewRoute: AuthenticatedAssignmentsNewRoute,
   AuthenticatedEmployeesIdRoute: AuthenticatedEmployeesIdRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
   AuthenticatedResumesIdRoute: AuthenticatedResumesIdRoute,
   AuthenticatedResumesNewRoute: AuthenticatedResumesNewRoute,
-  AuthenticatedAssignmentsIndexRoute: AuthenticatedAssignmentsIndexRoute,
   AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,
   AuthenticatedResumesIndexRoute: AuthenticatedResumesIndexRoute,
   AuthenticatedTestIndexRoute: AuthenticatedTestIndexRoute,

@@ -4,85 +4,22 @@ import { branchAssignmentSchema } from "./resume-versions.js";
 // ---------------------------------------------------------------------------
 // BranchAssignment schemas
 //
-// Per-branch assignment linking CRUD.
-// Each resume branch maintains its own curated list of assignments
-// independently of other branches on the same resume.
-//
-// The item schema re-uses branchAssignmentSchema from resume-versions to
-// keep a single source of truth for the row shape.
+// Per-branch assignment content CRUD. After the branch-content migration,
+// branch_assignments owns all mutable assignment content. Editing always
+// targets a specific branch_assignment row so changes are branch-isolated.
 // ---------------------------------------------------------------------------
 
 export const branchAssignmentItemSchema = branchAssignmentSchema;
-
 export type BranchAssignmentItem = z.infer<typeof branchAssignmentItemSchema>;
 
 // ---------------------------------------------------------------------------
-// listBranchAssignments schemas
+// Full branch assignment — includes all content fields
 // ---------------------------------------------------------------------------
 
-export const listBranchAssignmentsInputSchema = z.object({
+export const fullBranchAssignmentSchema = z.object({
+  id: z.string().uuid(),           // branch_assignment id (used for updates/removes)
+  assignmentId: z.string().uuid(), // assignment identity id (used for delete)
   branchId: z.string().uuid(),
-});
-
-export const listBranchAssignmentsOutputSchema = z.array(branchAssignmentItemSchema);
-
-// ---------------------------------------------------------------------------
-// addBranchAssignment schemas
-// ---------------------------------------------------------------------------
-
-export const addBranchAssignmentInputSchema = z.object({
-  branchId: z.string().uuid(),
-  assignmentId: z.string().uuid(),
-  highlight: z.boolean().optional(),
-  sortOrder: z.number().nullable().optional(),
-});
-
-export const addBranchAssignmentOutputSchema = branchAssignmentItemSchema;
-
-// ---------------------------------------------------------------------------
-// removeBranchAssignment schemas
-// ---------------------------------------------------------------------------
-
-export const removeBranchAssignmentInputSchema = z.object({
-  id: z.string().uuid(),
-});
-
-export const removeBranchAssignmentOutputSchema = z.object({
-  deleted: z.literal(true),
-});
-
-// ---------------------------------------------------------------------------
-// updateBranchAssignment schemas
-// ---------------------------------------------------------------------------
-
-export const updateBranchAssignmentInputSchema = z
-  .object({
-    id: z.string().uuid(),
-    highlight: z.boolean().optional(),
-    sortOrder: z.number().nullable().optional(),
-  })
-  .refine(
-    (d) => d.highlight !== undefined || d.sortOrder !== undefined,
-    { message: "At least one field must be provided" }
-  );
-
-export const updateBranchAssignmentOutputSchema = branchAssignmentItemSchema;
-
-// ---------------------------------------------------------------------------
-// listBranchAssignmentsFull schemas
-//
-// Returns full assignment data joined from the assignments table, augmented
-// with highlight and sortOrder from the branch_assignments join row.
-// Use this instead of listAssignments({ resumeId }) to load assignments for
-// any branch (main or non-main) from the unified branch_assignments source.
-// ---------------------------------------------------------------------------
-
-export const listBranchAssignmentsFullInputSchema = z.object({
-  branchId: z.string().uuid(),
-});
-
-const fullAssignmentSchema = z.object({
-  id: z.string().uuid(),
   employeeId: z.string().uuid(),
   clientName: z.string(),
   role: z.string(),
@@ -99,6 +36,97 @@ const fullAssignmentSchema = z.object({
   updatedAt: z.union([z.string(), z.date()]),
 });
 
-export type FullBranchAssignment = z.infer<typeof fullAssignmentSchema>;
+export type FullBranchAssignment = z.infer<typeof fullBranchAssignmentSchema>;
 
-export const listBranchAssignmentsFullOutputSchema = z.array(fullAssignmentSchema);
+// ---------------------------------------------------------------------------
+// listBranchAssignments (thin — link rows only)
+// ---------------------------------------------------------------------------
+
+export const listBranchAssignmentsInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const listBranchAssignmentsOutputSchema = z.array(branchAssignmentItemSchema);
+
+// ---------------------------------------------------------------------------
+// listBranchAssignmentsFull — returns full content per branch
+// ---------------------------------------------------------------------------
+
+export const listBranchAssignmentsFullInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const listBranchAssignmentsFullOutputSchema = z.array(fullBranchAssignmentSchema);
+
+// ---------------------------------------------------------------------------
+// addBranchAssignment — link assignment identity to a branch with content
+// ---------------------------------------------------------------------------
+
+export const addBranchAssignmentInputSchema = z.object({
+  branchId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  clientName: z.string().min(1),
+  role: z.string().min(1),
+  description: z.string().default(""),
+  startDate: z.string(),
+  endDate: z.string().nullable().optional(),
+  technologies: z.array(z.string()).default([]),
+  isCurrent: z.boolean().default(false),
+  keywords: z.string().nullable().optional(),
+  type: z.string().nullable().optional(),
+  highlight: z.boolean().optional(),
+  sortOrder: z.number().nullable().optional(),
+});
+
+export const addBranchAssignmentOutputSchema = fullBranchAssignmentSchema;
+
+// ---------------------------------------------------------------------------
+// removeBranchAssignment
+// ---------------------------------------------------------------------------
+
+export const removeBranchAssignmentInputSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const removeBranchAssignmentOutputSchema = z.object({
+  deleted: z.literal(true),
+});
+
+// ---------------------------------------------------------------------------
+// updateBranchAssignment — content + curation fields, all optional
+// ---------------------------------------------------------------------------
+
+export const updateBranchAssignmentInputSchema = z
+  .object({
+    id: z.string().uuid(),
+    // Content fields
+    clientName: z.string().min(1).optional(),
+    role: z.string().min(1).optional(),
+    description: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().nullable().optional(),
+    technologies: z.array(z.string()).optional(),
+    isCurrent: z.boolean().optional(),
+    keywords: z.string().nullable().optional(),
+    type: z.string().nullable().optional(),
+    // Curation fields
+    highlight: z.boolean().optional(),
+    sortOrder: z.number().nullable().optional(),
+  })
+  .refine(
+    (d) =>
+      d.clientName !== undefined ||
+      d.role !== undefined ||
+      d.description !== undefined ||
+      d.startDate !== undefined ||
+      d.endDate !== undefined ||
+      d.technologies !== undefined ||
+      d.isCurrent !== undefined ||
+      d.keywords !== undefined ||
+      d.type !== undefined ||
+      d.highlight !== undefined ||
+      d.sortOrder !== undefined,
+    { message: "At least one field must be provided" }
+  );
+
+export const updateBranchAssignmentOutputSchema = fullBranchAssignmentSchema;

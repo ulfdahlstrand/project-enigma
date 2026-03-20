@@ -19,7 +19,10 @@ import { ImproveAssignmentFab } from "./ai-assistant/ImproveAssignmentFab";
 // ---------------------------------------------------------------------------
 
 export interface AssignmentRow {
+  /** branch_assignment id — used for content updates */
   id: string;
+  /** assignment identity id — used for deletion */
+  assignmentId: string;
   clientName: string;
   role: string;
   description: string;
@@ -90,7 +93,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [saveError, setSaveError] = useState(false);
 
-  // Per-card DOM refs for FAB positioning
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
 
@@ -104,9 +106,10 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
     setCardTops(tops);
   }, [canvasEl, assignments, editingId]);
 
+  // All content edits go through updateBranchAssignment (id = branch_assignment id)
   const updateMutation = useMutation({
-    mutationFn: (input: Parameters<typeof orpc.updateAssignment>[0]) =>
-      orpc.updateAssignment(input),
+    mutationFn: (input: Parameters<typeof orpc.updateBranchAssignment>[0]) =>
+      orpc.updateBranchAssignment(input),
     onSuccess: async () => {
       setEditingId(null);
       setDraft(null);
@@ -130,7 +133,8 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
 
   const handleSave = (original: AssignmentRow) => {
     if (!draft) return;
-    const patch: Parameters<typeof orpc.updateAssignment>[0] = { id: original.id };
+    // id here is the branch_assignment id
+    const patch: Parameters<typeof orpc.updateBranchAssignment>[0] = { id: original.id };
 
     if (draft.role !== original.role) patch.role = draft.role;
     if (draft.clientName !== original.clientName) patch.clientName = draft.clientName;
@@ -157,10 +161,9 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
 
   const handleAiAccept = (a: AssignmentRow) => (improvedText: string) => {
     if (editingId === a.id && draft) {
-      // Card is open in edit mode — update the draft so user can review before saving
       setDraft((prev) => (prev ? { ...prev, description: improvedText } : prev));
     } else {
-      // Card is in read-only state — save directly
+      // id is branch_assignment id
       updateMutation.mutate({ id: a.id, description: improvedText });
     }
   };
@@ -188,7 +191,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
               ref={(el: HTMLDivElement | null) => { cardRefs.current.set(a.id, el); }}
               sx={{ position: "relative" }}
             >
-              {/* Edit icon — visible when card is in read-only state */}
               {!isEditing && (
                 <IconButton
                   size="small"
@@ -201,7 +203,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
               )}
 
               {isEditing && draft ? (
-                /* ── Edit mode ── */
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                   <Box sx={{ display: "flex", gap: 1.5 }}>
                     <TextField
@@ -299,7 +300,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
                   </Box>
                 </Box>
               ) : (
-                /* ── Read-only card (same layout as full view) ── */
                 <>
                   <Typography
                     variant="h6"
@@ -328,15 +328,7 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
                   )}
 
                   {(a.technologies.length > 0 || a.keywords) && (
-                    <Box
-                      sx={{
-                        bgcolor: "action.hover",
-                        borderRadius: 0,
-                        px: 1.5,
-                        py: 1,
-                        mt: 2,
-                      }}
-                    >
+                    <Box sx={{ bgcolor: "action.hover", borderRadius: 0, px: 1.5, py: 1, mt: 2 }}>
                       {a.technologies.length > 0 && (
                         <Typography variant="body2" sx={{ mb: a.keywords ? 0.5 : 0 }}>
                           <Box
@@ -368,9 +360,8 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
         })}
       </Box>
 
-      {/* AI improvement FABs — portalled into the canvas so they sit outside the paper */}
       {canvasEl && assignments.map((a) => {
-        if (editingId === a.id) return null; // hidden while card is in edit mode
+        if (editingId === a.id) return null;
         const top = cardTops.get(a.id);
         if (top === undefined) return null;
         return createPortal(

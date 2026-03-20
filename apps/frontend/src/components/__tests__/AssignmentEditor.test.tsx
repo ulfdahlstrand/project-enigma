@@ -5,7 +5,7 @@
  *   - Renders all assignments in read-only mode with correct role/client text
  *   - Edit icon button switches the card to edit mode with populated fields
  *   - Cancel returns to read-only mode without saving
- *   - Save calls orpc.updateAssignment with correct id and changed fields
+ *   - Save calls orpc.updateBranchAssignment with correct id and changed fields
  *   - isCurrent checkbox disables the end-date field when checked
  *   - Save button is disabled while mutation is pending
  *   - Error alert appears on mutation failure
@@ -27,7 +27,7 @@ const mockUpdateAssignment = vi.fn();
 
 vi.mock("../../orpc-client", () => ({
   orpc: {
-    updateAssignment: (...args: unknown[]) => mockUpdateAssignment(...args),
+    updateBranchAssignment: (...args: unknown[]) => mockUpdateAssignment(...args),
   },
 }));
 
@@ -41,6 +41,7 @@ afterEach(() => {
 
 const A1: AssignmentRow = {
   id: "550e8400-e29b-41d4-a716-446655440001",
+  assignmentId: "660e8400-e29b-41d4-a716-446655440001",
   role: "Senior Developer",
   clientName: "Acme Corp",
   description: "Built stuff.\n\nMore stuff.",
@@ -53,6 +54,7 @@ const A1: AssignmentRow = {
 
 const A2: AssignmentRow = {
   id: "550e8400-e29b-41d4-a716-446655440002",
+  assignmentId: "660e8400-e29b-41d4-a716-446655440002",
   role: "Tech Lead",
   clientName: "Globex",
   description: "Led a team.",

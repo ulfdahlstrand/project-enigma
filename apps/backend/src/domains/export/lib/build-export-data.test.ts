@@ -154,8 +154,7 @@ function buildDbMock(opts: {
   const assignWhere2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
   const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2, orderBy: assignOrderBy1 });
   const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere1 });
-  const assignInnerJoin2 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
-  const assignInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: assignInnerJoin2 });
+  const assignInnerJoin1 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
 
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);

@@ -26,7 +26,6 @@ import Typography from "@mui/material/Typography";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
-import { LIST_ASSIGNMENTS_QUERY_KEY } from "../assignments";
 import { getEducationQueryKey } from "./$id";
 import { LIST_RESUMES_QUERY_KEY } from "../resumes";
 
@@ -54,7 +53,6 @@ function ImportCvPage() {
     },
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: getEducationQueryKey(id) }),
         queryClient.invalidateQueries({ queryKey: [...LIST_RESUMES_QUERY_KEY, id] }),
       ]);

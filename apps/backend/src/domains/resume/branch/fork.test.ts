@@ -122,17 +122,16 @@ function buildDbMock(opts: {
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
 
-  // Source assignments query — plain branch_assignments select (copy step)
+  // Source assignments query — plain branch_assignments selectAll (copy step)
   const assignmentsExecute = vi.fn().mockResolvedValue(sourceAssignments);
   const assignmentsWhere = vi.fn().mockReturnValue({ execute: assignmentsExecute });
-  const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere });
+  const assignmentsSelectAll = vi.fn().mockReturnValue({ where: assignmentsWhere });
 
-  // Fresh assignments query — branch_assignments as ba innerJoin assignments (content build step)
+  // Fresh assignments query — branch_assignments as ba, select([...]) (content build step)
   const freshAssignmentsExecute = vi.fn().mockResolvedValue(freshAssignmentRows);
   const freshAssignmentsOrderBy = vi.fn().mockReturnValue({ execute: freshAssignmentsExecute });
   const freshAssignmentsWhere = vi.fn().mockReturnValue({ orderBy: freshAssignmentsOrderBy });
   const freshAssignmentsSelect = vi.fn().mockReturnValue({ where: freshAssignmentsWhere });
-  const freshAssignmentsInnerJoin = vi.fn().mockReturnValue({ select: freshAssignmentsSelect });
 
   // Copy assignments insert (inside transaction)
   const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
@@ -157,10 +156,10 @@ function buildDbMock(opts: {
   });
 
   const trxSelectFrom = vi.fn().mockImplementation((table: string) => {
-    // Plain branch_assignments → copy step (select/where/execute)
-    if (table === "branch_assignments") return { select: assignmentsSelect };
-    // Aliased branch_assignments as ba → fresh content build step (innerJoin chain)
-    if (table === "branch_assignments as ba") return { innerJoin: freshAssignmentsInnerJoin };
+    // Plain branch_assignments → copy step (selectAll/where/execute)
+    if (table === "branch_assignments") return { selectAll: assignmentsSelectAll };
+    // Aliased branch_assignments as ba → fresh content build step (select chain)
+    if (table === "branch_assignments as ba") return { select: freshAssignmentsSelect };
     return {};
   });
 
