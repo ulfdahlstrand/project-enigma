@@ -3,7 +3,7 @@
  *
  * Wires together all providers in the correct order:
  *   1. GoogleOAuthProvider -- Google OAuth; required by @react-oauth/google
- *   2. AuthProvider        -- CV Tool auth context; token storage
+ *   2. AuthProvider        -- CV Tool auth context; cookie/session bootstrap
  *   3. ColorModeProvider   -- dark/light mode with system-preference fallback
  *   4. ThemeProvider       -- Material UI; supplies the MUI theme to all child components
  *   5. CssBaseline         -- Material UI; normalises browser default styles globally

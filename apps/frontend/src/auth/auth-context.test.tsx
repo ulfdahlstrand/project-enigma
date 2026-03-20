@@ -4,8 +4,6 @@ import { render, screen, act, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./auth-context";
 import type { GetCurrentSessionOutput } from "@cv-tool/contracts";
 import { resetAuthSession } from "./session-store";
-
-const ACCESS_TOKEN = "header.payload.signature";
 const SESSION_RESPONSE: GetCurrentSessionOutput = {
   user: {
     id: "550e8400-e29b-41d4-a716-446655440000",
@@ -26,11 +24,10 @@ function getRequestUrl(input: string | URL | Request): string {
 }
 
 function TestConsumer() {
-  const { user, token, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   return (
     <div>
       <span data-testid="user">{user?.email ?? "null"}</span>
-      <span data-testid="token">{token ?? "null"}</span>
       <span data-testid="auth">{String(isAuthenticated)}</span>
       <span data-testid="loading">{String(isLoading)}</span>
     </div>
@@ -64,7 +61,6 @@ describe("AuthProvider / useAuth", () => {
     );
     expect(screen.getByTestId("auth").textContent).toBe("false");
     expect(screen.getByTestId("user").textContent).toBe("null");
-    expect(screen.getByTestId("token").textContent).toBe("null");
   });
 
   it("authenticates from the current session endpoint on mount", async () => {
@@ -80,10 +76,9 @@ describe("AuthProvider / useAuth", () => {
     );
     expect(screen.getByTestId("auth").textContent).toBe("true");
     expect(screen.getByTestId("user").textContent).toBe(SESSION_RESPONSE.user.email);
-    expect(screen.getByTestId("token").textContent).toBe("null");
   });
 
-  it("persists the user after login hydrates token and refreshes the session snapshot", async () => {
+  it("persists the user after login refreshes the session snapshot", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = getRequestUrl(input);
 
@@ -97,7 +92,7 @@ describe("AuthProvider / useAuth", () => {
       }
 
       return Promise.resolve(
-        new Response(JSON.stringify({ accessToken: ACCESS_TOKEN }), {
+        new Response(JSON.stringify({ accessToken: "unused.access.token" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })
@@ -105,11 +100,10 @@ describe("AuthProvider / useAuth", () => {
     });
 
     function LoginConsumer() {
-      const { login, token, user } = useAuth();
+      const { login, user } = useAuth();
       return (
         <div>
           <button onClick={() => void login("google-credential")}>login</button>
-          <span data-testid="login-token">{token ?? "null"}</span>
           <span data-testid="login-user">{user?.email ?? "null"}</span>
         </div>
       );
@@ -128,8 +122,6 @@ describe("AuthProvider / useAuth", () => {
     await waitFor(() =>
       expect(screen.getByTestId("login-user").textContent).toBe(SESSION_RESPONSE.user.email)
     );
-
-    expect(screen.getByTestId("login-token").textContent).toBe(ACCESS_TOKEN);
   });
 
   it("clears the session snapshot when bootstrap fails", async () => {
