@@ -38,6 +38,7 @@ export async function addBranchAssignment(
     .selectFrom("assignments")
     .select("employee_id")
     .where("id", "=", input.assignmentId)
+    .where("deleted_at", "is", null)
     .executeTakeFirst();
 
   if (assignment === undefined) {

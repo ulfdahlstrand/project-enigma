@@ -27,11 +27,9 @@ import {
   updateBranchAssignmentHandler,
   listBranchAssignmentsHandler,
   listBranchAssignmentsFullHandler,
-} from "./domains/resume/index.js";
-import {
   createAssignmentHandler,
   deleteAssignmentHandler,
-} from "./domains/assignment/index.js";
+} from "./domains/resume/index.js";
 import {
   listEducationHandler,
   createEducationHandler,

@@ -62,10 +62,11 @@ function buildDbMock(opts: {
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
-  // ba + rb + r + a join (3 innerJoins)
+  // ba + rb + r + a join (3 innerJoins), then two where calls (id + deleted_at filter)
   const rowExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedRow);
-  const rowWhere = vi.fn().mockReturnValue({ executeTakeFirst: rowExecuteTakeFirst });
-  const rowSelect = vi.fn().mockReturnValue({ where: rowWhere });
+  const rowWhere2 = vi.fn().mockReturnValue({ executeTakeFirst: rowExecuteTakeFirst });
+  const rowWhere1 = vi.fn().mockReturnValue({ where: rowWhere2 });
+  const rowSelect = vi.fn().mockReturnValue({ where: rowWhere1 });
   const rowInnerJoin3 = vi.fn().mockReturnValue({ select: rowSelect });
   const rowInnerJoin2 = vi.fn().mockReturnValue({ innerJoin: rowInnerJoin3 });
   const rowInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: rowInnerJoin2 });

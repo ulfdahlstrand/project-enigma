@@ -74,9 +74,11 @@ export async function saveResumeVersion(
     .orderBy("sort_order", "asc")
     .execute();
 
-  // Fetch assignments linked to this branch — all content is now in branch_assignments
+  // Fetch assignments linked to this branch — all content is now in branch_assignments.
+  // Soft-deleted assignments are excluded (deleted_at IS NULL guard).
   const assignmentRows = await db
     .selectFrom("branch_assignments as ba")
+    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
     .select([
       "ba.assignment_id",
       "ba.client_name",
@@ -92,6 +94,7 @@ export async function saveResumeVersion(
       "ba.sort_order",
     ])
     .where("ba.branch_id", "=", input.branchId)
+    .where("a.deleted_at", "is", null)
     .orderBy("ba.sort_order", "asc")
     .execute();
 

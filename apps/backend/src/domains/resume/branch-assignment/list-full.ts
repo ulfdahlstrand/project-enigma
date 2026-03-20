@@ -62,6 +62,7 @@ export async function listBranchAssignmentsFull(
       "ba.updated_at",
     ])
     .where("ba.branch_id", "=", input.branchId)
+    .where("a.deleted_at", "is", null)
     .orderBy(sql`ba.sort_order ASC NULLS LAST`)
     .orderBy("ba.start_date", "desc")
     .execute();

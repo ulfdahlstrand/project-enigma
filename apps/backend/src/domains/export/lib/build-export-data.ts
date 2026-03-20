@@ -62,9 +62,11 @@ async function buildFromLive(
     db
       .selectFrom("branch_assignments as ba")
       .innerJoin("resume_branches as rb", "rb.id", "ba.branch_id")
+      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
       .selectAll("ba")
       .where("rb.resume_id", "=", resumeId)
       .where("rb.is_main", "=", true)
+      .where("a.deleted_at", "is", null)
       .orderBy("ba.is_current", "desc")
       .orderBy("ba.end_date", "desc")
       .orderBy("ba.start_date", "desc")
