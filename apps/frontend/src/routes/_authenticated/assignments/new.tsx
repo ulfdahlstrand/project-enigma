@@ -1,7 +1,7 @@
 import Button from "@mui/material/Button";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,11 +13,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
-import { LIST_ASSIGNMENTS_QUERY_KEY } from ".";
 import { useSearch } from "@tanstack/react-router";
-
-export const LIST_ASSIGNMENTS_NEW_QUERY_KEY = LIST_ASSIGNMENTS_QUERY_KEY;
-
 
 const searchSchema = z.object({
   employeeId: z.string().optional(),
@@ -46,7 +42,6 @@ export const Route = createFileRoute("/_authenticated/assignments/new")({
 function NewAssignmentPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { employeeId, resumeId, branchId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string; branchId?: string };
 
   const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
@@ -66,25 +61,24 @@ function NewAssignmentPage() {
   const mutation = useMutation({
     mutationFn: (input: Parameters<typeof orpc.createAssignment>[0]) =>
       orpc.createAssignment(input),
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: LIST_ASSIGNMENTS_QUERY_KEY });
+    onSuccess: () => {
       if (branchId && resumeId) {
         void navigate({ to: "/resumes/$id", params: { id: resumeId }, search: { branchId } });
-      } else {
-        void navigate({ to: "/assignments/$id", params: { id: data.id } });
+      } else if (resumeId) {
+        void navigate({ to: "/resumes/$id", params: { id: resumeId } });
       }
     },
   });
 
   const onSubmit = (data: NewAssignmentFormValues) => {
-    if (!employeeId) return;
+    if (!employeeId || !branchId) return;
     const technologies = data.technologiesRaw
       .split(",")
       .map((tech) => tech.trim())
       .filter(Boolean);
     mutation.mutate({
       employeeId,
-      branchId: branchId ?? undefined,
+      branchId,
       clientName: data.clientName.trim(),
       role: data.role.trim(),
       description: data.description,
@@ -183,14 +177,17 @@ function NewAssignmentPage() {
           >
             {t("assignment.new.saveButton")}
           </Button>
-          <RouterButton
-            variant="outlined"
-            to="/assignments"
-            search={employeeId ? { employeeId } : {}}
-            aria-label={t("assignment.new.cancel")}
-          >
-            {t("assignment.new.cancel")}
-          </RouterButton>
+          {resumeId && (
+            <RouterButton
+              variant="outlined"
+              to="/resumes/$id"
+              params={{ id: resumeId }}
+              search={branchId ? { branchId } : {}}
+              aria-label={t("assignment.new.cancel")}
+            >
+              {t("assignment.new.cancel")}
+            </RouterButton>
+          )}
         </Box>
       </Box>
     </Box>

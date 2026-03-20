@@ -74,21 +74,20 @@ export async function saveResumeVersion(
     .orderBy("sort_order", "asc")
     .execute();
 
-  // Fetch assignments linked to this branch
+  // Fetch assignments linked to this branch — all content is now in branch_assignments
   const assignmentRows = await db
     .selectFrom("branch_assignments as ba")
-    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
     .select([
-      "a.id as assignment_id",
-      "a.client_name",
-      "a.role",
-      "a.description",
-      "a.start_date",
-      "a.end_date",
-      "a.technologies",
-      "a.is_current",
-      "a.keywords",
-      "a.type",
+      "ba.assignment_id",
+      "ba.client_name",
+      "ba.role",
+      "ba.description",
+      "ba.start_date",
+      "ba.end_date",
+      "ba.technologies",
+      "ba.is_current",
+      "ba.keywords",
+      "ba.type",
       "ba.highlight",
       "ba.sort_order",
     ])

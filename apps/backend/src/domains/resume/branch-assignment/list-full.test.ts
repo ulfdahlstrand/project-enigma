@@ -17,8 +17,9 @@ const BRANCH_ROW = { id: BRANCH_ID, employee_id: EMPLOYEE_ID };
 const ASSIGNMENT_ROWS = [
   {
     id: ASSIGNMENT_ID_1,
+    assignment_id: "550e8400-e29b-41d4-a716-446655440020",
+    branch_id: BRANCH_ID,
     employee_id: EMPLOYEE_ID,
-    resume_id: null,
     client_name: "ACME",
     role: "Engineer",
     description: "Built things",
@@ -35,8 +36,9 @@ const ASSIGNMENT_ROWS = [
   },
   {
     id: ASSIGNMENT_ID_2,
+    assignment_id: "550e8400-e29b-41d4-a716-446655440021",
+    branch_id: BRANCH_ID,
     employee_id: EMPLOYEE_ID,
-    resume_id: null,
     client_name: "Globex",
     role: "Consultant",
     description: "",

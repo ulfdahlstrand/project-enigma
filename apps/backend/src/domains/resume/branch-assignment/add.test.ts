@@ -19,12 +19,32 @@ const ASSIGNMENT_ID = "550e8400-e29b-41d4-a716-446655440051";
 const BRANCH_ROW = { id: BRANCH_ID, employee_id: EMPLOYEE_ID_1 };
 const ASSIGNMENT_ROW = { employee_id: EMPLOYEE_ID_1 };
 
+// Minimum valid input — required content fields after the branch-content refactor
+const VALID_INPUT = {
+  branchId: BRANCH_ID,
+  assignmentId: ASSIGNMENT_ID,
+  clientName: "Acme Corp",
+  role: "Developer",
+  startDate: "2023-01-01",
+};
+
 const INSERTED_ROW = {
   id: BA_ID,
   branch_id: BRANCH_ID,
   assignment_id: ASSIGNMENT_ID,
+  client_name: "Acme Corp",
+  role: "Developer",
+  description: "",
+  start_date: new Date("2023-01-01"),
+  end_date: null,
+  technologies: [],
+  is_current: false,
+  keywords: null,
+  type: null,
   highlight: false,
   sort_order: null,
+  created_at: new Date("2023-01-01"),
+  updated_at: new Date("2023-01-01"),
 };
 
 // ---------------------------------------------------------------------------
@@ -86,10 +106,7 @@ describe("addBranchAssignment", () => {
   it("inserts a branch assignment and returns the created row", async () => {
     const { db, insertValues } = buildDbMock();
 
-    const result = await addBranchAssignment(db, MOCK_ADMIN, {
-      branchId: BRANCH_ID,
-      assignmentId: ASSIGNMENT_ID,
-    });
+    const result = await addBranchAssignment(db, MOCK_ADMIN, VALID_INPUT);
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -108,12 +125,7 @@ describe("addBranchAssignment", () => {
       insertedRow: { ...INSERTED_ROW, highlight: true, sort_order: 5 },
     });
 
-    await addBranchAssignment(db, MOCK_ADMIN, {
-      branchId: BRANCH_ID,
-      assignmentId: ASSIGNMENT_ID,
-      highlight: true,
-      sortOrder: 5,
-    });
+    await addBranchAssignment(db, MOCK_ADMIN, { ...VALID_INPUT, highlight: true, sortOrder: 5 });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({ highlight: true, sort_order: 5 })
@@ -124,7 +136,7 @@ describe("addBranchAssignment", () => {
     const { db } = buildDbMock({ assignmentRow: null });
 
     await expect(
-      addBranchAssignment(db, MOCK_ADMIN, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID })
+      addBranchAssignment(db, MOCK_ADMIN, VALID_INPUT)
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
@@ -134,7 +146,7 @@ describe("addBranchAssignment", () => {
     const { db } = buildDbMock({ assignmentRow: { employee_id: EMPLOYEE_ID_2 } });
 
     await expect(
-      addBranchAssignment(db, MOCK_ADMIN, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID })
+      addBranchAssignment(db, MOCK_ADMIN, VALID_INPUT)
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
@@ -144,7 +156,7 @@ describe("addBranchAssignment", () => {
     const { db } = buildDbMock({ branchRow: null });
 
     await expect(
-      addBranchAssignment(db, MOCK_ADMIN, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID })
+      addBranchAssignment(db, MOCK_ADMIN, VALID_INPUT)
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
@@ -154,7 +166,7 @@ describe("addBranchAssignment", () => {
     const { db } = buildDbMock({ employeeId: EMPLOYEE_ID_1 });
 
     await expect(
-      addBranchAssignment(db, MOCK_CONSULTANT, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID })
+      addBranchAssignment(db, MOCK_CONSULTANT, VALID_INPUT)
     ).resolves.toBeDefined();
   });
 
@@ -162,7 +174,7 @@ describe("addBranchAssignment", () => {
     const { db } = buildDbMock({ employeeId: EMPLOYEE_ID_2 });
 
     await expect(
-      addBranchAssignment(db, MOCK_CONSULTANT_2, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID })
+      addBranchAssignment(db, MOCK_CONSULTANT_2, VALID_INPUT)
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
@@ -176,7 +188,7 @@ describe("createAddBranchAssignmentHandler", () => {
 
     const result = await call(
       handler,
-      { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID },
+      VALID_INPUT,
       { context: { user: MOCK_ADMIN } }
     );
 
@@ -188,7 +200,7 @@ describe("createAddBranchAssignmentHandler", () => {
     const handler = createAddBranchAssignmentHandler(db);
 
     await expect(
-      call(handler, { branchId: BRANCH_ID, assignmentId: ASSIGNMENT_ID }, { context: {} })
+      call(handler, VALID_INPUT, { context: {} })
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "UNAUTHORIZED"
     );

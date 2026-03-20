@@ -62,21 +62,11 @@ export type ResumeSkill = Selectable<ResumeSkillTable>;
 export type NewResumeSkill = Insertable<ResumeSkillTable>;
 export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
 
+/** Identity-only record. All mutable content lives in branch_assignments. */
 export interface AssignmentTable {
   id: Generated<string>;
   employee_id: string;
-  client_name: string;
-  role: string;
-  description: Generated<string>;
-  start_date: Date;
-  end_date: Date | null;
-  technologies: ColumnType<string[], string[], string[]>;
-  is_current: Generated<boolean>;
-  keywords: string | null;
-  type: string | null;
-  highlight: Generated<boolean>;
   created_at: Generated<Date>;
-  updated_at: Generated<Date>;
 }
 
 export interface EducationTable {
@@ -91,7 +81,6 @@ export interface EducationTable {
 
 export type Assignment = Selectable<AssignmentTable>;
 export type NewAssignment = Insertable<AssignmentTable>;
-export type AssignmentUpdate = Updateable<AssignmentTable>;
 
 export type Education = Selectable<EducationTable>;
 export type NewEducation = Insertable<EducationTable>;
@@ -190,15 +179,28 @@ export type NewResumeBranch = Insertable<ResumeBranchTable>;
 export type ResumeBranchUpdate = Updateable<ResumeBranchTable>;
 
 /**
- * Per-branch assignment linking. Each branch maintains its own curated list of
- * assignments independently of other branches on the same resume.
+ * Per-branch assignment content. Each row owns the full content for one
+ * assignment on one branch — editing is branch-specific.
  */
 export interface BranchAssignmentTable {
   id: Generated<string>;
   branch_id: string;
   assignment_id: string;
+  // Content columns (branch-specific)
+  client_name: string;
+  role: string;
+  description: Generated<string>;
+  start_date: Date;
+  end_date: Date | null;
+  technologies: ColumnType<string[], string[], string[]>;
+  is_current: Generated<boolean>;
+  keywords: string | null;
+  type: string | null;
+  // Curation columns
   highlight: Generated<boolean>;
   sort_order: number | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 export type BranchAssignment = Selectable<BranchAssignmentTable>;

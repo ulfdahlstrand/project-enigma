@@ -16,14 +16,29 @@ const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
 const BA_ID = "550e8400-e29b-41d4-a716-446655440061";
 const ASSIGNMENT_ID = "550e8400-e29b-41d4-a716-446655440051";
 
-const EXISTING_ROW = { id: BA_ID, employee_id: EMPLOYEE_ID_1 };
+const EXISTING_ROW = {
+  id: BA_ID,
+  employee_id: EMPLOYEE_ID_1,
+  assignment_employee_id: EMPLOYEE_ID_1,
+};
 
 const UPDATED_ROW = {
   id: BA_ID,
   branch_id: BRANCH_ID,
   assignment_id: ASSIGNMENT_ID,
+  client_name: "Acme Corp",
+  role: "Developer",
+  description: "",
+  start_date: new Date("2023-01-01"),
+  end_date: null,
+  technologies: [],
+  is_current: false,
+  keywords: null,
+  type: null,
   highlight: true,
   sort_order: 3,
+  created_at: new Date("2023-01-01"),
+  updated_at: new Date("2023-01-01"),
 };
 
 // ---------------------------------------------------------------------------
@@ -47,11 +62,12 @@ function buildDbMock(opts: {
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
-  // ba + branch + resume join
+  // ba + rb + r + a join (3 innerJoins)
   const rowExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedRow);
   const rowWhere = vi.fn().mockReturnValue({ executeTakeFirst: rowExecuteTakeFirst });
   const rowSelect = vi.fn().mockReturnValue({ where: rowWhere });
-  const rowInnerJoin2 = vi.fn().mockReturnValue({ select: rowSelect });
+  const rowInnerJoin3 = vi.fn().mockReturnValue({ select: rowSelect });
+  const rowInnerJoin2 = vi.fn().mockReturnValue({ innerJoin: rowInnerJoin3 });
   const rowInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: rowInnerJoin2 });
 
   // Update
@@ -89,6 +105,8 @@ describe("updateBranchAssignment", () => {
     );
     expect(result).toMatchObject({
       id: BA_ID,
+      assignmentId: ASSIGNMENT_ID,
+      branchId: BRANCH_ID,
       highlight: true,
       sortOrder: 3,
     });
