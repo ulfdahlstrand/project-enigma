@@ -91,6 +91,16 @@ const GRAPH = {
       forkedFromCommitId: "commit-id-3",
       createdAt: "2024-06-04T09:00:00Z",
     },
+    {
+      id: "branch-id-4",
+      resumeId: "resume-id-1",
+      name: "Empty Variant",
+      language: "fr",
+      isMain: false,
+      headCommitId: null,
+      forkedFromCommitId: "commit-id-2",
+      createdAt: "2024-06-05T09:00:00Z",
+    },
   ],
   commits: [
     {
@@ -217,6 +227,24 @@ describe("Commit list", () => {
     expect(await screen.findByText("Swedish version")).toBeInTheDocument();
     expect(screen.queryByText("Initial version")).toBeNull();
   });
+
+  it("falls back to the main branch when the search branch is unknown", async () => {
+    mockSearch = { branchId: "missing-branch", view: "list" };
+    renderPage();
+
+    expect(await screen.findByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("Swedish version")).toBeNull();
+  });
+
+  it("renders commits with the newest saved version first", async () => {
+    renderPage();
+
+    expect(await screen.findByText(enCommon.resume.history.defaultMessage)).toBeInTheDocument();
+
+    const commitMessages = screen.getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
+    expect(commitMessages[0]).toContain(enCommon.resume.history.defaultMessage);
+    expect(commitMessages[1]).toContain("Initial version");
+  });
 });
 
 describe("View controls", () => {
@@ -255,6 +283,7 @@ describe("View controls", () => {
     expect(screen.getByTestId("tree-branch-branch-id-1")).toBeInTheDocument();
     expect(screen.getByTestId("tree-branch-branch-id-2")).toBeInTheDocument();
     expect(screen.getByTestId("tree-branch-branch-id-3")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-4")).toBeInTheDocument();
     expect(screen.getByTestId("tree-commit-commit-id-1")).toBeInTheDocument();
     expect(screen.getByTestId("tree-commit-commit-id-2")).toBeInTheDocument();
     expect(screen.getByTestId("tree-commit-commit-id-3")).toBeInTheDocument();
@@ -280,6 +309,28 @@ describe("View controls", () => {
     expect(updatedCommit).toHaveTextContent("commit-id-2");
     expect(swedishCommit).toHaveTextContent("Swedish version");
     expect(germanCommit).toHaveTextContent("German version");
+  });
+
+  it("renders the no-commits branch state in tree mode", async () => {
+    mockSearch = { view: "tree", branchId: "branch-id-4" };
+    renderPage();
+
+    expect(await screen.findByTestId("tree-branch-branch-id-4")).toHaveTextContent(
+      enCommon.resume.history.treeNoCommits
+    );
+    expect(screen.getByText(enCommon.resume.history.currentBranchTag)).toBeInTheDocument();
+  });
+
+  it("falls back to the first branch when no main branch exists", async () => {
+    mockSearch = { view: "tree" };
+    mockGetResumeBranchHistoryGraph.mockResolvedValue({
+      ...GRAPH,
+      branches: GRAPH.branches.map((branch) => ({ ...branch, isMain: false })),
+    });
+    renderPage();
+
+    const firstBranch = await screen.findByTestId("tree-branch-branch-id-1");
+    expect(firstBranch).toHaveTextContent(enCommon.resume.history.currentBranchTag);
   });
 
   it("navigates when tree view is selected", async () => {

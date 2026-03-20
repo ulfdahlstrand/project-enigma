@@ -65,13 +65,17 @@ function VersionHistoryPage() {
   } = useResumeBranchHistoryGraph(resumeId);
 
   const branches = graph?.branches ?? [];
+  const selectedBranch =
+    branches.find((branch) => branch.id === branchIdFromSearch) ??
+    branches.find((branch) => branch.isMain) ??
+    branches[0];
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
-  const selectedBranchId =
-    branches.find((branch) => branch.id === branchIdFromSearch)?.id ??
-    mainBranchId;
+  const selectedBranchId = selectedBranch?.id ?? mainBranchId;
   const selectedView = viewFromSearch ?? "list";
   const graphCommits = graph?.commits ?? [];
-  const commits = graphCommits.filter((commit) => commit.branchId === selectedBranchId);
+  const commits = sortByCreatedAt(
+    graphCommits.filter((commit) => commit.branchId === selectedBranchId)
+  ).reverse();
   const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
   const sortedBranches = sortByCreatedAt(branches);
   const branchCommitsByBranchId = new Map(
