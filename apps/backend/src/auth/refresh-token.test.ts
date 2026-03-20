@@ -42,6 +42,11 @@ describe("refresh-token utilities", () => {
       expect(cookie).toContain("HttpOnly");
     });
 
+    it("uses the root path so the session cookie reaches authenticated API routes", () => {
+      const cookie = buildRefreshCookie("my-token", false);
+      expect(cookie).toContain("Path=/");
+    });
+
     it("includes Secure directive in production", () => {
       const cookie = buildRefreshCookie("my-token", true);
       expect(cookie).toContain("Secure");
@@ -57,6 +62,11 @@ describe("refresh-token utilities", () => {
     it("sets MaxAge=0", () => {
       const cookie = clearRefreshCookie(false);
       expect(cookie).toContain("MaxAge=0");
+    });
+
+    it("clears the root-path cookie", () => {
+      const cookie = clearRefreshCookie(false);
+      expect(cookie).toContain("Path=/");
     });
   });
 

@@ -12,6 +12,7 @@ import { upsertUser } from "./auth/upsert-user.js";
 import { loginHandler } from "./auth/login-handler.js";
 import { refreshHandler } from "./auth/refresh-handler.js";
 import { logoutHandler } from "./auth/logout-handler.js";
+import { resolveUser } from "./auth/resolve-user.js";
 import type { User } from "./db/types.js";
 import { getDb } from "./db/client.js";
 
@@ -36,37 +37,6 @@ const handler = new OpenAPIHandler(router, {
     }),
   ],
 });
-
-/**
- * Resolves the authenticated user from the request.
- *
- * Verification order:
- *   1. Self-issued JWT (HS256) — primary path after Phase 4 is deployed
- *   2. Google ID token — legacy fallback during rollout
- */
-async function resolveUser(authHeader: string): Promise<User | null> {
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return null;
-
-  // Try self-issued JWT first
-  try {
-    const payload = await verifyAccessToken(token);
-    // Fetch full user from DB so we always have current data
-    const user = await getDb()
-      .selectFrom("users")
-      .selectAll()
-      .where("id", "=", payload.sub)
-      .executeTakeFirst();
-    return user ?? null;
-  } catch {
-    // Fall through to Google token verification
-  }
-
-  // Legacy: Google ID token
-  const googleUser = await verifyGoogleToken(token);
-  if (!googleUser) return null;
-  return upsertUser(googleUser).catch(() => null);
-}
 
 const server = createServer(async (req, res) => {
   // Apply CORS headers to every response (preflight + actual requests)
@@ -102,7 +72,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const user = await resolveUser(req.headers["authorization"] ?? "");
+  const user = await resolveUser(getDb(), req.headers["authorization"] ?? "", req.headers["cookie"]);
 
   const result = await handler.handle(req, res, { context: { user } });
 

@@ -24,13 +24,13 @@ export function refreshTokenExpiresAt(): Date {
 export function buildRefreshCookie(token: string, isProduction: boolean): string {
   const expires = refreshTokenExpiresAt().toUTCString();
   const secure = isProduction ? "; Secure" : "";
-  return `${REFRESH_TOKEN_COOKIE}=${token}; HttpOnly${secure}; SameSite=Strict; Path=/auth; Expires=${expires}`;
+  return `${REFRESH_TOKEN_COOKIE}=${token}; HttpOnly${secure}; SameSite=Strict; Path=/; Expires=${expires}`;
 }
 
 /** Clears the refresh cookie by setting MaxAge=0. */
 export function clearRefreshCookie(isProduction: boolean): string {
   const secure = isProduction ? "; Secure" : "";
-  return `${REFRESH_TOKEN_COOKIE}=; HttpOnly${secure}; SameSite=Strict; Path=/auth; MaxAge=0`;
+  return `${REFRESH_TOKEN_COOKIE}=; HttpOnly${secure}; SameSite=Strict; Path=/; MaxAge=0`;
 }
 
 /** Parses a raw Cookie header and returns the refresh token value, if present. */
