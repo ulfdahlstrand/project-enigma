@@ -28,14 +28,8 @@ import {
   deleteResumeSkillOutputSchema,
 } from "./resumes.js";
 import {
-  listAssignmentsInputSchema,
-  listAssignmentsOutputSchema,
-  getAssignmentInputSchema,
-  getAssignmentOutputSchema,
   createAssignmentInputSchema,
   createAssignmentOutputSchema,
-  updateAssignmentInputSchema,
-  updateAssignmentOutputSchema,
   deleteAssignmentInputSchema,
   deleteAssignmentOutputSchema,
 } from "./assignments.js";
@@ -119,11 +113,6 @@ export const healthOutputSchema = z.object({
 
 // ---------------------------------------------------------------------------
 // Test entries procedure — Zod schemas
-//
-// These schemas back the `listTestEntries` procedure, which queries the
-// `test_entries` table created by the initial migration. They exist solely
-// to validate the full end-to-end stack (database → oRPC → TanStack Query →
-// React route) and carry no CV-specific business logic.
 // ---------------------------------------------------------------------------
 
 export const listTestEntriesInputSchema = z.object({});
@@ -141,7 +130,7 @@ export const listTestEntriesOutputSchema = z.object({
 export type TestEntry = z.infer<typeof testEntrySchema>;
 
 // ---------------------------------------------------------------------------
-// Employee schemas — re-exported from ./employees
+// Re-exports
 // ---------------------------------------------------------------------------
 
 export {
@@ -155,10 +144,6 @@ export {
   updateEmployeeOutputSchema,
 } from "./employees.js";
 export type { Employee } from "./employees.js";
-
-// ---------------------------------------------------------------------------
-// Resume schemas — re-exported from ./resumes
-// ---------------------------------------------------------------------------
 
 export {
   resumeSkillSchema,
@@ -183,28 +168,14 @@ export {
 } from "./resumes.js";
 export type { ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
-// ---------------------------------------------------------------------------
-// Assignment schemas — re-exported from ./assignments
-// ---------------------------------------------------------------------------
-
 export {
   assignmentSchema,
-  listAssignmentsInputSchema,
-  listAssignmentsOutputSchema,
-  getAssignmentInputSchema,
-  getAssignmentOutputSchema,
   createAssignmentInputSchema,
   createAssignmentOutputSchema,
-  updateAssignmentInputSchema,
-  updateAssignmentOutputSchema,
   deleteAssignmentInputSchema,
   deleteAssignmentOutputSchema,
 } from "./assignments.js";
 export type { Assignment } from "./assignments.js";
-
-// ---------------------------------------------------------------------------
-// Education schemas — re-exported from ./education
-// ---------------------------------------------------------------------------
 
 export {
   educationTypeSchema,
@@ -218,10 +189,6 @@ export {
 } from "./education.js";
 export type { Education, EducationType } from "./education.js";
 
-// ---------------------------------------------------------------------------
-// CV import schemas — re-exported from ./import-cv
-// ---------------------------------------------------------------------------
-
 export {
   cvJsonSchema,
   importCvInputSchema,
@@ -231,10 +198,6 @@ export {
 } from "./import-cv.js";
 export type { CvJson } from "./import-cv.js";
 
-// ---------------------------------------------------------------------------
-// Export schemas — re-exported from ./export-resume
-// ---------------------------------------------------------------------------
-
 export {
   exportResumeMarkdownInputSchema,
   exportResumeMarkdownOutputSchema,
@@ -243,10 +206,6 @@ export {
   exportResumeDocxInputSchema,
   exportResumeDocxOutputSchema,
 } from "./export-resume.js";
-
-// ---------------------------------------------------------------------------
-// Resume versioning schemas — re-exported from ./resume-versions
-// ---------------------------------------------------------------------------
 
 export {
   resumeCommitSkillSchema,
@@ -288,12 +247,9 @@ export type {
   CompareResumeCommitsOutput,
 } from "./resume-versions.js";
 
-// ---------------------------------------------------------------------------
-// Branch assignment schemas — re-exported from ./branch-assignments
-// ---------------------------------------------------------------------------
-
 export {
   branchAssignmentItemSchema,
+  fullBranchAssignmentSchema,
   listBranchAssignmentsInputSchema,
   listBranchAssignmentsOutputSchema,
   addBranchAssignmentInputSchema,
@@ -307,19 +263,11 @@ export {
 } from "./branch-assignments.js";
 export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
 
-// ---------------------------------------------------------------------------
-// AI schemas — re-exported from ./ai
-// ---------------------------------------------------------------------------
-
 export {
   improveDescriptionInputSchema,
   improveDescriptionOutputSchema,
 } from "./ai.js";
 export type { ImproveDescriptionInput, ImproveDescriptionOutput } from "./ai.js";
-
-// ---------------------------------------------------------------------------
-// AI conversation schemas — re-exported from ./ai-conversations
-// ---------------------------------------------------------------------------
 
 export {
   aiMessageRoleSchema,
@@ -354,10 +302,6 @@ export type {
 
 // ---------------------------------------------------------------------------
 // Router contract
-//
-// Defines the shape of every procedure (input + output schemas) without any
-// implementation. The backend imports this contract and attaches handlers;
-// the frontend imports the inferred AppRouter type for a fully-typed client.
 // ---------------------------------------------------------------------------
 
 export const contract = oc.router({
@@ -385,10 +329,7 @@ export const contract = oc.router({
   createResumeSkill: oc.input(createResumeSkillInputSchema).output(createResumeSkillOutputSchema),
   updateResumeSkill: oc.input(updateResumeSkillInputSchema).output(updateResumeSkillOutputSchema),
   deleteResumeSkill: oc.input(deleteResumeSkillInputSchema).output(deleteResumeSkillOutputSchema),
-  listAssignments: oc.input(listAssignmentsInputSchema).output(listAssignmentsOutputSchema),
-  getAssignment: oc.input(getAssignmentInputSchema).output(getAssignmentOutputSchema),
   createAssignment: oc.input(createAssignmentInputSchema).output(createAssignmentOutputSchema),
-  updateAssignment: oc.input(updateAssignmentInputSchema).output(updateAssignmentOutputSchema),
   deleteAssignment: oc.input(deleteAssignmentInputSchema).output(deleteAssignmentOutputSchema),
   listEducation: oc.input(listEducationInputSchema).output(listEducationOutputSchema),
   createEducation: oc.input(createEducationInputSchema).output(createEducationOutputSchema),

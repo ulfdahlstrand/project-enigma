@@ -38,33 +38,38 @@ export async function listBranchAssignmentsFull(
     throw new ORPCError("FORBIDDEN");
   }
 
+  // All content now lives in branch_assignments; join assignments only for employee_id
   const rows = await db
     .selectFrom("branch_assignments as ba")
     .innerJoin("assignments as a", "a.id", "ba.assignment_id")
     .select([
-      "a.id",
+      "ba.id",
+      "ba.assignment_id",
+      "ba.branch_id",
       "a.employee_id",
-      "a.client_name",
-      "a.role",
-      "a.description",
-      "a.start_date",
-      "a.end_date",
-      "a.technologies",
-      "a.is_current",
-      "a.keywords",
-      "a.type",
-      "a.highlight",
-      "a.created_at",
-      "a.updated_at",
+      "ba.client_name",
+      "ba.role",
+      "ba.description",
+      "ba.start_date",
+      "ba.end_date",
+      "ba.technologies",
+      "ba.is_current",
+      "ba.keywords",
+      "ba.type",
+      "ba.highlight",
       "ba.sort_order",
+      "ba.created_at",
+      "ba.updated_at",
     ])
     .where("ba.branch_id", "=", input.branchId)
     .orderBy(sql`ba.sort_order ASC NULLS LAST`)
-    .orderBy("a.start_date", "desc")
+    .orderBy("ba.start_date", "desc")
     .execute();
 
   return rows.map((row) => ({
     id: row.id,
+    assignmentId: row.assignment_id,
+    branchId: row.branch_id,
     employeeId: row.employee_id,
     clientName: row.client_name,
     role: row.role,

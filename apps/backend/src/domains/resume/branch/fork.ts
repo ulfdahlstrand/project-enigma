@@ -80,11 +80,11 @@ export async function forkResumeBranch(
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // Copy branch_assignments from the source branch (if any)
+    // Copy branch_assignments from the source branch (if any) — includes all content columns
     if (commit.source_branch_id !== null) {
       const sourceAssignments = await trx
         .selectFrom("branch_assignments")
-        .select(["assignment_id", "highlight", "sort_order"])
+        .selectAll()
         .where("branch_id", "=", commit.source_branch_id)
         .execute();
 
@@ -95,6 +95,15 @@ export async function forkResumeBranch(
             sourceAssignments.map((a) => ({
               branch_id: branch.id,
               assignment_id: a.assignment_id,
+              client_name: a.client_name,
+              role: a.role,
+              description: a.description,
+              start_date: a.start_date,
+              end_date: a.end_date,
+              technologies: a.technologies,
+              is_current: a.is_current,
+              keywords: a.keywords,
+              type: a.type,
               highlight: a.highlight,
               sort_order: a.sort_order,
             }))
@@ -103,23 +112,20 @@ export async function forkResumeBranch(
       }
     }
 
-    // Build fresh content: use source commit fields but read assignments from the
-    // newly copied branch_assignments (the source commit JSONB may have assignments: []
-    // if it predates the per-branch assignment linking migration).
+    // Build fresh content from the newly copied branch_assignments — all content is in ba.*
     const freshAssignmentRows = await trx
       .selectFrom("branch_assignments as ba")
-      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
       .select([
-        "a.id as assignment_id",
-        "a.client_name",
-        "a.role",
-        "a.description",
-        "a.start_date",
-        "a.end_date",
-        "a.technologies",
-        "a.is_current",
-        "a.keywords",
-        "a.type",
+        "ba.assignment_id",
+        "ba.client_name",
+        "ba.role",
+        "ba.description",
+        "ba.start_date",
+        "ba.end_date",
+        "ba.technologies",
+        "ba.is_current",
+        "ba.keywords",
+        "ba.type",
         "ba.highlight",
         "ba.sort_order",
       ])

@@ -72,14 +72,17 @@ function buildDb({
 
   const selectWhere = vi.fn();
   const selectSelect = vi.fn();
+  const selectInnerJoin = vi.fn();
   const selectChain = {
     select: selectSelect,
     where: selectWhere,
+    innerJoin: selectInnerJoin,
     executeTakeFirst: selectExecuteTakeFirst,
     executeTakeFirstOrThrow: selectExecuteTakeFirstOrThrow,
   };
   selectWhere.mockReturnValue(selectChain);
   selectSelect.mockReturnValue(selectChain);
+  selectInnerJoin.mockReturnValue(selectChain);
   const selectFrom = vi.fn().mockReturnValue(selectChain);
 
   const updateExecute = vi.fn().mockResolvedValue(undefined);
@@ -148,7 +151,8 @@ describe("importCv — assignments", () => {
   it("passes description directly to the assignment insert", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { description: string };
+    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
+    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { description: string };
     expect(passedValues.description).toBe("Built things.\n\nImproved performance.");
   });
 
@@ -159,14 +163,16 @@ describe("importCv — assignments", () => {
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, client: "   " }],
     };
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
-    const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { client_name: string };
+    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
+    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { client_name: string };
     expect(passedValues.client_name).toBe("Unknown");
   });
 
   it("uses technologies array directly", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    const passedValues = db._mocks.insertValues.mock.calls[0]?.[0] as { technologies: string[] };
+    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
+    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { technologies: string[] };
     expect(passedValues.technologies).toEqual(["TypeScript", "Node.js"]);
   });
 

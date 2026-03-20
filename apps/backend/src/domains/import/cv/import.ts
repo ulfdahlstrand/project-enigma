@@ -123,14 +123,15 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       isCurrent = period.isCurrent;
     }
 
-    // Duplicate check — assignment already exists for this employee
+    // Duplicate check — assignment already exists for this employee on the main branch
     const existing = await db
-      .selectFrom("assignments")
-      .select("id")
-      .where("employee_id", "=", employeeId)
-      .where("client_name", "=", clientName)
-      .where("role", "=", a.role.trim())
-      .where("start_date", "=", startDate)
+      .selectFrom("branch_assignments as ba")
+      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
+      .select("ba.id")
+      .where("a.employee_id", "=", employeeId)
+      .where("ba.client_name", "=", clientName)
+      .where("ba.role", "=", a.role.trim())
+      .where("ba.start_date", "=", startDate)
       .executeTakeFirst();
 
     if (existing) {
@@ -146,8 +147,15 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     await db.transaction().execute(async (trx) => {
       const newAssignment = await trx
         .insertInto("assignments")
+        .values({ employee_id: employeeId })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+
+      await trx
+        .insertInto("branch_assignments")
         .values({
-          employee_id: employeeId,
+          branch_id: mainBranch.id,
+          assignment_id: newAssignment.id,
           client_name: clientName,
           role: a.role.trim(),
           description,
@@ -159,12 +167,6 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
           type: a.type ?? null,
           highlight: a.highlight ?? false,
         })
-        .returning("id")
-        .executeTakeFirstOrThrow();
-
-      await trx
-        .insertInto("branch_assignments")
-        .values({ branch_id: mainBranch.id, assignment_id: newAssignment.id })
         .execute();
     });
 

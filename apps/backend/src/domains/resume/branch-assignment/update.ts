@@ -19,12 +19,12 @@ export async function updateBranchAssignment(
 ): Promise<UpdateBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Fetch the branch_assignment row with ownership info via join
   const existing = await db
     .selectFrom("branch_assignments as ba")
     .innerJoin("resume_branches as rb", "rb.id", "ba.branch_id")
     .innerJoin("resumes as r", "r.id", "rb.resume_id")
-    .select(["ba.id", "r.employee_id"])
+    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
+    .select(["ba.id", "r.employee_id", "a.employee_id as assignment_employee_id"])
     .where("ba.id", "=", input.id)
     .executeTakeFirst();
 
@@ -36,10 +36,18 @@ export async function updateBranchAssignment(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const updates = {
-    ...(input.highlight !== undefined ? { highlight: input.highlight } : {}),
-    ...(input.sortOrder !== undefined ? { sort_order: input.sortOrder } : {}),
-  };
+  const updates: Record<string, unknown> = { updated_at: new Date() };
+  if (input.clientName !== undefined) updates.client_name = input.clientName;
+  if (input.role !== undefined) updates.role = input.role;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.startDate !== undefined) updates.start_date = new Date(input.startDate);
+  if (input.endDate !== undefined) updates.end_date = input.endDate ? new Date(input.endDate) : null;
+  if (input.technologies !== undefined) updates.technologies = input.technologies;
+  if (input.isCurrent !== undefined) updates.is_current = input.isCurrent;
+  if (input.keywords !== undefined) updates.keywords = input.keywords;
+  if (input.type !== undefined) updates.type = input.type;
+  if (input.highlight !== undefined) updates.highlight = input.highlight;
+  if (input.sortOrder !== undefined) updates.sort_order = input.sortOrder;
 
   const updated = await db
     .updateTable("branch_assignments")
@@ -50,10 +58,22 @@ export async function updateBranchAssignment(
 
   return {
     id: updated.id,
-    branchId: updated.branch_id,
     assignmentId: updated.assignment_id,
+    branchId: updated.branch_id,
+    employeeId: existing.assignment_employee_id,
+    clientName: updated.client_name,
+    role: updated.role,
+    description: updated.description,
+    startDate: updated.start_date,
+    endDate: updated.end_date,
+    technologies: updated.technologies,
+    isCurrent: updated.is_current,
+    keywords: updated.keywords,
+    type: updated.type,
     highlight: updated.highlight,
     sortOrder: updated.sort_order,
+    createdAt: updated.created_at,
+    updatedAt: updated.updated_at,
   };
 }
 

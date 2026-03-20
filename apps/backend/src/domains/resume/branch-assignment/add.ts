@@ -19,7 +19,6 @@ export async function addBranchAssignment(
 ): Promise<AddBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  // Verify branch exists and check ownership
   const branch = await db
     .selectFrom("resume_branches as rb")
     .innerJoin("resumes as r", "r.id", "rb.resume_id")
@@ -35,7 +34,6 @@ export async function addBranchAssignment(
     throw new ORPCError("FORBIDDEN");
   }
 
-  // Verify the assignment belongs to the same employee as the branch's resume
   const assignment = await db
     .selectFrom("assignments")
     .select("employee_id")
@@ -55,6 +53,15 @@ export async function addBranchAssignment(
     .values({
       branch_id: input.branchId,
       assignment_id: input.assignmentId,
+      client_name: input.clientName,
+      role: input.role,
+      description: input.description ?? "",
+      start_date: new Date(input.startDate),
+      end_date: input.endDate ? new Date(input.endDate) : null,
+      technologies: input.technologies ?? [],
+      is_current: input.isCurrent ?? false,
+      keywords: input.keywords ?? null,
+      type: input.type ?? null,
       highlight: input.highlight ?? false,
       sort_order: input.sortOrder ?? null,
     })
@@ -63,10 +70,22 @@ export async function addBranchAssignment(
 
   return {
     id: row.id,
-    branchId: row.branch_id,
     assignmentId: row.assignment_id,
+    branchId: row.branch_id,
+    employeeId: assignment.employee_id,
+    clientName: row.client_name,
+    role: row.role,
+    description: row.description,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    technologies: row.technologies,
+    isCurrent: row.is_current,
+    keywords: row.keywords,
+    type: row.type,
     highlight: row.highlight,
     sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

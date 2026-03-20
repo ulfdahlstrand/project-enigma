@@ -925,8 +925,6 @@ function ResumeDetailPage() {
                     return (
                       <Box
                         key={a.id}
-                        onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
-                        sx={{ cursor: "pointer", "&:hover": { opacity: 0.85 } }}
                       >
                         {/* Role heading */}
                         <Typography
@@ -1008,8 +1006,6 @@ function ResumeDetailPage() {
                         <TableRow
                           key={a.id}
                           hover
-                          sx={{ cursor: "pointer" }}
-                          onClick={() => void navigate({ to: "/assignments/$id", params: { id: a.id } })}
                         >
                           <TableCell>{a.clientName}</TableCell>
                           <TableCell>{a.role}</TableCell>

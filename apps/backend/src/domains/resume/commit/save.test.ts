@@ -108,12 +108,11 @@ function buildDbMock(opts: {
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // Assignments join query
+  // Assignments query (reads directly from ba.* — no join to assignments)
   const assignmentsExecute = vi.fn().mockResolvedValue(assignmentRows);
   const assignmentsOrderBy = vi.fn().mockReturnValue({ execute: assignmentsExecute });
   const assignmentsWhere = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy });
   const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere });
-  const assignmentsInnerJoin = vi.fn().mockReturnValue({ select: assignmentsSelect });
 
   // Insert commit
   const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedCommit);
@@ -138,7 +137,7 @@ function buildDbMock(opts: {
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_skills") return { select: skillsSelect };
-    if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
+    if (table === "branch_assignments as ba") return { select: assignmentsSelect };
     // resume_branches join
     return { innerJoin: branchInnerJoin };
   });
