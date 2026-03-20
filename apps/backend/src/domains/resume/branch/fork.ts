@@ -83,9 +83,11 @@ export async function forkResumeBranch(
     // Copy branch_assignments from the source branch (if any) — includes all content columns
     if (commit.source_branch_id !== null) {
       const sourceAssignments = await trx
-        .selectFrom("branch_assignments")
-        .selectAll()
-        .where("branch_id", "=", commit.source_branch_id)
+        .selectFrom("branch_assignments as ba")
+        .innerJoin("assignments as a", "a.id", "ba.assignment_id")
+        .selectAll("ba")
+        .where("ba.branch_id", "=", commit.source_branch_id)
+        .where("a.deleted_at", "is", null)
         .execute();
 
       if (sourceAssignments.length > 0) {

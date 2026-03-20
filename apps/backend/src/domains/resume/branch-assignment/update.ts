@@ -26,6 +26,7 @@ export async function updateBranchAssignment(
     .innerJoin("assignments as a", "a.id", "ba.assignment_id")
     .select(["ba.id", "r.employee_id", "a.employee_id as assignment_employee_id"])
     .where("ba.id", "=", input.id)
+    .where("a.deleted_at", "is", null)
     .executeTakeFirst();
 
   if (existing === undefined) {

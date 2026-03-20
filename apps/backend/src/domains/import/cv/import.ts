@@ -129,6 +129,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .innerJoin("assignments as a", "a.id", "ba.assignment_id")
       .select("ba.id")
       .where("a.employee_id", "=", employeeId)
+      .where("a.deleted_at", "is", null)
       .where("ba.client_name", "=", clientName)
       .where("ba.role", "=", a.role.trim())
       .where("ba.start_date", "=", startDate)

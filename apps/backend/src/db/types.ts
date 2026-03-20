@@ -67,6 +67,8 @@ export interface AssignmentTable {
   id: Generated<string>;
   employee_id: string;
   created_at: Generated<Date>;
+  /** Soft-delete timestamp. Non-null means the assignment is deleted. */
+  deleted_at: ColumnType<Date | null, Date | null | undefined, Date | null>;
 }
 
 export interface EducationTable {
