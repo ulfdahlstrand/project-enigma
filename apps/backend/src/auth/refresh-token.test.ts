@@ -56,6 +56,16 @@ describe("refresh-token utilities", () => {
       const cookie = buildRefreshCookie("my-token", false);
       expect(cookie).not.toContain("Secure");
     });
+
+    it("uses SameSite=Lax in development so local frontend/backend origins can bootstrap the session", () => {
+      const cookie = buildRefreshCookie("my-token", false);
+      expect(cookie).toContain("SameSite=Lax");
+    });
+
+    it("uses SameSite=Strict in production", () => {
+      const cookie = buildRefreshCookie("my-token", true);
+      expect(cookie).toContain("SameSite=Strict");
+    });
   });
 
   describe("clearRefreshCookie", () => {
@@ -67,6 +77,16 @@ describe("refresh-token utilities", () => {
     it("clears the root-path cookie", () => {
       const cookie = clearRefreshCookie(false);
       expect(cookie).toContain("Path=/");
+    });
+
+    it("clears the dev cookie with SameSite=Lax", () => {
+      const cookie = clearRefreshCookie(false);
+      expect(cookie).toContain("SameSite=Lax");
+    });
+
+    it("clears the production cookie with SameSite=Strict", () => {
+      const cookie = clearRefreshCookie(true);
+      expect(cookie).toContain("SameSite=Strict");
     });
   });
 
