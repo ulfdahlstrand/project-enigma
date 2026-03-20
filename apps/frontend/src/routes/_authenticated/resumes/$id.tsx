@@ -42,10 +42,11 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
-import { resumeBranchesKey } from "../../../hooks/versioning";
+import { resumeBranchesKey, useForkResumeBranch } from "../../../hooks/versioning";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { SaveVersionButton } from "../../../components/SaveVersionButton";
+import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
 import { SkillsEditor } from "../../../components/SkillsEditor";
@@ -646,6 +647,7 @@ function ResumeDetailPage() {
       setIsEditing(false);
     },
   });
+  const forkResumeBranch = useForkResumeBranch();
 
   const [showFullAssignments, setShowFullAssignments] = useState(true);
 
@@ -712,7 +714,6 @@ function ResumeDetailPage() {
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
-
   // Sort: current assignments first, then by start date descending
   const sortedAssignments = [...assignments].sort((a, b) => {
     if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
@@ -726,22 +727,54 @@ function ResumeDetailPage() {
   const hasSkills = skills.length > 0;
   const showSkillsPage = hasSkills || (isEditing && !isSnapshotMode);
   const hasAssignments = assignments.length > 0;
+  const baseCommitId = activeBranch?.headCommitId ?? null;
   const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);
   const skillsPage = showSkillsPage ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
 
-  const handleSave = () => {
+  const buildDraftPatch = () => {
     const patch = {
       consultantTitle: draftTitle.trim() || null,
       presentation: draftPresentation.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
       summary: draftSummary.trim() || null,
     };
+    return patch;
+  };
+
+  const handleSave = () => {
+    const patch = buildDraftPatch();
+
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
       saveVersion.mutate({ branchId: activeBranchId, ...patch });
     } else {
       updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
     }
+  };
+
+  const handleSaveAsNewVersion = async (name: string) => {
+    if (!baseCommitId) {
+      throw new Error("Missing base commit");
+    }
+
+    const patch = buildDraftPatch();
+    const newBranch = await forkResumeBranch.mutateAsync({
+      fromCommitId: baseCommitId,
+      name,
+      resumeId: id,
+    });
+
+    await saveVersion.mutateAsync({
+      branchId: newBranch.id,
+      ...patch,
+    });
+
+    setIsEditing(false);
+    await navigate({
+      to: "/resumes/$id",
+      params: { id },
+      search: { branchId: newBranch.id },
+    });
   };
 
   const toolbarActions = (
@@ -752,13 +785,16 @@ function ResumeDetailPage() {
       <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       {isEditing ? (
         <>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={updateResume.isPending || saveVersion.isPending}
-          >
-            {updateResume.isPending || saveVersion.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
-          </Button>
+          <ResumeSaveSplitButton
+            onSaveCurrent={handleSave}
+            onSaveAsNewVersion={handleSaveAsNewVersion}
+            canSaveAsNewVersion={baseCommitId !== null}
+            isPending={
+              updateResume.isPending ||
+              saveVersion.isPending ||
+              forkResumeBranch.isPending
+            }
+          />
           <Button variant="outlined" onClick={() => setIsEditing(false)}>
             {t("resume.edit.backButton")}
           </Button>
