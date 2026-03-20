@@ -258,6 +258,16 @@ describe("Navigation", () => {
     const backLink = screen.getByText(enCommon.resume.detail.backButton);
     expect(backLink).toBeInTheDocument();
   });
+
+  it("renders a History link to the resume history page", async () => {
+    renderPage();
+    await screen.findAllByText(TEST_RESUME.title);
+    const historyLink = screen.getByRole("link", {
+      name: enCommon.resume.history.pageTitle,
+    });
+    expect(historyLink).toBeInTheDocument();
+    expect(historyLink).toHaveAttribute("href", `/resumes/${TEST_RESUME_ID}/history`);
+  });
 });
 
 // ---------------------------------------------------------------------------
