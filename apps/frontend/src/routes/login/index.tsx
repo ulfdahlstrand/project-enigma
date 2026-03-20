@@ -1,10 +1,8 @@
 /**
  * /login route — public page for Google OAuth sign-in.
  *
- * On successful authentication the backend issues a short-lived JWT (access
- * token) and sets an HttpOnly refresh-token cookie. The access token is kept
- * in React state via AuthContext; only a session-presence flag is stored in
- * localStorage so the route guard can redirect quickly.
+ * On successful authentication the backend issues the session cookie and the
+ * frontend refreshes its current-session bootstrap state from the server.
  */
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { GoogleLogin } from "@react-oauth/google";
@@ -14,12 +12,12 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../../auth/auth-context";
-
-const SESSION_FLAG_KEY = "cv-tool:has-session";
+import { ensureAuthSession } from "../../auth/session-store";
 
 export const Route = createFileRoute("/login/")({
-  beforeLoad: () => {
-    if (localStorage.getItem(SESSION_FLAG_KEY)) {
+  beforeLoad: async () => {
+    const session = await ensureAuthSession();
+    if (session.status === "authenticated") {
       throw redirect({ to: "/employees" });
     }
   },

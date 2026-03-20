@@ -1,21 +1,34 @@
 /**
- * AuthContext — access token stored in React state only (not localStorage).
+ * AuthContext — session bootstrap is derived from the backend session cookie.
  *
- * On mount we attempt a silent refresh via POST /auth/refresh (which reads
- * the HttpOnly refresh cookie set by the backend). If the cookie is present
- * and valid we get a fresh access token without any user interaction.
- *
- * A `cv-tool:has-session` flag in localStorage is the only thing stored
- * client-side — it lets the router guard redirect to /login quickly on page
- * load, without waiting for the async silent-refresh attempt to complete.
+ * On mount we ask the backend for the current authenticated session via
+ * GET /auth/session. That response becomes the source of truth for route
+ * guards and the visible user state. A short-lived bearer token still exists
+ * for legacy API calls until the transport cleanup lands, but bootstrap no
+ * longer depends on it or on localStorage flags.
  */
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
+import type { CurrentSessionUser } from "@cv-tool/contracts";
 import { setStoredToken } from "./token-store";
+import {
+  clearAuthSession,
+  ensureAuthSession,
+  getAuthSessionSnapshot,
+  refreshAuthSession,
+  subscribeAuthSession,
+} from "./session-store";
 
-const SESSION_FLAG_KEY = "cv-tool:has-session";
 const apiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
 
 type AuthContextValue = {
+  user: CurrentSessionUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -28,7 +41,15 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const session = useSyncExternalStore(
+    subscribeAuthSession,
+    getAuthSessionSnapshot,
+    getAuthSessionSnapshot
+  );
+
+  useEffect(() => {
+    void ensureAuthSession();
+  }, []);
 
   const refreshToken = useCallback(async (): Promise<string | null> => {
     try {
@@ -37,27 +58,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: "include",
       });
       if (!res.ok) {
-        localStorage.removeItem(SESSION_FLAG_KEY);
+        clearAuthSession();
+        setStoredToken(null);
         setToken(null);
         return null;
       }
       const data = (await res.json()) as { accessToken: string };
-      localStorage.setItem(SESSION_FLAG_KEY, "1");
       setStoredToken(data.accessToken);
       setToken(data.accessToken);
+      await refreshAuthSession();
       return data.accessToken;
     } catch {
-      localStorage.removeItem(SESSION_FLAG_KEY);
+      clearAuthSession();
       setStoredToken(null);
       setToken(null);
       return null;
     }
   }, []);
-
-  // Silent refresh on mount to restore session from HttpOnly cookie
-  useEffect(() => {
-    void refreshToken().finally(() => setIsLoading(false));
-  }, [refreshToken]);
 
   const login = useCallback(async (googleCredential: string): Promise<void> => {
     const res = await fetch(`${apiUrl}/auth/login`, {
@@ -70,9 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Login failed");
     }
     const data = (await res.json()) as { accessToken: string };
-    localStorage.setItem(SESSION_FLAG_KEY, "1");
     setStoredToken(data.accessToken);
     setToken(data.accessToken);
+    await refreshAuthSession();
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
@@ -84,14 +101,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Best-effort — always clear local state
     }
-    localStorage.removeItem(SESSION_FLAG_KEY);
+    clearAuthSession();
     setStoredToken(null);
     setToken(null);
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ token, isAuthenticated: token !== null, isLoading, login, logout, refreshToken }}
+      value={{
+        user: session.user,
+        token,
+        isAuthenticated: session.status === "authenticated",
+        isLoading: session.status === "loading",
+        login,
+        logout,
+        refreshToken,
+      }}
     >
       {children}
     </AuthContext.Provider>

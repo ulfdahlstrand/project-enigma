@@ -1,11 +1,10 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-
-/** Set by AuthContext on successful login/refresh; cleared on logout. */
-const SESSION_FLAG_KEY = "cv-tool:has-session";
+import { ensureAuthSession } from "../auth/session-store";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: () => {
-    if (!localStorage.getItem(SESSION_FLAG_KEY)) {
+  beforeLoad: async () => {
+    const session = await ensureAuthSession();
+    if (session.status !== "authenticated") {
       throw redirect({ to: "/login" });
     }
   },

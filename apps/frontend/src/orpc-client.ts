@@ -33,7 +33,11 @@ async function fetchWithAuth(request: Request, init?: RequestInit): Promise<Resp
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await globalThis.fetch(new Request(request, { headers, ...init }));
+  const res = await globalThis.fetch(new Request(request, {
+    ...init,
+    credentials: "include",
+    headers,
+  }));
 
   // On 401: attempt one silent refresh then retry
   if (res.status === 401) {
@@ -46,7 +50,11 @@ async function fetchWithAuth(request: Request, init?: RequestInit): Promise<Resp
       setStoredToken(data.accessToken);
       const retryHeaders = new Headers(request.headers);
       retryHeaders.set("Authorization", `Bearer ${data.accessToken}`);
-      return globalThis.fetch(new Request(request, { headers: retryHeaders, ...init }));
+      return globalThis.fetch(new Request(request, {
+        ...init,
+        credentials: "include",
+        headers: retryHeaders,
+      }));
     }
     // Refresh failed — clear token so UI reflects logged-out state
     setStoredToken(null);

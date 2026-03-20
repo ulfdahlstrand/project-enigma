@@ -2,30 +2,34 @@ import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./auth-context";
+import type { GetCurrentSessionOutput } from "@cv-tool/contracts";
+import { resetAuthSession } from "./session-store";
 
-const SESSION_FLAG_KEY = "cv-tool:has-session";
 const ACCESS_TOKEN = "header.payload.signature";
+const SESSION_RESPONSE: GetCurrentSessionOutput = {
+  user: {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    email: "alice@example.com",
+    name: "Alice Example",
+    role: "consultant",
+  },
+};
 
-// Mock fetch for silent refresh on mount
-function mockFetchRejects() {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(null, { status: 401 })
-  );
-}
-
-function mockFetchSucceeds() {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify({ accessToken: ACCESS_TOKEN }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })
-  );
+function getRequestUrl(input: string | URL | Request): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  return input.url;
 }
 
 function TestConsumer() {
-  const { token, isAuthenticated, isLoading } = useAuth();
+  const { user, token, isAuthenticated, isLoading } = useAuth();
   return (
     <div>
+      <span data-testid="user">{user?.email ?? "null"}</span>
       <span data-testid="token">{token ?? "null"}</span>
       <span data-testid="auth">{String(isAuthenticated)}</span>
       <span data-testid="loading">{String(isLoading)}</span>
@@ -43,7 +47,7 @@ function renderWithAuth() {
 
 describe("AuthProvider / useAuth", () => {
   beforeEach(() => {
-    localStorage.clear();
+    resetAuthSession();
     vi.restoreAllMocks();
   });
 
@@ -51,36 +55,89 @@ describe("AuthProvider / useAuth", () => {
     vi.restoreAllMocks();
   });
 
-  it("starts loading and unauthenticated; settles unauthenticated when refresh fails", async () => {
-    mockFetchRejects();
+  it("starts loading and unauthenticated; settles unauthenticated when session bootstrap fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }));
     renderWithAuth();
     expect(screen.getByTestId("loading").textContent).toBe("true");
     await waitFor(() =>
       expect(screen.getByTestId("loading").textContent).toBe("false")
     );
     expect(screen.getByTestId("auth").textContent).toBe("false");
+    expect(screen.getByTestId("user").textContent).toBe("null");
     expect(screen.getByTestId("token").textContent).toBe("null");
-    expect(localStorage.getItem(SESSION_FLAG_KEY)).toBeNull();
   });
 
-  it("authenticates silently when refresh cookie succeeds on mount", async () => {
-    mockFetchSucceeds();
+  it("authenticates from the current session endpoint on mount", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(SESSION_RESPONSE), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     renderWithAuth();
     await waitFor(() =>
       expect(screen.getByTestId("loading").textContent).toBe("false")
     );
     expect(screen.getByTestId("auth").textContent).toBe("true");
-    expect(screen.getByTestId("token").textContent).toBe(ACCESS_TOKEN);
-    expect(localStorage.getItem(SESSION_FLAG_KEY)).toBe("1");
+    expect(screen.getByTestId("user").textContent).toBe(SESSION_RESPONSE.user.email);
+    expect(screen.getByTestId("token").textContent).toBe("null");
   });
 
-  it("clears session flag when refresh fails", async () => {
-    localStorage.setItem(SESSION_FLAG_KEY, "1");
-    mockFetchRejects();
+  it("persists the user after login hydrates token and refreshes the session snapshot", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = getRequestUrl(input);
+
+      if (url.endsWith("/auth/session")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(SESSION_RESPONSE), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ accessToken: ACCESS_TOKEN }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    });
+
+    function LoginConsumer() {
+      const { login, token, user } = useAuth();
+      return (
+        <div>
+          <button onClick={() => void login("google-credential")}>login</button>
+          <span data-testid="login-token">{token ?? "null"}</span>
+          <span data-testid="login-user">{user?.email ?? "null"}</span>
+        </div>
+      );
+    }
+
+    render(
+      <AuthProvider>
+        <LoginConsumer />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      screen.getByRole("button", { name: "login" }).click();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("login-user").textContent).toBe(SESSION_RESPONSE.user.email)
+    );
+
+    expect(screen.getByTestId("login-token").textContent).toBe(ACCESS_TOKEN);
+  });
+
+  it("clears the session snapshot when bootstrap fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }));
     renderWithAuth();
     await waitFor(() =>
       expect(screen.getByTestId("loading").textContent).toBe("false")
     );
-    expect(localStorage.getItem(SESSION_FLAG_KEY)).toBeNull();
+    expect(screen.getByTestId("user").textContent).toBe("null");
   });
 });
