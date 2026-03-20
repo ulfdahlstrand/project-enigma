@@ -6,6 +6,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import enCommon from "../../../locales/en/common.json";
 import { AuthProvider } from "../../../auth/auth-context";
+import { resetAuthSession } from "../../../auth/session-store";
 import { Route } from "..";
 
 // ---------------------------------------------------------------------------
@@ -73,29 +74,41 @@ function renderLogin() {
   );
 }
 
+function getRequestUrl(input: string | URL | Request): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  return input.url;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe("LoginPage", () => {
   beforeEach(() => {
-    localStorage.clear();
+    resetAuthSession();
     vi.clearAllMocks();
-    // Mock fetch: silent refresh (mount) returns 401, login returns 200
-    let callCount = 0;
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        // First call = silent refresh on mount → fail gracefully
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = getRequestUrl(input);
+
+      if (url.endsWith("/auth/session")) {
         return Promise.resolve(new Response(null, { status: 401 }));
       }
-      // Subsequent calls = login
-      return Promise.resolve(
-        new Response(JSON.stringify({ accessToken: "access.token.value" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      );
+
+      if (url.endsWith("/auth/login")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ accessToken: "access.token.value" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+        );
+      }
+
+      return Promise.resolve(new Response(null, { status: 404 }));
     });
   });
 
@@ -113,14 +126,6 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("button", { name: /sign in with google/i })
     ).toBeInTheDocument();
-  });
-
-  it("sets the session flag in localStorage on successful login", async () => {
-    renderLogin();
-    await act(async () => {
-      screen.getByRole("button", { name: /sign in with google/i }).click();
-    });
-    expect(localStorage.getItem("cv-tool:has-session")).toBe("1");
   });
 
   it("navigates to /employees after successful login", async () => {

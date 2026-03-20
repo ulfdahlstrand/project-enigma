@@ -49,6 +49,7 @@ import {
   exportResumeDocxHandler,
   exportResumeMarkdownHandler,
 } from "./domains/export/index.js";
+import { getCurrentSessionHandler } from "./domains/auth/index.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -61,6 +62,7 @@ import {
  */
 export const router = implement(contract).router({
   health: healthHandler,
+  getCurrentSession: getCurrentSessionHandler,
   listTestEntries: listTestEntriesHandler,
   listEmployees: listEmployeesHandler,
   getEmployee: getEmployeeHandler,

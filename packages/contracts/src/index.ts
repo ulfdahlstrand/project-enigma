@@ -86,6 +86,10 @@ import {
   improveDescriptionOutputSchema,
 } from "./ai.js";
 import {
+  getCurrentSessionInputSchema,
+  getCurrentSessionOutputSchema,
+} from "./auth.js";
+import {
   createAIConversationInputSchema,
   createAIConversationOutputSchema,
   sendAIMessageInputSchema,
@@ -264,6 +268,19 @@ export {
 export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
 
 export {
+  authUserRoleSchema,
+  currentSessionUserSchema,
+  getCurrentSessionInputSchema,
+  getCurrentSessionOutputSchema,
+} from "./auth.js";
+export type {
+  AuthUserRole,
+  CurrentSessionUser,
+  GetCurrentSessionInput,
+  GetCurrentSessionOutput,
+} from "./auth.js";
+
+export {
   improveDescriptionInputSchema,
   improveDescriptionOutputSchema,
 } from "./ai.js";
@@ -306,6 +323,10 @@ export type {
 
 export const contract = oc.router({
   health: oc.input(healthInputSchema).output(healthOutputSchema),
+  getCurrentSession: oc
+    .route({ method: "GET", path: "/auth/session" })
+    .input(getCurrentSessionInputSchema)
+    .output(getCurrentSessionOutputSchema),
   listTestEntries: oc
     .input(listTestEntriesInputSchema)
     .output(listTestEntriesOutputSchema),

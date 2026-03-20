@@ -42,6 +42,11 @@ describe("refresh-token utilities", () => {
       expect(cookie).toContain("HttpOnly");
     });
 
+    it("uses the root path so the session cookie reaches authenticated API routes", () => {
+      const cookie = buildRefreshCookie("my-token", false);
+      expect(cookie).toContain("Path=/");
+    });
+
     it("includes Secure directive in production", () => {
       const cookie = buildRefreshCookie("my-token", true);
       expect(cookie).toContain("Secure");
@@ -51,12 +56,37 @@ describe("refresh-token utilities", () => {
       const cookie = buildRefreshCookie("my-token", false);
       expect(cookie).not.toContain("Secure");
     });
+
+    it("uses SameSite=Lax in development so local frontend/backend origins can bootstrap the session", () => {
+      const cookie = buildRefreshCookie("my-token", false);
+      expect(cookie).toContain("SameSite=Lax");
+    });
+
+    it("uses SameSite=Strict in production", () => {
+      const cookie = buildRefreshCookie("my-token", true);
+      expect(cookie).toContain("SameSite=Strict");
+    });
   });
 
   describe("clearRefreshCookie", () => {
     it("sets MaxAge=0", () => {
       const cookie = clearRefreshCookie(false);
       expect(cookie).toContain("MaxAge=0");
+    });
+
+    it("clears the root-path cookie", () => {
+      const cookie = clearRefreshCookie(false);
+      expect(cookie).toContain("Path=/");
+    });
+
+    it("clears the dev cookie with SameSite=Lax", () => {
+      const cookie = clearRefreshCookie(false);
+      expect(cookie).toContain("SameSite=Lax");
+    });
+
+    it("clears the production cookie with SameSite=Strict", () => {
+      const cookie = clearRefreshCookie(true);
+      expect(cookie).toContain("SameSite=Strict");
     });
   });
 
