@@ -15,6 +15,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
+import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
@@ -39,6 +40,18 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   component: VersionHistoryPage,
 });
 
+function formatCommitLabel(message: string, fallback: string) {
+  return message || fallback;
+}
+
+function sortByCreatedAt<T extends { createdAt: string | Date }>(items: T[]) {
+  return [...items].sort((a, b) => {
+    const aDate = typeof a.createdAt === "string" ? a.createdAt : a.createdAt.toISOString();
+    const bDate = typeof b.createdAt === "string" ? b.createdAt : b.createdAt.toISOString();
+    return aDate.localeCompare(bDate);
+  });
+}
+
 function VersionHistoryPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
@@ -57,7 +70,147 @@ function VersionHistoryPage() {
     branches.find((branch) => branch.id === branchIdFromSearch)?.id ??
     mainBranchId;
   const selectedView = viewFromSearch ?? "list";
-  const commits = (graph?.commits ?? []).filter((commit) => commit.branchId === selectedBranchId);
+  const graphCommits = graph?.commits ?? [];
+  const commits = graphCommits.filter((commit) => commit.branchId === selectedBranchId);
+  const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
+  const sortedBranches = sortByCreatedAt(branches);
+  const branchCommitsByBranchId = new Map(
+    sortedBranches.map((branch) => [
+      branch.id,
+      sortByCreatedAt(graphCommits.filter((commit) => commit.branchId === branch.id)),
+    ])
+  );
+  const childBranchesByForkCommitId = new Map<string, typeof branches>();
+
+  sortedBranches.forEach((branch) => {
+    if (!branch.forkedFromCommitId) {
+      return;
+    }
+
+    const existingBranches = childBranchesByForkCommitId.get(branch.forkedFromCommitId) ?? [];
+    childBranchesByForkCommitId.set(branch.forkedFromCommitId, [...existingBranches, branch]);
+  });
+
+  const rootBranches = sortedBranches.filter(
+    (branch) => !branch.forkedFromCommitId || !commitsById.has(branch.forkedFromCommitId)
+  );
+
+  function renderBranchTree(branchId: string, depth = 0): React.ReactNode {
+    const branch = branches.find((item) => item.id === branchId);
+    if (!branch) {
+      return null;
+    }
+
+    const branchCommits = branchCommitsByBranchId.get(branch.id) ?? [];
+    const headCommit = branch.headCommitId ? commitsById.get(branch.headCommitId) : undefined;
+    const baseCommit = branch.forkedFromCommitId ? commitsById.get(branch.forkedFromCommitId) : undefined;
+
+    return (
+      <Box
+        key={branch.id}
+        data-testid={`tree-branch-${branch.id}`}
+        sx={{
+          ml: depth === 0 ? 0 : 4,
+          pl: depth === 0 ? 0 : 2.5,
+          borderLeft: depth === 0 ? "none" : "2px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2,
+            borderColor: branch.id === selectedBranchId ? "primary.main" : "divider",
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+                <Typography variant="h6">{branch.name}</Typography>
+                {branch.isMain ? (
+                  <Chip size="small" label={t("resume.history.mainBranchTag")} />
+                ) : null}
+                {branch.id === selectedBranchId ? (
+                  <Chip size="small" color="primary" label={t("resume.history.currentBranchTag")} />
+                ) : null}
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {t("resume.history.treeBaseLabel")}:{" "}
+                {baseCommit
+                  ? formatCommitLabel(baseCommit.message, baseCommit.id)
+                  : t("resume.history.rootBranch")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t("resume.history.treeHeadLabel")}:{" "}
+                {headCommit
+                  ? formatCommitLabel(headCommit.message, headCommit.id)
+                  : "—"}
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ alignSelf: "flex-start" }}>
+              {t("resume.history.treeCommitCount", { count: branchCommits.length })}
+            </Typography>
+          </Box>
+
+          {branchCommits.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t("resume.history.treeNoCommits")}
+            </Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {branchCommits.map((commit) => {
+                const isHead = commit.id === branch.headCommitId;
+                const childBranches = childBranchesByForkCommitId.get(commit.id) ?? [];
+
+                return (
+                  <Box key={commit.id} sx={{ position: "relative", pl: 3 }}>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: 0,
+                        top: 8,
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        bgcolor: isHead ? "primary.main" : "background.paper",
+                        border: "2px solid",
+                        borderColor: isHead ? "primary.main" : "divider",
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: 5,
+                        top: 20,
+                        bottom: childBranches.length > 0 ? -24 : -16,
+                        width: 2,
+                        bgcolor: "divider",
+                        display: isHead && childBranches.length === 0 ? "none" : "block",
+                      }}
+                    />
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                      <Typography variant="body2" data-testid={`tree-commit-${commit.id}`}>
+                        {formatCommitLabel(commit.message, commit.id)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {isHead ? t("resume.history.treeHeadCommitTag") : t("resume.history.treeCommitTag")}
+                      </Typography>
+                    </Box>
+
+                    {childBranches.length > 0 ? (
+                      <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 2 }}>
+                        {childBranches.map((childBranch) => renderBranchTree(childBranch.id, depth + 1))}
+                      </Box>
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </Paper>
+      </Box>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -140,30 +293,11 @@ function VersionHistoryPage() {
       </Box>
 
       {selectedView === "tree" ? (
-        !graph || graph.branches.length === 0 ? (
+        !graph || rootBranches.length === 0 ? (
           <Typography variant="body1">{t("resume.history.empty")}</Typography>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {graph.branches.map((branch) => {
-              const branchCommits = graph.commits.filter((commit) => commit.branchId === branch.id);
-              const headCommit = graph.commits.find((commit) => commit.id === branch.headCommitId);
-              const baseCommit = graph.commits.find((commit) => commit.id === branch.forkedFromCommitId);
-
-              return (
-                <Paper key={branch.id} variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="h6">{branch.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("resume.history.treeHeadLabel")}: {headCommit?.message || headCommit?.id || "—"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("resume.history.treeBaseLabel")}: {baseCommit?.message || baseCommit?.id || t("resume.history.rootBranch")}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {t("resume.history.treeCommitCount", { count: branchCommits.length })}
-                  </Typography>
-                </Paper>
-              );
-            })}
+            {rootBranches.map((branch) => renderBranchTree(branch.id))}
           </Box>
         )
       ) : !commits || commits.length === 0 ? (

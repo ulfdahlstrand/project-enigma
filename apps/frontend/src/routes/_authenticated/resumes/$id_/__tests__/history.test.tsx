@@ -81,6 +81,16 @@ const GRAPH = {
       forkedFromCommitId: "commit-id-1",
       createdAt: "2024-06-03T09:00:00Z",
     },
+    {
+      id: "branch-id-3",
+      resumeId: "resume-id-1",
+      name: "German Variant",
+      language: "de",
+      isMain: false,
+      headCommitId: "commit-id-4",
+      forkedFromCommitId: "commit-id-3",
+      createdAt: "2024-06-04T09:00:00Z",
+    },
   ],
   commits: [
     {
@@ -106,6 +116,14 @@ const GRAPH = {
       parentCommitId: "commit-id-1",
       message: "Swedish version",
       createdAt: "2024-06-03T10:00:00Z",
+    },
+    {
+      id: "commit-id-4",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-3",
+      parentCommitId: "commit-id-3",
+      message: "German version",
+      createdAt: "2024-06-04T10:00:00Z",
     },
   ],
 };
@@ -232,6 +250,36 @@ describe("View controls", () => {
 
     expect(await screen.findByText(enCommon.resume.history.treeHeadLabel)).toBeInTheDocument();
     expect(screen.getByText(enCommon.resume.history.treeBaseLabel)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.resume.history.mainBranchTag)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.resume.history.currentBranchTag)).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-1")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-2")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-3")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-1")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-2")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-3")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-4")).toBeInTheDocument();
+  });
+
+  it("renders branch ancestry details in deterministic order", async () => {
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    const mainBranch = await screen.findByTestId("tree-branch-branch-id-1");
+    const swedishBranch = screen.getByTestId("tree-branch-branch-id-2");
+    const germanBranch = screen.getByTestId("tree-branch-branch-id-3");
+    const mainCommit = await screen.findByTestId("tree-commit-commit-id-1");
+    const updatedCommit = screen.getByTestId("tree-commit-commit-id-2");
+    const swedishCommit = screen.getByTestId("tree-commit-commit-id-3");
+    const germanCommit = screen.getByTestId("tree-commit-commit-id-4");
+
+    expect(mainBranch).toHaveTextContent("main");
+    expect(swedishBranch).toHaveTextContent("Based on: Initial version");
+    expect(germanBranch).toHaveTextContent("Based on: Swedish version");
+    expect(mainCommit).toHaveTextContent("Initial version");
+    expect(updatedCommit).toHaveTextContent("commit-id-2");
+    expect(swedishCommit).toHaveTextContent("Swedish version");
+    expect(germanCommit).toHaveTextContent("German version");
   });
 
   it("navigates when tree view is selected", async () => {
