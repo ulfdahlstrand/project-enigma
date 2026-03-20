@@ -167,6 +167,23 @@ export const listResumeBranchesInputSchema = z.object({
 export const listResumeBranchesOutputSchema = z.array(resumeBranchSchema);
 
 // ---------------------------------------------------------------------------
+// getResumeBranchHistoryGraph schemas
+// ---------------------------------------------------------------------------
+
+export const getResumeBranchHistoryGraphInputSchema = z.object({
+  resumeId: z.string().uuid(),
+});
+
+export const resumeBranchHistoryGraphSchema = z.object({
+  branches: z.array(resumeBranchSchema),
+  commits: z.array(resumeCommitSummarySchema),
+});
+
+export const getResumeBranchHistoryGraphOutputSchema = resumeBranchHistoryGraphSchema;
+
+export type ResumeBranchHistoryGraph = z.infer<typeof resumeBranchHistoryGraphSchema>;
+
+// ---------------------------------------------------------------------------
 // Diff engine schemas
 //
 // Used by compareResumeCommits to describe what changed between two commits.
