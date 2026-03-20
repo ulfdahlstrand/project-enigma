@@ -276,10 +276,7 @@ describe("View controls", () => {
     mockSearch = { view: "tree", branchId: "branch-id-1" };
     renderPage();
 
-    expect(await screen.findByText(enCommon.resume.history.treeHeadLabel)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.resume.history.treeBaseLabel)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.resume.history.mainBranchTag)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.resume.history.currentBranchTag)).toBeInTheDocument();
+    expect(await screen.findByTestId("history-graph")).toBeInTheDocument();
     expect(screen.getByTestId("tree-branch-branch-id-1")).toBeInTheDocument();
     expect(screen.getByTestId("tree-branch-branch-id-2")).toBeInTheDocument();
     expect(screen.getByTestId("tree-branch-branch-id-3")).toBeInTheDocument();
@@ -297,28 +294,24 @@ describe("View controls", () => {
     const mainBranch = await screen.findByTestId("tree-branch-branch-id-1");
     const swedishBranch = screen.getByTestId("tree-branch-branch-id-2");
     const germanBranch = screen.getByTestId("tree-branch-branch-id-3");
-    const mainCommit = await screen.findByTestId("tree-commit-commit-id-1");
-    const updatedCommit = screen.getByTestId("tree-commit-commit-id-2");
-    const swedishCommit = screen.getByTestId("tree-commit-commit-id-3");
-    const germanCommit = screen.getByTestId("tree-commit-commit-id-4");
 
-    expect(mainBranch).toHaveTextContent("main");
-    expect(swedishBranch).toHaveTextContent("Based on: Initial version");
-    expect(germanBranch).toHaveTextContent("Based on: Swedish version");
-    expect(mainCommit).toHaveTextContent("Initial version");
-    expect(updatedCommit).toHaveTextContent("commit-id-2");
-    expect(swedishCommit).toHaveTextContent("Swedish version");
-    expect(germanCommit).toHaveTextContent("German version");
+    expect(mainBranch).toHaveAttribute("aria-label", "main");
+    expect(swedishBranch).toHaveAttribute("aria-label", "Swedish Variant");
+    expect(germanBranch).toHaveAttribute("aria-label", "German Variant");
+    expect(screen.queryByText("Initial version")).toBeNull();
+    expect(screen.queryByText("Swedish version")).toBeNull();
+    expect(screen.queryByText("German version")).toBeNull();
   });
 
   it("renders the no-commits branch state in tree mode", async () => {
+    const user = userEvent.setup();
     mockSearch = { view: "tree", branchId: "branch-id-4" };
     renderPage();
 
-    expect(await screen.findByTestId("tree-branch-branch-id-4")).toHaveTextContent(
-      enCommon.resume.history.treeNoCommits
-    );
-    expect(screen.getByText(enCommon.resume.history.currentBranchTag)).toBeInTheDocument();
+    const emptyBranch = await screen.findByTestId("tree-branch-branch-id-4");
+    await user.hover(emptyBranch);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(enCommon.resume.history.treeNoCommits);
   });
 
   it("falls back to the first branch when no main branch exists", async () => {
@@ -330,7 +323,34 @@ describe("View controls", () => {
     renderPage();
 
     const firstBranch = await screen.findByTestId("tree-branch-branch-id-1");
-    expect(firstBranch).toHaveTextContent(enCommon.resume.history.currentBranchTag);
+    expect(firstBranch).toHaveAttribute("aria-label", "main");
+  });
+
+  it("renders commit details only on hover in tree mode", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    const swedishCommit = await screen.findByTestId("tree-commit-commit-id-3");
+    expect(screen.queryByText("Swedish version")).toBeNull();
+
+    await user.hover(swedishCommit);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish version");
+    expect(screen.getByRole("tooltip")).toHaveTextContent(enCommon.resume.history.tableHeaderSavedAt);
+  });
+
+  it("renders branch details only on hover in tree mode", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    expect(screen.queryByText("Swedish Variant")).toBeNull();
+
+    await user.hover(await screen.findByTestId("tree-branch-branch-id-2"));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish Variant");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("1 commit");
   });
 
   it("navigates when tree view is selected", async () => {
