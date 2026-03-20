@@ -19,3 +19,5 @@ export { listBranchAssignmentsHandler } from "./branch-assignment/list.js";
 export { listBranchAssignmentsFullHandler } from "./branch-assignment/list-full.js";
 export { createAssignmentHandler } from "./branch-assignment/create.js";
 export { deleteAssignmentHandler } from "./branch-assignment/delete.js";
+export { listResumeHighlightedItemsHandler } from "./highlighted-item/list.js";
+export { setResumeHighlightedItemsHandler } from "./highlighted-item/set.js";

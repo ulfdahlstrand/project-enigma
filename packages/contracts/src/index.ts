@@ -82,6 +82,12 @@ import {
   listBranchAssignmentsFullOutputSchema,
 } from "./branch-assignments.js";
 import {
+  listResumeHighlightedItemsInputSchema,
+  listResumeHighlightedItemsOutputSchema,
+  setResumeHighlightedItemsInputSchema,
+  setResumeHighlightedItemsOutputSchema,
+} from "./resume-highlighted-items.js";
+import {
   improveDescriptionInputSchema,
   improveDescriptionOutputSchema,
 } from "./ai.js";
@@ -263,6 +269,29 @@ export {
 } from "./branch-assignments.js";
 export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
 
+// ---------------------------------------------------------------------------
+// Resume highlighted items schemas — re-exported from ./resume-highlighted-items
+// ---------------------------------------------------------------------------
+
+export {
+  resumeHighlightedItemSchema,
+  listResumeHighlightedItemsInputSchema,
+  listResumeHighlightedItemsOutputSchema,
+  setResumeHighlightedItemsInputSchema,
+  setResumeHighlightedItemsOutputSchema,
+} from "./resume-highlighted-items.js";
+export type {
+  ResumeHighlightedItem,
+  ListResumeHighlightedItemsInput,
+  ListResumeHighlightedItemsOutput,
+  SetResumeHighlightedItemsInput,
+  SetResumeHighlightedItemsOutput,
+} from "./resume-highlighted-items.js";
+
+// ---------------------------------------------------------------------------
+// AI schemas — re-exported from ./ai
+// ---------------------------------------------------------------------------
+
 export {
   improveDescriptionInputSchema,
   improveDescriptionOutputSchema,
@@ -378,6 +407,12 @@ export const contract = oc.router({
   compareResumeCommits: oc
     .input(compareResumeCommitsInputSchema)
     .output(compareResumeCommitsOutputSchema),
+  listResumeHighlightedItems: oc
+    .input(listResumeHighlightedItemsInputSchema)
+    .output(listResumeHighlightedItemsOutputSchema),
+  setResumeHighlightedItems: oc
+    .input(setResumeHighlightedItemsInputSchema)
+    .output(setResumeHighlightedItemsOutputSchema),
   improveDescription: oc
     .route({ method: "POST", path: "/ai/improve-description" })
     .input(improveDescriptionInputSchema)

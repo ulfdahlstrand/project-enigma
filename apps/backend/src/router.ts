@@ -29,6 +29,8 @@ import {
   listBranchAssignmentsFullHandler,
   createAssignmentHandler,
   deleteAssignmentHandler,
+  listResumeHighlightedItemsHandler,
+  setResumeHighlightedItemsHandler,
 } from "./domains/resume/index.js";
 import {
   listEducationHandler,
@@ -95,6 +97,8 @@ export const router = implement(contract).router({
   removeBranchAssignment: removeBranchAssignmentHandler,
   updateBranchAssignment: updateBranchAssignmentHandler,
   compareResumeCommits: compareResumeCommitsHandler,
+  listResumeHighlightedItems: listResumeHighlightedItemsHandler,
+  setResumeHighlightedItems: setResumeHighlightedItemsHandler,
   improveDescription: improveDescriptionHandler,
   createAIConversation: createAIConversationHandler,
   sendAIMessage: sendAIMessageHandler,

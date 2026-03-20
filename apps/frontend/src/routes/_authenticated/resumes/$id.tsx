@@ -156,17 +156,17 @@ interface CoverPageContentProps {
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
-  highlightedAssignments: Array<{ role: string; clientName: string }>;
-  allAssignments?: Array<{ id: string; role: string; clientName: string; highlight: boolean }>;
+  highlightedItems: Array<{ text: string }>;
   presentationRef?: RefObject<HTMLDivElement | null>;
   isEditing?: boolean;
   draftTitle?: string;
   draftPresentation?: string;
   draftSummary?: string;
+  draftHighlightedItems?: string;
   onDraftTitleChange?: (v: string) => void;
   onDraftPresentationChange?: (v: string) => void;
   onDraftSummaryChange?: (v: string) => void;
-  onHighlightToggle?: (id: string, highlight: boolean) => void;
+  onDraftHighlightedItemsChange?: (v: string) => void;
 }
 
 function CoverPageContent({
@@ -174,17 +174,17 @@ function CoverPageContent({
   consultantTitle,
   presentation,
   summary,
-  highlightedAssignments,
-  allAssignments = [],
+  highlightedItems,
   presentationRef,
   isEditing = false,
   draftTitle = "",
   draftPresentation = "",
   draftSummary = "",
+  draftHighlightedItems = "",
   onDraftTitleChange,
   onDraftPresentationChange,
   onDraftSummaryChange,
-  onHighlightToggle,
+  onDraftHighlightedItemsChange,
 }: CoverPageContentProps) {
   const { t } = useTranslation("common");
 
@@ -242,7 +242,7 @@ function CoverPageContent({
       ) : null}
 
       {/* Special skills + highlighted experience box */}
-      {(isEditing || summary || highlightedAssignments.length > 0) && (
+      {(isEditing || summary || highlightedItems.length > 0) && (
         <Box
           sx={{
             bgcolor: "action.hover",
@@ -253,7 +253,7 @@ function CoverPageContent({
           }}
         >
           {(isEditing || summary) && (
-            <Box sx={{ mb: highlightedAssignments.length > 0 ? 2.5 : 0 }}>
+            <Box sx={{ mb: isEditing || highlightedItems.length > 0 ? 2.5 : 0 }}>
               <Typography
                 variant="caption"
                 sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
@@ -278,7 +278,7 @@ function CoverPageContent({
             </Box>
           )}
 
-          {(isEditing ? allAssignments.length > 0 : highlightedAssignments.length > 0) && (
+          {(isEditing || highlightedItems.length > 0) && (
             <Box>
               <Typography
                 variant="caption"
@@ -287,24 +287,19 @@ function CoverPageContent({
                 {t("resume.detail.highlightedExperienceHeading").toUpperCase()}
               </Typography>
               {isEditing ? (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-                  {allAssignments.map((a) => (
-                    <Box key={a.id} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <input
-                        type="checkbox"
-                        checked={a.highlight}
-                        onChange={(e) => onHighlightToggle?.(a.id, e.target.checked)}
-                        style={{ margin: 0, cursor: "pointer" }}
-                      />
-                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                        {a.role} – {a.clientName}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
+                <TextField
+                  value={draftHighlightedItems}
+                  onChange={(e) => onDraftHighlightedItemsChange?.(e.target.value)}
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  placeholder={t("resume.detail.highlightedItemsPlaceholder")}
+                />
               ) : (
                 <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-                  {highlightedAssignments.map((a, i) => (
+                  {highlightedItems.map((item, i) => (
                     <Typography
                       key={i}
                       component="li"
@@ -312,7 +307,7 @@ function CoverPageContent({
                       color="text.secondary"
                       sx={{ mb: 0.25 }}
                     >
-                      {a.role} hos {a.clientName}
+                      {item.text}
                     </Typography>
                   ))}
                 </Box>
@@ -643,10 +638,27 @@ function ResumeDetailPage() {
     enabled: !!resume?.employeeId,
   });
 
+  const { data: highlightedItemsData } = useQuery({
+    queryKey: ["listResumeHighlightedItems", id],
+    queryFn: () => orpc.listResumeHighlightedItems({ resumeId: id }),
+    enabled: !!id,
+  });
+
+  const highlightedItems = highlightedItemsData?.items ?? [];
+
+  const setHighlightedItems = useMutation({
+    mutationFn: (items: { text: string; sortOrder?: number }[]) =>
+      orpc.setResumeHighlightedItems({ resumeId: id, items }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["listResumeHighlightedItems", id] });
+    },
+  });
+
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
+  const [draftHighlightedItems, setDraftHighlightedItems] = useState("");
 
   const updateResume = useMutation({
     mutationFn: (patch: { presentation?: string[]; consultantTitle?: string | null; summary?: string | null }) =>
@@ -664,14 +676,6 @@ function ResumeDetailPage() {
         await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
       }
       setIsEditing(false);
-    },
-  });
-
-  const toggleHighlight = useMutation({
-    mutationFn: ({ id: baId, highlight }: { id: string; highlight: boolean }) =>
-      orpc.updateBranchAssignment({ id: baId, highlight }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
     },
   });
 
@@ -700,6 +704,7 @@ function ResumeDetailPage() {
       setDraftTitle(consultantTitle ?? "");
       setDraftPresentation(presentation.join("\n\n"));
       setDraftSummary(summary ?? "");
+      setDraftHighlightedItems(highlightedItems.map((i) => i.text).join("\n"));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
@@ -747,7 +752,6 @@ function ResumeDetailPage() {
     return (b.startDate ?? "").toString().localeCompare((a.startDate ?? "").toString());
   });
 
-  const highlighted = sortedAssignments.filter((a) => a.highlight);
   const skills = snapshotContent?.skills
     ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
     : (resume?.skills ?? []);
@@ -764,11 +768,29 @@ function ResumeDetailPage() {
       presentation: draftPresentation.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
       summary: draftSummary.trim() || null,
     };
+    const newHighlightedItems = draftHighlightedItems
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((text, idx) => ({ text, sortOrder: idx }));
+
     if (isSnapshotMode && activeBranchId) {
-      // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
-      saveVersion.mutate({ branchId: activeBranchId, ...patch });
+      saveVersion.mutate(
+        { branchId: activeBranchId, ...patch },
+        {
+          onSuccess: () => {
+            setHighlightedItems.mutate(newHighlightedItems);
+          },
+        }
+      );
     } else {
-      updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+      updateResume.mutate(patch, {
+        onSuccess: () => {
+          setHighlightedItems.mutate(newHighlightedItems, {
+            onSuccess: () => setIsEditing(false),
+          });
+        },
+      });
     }
   };
 
@@ -783,9 +805,9 @@ function ResumeDetailPage() {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={updateResume.isPending || saveVersion.isPending}
+            disabled={updateResume.isPending || saveVersion.isPending || setHighlightedItems.isPending}
           >
-            {updateResume.isPending || saveVersion.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
+            {updateResume.isPending || saveVersion.isPending || setHighlightedItems.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
           </Button>
           <Button variant="outlined" onClick={() => setIsEditing(false)}>
             {t("resume.edit.backButton")}
@@ -849,22 +871,17 @@ function ResumeDetailPage() {
             consultantTitle={consultantTitle}
             presentation={presentation}
             summary={summary}
-            highlightedAssignments={highlighted}
-            allAssignments={sortedAssignments.map((a) => ({
-              id: a.id,
-              role: a.role,
-              clientName: a.clientName,
-              highlight: a.highlight,
-            }))}
+            highlightedItems={highlightedItems}
             presentationRef={presentationRef}
             isEditing={isEditing}
             draftTitle={draftTitle}
             draftPresentation={draftPresentation}
             draftSummary={draftSummary}
+            draftHighlightedItems={draftHighlightedItems}
             onDraftTitleChange={setDraftTitle}
             onDraftPresentationChange={setDraftPresentation}
             onDraftSummaryChange={setDraftSummary}
-            onHighlightToggle={(id, highlight) => toggleHighlight.mutate({ id, highlight })}
+            onDraftHighlightedItemsChange={setDraftHighlightedItems}
           />
         </DocumentPage>
 

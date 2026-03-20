@@ -210,6 +210,20 @@ export type NewBranchAssignment = Insertable<BranchAssignmentTable>;
 export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
 
 // ---------------------------------------------------------------------------
+// Resume highlighted items table
+// ---------------------------------------------------------------------------
+
+export interface ResumeHighlightedItemTable {
+  id: Generated<string>;
+  resume_id: string;
+  text: string;
+  sort_order: Generated<number>;
+}
+
+export type ResumeHighlightedItem = Selectable<ResumeHighlightedItemTable>;
+export type NewResumeHighlightedItem = Insertable<ResumeHighlightedItemTable>;
+
+// ---------------------------------------------------------------------------
 // AI assistant tables
 // ---------------------------------------------------------------------------
 
@@ -266,6 +280,7 @@ export interface Database {
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
+  resume_highlighted_items: ResumeHighlightedItemTable;
   resume_commits: ResumeCommitTable;
   resume_branches: ResumeBranchTable;
   branch_assignments: BranchAssignmentTable;
