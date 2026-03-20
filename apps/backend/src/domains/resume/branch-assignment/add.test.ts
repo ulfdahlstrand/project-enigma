@@ -77,10 +77,11 @@ function buildDbMock(opts: {
   const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
   const branchInnerJoin1 = vi.fn().mockReturnValue({ select: branchSelect });
 
-  // Assignment cross-ownership check
+  // Assignment cross-ownership check — two where calls (id + deleted_at filter)
   const assignmentExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedAssignment);
-  const assignmentWhere = vi.fn().mockReturnValue({ executeTakeFirst: assignmentExecuteTakeFirst });
-  const assignmentSelect = vi.fn().mockReturnValue({ where: assignmentWhere });
+  const assignmentWhere2 = vi.fn().mockReturnValue({ executeTakeFirst: assignmentExecuteTakeFirst });
+  const assignmentWhere1 = vi.fn().mockReturnValue({ where: assignmentWhere2 });
+  const assignmentSelect = vi.fn().mockReturnValue({ where: assignmentWhere1 });
 
   // Insert
   const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedRow);

@@ -146,15 +146,17 @@ function buildDbMock(opts: {
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // Assignments chain — now via branch_assignments join
+  // Assignments chain — two innerJoins (resume_branches + assignments), three wheres, three orderBys
   const assignExec = vi.fn().mockResolvedValue(assignmentRows);
   const assignOrderBy3 = vi.fn().mockReturnValue({ execute: assignExec });
   const assignOrderBy2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy3 });
   const assignOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignOrderBy2 });
-  const assignWhere2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
-  const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2, orderBy: assignOrderBy1 });
+  const assignWhere3 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
+  const assignWhere2 = vi.fn().mockReturnValue({ where: assignWhere3 });
+  const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2 });
   const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere1 });
-  const assignInnerJoin1 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
+  const assignInnerJoin2 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
+  const assignInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: assignInnerJoin2 });
 
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);

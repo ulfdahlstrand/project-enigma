@@ -122,10 +122,12 @@ function buildDbMock(opts: {
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
 
-  // Source assignments query — plain branch_assignments selectAll (copy step)
+  // Source assignments query — branch_assignments as ba, innerJoin + selectAll + 2 wheres (copy step)
   const assignmentsExecute = vi.fn().mockResolvedValue(sourceAssignments);
-  const assignmentsWhere = vi.fn().mockReturnValue({ execute: assignmentsExecute });
-  const assignmentsSelectAll = vi.fn().mockReturnValue({ where: assignmentsWhere });
+  const assignmentsWhere2 = vi.fn().mockReturnValue({ execute: assignmentsExecute });
+  const assignmentsWhere1 = vi.fn().mockReturnValue({ where: assignmentsWhere2 });
+  const assignmentsSelectAll = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
+  const assignmentsInnerJoin = vi.fn().mockReturnValue({ selectAll: assignmentsSelectAll });
 
   // Fresh assignments query — branch_assignments as ba, select([...]) (content build step)
   const freshAssignmentsExecute = vi.fn().mockResolvedValue(freshAssignmentRows);
@@ -156,10 +158,11 @@ function buildDbMock(opts: {
   });
 
   const trxSelectFrom = vi.fn().mockImplementation((table: string) => {
-    // Plain branch_assignments → copy step (selectAll/where/execute)
-    if (table === "branch_assignments") return { selectAll: assignmentsSelectAll };
-    // Aliased branch_assignments as ba → fresh content build step (select chain)
-    if (table === "branch_assignments as ba") return { select: freshAssignmentsSelect };
+    if (table === "branch_assignments as ba") return {
+      // Source copy path starts with innerJoin; fresh content path starts with select
+      innerJoin: assignmentsInnerJoin,
+      select: freshAssignmentsSelect,
+    };
     return {};
   });
 

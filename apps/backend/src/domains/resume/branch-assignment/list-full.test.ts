@@ -74,8 +74,9 @@ function buildDb(opts: {
   const assignmentsExecute = vi.fn().mockResolvedValue(assignmentRows);
   const assignmentsOrderBy2 = vi.fn().mockReturnValue({ execute: assignmentsExecute });
   const assignmentsOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy2 });
-  const assignmentsWhere = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy1 });
-  const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere });
+  const assignmentsWhere2 = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy1 });
+  const assignmentsWhere1 = vi.fn().mockReturnValue({ where: assignmentsWhere2 });
+  const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
   const assignmentsInnerJoin = vi.fn().mockReturnValue({ select: assignmentsSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
