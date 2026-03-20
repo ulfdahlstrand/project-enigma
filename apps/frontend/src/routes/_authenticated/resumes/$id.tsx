@@ -62,8 +62,6 @@ const PAGE_MY = "56px";
 const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
 
-// How many assignments to show as bullets on the cover page
-const COVER_HIGHLIGHT_COUNT = 5;
 
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
@@ -159,6 +157,7 @@ interface CoverPageContentProps {
   presentation: string[];
   summary: string | null;
   highlightedAssignments: Array<{ role: string; clientName: string }>;
+  allAssignments?: Array<{ id: string; role: string; clientName: string; highlight: boolean }>;
   presentationRef?: RefObject<HTMLDivElement | null>;
   isEditing?: boolean;
   draftTitle?: string;
@@ -167,6 +166,7 @@ interface CoverPageContentProps {
   onDraftTitleChange?: (v: string) => void;
   onDraftPresentationChange?: (v: string) => void;
   onDraftSummaryChange?: (v: string) => void;
+  onHighlightToggle?: (id: string, highlight: boolean) => void;
 }
 
 function CoverPageContent({
@@ -175,6 +175,7 @@ function CoverPageContent({
   presentation,
   summary,
   highlightedAssignments,
+  allAssignments = [],
   presentationRef,
   isEditing = false,
   draftTitle = "",
@@ -183,6 +184,7 @@ function CoverPageContent({
   onDraftTitleChange,
   onDraftPresentationChange,
   onDraftSummaryChange,
+  onHighlightToggle,
 }: CoverPageContentProps) {
   const { t } = useTranslation("common");
 
@@ -276,7 +278,7 @@ function CoverPageContent({
             </Box>
           )}
 
-          {highlightedAssignments.length > 0 && (
+          {(isEditing ? allAssignments.length > 0 : highlightedAssignments.length > 0) && (
             <Box>
               <Typography
                 variant="caption"
@@ -284,19 +286,37 @@ function CoverPageContent({
               >
                 {t("resume.detail.highlightedExperienceHeading").toUpperCase()}
               </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-                {highlightedAssignments.map((a, i) => (
-                  <Typography
-                    key={i}
-                    component="li"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 0.25 }}
-                  >
-                    {a.role} hos {a.clientName}
-                  </Typography>
-                ))}
-              </Box>
+              {isEditing ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                  {allAssignments.map((a) => (
+                    <Box key={a.id} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <input
+                        type="checkbox"
+                        checked={a.highlight}
+                        onChange={(e) => onHighlightToggle?.(a.id, e.target.checked)}
+                        style={{ margin: 0, cursor: "pointer" }}
+                      />
+                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                        {a.role} – {a.clientName}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {highlightedAssignments.map((a, i) => (
+                    <Typography
+                      key={i}
+                      component="li"
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 0.25 }}
+                    >
+                      {a.role} hos {a.clientName}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
             </Box>
           )}
         </Box>
@@ -647,6 +667,14 @@ function ResumeDetailPage() {
     },
   });
 
+  const toggleHighlight = useMutation({
+    mutationFn: ({ id: baId, highlight }: { id: string; highlight: boolean }) =>
+      orpc.updateBranchAssignment({ id: baId, highlight }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
+    },
+  });
+
   const [showFullAssignments, setShowFullAssignments] = useState(true);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -719,7 +747,7 @@ function ResumeDetailPage() {
     return (b.startDate ?? "").toString().localeCompare((a.startDate ?? "").toString());
   });
 
-  const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
+  const highlighted = sortedAssignments.filter((a) => a.highlight);
   const skills = snapshotContent?.skills
     ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
     : (resume?.skills ?? []);
@@ -822,6 +850,12 @@ function ResumeDetailPage() {
             presentation={presentation}
             summary={summary}
             highlightedAssignments={highlighted}
+            allAssignments={sortedAssignments.map((a) => ({
+              id: a.id,
+              role: a.role,
+              clientName: a.clientName,
+              highlight: a.highlight,
+            }))}
             presentationRef={presentationRef}
             isEditing={isEditing}
             draftTitle={draftTitle}
@@ -830,6 +864,7 @@ function ResumeDetailPage() {
             onDraftTitleChange={setDraftTitle}
             onDraftPresentationChange={setDraftPresentation}
             onDraftSummaryChange={setDraftSummary}
+            onHighlightToggle={(id, highlight) => toggleHighlight.mutate({ id, highlight })}
           />
         </DocumentPage>
 
