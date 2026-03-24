@@ -30,7 +30,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { alpha, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import { useResumeBranchHistoryGraph } from "../../../../../hooks/versioning";
 
 
@@ -64,7 +64,12 @@ const TREE_PADDING_Y = 24;
 const TREE_HEADER_HEIGHT = 52;
 const TREE_BRANCH_GAP = 38;
 const TREE_COMMIT_GAP = 36;
-const TREE_NODE_SIZE = 10;
+const TREE_NODE_OUTER_RADIUS = 5;
+const TREE_NODE_GAP_RADIUS = 3;
+const TREE_NODE_INNER_RADIUS = 1.8;
+
+const TREE_BRANCH_COLORS_DARK = ["#63a8ff", "#f59e0b", "#ff5cad", "#b47cff", "#4dd0c8", "#fb923c"];
+const TREE_BRANCH_COLORS_LIGHT = ["#2563eb", "#d97706", "#db2777", "#7c3aed", "#0f766e", "#ea580c"];
 
 function VersionHistoryPage() {
   const { t } = useTranslation("common");
@@ -81,54 +86,36 @@ function VersionHistoryPage() {
   } = useResumeBranchHistoryGraph(resumeId);
 
   const branches = graph?.branches ?? [];
-  const selectedBranch =
-    branches.find((branch) => branch.id === branchIdFromSearch) ??
-    branches.find((branch) => branch.isMain) ??
-    branches[0];
-  const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
-  const selectedBranchId = selectedBranch?.id ?? mainBranchId;
-  const selectedView = viewFromSearch ?? "list";
   const graphCommits = graph?.commits ?? [];
-  const commits = sortByCreatedAt(
-    graphCommits.filter((commit) => commit.branchId === selectedBranchId)
-  ).reverse();
-  const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
-  const sortedBranches = sortByCreatedAt(branches);
-  const branchCommitsByBranchId = new Map(
-    sortedBranches.map((branch) => [
-      branch.id,
-      sortByCreatedAt(graphCommits.filter((commit) => commit.branchId === branch.id)),
-    ])
-  );
-  const childBranchesByForkCommitId = new Map<string, typeof branches>();
+  const isDark = theme.palette.mode === "dark";
 
-  sortedBranches.forEach((branch) => {
-    if (!branch.forkedFromCommitId) {
-      return;
-    }
-
-    const existingBranches = childBranchesByForkCommitId.get(branch.forkedFromCommitId) ?? [];
-    childBranchesByForkCommitId.set(branch.forkedFromCommitId, [...existingBranches, branch]);
-  });
-
-  const rootBranches = sortedBranches.filter(
-    (branch) => !branch.forkedFromCommitId || !commitsById.has(branch.forkedFromCommitId)
-  );
-  const treeBranchColors = theme.palette.mode === "dark"
-    ? ["#63a8ff", "#f59e0b", "#ff5cad", "#b47cff", "#4dd0c8", "#fb923c"]
-    : ["#2563eb", "#d97706", "#db2777", "#7c3aed", "#0f766e", "#ea580c"];
   const graphLayout = useMemo(() => {
+    const treeBranchColors = isDark ? TREE_BRANCH_COLORS_DARK : TREE_BRANCH_COLORS_LIGHT;
+    const sortedBranches = sortByCreatedAt(branches);
+    const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
+    const branchCommitsByBranchId = new Map(
+      sortedBranches.map((branch) => [
+        branch.id,
+        sortByCreatedAt(graphCommits.filter((commit) => commit.branchId === branch.id)),
+      ])
+    );
+    const childBranchesByForkCommitId = new Map<string, typeof branches>();
+    sortedBranches.forEach((branch) => {
+      if (!branch.forkedFromCommitId) return;
+      const existing = childBranchesByForkCommitId.get(branch.forkedFromCommitId) ?? [];
+      childBranchesByForkCommitId.set(branch.forkedFromCommitId, [...existing, branch]);
+    });
+    const rootBranches = sortedBranches.filter(
+      (branch) => !branch.forkedFromCommitId || !commitsById.has(branch.forkedFromCommitId)
+    );
+
     const orderedBranchIds: string[] = [];
     const visitedBranchIds = new Set<string>();
 
     function pushBranchAndChildren(branchId: string) {
-      if (visitedBranchIds.has(branchId)) {
-        return;
-      }
-
+      if (visitedBranchIds.has(branchId)) return;
       visitedBranchIds.add(branchId);
       orderedBranchIds.push(branchId);
-
       const branchCommits = branchCommitsByBranchId.get(branchId) ?? [];
       branchCommits.forEach((commit) => {
         const childBranches = childBranchesByForkCommitId.get(commit.id) ?? [];
@@ -165,10 +152,27 @@ function VersionHistoryPage() {
       branchIndexById,
       commitIndexById,
       branchColorById,
+      branchCommitsByBranchId,
+      commitsById,
+      rootBranches,
       width,
       height,
     };
-  }, [branches, graphCommits, rootBranches, sortedBranches, branchCommitsByBranchId, childBranchesByForkCommitId, treeBranchColors]);
+  }, [branches, graphCommits, isDark]);
+
+  const selectedBranch =
+    branches.find((branch) => branch.id === branchIdFromSearch) ??
+    branches.find((branch) => branch.isMain) ??
+    branches[0];
+  const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
+  const selectedBranchId = selectedBranch?.id ?? mainBranchId;
+  const selectedView = viewFromSearch ?? "list";
+  const commits = sortByCreatedAt(
+    graphCommits.filter((commit) => commit.branchId === selectedBranchId)
+  ).reverse();
+
+  const graphSurfaceColor = isDark ? "#0d1117" : theme.palette.grey[50];
+  const graphBorderColor = theme.palette.divider;
 
   function getBranchX(branchId: string) {
     return TREE_PADDING_X + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + 48;
@@ -183,123 +187,117 @@ function VersionHistoryPage() {
     );
   }
 
-  const graphSurfaceColor = theme.palette.mode === "dark" ? theme.palette.background.paper : theme.palette.grey[50];
-  const graphBorderColor = theme.palette.divider;
-
   useEffect(() => {
-    if (selectedView !== "tree") {
-      return;
-    }
+    if (selectedView !== "tree") return;
 
     const canvas = graphCanvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
+    if (!canvas) return;
     const context = canvas.getContext("2d");
-    if (!context) {
-      return;
-    }
+    if (!context) return;
+
+    const { width, height, orderedBranches, orderedCommits, branchColorById, branchCommitsByBranchId, commitsById } = graphLayout;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = graphLayout.width * dpr;
-    canvas.height = graphLayout.height * dpr;
-    canvas.style.width = `${graphLayout.width}px`;
-    canvas.style.height = `${graphLayout.height}px`;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    context.clearRect(0, 0, graphLayout.width, graphLayout.height);
-
+    context.clearRect(0, 0, width, height);
     context.fillStyle = graphSurfaceColor;
-    context.fillRect(0, 0, graphLayout.width, graphLayout.height);
-
+    context.fillRect(0, 0, width, height);
     context.lineCap = "round";
     context.lineJoin = "round";
 
-    graphLayout.orderedBranches.forEach((branch) => {
+    function localBranchX(branchId: string) {
+      return TREE_PADDING_X + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + 48;
+    }
+    function localCommitY(commitId: string) {
+      return TREE_HEADER_HEIGHT + TREE_PADDING_Y + (graphLayout.commitIndexById.get(commitId) ?? 0) * TREE_COMMIT_GAP + 18;
+    }
+
+    // Draw branch lines and fork curves
+    orderedBranches.forEach((branch) => {
       const branchCommits = branchCommitsByBranchId.get(branch.id) ?? [];
-      const branchX = getBranchX(branch.id);
-      const branchColor = graphLayout.branchColorById.get(branch.id) ?? "#61afef";
-      const lineColor = branch.id === selectedBranchId ? branchColor : `${branchColor}60`;
+      const bx = localBranchX(branch.id);
+      const branchColor = branchColorById.get(branch.id) ?? "#61afef";
+      const isSelected = branch.id === selectedBranchId;
+      const lineColor = isSelected ? branchColor : `${branchColor}99`;
+      const lineWidth = isSelected ? 2.5 : 1.5;
 
       if (branchCommits.length > 0) {
         const firstCommit = branchCommits[0];
         const lastCommit = branchCommits[branchCommits.length - 1];
         if (firstCommit && lastCommit) {
           context.strokeStyle = lineColor;
-          context.lineWidth = branch.id === selectedBranchId ? 3 : 2;
+          context.lineWidth = lineWidth;
           context.beginPath();
-          context.moveTo(branchX, getCommitY(firstCommit.id));
-          context.lineTo(branchX, getCommitY(lastCommit.id));
+          context.moveTo(bx, localCommitY(firstCommit.id));
+          context.lineTo(bx, localCommitY(lastCommit.id));
           context.stroke();
         }
       }
 
-      if (!branch.forkedFromCommitId) {
-        return;
-      }
-
+      if (!branch.forkedFromCommitId) return;
       const baseCommit = commitsById.get(branch.forkedFromCommitId);
-      if (!baseCommit?.branchId) {
-        return;
-      }
+      if (!baseCommit?.branchId) return;
 
-      const baseX = getBranchX(baseCommit.branchId);
-      const baseY = getCommitY(baseCommit.id);
+      const baseX = localBranchX(baseCommit.branchId);
+      const baseY = localCommitY(baseCommit.id);
       const firstCommit = branchCommits[0];
-      const targetX = branchX;
-      const targetY = firstCommit ? getCommitY(firstCommit.id) : baseY + TREE_COMMIT_GAP * 0.8;
+      const targetX = bx;
+      const targetY = firstCommit ? localCommitY(firstCommit.id) : baseY + TREE_COMMIT_GAP * 0.8;
       const turnRadius = Math.min(14, Math.abs(targetX - baseX) / 2, Math.abs(targetY - baseY) / 2);
 
       context.strokeStyle = lineColor;
-      context.lineWidth = branch.id === selectedBranchId ? 3 : 2;
+      context.lineWidth = lineWidth;
       context.beginPath();
       context.moveTo(baseX, baseY);
       context.lineTo(targetX - turnRadius, baseY);
-
       if (targetY >= baseY) {
         context.quadraticCurveTo(targetX, baseY, targetX, baseY + turnRadius);
       } else {
         context.quadraticCurveTo(targetX, baseY, targetX, baseY - turnRadius);
       }
-
       context.lineTo(targetX, targetY);
       context.stroke();
     });
 
-    graphLayout.orderedCommits.forEach((commit) => {
-      const branch = branches.find((item) => item.id === commit.branchId);
-      if (!branch) {
-        return;
-      }
+    // Draw commit nodes as ⊙ (outer ring → surface gap → inner dot)
+    orderedCommits.forEach((commit) => {
+      const branch = branches.find((b) => b.id === commit.branchId);
+      if (!branch) return;
 
-      const branchColor = graphLayout.branchColorById.get(branch.id) ?? "#61afef";
-      const nodeColor = branch.id === selectedBranchId ? branchColor : `${branchColor}60`;
-      const x = getBranchX(branch.id);
-      const y = getCommitY(commit.id);
+      const branchColor = branchColorById.get(branch.id) ?? "#61afef";
+      const isSelected = branch.id === selectedBranchId;
+      const nodeColor = isSelected ? branchColor : `${branchColor}99`;
+      const x = localBranchX(branch.id);
+      const y = localCommitY(commit.id);
 
+      // Outer filled circle
       context.fillStyle = nodeColor;
       context.beginPath();
-      context.arc(x, y, TREE_NODE_SIZE / 2, 0, Math.PI * 2);
+      context.arc(x, y, TREE_NODE_OUTER_RADIUS, 0, Math.PI * 2);
       context.fill();
 
-      if (branch.id === selectedBranchId || commit.id === branch.headCommitId) {
-        context.strokeStyle = theme.palette.mode === "dark" ? "#f8fafc" : theme.palette.common.white;
-        context.lineWidth = 1.5;
-        context.beginPath();
-        context.arc(x, y, TREE_NODE_SIZE / 2 + 2, 0, Math.PI * 2);
-        context.stroke();
-      }
+      // Gap — use surface background so it adapts to light/dark
+      context.fillStyle = graphSurfaceColor;
+      context.beginPath();
+      context.arc(x, y, TREE_NODE_GAP_RADIUS, 0, Math.PI * 2);
+      context.fill();
+
+      // Inner dot
+      context.fillStyle = nodeColor;
+      context.beginPath();
+      context.arc(x, y, TREE_NODE_INNER_RADIUS, 0, Math.PI * 2);
+      context.fill();
     });
   }, [
     selectedView,
     graphLayout,
-    branchCommitsByBranchId,
     branches,
-    commitsById,
     selectedBranchId,
     graphSurfaceColor,
-    theme.palette.mode,
-    theme.palette.common.white,
   ]);
 
   if (isLoading) {
@@ -383,7 +381,7 @@ function VersionHistoryPage() {
       </Box>
 
       {selectedView === "tree" ? (
-        !graph || rootBranches.length === 0 ? (
+        !graph || graphLayout.rootBranches.length === 0 ? (
           <Typography variant="body1">{t("resume.history.empty")}</Typography>
         ) : (
           <Paper
@@ -417,7 +415,7 @@ function VersionHistoryPage() {
 
               {graphLayout.orderedBranches.map((branch) => {
                 const branchX = getBranchX(branch.id);
-                const branchCommits = branchCommitsByBranchId.get(branch.id) ?? [];
+                const branchCommits = graphLayout.branchCommitsByBranchId.get(branch.id) ?? [];
 
                 return (
                   <Box key={branch.id}>
@@ -462,8 +460,7 @@ function VersionHistoryPage() {
 
                     {branchCommits.map((commit) => {
                       const isHead = commit.id === branch.headCommitId;
-                      const commitLabel = formatCommitLabel(commit.message, commit.id);
-                      const branchColor = graphLayout.branchColorById.get(branch.id) ?? "#61afef";
+                      const commitLabel = commit.message || t("resume.history.defaultMessage");
 
                       return (
                         <Tooltip
@@ -498,10 +495,6 @@ function VersionHistoryPage() {
                               borderRadius: "50%",
                               cursor: "default",
                               bgcolor: "transparent",
-                              boxShadow:
-                                branch.id === selectedBranchId
-                                  ? `0 0 0 1px ${alpha(branchColor, 0.25)}`
-                                  : "none",
                             }}
                           />
                         </Tooltip>
