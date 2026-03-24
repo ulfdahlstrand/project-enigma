@@ -1,0 +1,9 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>.bg{fill:#f6f6f6}.panel{fill:#fff;stroke:#222;stroke-width:2}.soft{fill:#efefef;stroke:#222;stroke-width:2}.title{font:28px sans-serif;font-weight:700;fill:#111}.section{font:20px sans-serif;font-weight:700;fill:#111}.text{font:16px sans-serif;fill:#111}.small{font:13px sans-serif;fill:#333}</style>
+  <rect class="bg" width="1400" height="900"/><text class="title" x="60" y="60">Employee List Low-Fi</text>
+  <rect class="panel" x="60" y="110" width="1280" height="110" rx="12"/><text class="section" x="90" y="158">Header</text><rect class="soft" x="1120" y="136" width="180" height="46" rx="8"/><text class="small" x="1172" y="164">Add person</text>
+  <rect class="panel" x="60" y="250" width="1280" height="580" rx="12"/><text class="section" x="90" y="298">Employee table</text>
+  <rect class="soft" x="90" y="320" width="1220" height="52" rx="8"/><text class="small" x="120" y="352">Table header: Name / Email</text>
+  <rect class="soft" x="90" y="392" width="1220" height="62" rx="8"/><rect class="soft" x="90" y="468" width="1220" height="62" rx="8"/><rect class="soft" x="90" y="544" width="1220" height="62" rx="8"/><rect class="soft" x="90" y="620" width="1220" height="62" rx="8"/>
+  <text class="small" x="120" y="429">Clickable employee row</text><text class="small" x="120" y="505">Clickable employee row</text><text class="small" x="120" y="581">Clickable employee row</text><text class="small" x="120" y="657">Clickable employee row</text>
+</svg>

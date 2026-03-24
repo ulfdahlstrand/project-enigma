@@ -1,0 +1,8 @@
+<svg width="1200" height="820" viewBox="0 0 1200 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>.bg{fill:#f6f6f6}.panel{fill:#fff;stroke:#222;stroke-width:2}.soft{fill:#efefef;stroke:#222;stroke-width:2}.title{font:28px sans-serif;font-weight:700;fill:#111}.section{font:20px sans-serif;font-weight:700;fill:#111}.small{font:13px sans-serif;fill:#333}</style>
+  <rect class="bg" width="1200" height="820"/><text class="title" x="60" y="60">New Resume Low-Fi</text>
+  <rect class="panel" x="180" y="120" width="640" height="560" rx="12"/><text class="section" x="210" y="170">Resume creation form</text>
+  <rect class="soft" x="210" y="200" width="580" height="84" rx="8"/><text class="small" x="235" y="245">Title</text>
+  <rect class="soft" x="210" y="310" width="580" height="84" rx="8"/><text class="small" x="235" y="355">Language</text>
+  <rect class="soft" x="210" y="430" width="160" height="46" rx="8"/><rect class="soft" x="388" y="430" width="160" height="46" rx="8"/><text class="small" x="266" y="458">Save</text><text class="small" x="436" y="458">Cancel</text>
+  <rect class="soft" x="850" y="120" width="250" height="560" rx="12"/><text class="section" x="878" y="170">Context</text><text class="small" x="878" y="208">Employee context / resume defaults / language guidance.</text></svg>

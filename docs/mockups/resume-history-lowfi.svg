@@ -1,0 +1,10 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>.bg{fill:#f6f6f6}.panel{fill:#fff;stroke:#222;stroke-width:2}.soft{fill:#efefef;stroke:#222;stroke-width:2}.title{font:28px sans-serif;font-weight:700;fill:#111}.section{font:20px sans-serif;font-weight:700;fill:#111}.small{font:13px sans-serif;fill:#333}</style>
+  <rect class="bg" width="1600" height="1000"/><text class="title" x="60" y="60">Resume History Low-Fi</text>
+  <rect class="panel" x="60" y="110" width="1480" height="94" rx="12"/><text class="section" x="90" y="160">Header / branch selector / list-tree toggle</text>
+  <rect class="soft" x="1110" y="132" width="170" height="42" rx="8"/><rect class="soft" x="1294" y="132" width="110" height="42" rx="8"/><rect class="soft" x="1416" y="132" width="94" height="42" rx="8"/>
+  <text class="small" x="1148" y="158">Branch</text><text class="small" x="1326" y="158">List</text><text class="small" x="1445" y="158">Tree</text>
+  <rect class="panel" x="60" y="240" width="1480" height="700" rx="12"/>
+  <rect class="soft" x="90" y="270" width="620" height="620" rx="8"/><text class="section" x="116" y="310">List view area</text><text class="small" x="116" y="338">Commit history table/list for selected branch</text>
+  <rect class="soft" x="740" y="270" width="770" height="620" rx="8"/><text class="section" x="766" y="310">Tree view area</text><text class="small" x="766" y="338">Graph overview of branches and commits</text>
+</svg>

@@ -1,0 +1,154 @@
+<svg width="1600" height="2200" viewBox="0 0 1600 2200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #f6f6f6; }
+    .panel { fill: #ffffff; stroke: #222; stroke-width: 2; }
+    .soft { fill: #f0f0f0; stroke: #222; stroke-width: 2; }
+    .text { font: 16px sans-serif; fill: #111; }
+    .small { font: 13px sans-serif; fill: #333; }
+    .title { font: 28px sans-serif; font-weight: 700; fill: #111; }
+    .section { font: 20px sans-serif; font-weight: 700; fill: #111; }
+    .label { font: 12px sans-serif; fill: #555; text-transform: uppercase; }
+    .muted { font: 13px sans-serif; fill: #666; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1600" height="2200"/>
+  <text class="title" x="70" y="70">CV Revision Workflow Low-Fi Wireframes</text>
+  <text class="text" x="70" y="100">Focus: what information goes where, not final visual design.</text>
+
+  <!-- Screen 1 -->
+  <text class="section" x="70" y="160">1. Discovery</text>
+  <rect class="panel" x="60" y="190" width="1480" height="610" rx="14"/>
+  <rect class="soft" x="60" y="190" width="1480" height="54" rx="14"/>
+  <text class="text" x="84" y="223">Top bar: workflow name, resume name, current step, pause/save actions</text>
+
+  <rect class="panel" x="84" y="266" width="270" height="500" rx="10"/>
+  <text class="section" x="104" y="298">Checklist</text>
+  <rect class="soft" x="104" y="320" width="230" height="60" rx="8"/>
+  <text class="text" x="120" y="346">Progress summary</text>
+  <text class="small" x="120" y="366">0 / 7 approved</text>
+  <rect class="soft" x="104" y="398" width="230" height="64" rx="8"/>
+  <rect class="soft" x="104" y="472" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="534" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="596" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="658" width="230" height="52" rx="8"/>
+  <text class="small" x="120" y="425">Discovery (active)</text>
+  <text class="small" x="120" y="500">Consultant title</text>
+  <text class="small" x="120" y="562">Presentation</text>
+  <text class="small" x="120" y="624">Summary</text>
+  <text class="small" x="120" y="686">Skills / Assignments / Polish</text>
+
+  <rect class="panel" x="376" y="266" width="650" height="500" rx="10"/>
+  <text class="section" x="398" y="298">Current step conversation</text>
+  <rect class="soft" x="398" y="320" width="606" height="84" rx="8"/>
+  <text class="text" x="416" y="348">Intro / context card</text>
+  <text class="small" x="416" y="370">What the discovery step is for and what the AI will ask.</text>
+  <rect class="soft" x="398" y="424" width="470" height="82" rx="8"/>
+  <text class="small" x="416" y="455">AI message</text>
+  <text class="small" x="416" y="478">Questions about target role, tone, strengths, what to downplay.</text>
+  <rect class="soft" x="534" y="526" width="470" height="82" rx="8"/>
+  <text class="small" x="552" y="557">User reply</text>
+  <text class="small" x="552" y="580">Target role, emphasis, language preferences.</text>
+  <rect class="soft" x="398" y="628" width="606" height="72" rx="8"/>
+  <text class="small" x="416" y="657">Message composer</text>
+  <text class="small" x="416" y="678">User continues discussion here.</text>
+  <rect class="soft" x="744" y="712" width="122" height="36" rx="8"/>
+  <rect class="soft" x="878" y="712" width="126" height="36" rx="8"/>
+  <text class="small" x="758" y="735">Save draft</text>
+  <text class="small" x="888" y="735">Confirm</text>
+
+  <rect class="panel" x="1048" y="266" width="468" height="500" rx="10"/>
+  <text class="section" x="1070" y="298">Structured summary</text>
+  <rect class="soft" x="1070" y="320" width="424" height="72" rx="8"/>
+  <rect class="soft" x="1070" y="406" width="205" height="76" rx="8"/>
+  <rect class="soft" x="1289" y="406" width="205" height="76" rx="8"/>
+  <rect class="soft" x="1070" y="496" width="424" height="76" rx="8"/>
+  <rect class="soft" x="1070" y="586" width="424" height="94" rx="8"/>
+  <text class="small" x="1088" y="347">Target role</text>
+  <text class="small" x="1088" y="433">Tone</text>
+  <text class="small" x="1307" y="433">Language</text>
+  <text class="small" x="1088" y="523">Emphasize</text>
+  <text class="small" x="1088" y="613">Downplay / notes</text>
+
+  <!-- Screen 2 -->
+  <text class="section" x="70" y="880">2. Section Review</text>
+  <rect class="panel" x="60" y="910" width="1480" height="700" rx="14"/>
+  <rect class="soft" x="60" y="910" width="1480" height="54" rx="14"/>
+  <text class="text" x="84" y="943">Top bar: current section, branch, section progress</text>
+
+  <rect class="panel" x="84" y="986" width="270" height="590" rx="10"/>
+  <text class="section" x="104" y="1018">Checklist</text>
+  <rect class="soft" x="104" y="1040" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="1102" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="1164" width="230" height="64" rx="8"/>
+  <rect class="soft" x="104" y="1238" width="230" height="52" rx="8"/>
+  <rect class="soft" x="104" y="1300" width="230" height="52" rx="8"/>
+  <text class="small" x="120" y="1071">Approved: Discovery</text>
+  <text class="small" x="120" y="1133">Approved: Title</text>
+  <text class="small" x="120" y="1191">Active: Summary</text>
+  <text class="small" x="120" y="1210">Status: Reviewing</text>
+  <text class="small" x="120" y="1269">Pending: Skills</text>
+  <text class="small" x="120" y="1331">Pending: Assignments</text>
+
+  <rect class="panel" x="376" y="986" width="650" height="590" rx="10"/>
+  <text class="section" x="398" y="1018">Proposal + discussion</text>
+  <rect class="soft" x="398" y="1040" width="606" height="126" rx="8"/>
+  <text class="text" x="416" y="1068">Proposal card</text>
+  <text class="small" x="416" y="1092">Revised section content</text>
+  <text class="small" x="416" y="1114">Change summary</text>
+  <text class="small" x="416" y="1136">Reasoning</text>
+  <rect class="soft" x="398" y="1186" width="606" height="84" rx="8"/>
+  <text class="text" x="416" y="1214">AI explanation</text>
+  <text class="small" x="416" y="1237">Why this section was changed this way.</text>
+  <rect class="soft" x="534" y="1290" width="470" height="82" rx="8"/>
+  <text class="small" x="552" y="1321">User feedback</text>
+  <text class="small" x="552" y="1344">Ask for rework or discuss details.</text>
+  <rect class="soft" x="398" y="1392" width="606" height="90" rx="8"/>
+  <text class="small" x="416" y="1420">Message composer</text>
+  <text class="small" x="416" y="1443">Continue discussing this specific section.</text>
+  <rect class="soft" x="612" y="1502" width="116" height="40" rx="8"/>
+  <rect class="soft" x="740" y="1502" width="132" height="40" rx="8"/>
+  <rect class="soft" x="884" y="1502" width="120" height="40" rx="8"/>
+  <text class="small" x="624" y="1527">Discuss</text>
+  <text class="small" x="752" y="1527">Request rework</text>
+  <text class="small" x="900" y="1527">Approve</text>
+
+  <rect class="panel" x="1048" y="986" width="468" height="590" rx="10"/>
+  <text class="section" x="1070" y="1018">Preview / diff</text>
+  <rect class="soft" x="1070" y="1040" width="202" height="220" rx="8"/>
+  <rect class="soft" x="1292" y="1040" width="202" height="220" rx="8"/>
+  <text class="small" x="1088" y="1067">Original</text>
+  <text class="small" x="1310" y="1067">Proposed</text>
+  <rect class="soft" x="1070" y="1280" width="424" height="120" rx="8"/>
+  <text class="small" x="1088" y="1307">What changed</text>
+  <text class="small" x="1088" y="1330">Short bullets: tighter tone, more technical focus, removed generic phrasing.</text>
+  <rect class="soft" x="1070" y="1420" width="424" height="110" rx="8"/>
+  <text class="small" x="1088" y="1447">Why</text>
+  <text class="small" x="1088" y="1470">Compact rationale shown beside the preview, not buried in the chat.</text>
+
+  <!-- Screen 3 -->
+  <text class="section" x="70" y="1690">3. Final Review</text>
+  <rect class="panel" x="60" y="1720" width="1480" height="420" rx="14"/>
+  <rect class="soft" x="60" y="1720" width="1480" height="54" rx="14"/>
+  <text class="text" x="84" y="1753">Top bar: all steps approved, ready to save as new branch/version</text>
+
+  <rect class="panel" x="84" y="1796" width="900" height="310" rx="10"/>
+  <text class="section" x="104" y="1828">Full revised CV preview</text>
+  <rect class="soft" x="104" y="1850" width="860" height="220" rx="8"/>
+  <text class="small" x="122" y="1878">Compiled document preview</text>
+  <text class="small" x="122" y="1902">Assembled from approved step outputs, not from a new freeform AI call.</text>
+  <rect class="soft" x="690" y="2082" width="128" height="38" rx="8"/>
+  <rect class="soft" x="832" y="2082" width="132" height="38" rx="8"/>
+  <text class="small" x="703" y="2106">New version</text>
+  <text class="small" x="845" y="2106">New branch</text>
+
+  <rect class="panel" x="1006" y="1796" width="510" height="310" rx="10"/>
+  <text class="section" x="1028" y="1828">Section review summary</text>
+  <rect class="soft" x="1028" y="1850" width="466" height="54" rx="8"/>
+  <rect class="soft" x="1028" y="1914" width="466" height="54" rx="8"/>
+  <rect class="soft" x="1028" y="1978" width="466" height="54" rx="8"/>
+  <rect class="soft" x="1028" y="2042" width="466" height="54" rx="8"/>
+  <text class="small" x="1044" y="1882">Accordion row: section name + reasoning + original/proposed summary</text>
+  <text class="small" x="1044" y="1946">Accordion row: presentation</text>
+  <text class="small" x="1044" y="2010">Accordion row: summary</text>
+  <text class="small" x="1044" y="2074">Accordion row: assignments / polish</text>
+</svg>

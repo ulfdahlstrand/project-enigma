@@ -1,0 +1,7 @@
+<svg width="1400" height="960" viewBox="0 0 1400 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>.bg{fill:#f6f6f6}.panel{fill:#fff;stroke:#222;stroke-width:2}.soft{fill:#efefef;stroke:#222;stroke-width:2}.title{font:28px sans-serif;font-weight:700;fill:#111}.section{font:20px sans-serif;font-weight:700;fill:#111}.small{font:13px sans-serif;fill:#333}</style>
+  <rect class="bg" width="1400" height="960"/><text class="title" x="60" y="60">Resume Compare Low-Fi</text>
+  <rect class="panel" x="60" y="110" width="1280" height="94" rx="12"/><text class="section" x="90" y="160">Header / back</text>
+  <rect class="panel" x="60" y="240" width="1280" height="110" rx="12"/><text class="section" x="90" y="288">Version selectors</text><rect class="soft" x="90" y="304" width="360" height="44" rx="8"/><rect class="soft" x="470" y="304" width="360" height="44" rx="8"/><text class="small" x="210" y="332">Version A</text><text class="small" x="590" y="332">Version B</text>
+  <rect class="panel" x="60" y="380" width="1280" height="500" rx="12"/><text class="section" x="90" y="428">Diff result</text><rect class="soft" x="90" y="450" width="380" height="160" rx="8"/><rect class="soft" x="490" y="450" width="360" height="160" rx="8"/><rect class="soft" x="870" y="450" width="440" height="160" rx="8"/><text class="small" x="116" y="486">Scalar changes</text><text class="small" x="516" y="486">Skills diff</text><text class="small" x="896" y="486">Assignments diff</text>
+</svg>

@@ -1,0 +1,12 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>.bg{fill:#f6f6f6}.panel{fill:#fff;stroke:#222;stroke-width:2}.soft{fill:#efefef;stroke:#222;stroke-width:2}.title{font:28px sans-serif;font-weight:700;fill:#111}.section{font:20px sans-serif;font-weight:700;fill:#111}.small{font:13px sans-serif;fill:#333}.muted{font:13px sans-serif;fill:#666}</style>
+  <rect class="bg" width="1600" height="1200"/><text class="title" x="60" y="60">Resume Detail Low-Fi</text>
+  <rect class="panel" x="60" y="110" width="1480" height="94" rx="12"/><text class="section" x="90" y="160">Toolbar / header</text>
+  <rect class="soft" x="720" y="132" width="120" height="42" rx="8"/><rect class="soft" x="854" y="132" width="140" height="42" rx="8"/><rect class="soft" x="1008" y="132" width="160" height="42" rx="8"/><rect class="soft" x="1182" y="132" width="140" height="42" rx="8"/><rect class="soft" x="1336" y="132" width="174" height="42" rx="8"/>
+  <text class="small" x="750" y="158">Edit</text><text class="small" x="888" y="158">History</text><text class="small" x="1038" y="158">Variant switcher</text><text class="small" x="1218" y="158">Export</text><text class="small" x="1366" y="158">Save / version</text>
+  <rect class="panel" x="210" y="240" width="860" height="900" rx="10"/><text class="section" x="240" y="280">Document preview area</text><rect class="soft" x="240" y="310" width="800" height="760" rx="8"/><text class="small" x="270" y="348">A4 document pages</text><text class="muted" x="270" y="372">Cover content, skills, assignments, branch-specific edits.</text>
+  <rect class="panel" x="1110" y="240" width="370" height="900" rx="10"/><text class="section" x="1140" y="280">Side tools</text>
+  <rect class="soft" x="1140" y="310" width="310" height="170" rx="8"/><text class="small" x="1164" y="348">Branch / version context</text>
+  <rect class="soft" x="1140" y="500" width="310" height="220" rx="8"/><text class="small" x="1164" y="538">Inline editors / highlighted experience / skills tools</text>
+  <rect class="soft" x="1140" y="740" width="310" height="200" rx="8"/><text class="small" x="1164" y="778">AI improvement entry points</text>
+</svg>
