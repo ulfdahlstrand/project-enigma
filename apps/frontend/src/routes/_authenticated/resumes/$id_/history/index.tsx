@@ -401,8 +401,7 @@ function VersionHistoryPage() {
           <Paper
             variant="outlined"
             sx={{
-              px: 1,
-              py: 1,
+              p: 2,
               overflow: "auto",
               bgcolor: graphSurfaceColor,
               borderColor: graphBorderColor,
@@ -429,44 +428,73 @@ function VersionHistoryPage() {
                 }}
               />
 
-              {/* Hoverable rows with commit labels — z-index 1, behind tooltips */}
+              {/* Hoverable rows with commit labels and per-row tooltips — z-index 1 */}
               {graphLayout.orderedCommits.map((commit) => {
                 const cy = getCommitY(commit.id);
-                const label = commit.message || t("resume.history.defaultMessage");
+                const commitLabel = commit.message || t("resume.history.defaultMessage");
+                const branch = branches.find((b) => b.id === commit.branchId);
+                const isHead = branch ? commit.id === branch.headCommitId : false;
+
                 return (
-                  <Box
+                  <Tooltip
                     key={`row-${commit.id}`}
-                    sx={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: cy - TREE_COMMIT_GAP / 2,
-                      height: TREE_COMMIT_GAP,
-                      display: "flex",
-                      alignItems: "center",
-                      zIndex: 1,
-                      borderRadius: 0.5,
-                      "&:hover": {
-                        bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-                      },
-                    }}
+                    arrow
+                    placement="right"
+                    title={
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {commitLabel}
+                        </Typography>
+                        {branch ? (
+                          <Typography variant="caption" sx={{ display: "block" }}>
+                            {branch.name}
+                          </Typography>
+                        ) : null}
+                        <Typography variant="caption" sx={{ display: "block" }}>
+                          {isHead ? t("resume.history.treeHeadCommitTag") : t("resume.history.treeCommitTag")}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: "block" }}>
+                          {t("resume.history.tableHeaderSavedAt")}: {formatCommitTimestamp(commit.createdAt)}
+                        </Typography>
+                      </Box>
+                    }
                   >
-                    <Typography
-                      variant="caption"
-                      noWrap
+                    <Box
+                      data-testid={`tree-commit-${commit.id}`}
+                      aria-label={commitLabel}
                       sx={{
                         position: "absolute",
-                        left: graphLayout.labelColumnX,
-                        right: 8,
-                        color: "text.primary",
-                        fontSize: "0.75rem",
-                        lineHeight: 1,
-                        pointerEvents: "none",
+                        left: 0,
+                        right: 0,
+                        top: cy - TREE_COMMIT_GAP / 2,
+                        height: TREE_COMMIT_GAP,
+                        display: "flex",
+                        alignItems: "center",
+                        zIndex: 1,
+                        borderRadius: 0.5,
+                        cursor: "default",
+                        "&:hover": {
+                          bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                        },
                       }}
                     >
-                      {label}
-                    </Typography>
-                  </Box>
+                      <Typography
+                        variant="caption"
+                        noWrap
+                        sx={{
+                          position: "absolute",
+                          left: graphLayout.labelColumnX,
+                          right: 8,
+                          color: "text.primary",
+                          fontSize: "0.75rem",
+                          lineHeight: 1,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {commitLabel}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
                 );
               })}
 
@@ -476,92 +504,46 @@ function VersionHistoryPage() {
                 const branchCommits = graphLayout.branchCommitsByBranchId.get(branch.id) ?? [];
 
                 return (
-                  <Box key={branch.id}>
-                    <Tooltip
-                      arrow
-                      title={
-                        <Box sx={{ py: 0.5 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {branch.name}
-                          </Typography>
+                  <Tooltip
+                    key={branch.id}
+                    arrow
+                    title={
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {branch.name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: "block" }}>
+                          {branch.isMain
+                            ? t("resume.history.mainBranchTag")
+                            : branch.id === selectedBranchId
+                              ? t("resume.history.currentBranchTag")
+                              : ""}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: "block" }}>
+                          {t("resume.history.treeCommitCount", { count: branchCommits.length })}
+                        </Typography>
+                        {branchCommits.length === 0 ? (
                           <Typography variant="caption" sx={{ display: "block" }}>
-                            {branch.isMain
-                              ? t("resume.history.mainBranchTag")
-                              : branch.id === selectedBranchId
-                                ? t("resume.history.currentBranchTag")
-                                : ""}
+                            {t("resume.history.treeNoCommits")}
                           </Typography>
-                          <Typography variant="caption" sx={{ display: "block" }}>
-                            {t("resume.history.treeCommitCount", { count: branchCommits.length })}
-                          </Typography>
-                          {branchCommits.length === 0 ? (
-                            <Typography variant="caption" sx={{ display: "block" }}>
-                              {t("resume.history.treeNoCommits")}
-                            </Typography>
-                          ) : null}
-                        </Box>
-                      }
-                    >
-                      <Box
-                        data-testid={`tree-branch-${branch.id}`}
-                        aria-label={branch.name}
-                        sx={{
-                          position: "absolute",
-                          left: branchX - 20,
-                          top: 0,
-                          width: 40,
-                          height: graphLayout.height,
-                          cursor: "default",
-                          zIndex: 2,
-                        }}
-                      />
-                    </Tooltip>
-
-                    {/* Commit node tooltip overlays — z-index 3 */}
-                    {branchCommits.map((commit) => {
-                      const isHead = commit.id === branch.headCommitId;
-                      const commitLabel = commit.message || t("resume.history.defaultMessage");
-
-                      return (
-                        <Tooltip
-                          key={commit.id}
-                          arrow
-                          title={
-                            <Box sx={{ py: 0.5 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {commitLabel}
-                              </Typography>
-                              <Typography variant="caption" sx={{ display: "block" }}>
-                                {branch.name}
-                              </Typography>
-                              <Typography variant="caption" sx={{ display: "block" }}>
-                                {isHead ? t("resume.history.treeHeadCommitTag") : t("resume.history.treeCommitTag")}
-                              </Typography>
-                              <Typography variant="caption" sx={{ display: "block" }}>
-                                {t("resume.history.tableHeaderSavedAt")}: {formatCommitTimestamp(commit.createdAt)}
-                              </Typography>
-                            </Box>
-                          }
-                        >
-                          <Box
-                            data-testid={`tree-commit-${commit.id}`}
-                            aria-label={commitLabel}
-                            sx={{
-                              position: "absolute",
-                              left: getBranchX(branch.id) - 12,
-                              top: getCommitY(commit.id) - 12,
-                              width: 24,
-                              height: 24,
-                              borderRadius: "50%",
-                              cursor: "default",
-                              bgcolor: "transparent",
-                              zIndex: 3,
-                            }}
-                          />
-                        </Tooltip>
-                      );
-                    })}
-                  </Box>
+                        ) : null}
+                      </Box>
+                    }
+                  >
+                    <Box
+                      data-testid={`tree-branch-${branch.id}`}
+                      aria-label={branch.name}
+                      sx={{
+                        position: "absolute",
+                        left: branchX - 20,
+                        top: 0,
+                        width: 40,
+                        height: graphLayout.height,
+                        cursor: "default",
+                        zIndex: 2,
+                      }}
+                    />
+                  </Tooltip>
                 );
               })}
             </Box>
