@@ -261,6 +261,102 @@ export type UserSession = Selectable<UserSessionTable>;
 export type NewUserSession = Insertable<UserSessionTable>;
 export type UserSessionUpdate = Updateable<UserSessionTable>;
 
+// ---------------------------------------------------------------------------
+// Resume revision workflow tables
+// ---------------------------------------------------------------------------
+
+export type ResumeRevisionWorkflowStatus = "active" | "completed" | "abandoned";
+
+export type ResumeRevisionStepSection =
+  | "discovery"
+  | "consultant_title"
+  | "presentation_summary"
+  | "skills"
+  | "assignments"
+  | "highlighted_experience"
+  | "consistency_polish";
+
+export type ResumeRevisionStepStatus =
+  | "pending"
+  | "generating"
+  | "reviewing"
+  | "approved"
+  | "needs_rework";
+
+export interface ResumeRevisionWorkflowTable {
+  id: Generated<string>;
+  resume_id: string;
+  /** Branch the workflow is revising from. */
+  base_branch_id: string;
+  /** Dedicated branch created to hold revision commits. NULL until first step starts. */
+  revision_branch_id: string | null;
+  created_by: string;
+  status: Generated<ResumeRevisionWorkflowStatus>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type ResumeRevisionWorkflow = Selectable<ResumeRevisionWorkflowTable>;
+export type NewResumeRevisionWorkflow = Insertable<ResumeRevisionWorkflowTable>;
+export type ResumeRevisionWorkflowUpdate = Updateable<ResumeRevisionWorkflowTable>;
+
+export interface ResumeRevisionWorkflowStepTable {
+  id: Generated<string>;
+  workflow_id: string;
+  section: ResumeRevisionStepSection;
+  step_order: number;
+  status: Generated<ResumeRevisionStepStatus>;
+  /** The proposal message the user accepted. NULL until the step is approved. */
+  approved_message_id: string | null;
+  /** Commit written to the revision branch on approval. NULL until approved. */
+  commit_id: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type ResumeRevisionWorkflowStep = Selectable<ResumeRevisionWorkflowStepTable>;
+export type NewResumeRevisionWorkflowStep = Insertable<ResumeRevisionWorkflowStepTable>;
+export type ResumeRevisionWorkflowStepUpdate = Updateable<ResumeRevisionWorkflowStepTable>;
+
+export interface ResumeRevisionMessageTable {
+  id: Generated<string>;
+  step_id: string;
+  role: AIMessageRole;
+  /** "text" for plain replies; "proposal" for AI-generated section proposals. */
+  message_type: Generated<string>;
+  content: string;
+  /** Non-null on proposal messages — carries { originalContent, proposedContent, reasoning, changeSummary }. */
+  structured_content: ColumnType<unknown, string, string> | null;
+  created_at: Generated<Date>;
+}
+
+export type ResumeRevisionMessage = Selectable<ResumeRevisionMessageTable>;
+export type NewResumeRevisionMessage = Insertable<ResumeRevisionMessageTable>;
+
+/**
+ * Typed payload stored in resume_revision_messages.structured_content (JSONB)
+ * for proposal messages.
+ */
+export interface ResumeRevisionProposalContent {
+  originalContent: unknown;
+  proposedContent: unknown;
+  reasoning: string | null;
+  changeSummary: string | null;
+}
+
+/**
+ * Typed payload stored when the discovery step is approved.
+ * Passed as context to every subsequent step's AI prompt.
+ */
+export interface ResumeRevisionDiscoveryOutput {
+  targetRole: string;
+  tone: string;
+  strengthsToEmphasise: string[];
+  thingsToDownplay: string[];
+  languagePreferences: string;
+  additionalNotes: string;
+}
+
 export interface Database {
   employees: EmployeeTable;
   users: UserTable;
@@ -275,6 +371,9 @@ export interface Database {
   ai_conversations: AIConversationTable;
   ai_messages: AIMessageTable;
   user_sessions: UserSessionTable;
+  resume_revision_workflows: ResumeRevisionWorkflowTable;
+  resume_revision_workflow_steps: ResumeRevisionWorkflowStepTable;
+  resume_revision_messages: ResumeRevisionMessageTable;
 }
 
 // ---------------------------------------------------------------------------
