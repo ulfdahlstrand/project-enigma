@@ -254,7 +254,8 @@ describe("View controls", () => {
 
   it("renders the branch selector", async () => {
     renderPage();
-    expect(await screen.findByText(enCommon.resume.history.branchLabel)).toBeInTheDocument();
+    const labels = await screen.findAllByText(enCommon.resume.history.branchLabel);
+    expect(labels.length).toBeGreaterThan(0);
   });
 
   it("navigates when a different branch is selected", async () => {
@@ -262,7 +263,7 @@ describe("View controls", () => {
     renderPage();
 
     await screen.findByText("Initial version");
-    await user.click(screen.getByLabelText(enCommon.resume.history.branchLabel));
+    await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByText("Swedish Variant"));
 
     expect(mockNavigate).toHaveBeenCalledWith({

@@ -87,6 +87,26 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   };
 });
 
+vi.mock("../../../../components/RouterButton", () => ({
+  default: React.forwardRef(function MockRouterButton(
+    {
+      to,
+      params,
+      children,
+      ...props
+    }: { to?: string; params?: Record<string, string>; children?: React.ReactNode; [key: string]: unknown },
+    ref: React.Ref<HTMLAnchorElement>
+  ) {
+    let href = String(to ?? "");
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        href = href.replace(`$${k}`, String(v));
+      }
+    }
+    return <a href={href} ref={ref} {...props}>{children}</a>;
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------
