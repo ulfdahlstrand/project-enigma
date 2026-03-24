@@ -806,6 +806,14 @@ function ResumeDetailPage() {
           </Button>
           <RouterButton
             variant="outlined"
+            to="/resumes/$id/history"
+            params={{ id }}
+            {...(activeBranchId ? { search: { branchId: activeBranchId } } : {})}
+          >
+            {t("resume.history.pageTitle")}
+          </RouterButton>
+          <RouterButton
+            variant="outlined"
             to="/assignments/new"
             search={{
               resumeId: id,

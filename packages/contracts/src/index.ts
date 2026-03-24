@@ -66,6 +66,8 @@ import {
   forkResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
+  getResumeBranchHistoryGraphInputSchema,
+  getResumeBranchHistoryGraphOutputSchema,
   compareResumeCommitsInputSchema,
   compareResumeCommitsOutputSchema,
 } from "./resume-versions.js";
@@ -229,9 +231,12 @@ export {
   forkResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
+  getResumeBranchHistoryGraphInputSchema,
+  getResumeBranchHistoryGraphOutputSchema,
   compareResumeCommitsInputSchema,
   compareResumeCommitsOutputSchema,
   diffStatusSchema,
+  resumeBranchHistoryGraphSchema,
   resumeDiffScalarsSchema,
   skillDiffEntrySchema,
   assignmentDiffEntrySchema,
@@ -242,6 +247,7 @@ export type {
   ResumeCommit,
   ResumeCommitSummary,
   ResumeBranch,
+  ResumeBranchHistoryGraph,
   BranchAssignment,
   DiffStatus,
   ResumeDiffScalars,
@@ -381,6 +387,9 @@ export const contract = oc.router({
   listResumeBranches: oc
     .input(listResumeBranchesInputSchema)
     .output(listResumeBranchesOutputSchema),
+  getResumeBranchHistoryGraph: oc
+    .input(getResumeBranchHistoryGraphInputSchema)
+    .output(getResumeBranchHistoryGraphOutputSchema),
   listBranchAssignments: oc
     .input(listBranchAssignmentsInputSchema)
     .output(listBranchAssignmentsOutputSchema),

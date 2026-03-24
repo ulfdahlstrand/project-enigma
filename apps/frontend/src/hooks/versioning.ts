@@ -17,6 +17,9 @@ export const resumeCommitsKey = (branchId: string) =>
 export const resumeBranchesKey = (resumeId: string) =>
   ["listResumeBranches", resumeId] as const;
 
+export const resumeBranchHistoryGraphKey = (resumeId: string) =>
+  ["getResumeBranchHistoryGraph", resumeId] as const;
+
 export const resumeCommitDiffKey = (
   baseCommitId: string,
   headCommitId: string
@@ -40,6 +43,15 @@ export function useResumeBranches(resumeId: string) {
   return useQuery({
     queryKey: resumeBranchesKey(resumeId),
     queryFn: () => orpc.listResumeBranches({ resumeId }),
+    enabled: Boolean(resumeId),
+  });
+}
+
+/** Fetches all branches and commits needed to render a resume history overview. */
+export function useResumeBranchHistoryGraph(resumeId: string) {
+  return useQuery({
+    queryKey: resumeBranchHistoryGraphKey(resumeId),
+    queryFn: () => orpc.getResumeBranchHistoryGraph({ resumeId }),
     enabled: Boolean(resumeId),
   });
 }

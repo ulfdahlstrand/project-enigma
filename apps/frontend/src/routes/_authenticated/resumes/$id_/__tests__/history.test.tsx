@@ -2,12 +2,12 @@
  * Tests for /resumes/$id/history — Version History page.
  *
  * Acceptance criteria:
- *   - Loading spinner while queries are pending
- *   - Empty state when no commits exist
- *   - Renders commit list (message + date)
- *   - Default message for commits without a message
+ *   - Loading spinner while graph query is pending
+ *   - Empty state when selected branch has no commits
+ *   - Renders branch-specific commit list
+ *   - Supports branch selection and list/tree toggle
  *   - Back button navigates to /resumes/$id
- *   - Error state when commits fetch fails
+ *   - Error state when graph fetch fails
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -24,21 +24,20 @@ import { Route } from "../history/index";
 
 vi.mock("../../../../../orpc-client", () => ({
   orpc: {
-    getResume: vi.fn(),
-    listResumeCommits: vi.fn(),
+    getResumeBranchHistoryGraph: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../../orpc-client";
 
-const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
-const mockListCommits = orpc.listResumeCommits as ReturnType<typeof vi.fn>;
+const mockGetResumeBranchHistoryGraph = orpc.getResumeBranchHistoryGraph as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
+let mockSearch: { branchId?: string; view?: "list" | "tree" } = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
@@ -46,6 +45,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({ id: "resume-id-1" }),
+    useSearch: () => mockSearch,
     Link: React.forwardRef(function MockLink(
       { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
       ref: React.Ref<HTMLAnchorElement>
@@ -59,29 +59,84 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
-const RESUME = {
-  id: "resume-id-1",
-  mainBranchId: "branch-id-1",
-  title: "My Resume",
-  language: "en",
+const GRAPH = {
+  branches: [
+    {
+      id: "branch-id-1",
+      resumeId: "resume-id-1",
+      name: "main",
+      language: "en",
+      isMain: true,
+      headCommitId: "commit-id-2",
+      forkedFromCommitId: null,
+      createdAt: "2024-06-01T09:00:00Z",
+    },
+    {
+      id: "branch-id-2",
+      resumeId: "resume-id-1",
+      name: "Swedish Variant",
+      language: "sv",
+      isMain: false,
+      headCommitId: "commit-id-3",
+      forkedFromCommitId: "commit-id-1",
+      createdAt: "2024-06-03T09:00:00Z",
+    },
+    {
+      id: "branch-id-3",
+      resumeId: "resume-id-1",
+      name: "German Variant",
+      language: "de",
+      isMain: false,
+      headCommitId: "commit-id-4",
+      forkedFromCommitId: "commit-id-3",
+      createdAt: "2024-06-04T09:00:00Z",
+    },
+    {
+      id: "branch-id-4",
+      resumeId: "resume-id-1",
+      name: "Empty Variant",
+      language: "fr",
+      isMain: false,
+      headCommitId: null,
+      forkedFromCommitId: "commit-id-2",
+      createdAt: "2024-06-05T09:00:00Z",
+    },
+  ],
+  commits: [
+    {
+      id: "commit-id-1",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-1",
+      parentCommitId: null,
+      message: "Initial version",
+      createdAt: "2024-06-01T10:00:00Z",
+    },
+    {
+      id: "commit-id-2",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-1",
+      parentCommitId: "commit-id-1",
+      message: "",
+      createdAt: "2024-06-02T10:00:00Z",
+    },
+    {
+      id: "commit-id-3",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-2",
+      parentCommitId: "commit-id-1",
+      message: "Swedish version",
+      createdAt: "2024-06-03T10:00:00Z",
+    },
+    {
+      id: "commit-id-4",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-3",
+      parentCommitId: "commit-id-3",
+      message: "German version",
+      createdAt: "2024-06-04T10:00:00Z",
+    },
+  ],
 };
-
-const COMMITS = [
-  {
-    id: "commit-id-1",
-    branchId: "branch-id-1",
-    message: "Initial version",
-    createdAt: "2024-06-01T10:00:00Z",
-    createdByEmployeeId: "emp-1",
-  },
-  {
-    id: "commit-id-2",
-    branchId: "branch-id-1",
-    message: null,
-    createdAt: "2024-06-02T10:00:00Z",
-    createdByEmployeeId: "emp-1",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Render helper
@@ -96,6 +151,7 @@ function renderPage() {
 
 afterEach(() => {
   vi.clearAllMocks();
+  mockSearch = {};
 });
 
 // ---------------------------------------------------------------------------
@@ -104,8 +160,7 @@ afterEach(() => {
 
 describe("Loading state", () => {
   it("renders a progressbar while commits are loading", () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockReturnValue(new Promise(() => undefined));
+    mockGetResumeBranchHistoryGraph.mockReturnValue(new Promise(() => undefined));
     renderPage();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
@@ -117,8 +172,11 @@ describe("Loading state", () => {
 
 describe("Empty state", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue([]);
+    mockSearch = { branchId: "branch-id-2", view: "list" };
+    mockGetResumeBranchHistoryGraph.mockResolvedValue({
+      ...GRAPH,
+      commits: GRAPH.commits.filter((commit) => commit.branchId !== "branch-id-2"),
+    });
   });
 
   it("renders the empty message when no commits exist", async () => {
@@ -134,8 +192,7 @@ describe("Empty state", () => {
 
 describe("Commit list", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
   });
 
   it("renders the page title", async () => {
@@ -162,6 +219,156 @@ describe("Commit list", () => {
     expect(screen.getByText(enCommon.resume.history.tableHeaderMessage)).toBeInTheDocument();
     expect(screen.getByText(enCommon.resume.history.tableHeaderSavedAt)).toBeInTheDocument();
   });
+
+  it("renders only commits for the selected branch", async () => {
+    mockSearch = { branchId: "branch-id-2", view: "list" };
+    renderPage();
+
+    expect(await screen.findByText("Swedish version")).toBeInTheDocument();
+    expect(screen.queryByText("Initial version")).toBeNull();
+  });
+
+  it("falls back to the main branch when the search branch is unknown", async () => {
+    mockSearch = { branchId: "missing-branch", view: "list" };
+    renderPage();
+
+    expect(await screen.findByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("Swedish version")).toBeNull();
+  });
+
+  it("renders commits with the newest saved version first", async () => {
+    renderPage();
+
+    expect(await screen.findByText(enCommon.resume.history.defaultMessage)).toBeInTheDocument();
+
+    const commitMessages = screen.getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
+    expect(commitMessages[0]).toContain(enCommon.resume.history.defaultMessage);
+    expect(commitMessages[1]).toContain("Initial version");
+  });
+});
+
+describe("View controls", () => {
+  beforeEach(() => {
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
+  });
+
+  it("renders the branch selector", async () => {
+    renderPage();
+    const labels = await screen.findAllByText(enCommon.resume.history.branchLabel);
+    expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it("navigates when a different branch is selected", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Initial version");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByText("Swedish Variant"));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-2", view: "list" },
+    });
+  });
+
+  it("renders the tree overview mode", async () => {
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    expect(await screen.findByTestId("history-graph")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-1")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-2")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-3")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-branch-branch-id-4")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-1")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-2")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-3")).toBeInTheDocument();
+    expect(screen.getByTestId("tree-commit-commit-id-4")).toBeInTheDocument();
+  });
+
+  it("renders branch ancestry details in deterministic order", async () => {
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    const mainBranch = await screen.findByTestId("tree-branch-branch-id-1");
+    const swedishBranch = screen.getByTestId("tree-branch-branch-id-2");
+    const germanBranch = screen.getByTestId("tree-branch-branch-id-3");
+
+    expect(mainBranch).toHaveAttribute("aria-label", "main");
+    expect(swedishBranch).toHaveAttribute("aria-label", "Swedish Variant");
+    expect(germanBranch).toHaveAttribute("aria-label", "German Variant");
+    // Labels are always visible in the row column (not tooltip-only)
+    expect(screen.queryByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("Swedish version")).toBeInTheDocument();
+    expect(screen.queryByText("German version")).toBeInTheDocument();
+  });
+
+  it("renders the no-commits branch state in tree mode", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-4" };
+    renderPage();
+
+    const emptyBranch = await screen.findByTestId("tree-branch-branch-id-4");
+    await user.hover(emptyBranch);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(enCommon.resume.history.treeNoCommits);
+  });
+
+  it("falls back to the first branch when no main branch exists", async () => {
+    mockSearch = { view: "tree" };
+    mockGetResumeBranchHistoryGraph.mockResolvedValue({
+      ...GRAPH,
+      branches: GRAPH.branches.map((branch) => ({ ...branch, isMain: false })),
+    });
+    renderPage();
+
+    const firstBranch = await screen.findByTestId("tree-branch-branch-id-1");
+    expect(firstBranch).toHaveAttribute("aria-label", "main");
+  });
+
+  it("renders commit details only on hover in tree mode", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    const swedishCommit = await screen.findByTestId("tree-commit-commit-id-3");
+    // Message is always visible as a row label; tooltip adds date/branch details on hover
+    expect(screen.queryByText("Swedish version")).toBeInTheDocument();
+
+    await user.hover(swedishCommit);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish version");
+    expect(screen.getByRole("tooltip")).toHaveTextContent(enCommon.resume.history.tableHeaderSavedAt);
+  });
+
+  it("renders branch details only on hover in tree mode", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    expect(screen.queryByText("Swedish Variant")).toBeNull();
+
+    await user.hover(await screen.findByTestId("tree-branch-branch-id-2"));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish Variant");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("1 commit");
+  });
+
+  it("navigates when tree view is selected", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Initial version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.treeView }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-1", view: "tree" },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -170,8 +377,7 @@ describe("Commit list", () => {
 
 describe("Back button", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
   });
 
   it("navigates to /resumes/$id when back button is clicked", async () => {
@@ -192,8 +398,7 @@ describe("Back button", () => {
 
 describe("Error state", () => {
   it("renders an error alert when commits fetch fails", async () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockRejectedValue(new Error("Server error"));
+    mockGetResumeBranchHistoryGraph.mockRejectedValue(new Error("Server error"));
     renderPage();
     const errorMsg = await screen.findByText(enCommon.resume.history.error);
     expect(errorMsg).toBeInTheDocument();

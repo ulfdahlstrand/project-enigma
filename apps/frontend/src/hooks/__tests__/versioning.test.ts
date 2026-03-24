@@ -4,6 +4,7 @@
  * Covers:
  *   - useResumeCommits — query key factory + enabled flag
  *   - useResumeBranches — query key factory + enabled flag
+ *   - useResumeBranchHistoryGraph — query key factory + enabled flag
  *   - useResumeCommitDiff — enabled only when both IDs are set
  *   - useSaveResumeVersion — calls orpc.saveResumeVersion, invalidates commits key
  *   - useForkResumeBranch — calls orpc.forkResumeBranch, invalidates branches key
@@ -16,9 +17,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   resumeCommitsKey,
   resumeBranchesKey,
+  resumeBranchHistoryGraphKey,
   resumeCommitDiffKey,
   useResumeCommits,
   useResumeBranches,
+  useResumeBranchHistoryGraph,
   useResumeCommitDiff,
   useSaveResumeVersion,
   useForkResumeBranch,
@@ -32,6 +35,7 @@ vi.mock("../../orpc-client", () => ({
   orpc: {
     listResumeCommits: vi.fn(),
     listResumeBranches: vi.fn(),
+    getResumeBranchHistoryGraph: vi.fn(),
     compareResumeCommits: vi.fn(),
     saveResumeVersion: vi.fn(),
     forkResumeBranch: vi.fn(),
@@ -42,6 +46,7 @@ import { orpc } from "../../orpc-client";
 
 const mockListCommits = orpc.listResumeCommits as ReturnType<typeof vi.fn>;
 const mockListBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
+const mockGetBranchHistoryGraph = orpc.getResumeBranchHistoryGraph as ReturnType<typeof vi.fn>;
 const mockCompare = orpc.compareResumeCommits as ReturnType<typeof vi.fn>;
 const mockSaveVersion = orpc.saveResumeVersion as ReturnType<typeof vi.fn>;
 const mockForkBranch = orpc.forkResumeBranch as ReturnType<typeof vi.fn>;
@@ -79,6 +84,15 @@ describe("resumeCommitsKey", () => {
 describe("resumeBranchesKey", () => {
   it("returns a tuple with the resumeId", () => {
     expect(resumeBranchesKey("resume-1")).toEqual(["listResumeBranches", "resume-1"]);
+  });
+});
+
+describe("resumeBranchHistoryGraphKey", () => {
+  it("returns a tuple with the resumeId", () => {
+    expect(resumeBranchHistoryGraphKey("resume-1")).toEqual([
+      "getResumeBranchHistoryGraph",
+      "resume-1",
+    ]);
   });
 });
 
@@ -157,6 +171,45 @@ describe("useResumeBranches", () => {
 
     expect(result.current.fetchStatus).toBe("idle");
     expect(mockListBranches).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useResumeBranchHistoryGraph
+// ---------------------------------------------------------------------------
+
+describe("useResumeBranchHistoryGraph", () => {
+  const GRAPH = {
+    branches: [
+      { id: "branch-1", resumeId: "resume-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", forkedFromCommitId: null, createdAt: "2024-01-01T00:00:00Z" },
+    ],
+    commits: [
+      { id: "commit-1", resumeId: "resume-1", branchId: "branch-1", parentCommitId: null, message: "v1", createdAt: "2024-01-01T00:00:00Z" },
+    ],
+  };
+
+  it("calls orpc.getResumeBranchHistoryGraph with the resumeId and returns data", async () => {
+    mockGetBranchHistoryGraph.mockResolvedValue(GRAPH);
+    const qc = buildClient();
+
+    const { result } = renderHook(() => useResumeBranchHistoryGraph("resume-1"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockGetBranchHistoryGraph).toHaveBeenCalledWith({ resumeId: "resume-1" });
+    expect(result.current.data).toEqual(GRAPH);
+  });
+
+  it("is disabled when resumeId is an empty string", () => {
+    const qc = buildClient();
+    const { result } = renderHook(() => useResumeBranchHistoryGraph(""), {
+      wrapper: makeWrapper(qc),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockGetBranchHistoryGraph).not.toHaveBeenCalled();
   });
 });
 
