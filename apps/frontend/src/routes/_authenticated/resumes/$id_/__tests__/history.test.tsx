@@ -299,9 +299,10 @@ describe("View controls", () => {
     expect(mainBranch).toHaveAttribute("aria-label", "main");
     expect(swedishBranch).toHaveAttribute("aria-label", "Swedish Variant");
     expect(germanBranch).toHaveAttribute("aria-label", "German Variant");
-    expect(screen.queryByText("Initial version")).toBeNull();
-    expect(screen.queryByText("Swedish version")).toBeNull();
-    expect(screen.queryByText("German version")).toBeNull();
+    // Labels are always visible in the row column (not tooltip-only)
+    expect(screen.queryByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("Swedish version")).toBeInTheDocument();
+    expect(screen.queryByText("German version")).toBeInTheDocument();
   });
 
   it("renders the no-commits branch state in tree mode", async () => {
@@ -333,7 +334,8 @@ describe("View controls", () => {
     renderPage();
 
     const swedishCommit = await screen.findByTestId("tree-commit-commit-id-3");
-    expect(screen.queryByText("Swedish version")).toBeNull();
+    // Message is always visible as a row label; tooltip adds date/branch details on hover
+    expect(screen.queryByText("Swedish version")).toBeInTheDocument();
 
     await user.hover(swedishCommit);
 

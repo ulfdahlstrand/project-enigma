@@ -135,11 +135,17 @@ function VersionHistoryPage() {
     const branchColorById = new Map(
       orderedBranches.map((branch, index) => [branch.id, treeBranchColors[index % treeBranchColors.length]])
     );
+    const forkCommitIds = new Set(
+      sortedBranches
+        .map((b) => b.forkedFromCommitId)
+        .filter((id): id is string => id !== null && id !== undefined)
+    );
 
-    const width =
-      TREE_PADDING_X * 2 +
-      Math.max(1, orderedBranches.length - 1) * TREE_BRANCH_GAP +
-      120;
+    const labelColumnX =
+      TREE_PADDING_X +
+      Math.max(0, orderedBranches.length - 1) * TREE_BRANCH_GAP +
+      48 + TREE_NODE_OUTER_RADIUS + 16;
+    const width = labelColumnX + 300;
     const height =
       TREE_HEADER_HEIGHT +
       TREE_PADDING_Y * 2 +
@@ -155,6 +161,8 @@ function VersionHistoryPage() {
       branchCommitsByBranchId,
       commitsById,
       rootBranches,
+      forkCommitIds,
+      labelColumnX,
       width,
       height,
     };
@@ -195,7 +203,7 @@ function VersionHistoryPage() {
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const { width, height, orderedBranches, orderedCommits, branchColorById, branchCommitsByBranchId, commitsById } = graphLayout;
+    const { width, height, orderedBranches, orderedCommits, branchColorById, branchCommitsByBranchId, commitsById, forkCommitIds } = graphLayout;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
@@ -263,7 +271,7 @@ function VersionHistoryPage() {
       context.stroke();
     });
 
-    // Draw commit nodes as ⊙ (outer ring → surface gap → inner dot)
+    // Draw commit nodes — ⊙ for fork points, solid for all others
     orderedCommits.forEach((commit) => {
       const branch = branches.find((b) => b.id === commit.branchId);
       if (!branch) return;
@@ -274,23 +282,29 @@ function VersionHistoryPage() {
       const x = localBranchX(branch.id);
       const y = localCommitY(commit.id);
 
-      // Outer filled circle
-      context.fillStyle = nodeColor;
-      context.beginPath();
-      context.arc(x, y, TREE_NODE_OUTER_RADIUS, 0, Math.PI * 2);
-      context.fill();
+      if (forkCommitIds.has(commit.id)) {
+        // Fork-point: ⊙ (outer ring → surface gap → inner dot)
+        context.fillStyle = nodeColor;
+        context.beginPath();
+        context.arc(x, y, TREE_NODE_OUTER_RADIUS, 0, Math.PI * 2);
+        context.fill();
 
-      // Gap — use surface background so it adapts to light/dark
-      context.fillStyle = graphSurfaceColor;
-      context.beginPath();
-      context.arc(x, y, TREE_NODE_GAP_RADIUS, 0, Math.PI * 2);
-      context.fill();
+        context.fillStyle = graphSurfaceColor;
+        context.beginPath();
+        context.arc(x, y, TREE_NODE_GAP_RADIUS, 0, Math.PI * 2);
+        context.fill();
 
-      // Inner dot
-      context.fillStyle = nodeColor;
-      context.beginPath();
-      context.arc(x, y, TREE_NODE_INNER_RADIUS, 0, Math.PI * 2);
-      context.fill();
+        context.fillStyle = nodeColor;
+        context.beginPath();
+        context.arc(x, y, TREE_NODE_INNER_RADIUS, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        // Regular commit: solid filled circle
+        context.fillStyle = nodeColor;
+        context.beginPath();
+        context.arc(x, y, TREE_NODE_OUTER_RADIUS, 0, Math.PI * 2);
+        context.fill();
+      }
     });
   }, [
     selectedView,
@@ -410,9 +424,52 @@ function VersionHistoryPage() {
                   width: graphLayout.width,
                   height: graphLayout.height,
                   display: "block",
+                  pointerEvents: "none",
                 }}
               />
 
+              {/* Hoverable rows with commit labels — z-index 1, behind tooltips */}
+              {graphLayout.orderedCommits.map((commit) => {
+                const cy = getCommitY(commit.id);
+                const label = commit.message || t("resume.history.defaultMessage");
+                return (
+                  <Box
+                    key={`row-${commit.id}`}
+                    sx={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: cy - TREE_COMMIT_GAP / 2,
+                      height: TREE_COMMIT_GAP,
+                      display: "flex",
+                      alignItems: "center",
+                      zIndex: 1,
+                      borderRadius: 0.5,
+                      "&:hover": {
+                        bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                      },
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      noWrap
+                      sx={{
+                        position: "absolute",
+                        left: graphLayout.labelColumnX,
+                        right: 8,
+                        color: "text.primary",
+                        fontSize: "0.75rem",
+                        lineHeight: 1,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {label}
+                    </Typography>
+                  </Box>
+                );
+              })}
+
+              {/* Branch lane tooltip overlays — z-index 2 */}
               {graphLayout.orderedBranches.map((branch) => {
                 const branchX = getBranchX(branch.id);
                 const branchCommits = graphLayout.branchCommitsByBranchId.get(branch.id) ?? [];
@@ -454,10 +511,12 @@ function VersionHistoryPage() {
                           width: 40,
                           height: graphLayout.height,
                           cursor: "default",
+                          zIndex: 2,
                         }}
                       />
                     </Tooltip>
 
+                    {/* Commit node tooltip overlays — z-index 3 */}
                     {branchCommits.map((commit) => {
                       const isHead = commit.id === branch.headCommitId;
                       const commitLabel = commit.message || t("resume.history.defaultMessage");
@@ -495,6 +554,7 @@ function VersionHistoryPage() {
                               borderRadius: "50%",
                               cursor: "default",
                               bgcolor: "transparent",
+                              zIndex: 3,
                             }}
                           />
                         </Tooltip>
