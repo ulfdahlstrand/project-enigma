@@ -59,14 +59,14 @@ function formatCommitTimestamp(value: string | Date) {
   return date.toLocaleString();
 }
 
-const TREE_PADDING_X = 32;
-const TREE_PADDING_Y = 24;
-const TREE_HEADER_HEIGHT = 52;
-const TREE_BRANCH_GAP = 38;
-const TREE_COMMIT_GAP = 36;
-const TREE_NODE_OUTER_RADIUS = 5;
-const TREE_NODE_GAP_RADIUS = 3;
-const TREE_NODE_INNER_RADIUS = 1.8;
+const TREE_ROW_PADDING_LEFT = 6;    // left edge of hover row → first branch lane
+const TREE_PADDING_Y = 10;
+const TREE_HEADER_HEIGHT = 28;
+const TREE_BRANCH_GAP = 16;
+const TREE_COMMIT_GAP = 20;
+const TREE_NODE_OUTER_RADIUS = 4;
+const TREE_NODE_GAP_RADIUS = 2.4;
+const TREE_NODE_INNER_RADIUS = 1.4;
 
 const TREE_BRANCH_COLORS_DARK = ["#63a8ff", "#f59e0b", "#ff5cad", "#b47cff", "#4dd0c8", "#fb923c"];
 const TREE_BRANCH_COLORS_LIGHT = ["#2563eb", "#d97706", "#db2777", "#7c3aed", "#0f766e", "#ea580c"];
@@ -142,9 +142,9 @@ function VersionHistoryPage() {
     );
 
     const labelColumnX =
-      TREE_PADDING_X +
+      TREE_ROW_PADDING_LEFT +
       Math.max(0, orderedBranches.length - 1) * TREE_BRANCH_GAP +
-      48 + TREE_NODE_OUTER_RADIUS + 16;
+      TREE_NODE_OUTER_RADIUS * 2 + 8;
     const width = labelColumnX + 300;
     const height =
       TREE_HEADER_HEIGHT +
@@ -183,7 +183,7 @@ function VersionHistoryPage() {
   const graphBorderColor = theme.palette.divider;
 
   function getBranchX(branchId: string) {
-    return TREE_PADDING_X + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + 48;
+    return TREE_ROW_PADDING_LEFT + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + TREE_NODE_OUTER_RADIUS;
   }
 
   function getCommitY(commitId: string) {
@@ -191,7 +191,7 @@ function VersionHistoryPage() {
       TREE_HEADER_HEIGHT +
       TREE_PADDING_Y +
       (graphLayout.commitIndexById.get(commitId) ?? 0) * TREE_COMMIT_GAP +
-      18
+      TREE_NODE_OUTER_RADIUS
     );
   }
 
@@ -218,10 +218,10 @@ function VersionHistoryPage() {
     context.lineJoin = "round";
 
     function localBranchX(branchId: string) {
-      return TREE_PADDING_X + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + 48;
+      return TREE_ROW_PADDING_LEFT + (graphLayout.branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP + TREE_NODE_OUTER_RADIUS;
     }
     function localCommitY(commitId: string) {
-      return TREE_HEADER_HEIGHT + TREE_PADDING_Y + (graphLayout.commitIndexById.get(commitId) ?? 0) * TREE_COMMIT_GAP + 18;
+      return TREE_HEADER_HEIGHT + TREE_PADDING_Y + (graphLayout.commitIndexById.get(commitId) ?? 0) * TREE_COMMIT_GAP + TREE_NODE_OUTER_RADIUS;
     }
 
     // Draw branch lines and fork curves
@@ -401,7 +401,8 @@ function VersionHistoryPage() {
           <Paper
             variant="outlined"
             sx={{
-              p: 2,
+              px: 1,
+              py: 1,
               overflow: "auto",
               bgcolor: graphSurfaceColor,
               borderColor: graphBorderColor,
