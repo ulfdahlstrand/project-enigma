@@ -361,5 +361,85 @@
   },
   "languageSelector": {
     "label": "Select language"
+  },
+  "revision": {
+    "pageTitle": "AI Revision Workflow",
+    "loading": "Loading revision workflow…",
+    "error": "Failed to load revision workflow.",
+    "creating": "Creating workflow…",
+    "createError": "Failed to create revision workflow. Please try again.",
+    "startTitle": "Start AI revision",
+    "startDescription": "Let AI help you revise your resume section by section. You stay in control — review, discuss, and approve each change.",
+    "startButton": "Start revision",
+    "starting": "Starting…",
+    "backButton": "Back to resume",
+    "reviseButton": "Revise with AI",
+    "topBar": {
+      "step": "Step {{current}} of {{total}}"
+    },
+    "checklist": {
+      "progressSummary": "{{approved}} / {{total}} approved",
+      "groupCount": "{{approved}} / {{total}}",
+      "skillsCategory": "Skills — {{category}}",
+      "skillsNewCategories": "Skills — New categories",
+      "assignment": "{{client}}",
+      "sectionNames": {
+        "discovery": "Discovery",
+        "consultant_title": "Consultant title",
+        "presentation_summary": "Presentation",
+        "skills": "Skills",
+        "assignments": "Assignments",
+        "highlighted_experience": "Highlighted experience",
+        "consistency_polish": "Final polish"
+      }
+    },
+    "stepStatus": {
+      "pending": "Pending",
+      "generating": "Generating…",
+      "reviewing": "Reviewing",
+      "approved": "Approved",
+      "needs_rework": "Needs rework"
+    },
+    "conversation": {
+      "inputPlaceholder": "Type your message…",
+      "sendButton": "Send",
+      "sending": "Sending…",
+      "approveButton": "Approve",
+      "approving": "Approving…",
+      "requestReworkButton": "Request rework",
+      "requestReworkPlaceholder": "Describe what you'd like changed…",
+      "requestingRework": "Requesting…",
+      "confirmButton": "Confirm direction",
+      "confirming": "Confirming…",
+      "noMessages": "No messages yet.",
+      "proposalCard": "Proposed revision",
+      "changeSummary": "What changed",
+      "reasoning": "Why",
+      "readOnly": "This step is approved — viewing read-only.",
+      "pendingInfo": "Send a message to start the AI conversation for this step.",
+      "skipButton": "Skip step"
+    },
+    "diffPanel": {
+      "original": "Original",
+      "proposed": "Proposed",
+      "noProposal": "No proposal yet. Start the conversation to get an AI proposal.",
+      "discoveryTitle": "Revision goals",
+      "targetRole": "Target role",
+      "tone": "Tone",
+      "language": "Language preferences",
+      "emphasize": "Emphasize",
+      "downplay": "Downplay / notes",
+      "pendingDiscovery": "Complete the discovery conversation to see your goals here."
+    },
+    "finalReview": {
+      "title": "All steps approved",
+      "subtitle": "Choose how to apply the revision to your resume.",
+      "mergeButton": "Merge into base branch",
+      "keepButton": "Keep as new branch",
+      "merging": "Merging…",
+      "keeping": "Keeping…",
+      "mergeDescription": "All revision commits will be applied to your base branch. The original is preserved in history.",
+      "keepDescription": "The revision branch stays as a separate branch. You can merge it later."
+    }
   }
 }

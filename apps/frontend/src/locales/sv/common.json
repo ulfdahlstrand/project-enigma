@@ -361,5 +361,85 @@
   },
   "languageSelector": {
     "label": "Välj språk"
+  },
+  "revision": {
+    "pageTitle": "AI-revisionsarbetsflöde",
+    "loading": "Laddar revisionsarbetsflöde…",
+    "error": "Kunde inte ladda revisionsarbetsflödet.",
+    "creating": "Skapar arbetsflöde…",
+    "createError": "Kunde inte skapa revisionsarbetsflödet. Försök igen.",
+    "startTitle": "Starta AI-revision",
+    "startDescription": "Låt AI hjälpa dig revidera ditt CV avsnitt för avsnitt. Du har kontrollen — granska, diskutera och godkänn varje ändring.",
+    "startButton": "Starta revision",
+    "starting": "Startar…",
+    "backButton": "Tillbaka till CV",
+    "reviseButton": "Revidera med AI",
+    "topBar": {
+      "step": "Steg {{current}} av {{total}}"
+    },
+    "checklist": {
+      "progressSummary": "{{approved}} / {{total}} godkända",
+      "groupCount": "{{approved}} / {{total}}",
+      "skillsCategory": "Kompetenser — {{category}}",
+      "skillsNewCategories": "Kompetenser — Nya kategorier",
+      "assignment": "{{client}}",
+      "sectionNames": {
+        "discovery": "Utforskning",
+        "consultant_title": "Konsulttitel",
+        "presentation_summary": "Presentation",
+        "skills": "Kompetenser",
+        "assignments": "Uppdrag",
+        "highlighted_experience": "Utvalda erfarenheter",
+        "consistency_polish": "Slutlig polish"
+      }
+    },
+    "stepStatus": {
+      "pending": "Väntar",
+      "generating": "Genererar…",
+      "reviewing": "Granskar",
+      "approved": "Godkänd",
+      "needs_rework": "Behöver omarbetas"
+    },
+    "conversation": {
+      "inputPlaceholder": "Skriv ditt meddelande…",
+      "sendButton": "Skicka",
+      "sending": "Skickar…",
+      "approveButton": "Godkänn",
+      "approving": "Godkänner…",
+      "requestReworkButton": "Begär omarbetning",
+      "requestReworkPlaceholder": "Beskriv vad du vill ha ändrat…",
+      "requestingRework": "Begär…",
+      "confirmButton": "Bekräfta riktning",
+      "confirming": "Bekräftar…",
+      "noMessages": "Inga meddelanden än.",
+      "proposalCard": "Föreslagen revision",
+      "changeSummary": "Vad ändrades",
+      "reasoning": "Varför",
+      "readOnly": "Det här steget är godkänt — skrivskyddat läge.",
+      "pendingInfo": "Skicka ett meddelande för att starta AI-konversationen för det här steget.",
+      "skipButton": "Hoppa över"
+    },
+    "diffPanel": {
+      "original": "Original",
+      "proposed": "Föreslagen",
+      "noProposal": "Inget förslag än. Starta konversationen för att få ett AI-förslag.",
+      "discoveryTitle": "Revisionsmål",
+      "targetRole": "Målroll",
+      "tone": "Ton",
+      "language": "Språkpreferenser",
+      "emphasize": "Betona",
+      "downplay": "Tona ner / anteckningar",
+      "pendingDiscovery": "Slutför utforskningskonversationen för att se dina mål här."
+    },
+    "finalReview": {
+      "title": "Alla steg godkända",
+      "subtitle": "Välj hur du vill tillämpa revisionen på ditt CV.",
+      "mergeButton": "Slå ihop med basen",
+      "keepButton": "Behåll som ny gren",
+      "merging": "Slår ihop…",
+      "keeping": "Behåller…",
+      "mergeDescription": "Alla revisionsändringar tillämpas på din basgren. Originalet bevaras i historiken.",
+      "keepDescription": "Revisionsgrenen behålls som en separat gren. Du kan slå ihop den senare."
+    }
   }
 }
