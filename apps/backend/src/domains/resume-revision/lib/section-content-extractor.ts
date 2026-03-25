@@ -53,6 +53,7 @@ export function extractSectionContent(
           role: a.role,
           startDate: a.startDate,
           endDate: a.endDate,
+          description: a.description,
         })),
       };
     case "consistency_polish":
