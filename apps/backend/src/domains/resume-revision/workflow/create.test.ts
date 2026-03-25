@@ -65,6 +65,12 @@ function buildDbMock(opts: {
   const branchSelect = vi.fn().mockReturnValue({ where: branchWhere1 });
   const branchInnerJoin = vi.fn().mockReturnValue({ select: branchSelect });
 
+  // Commit content query: selectFrom("resume_branches as rb").leftJoin(...).select(...).where(...).executeTakeFirst()
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue({ head_commit_id: null, content: null });
+  const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
+  const branchLeftJoin = vi.fn().mockReturnValue({ select: commitSelect });
+
   // Workflow insert (inside transaction)
   const wfInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(WORKFLOW_ROW);
   const wfInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: wfInsertExecuteTakeFirstOrThrow });
@@ -90,7 +96,7 @@ function buildDbMock(opts: {
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    return { innerJoin: branchInnerJoin };
+    return { innerJoin: branchInnerJoin, leftJoin: branchLeftJoin };
   });
 
   const db = { selectFrom, transaction } as unknown as Kysely<Database>;

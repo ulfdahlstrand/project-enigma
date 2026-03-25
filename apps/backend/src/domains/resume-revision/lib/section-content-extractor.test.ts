@@ -71,19 +71,20 @@ describe("extractSectionContent", () => {
     expect(result.assignments[0]).toMatchObject({ assignmentId: "asgn-1", clientName: "Acme Corp" });
   });
 
-  it("returns assignments with only id, highlight, clientName, role for highlighted_experience", () => {
+  it("returns assignments with only id, clientName, role, startDate, endDate for highlighted_experience", () => {
     const result = extractSectionContent("highlighted_experience", BASE_CONTENT) as {
-      assignments: Array<{ assignmentId: string; highlight: boolean; clientName: string; role: string }>;
+      assignments: Array<{ assignmentId: string; clientName: string; role: string; startDate: string; endDate: string | null }>;
     };
     expect(result.assignments).toHaveLength(2);
     const first = result.assignments[0];
     expect(Object.keys(first)).toEqual(
-      expect.arrayContaining(["assignmentId", "clientName", "role", "highlight"])
+      expect.arrayContaining(["assignmentId", "clientName", "role", "startDate", "endDate"])
     );
     expect(first).not.toHaveProperty("description");
     expect(first).not.toHaveProperty("technologies");
+    expect(first).not.toHaveProperty("highlight");
     expect(first.assignmentId).toBe("asgn-1");
-    expect(first.highlight).toBe(true);
+    expect(first.startDate).toBe("2023-01-01");
   });
 
   it("returns null for discovery section", () => {
@@ -119,31 +120,23 @@ describe("applySectionContent", () => {
     expect(result.consultantTitle).toBeNull();
   });
 
-  it("replaces skills with an empty array for skills section", () => {
+  it("preserves base skills when proposed skills array is empty", () => {
     const result = applySectionContent("skills", BASE_CONTENT, { skills: [] });
-    expect(result.skills).toEqual([]);
+    expect(result.skills).toEqual(BASE_CONTENT.skills);
   });
 
-  it("updates highlight flag for matching assignment in highlighted_experience", () => {
-    const proposal = {
-      assignments: [
-        { assignmentId: "asgn-1", highlight: false },
-        { assignmentId: "asgn-2", highlight: true },
-      ],
-    };
+  it("returns base content unchanged for highlighted_experience (writes go to resume_highlighted_items)", () => {
+    const proposal = { items: ["bullet 1", "bullet 2"] };
     const result = applySectionContent("highlighted_experience", BASE_CONTENT, proposal);
-    const a1 = result.assignments.find((a) => a.assignmentId === "asgn-1");
-    const a2 = result.assignments.find((a) => a.assignmentId === "asgn-2");
-    expect(a1?.highlight).toBe(false);
-    expect(a2?.highlight).toBe(true);
+    expect(result).toEqual(BASE_CONTENT);
   });
 
-  it("preserves other assignment fields when applying highlighted_experience", () => {
-    const proposal = { assignments: [{ assignmentId: "asgn-1", highlight: false }] };
+  it("preserves all assignments unchanged when applying highlighted_experience", () => {
+    const proposal = { items: ["bullet 1"] };
     const result = applySectionContent("highlighted_experience", BASE_CONTENT, proposal);
-    const a1 = result.assignments.find((a) => a.assignmentId === "asgn-1");
-    expect(a1?.clientName).toBe("Acme Corp");
-    expect(a1?.role).toBe("Backend Engineer");
+    expect(result.assignments).toHaveLength(2);
+    expect(result.assignments[0].clientName).toBe("Acme Corp");
+    expect(result.assignments[1].clientName).toBe("Beta Inc");
   });
 
   it("returns base unchanged for discovery section", () => {

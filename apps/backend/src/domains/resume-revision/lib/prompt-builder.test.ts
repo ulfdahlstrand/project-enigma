@@ -23,8 +23,11 @@ const DISCOVERY_OUTPUT: ResumeRevisionDiscoveryOutput = {
 function makeParams(overrides: Partial<BuildPromptParams> = {}): BuildPromptParams {
   return {
     section: "skills",
+    sectionDetail: null,
     discovery: DISCOVERY_OUTPUT,
     originalContent: { skills: [] },
+    fullCvContent: null,
+    consultantProfile: { name: "Anna", title: "Tech Lead", presentation: null },
     conversationHistory: [],
     userMessage: "Please revise my skills",
     ...overrides,
