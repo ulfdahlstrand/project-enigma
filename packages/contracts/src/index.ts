@@ -116,6 +116,10 @@ import {
   approveRevisionStepOutputSchema,
   requestRevisionStepReworkInputSchema,
   requestRevisionStepReworkOutputSchema,
+  kickoffRevisionStepInputSchema,
+  kickoffRevisionStepOutputSchema,
+  skipRevisionStepInputSchema,
+  skipRevisionStepOutputSchema,
   finaliseResumeRevisionInputSchema,
   finaliseResumeRevisionOutputSchema,
 } from "./resume-revision.js";
@@ -360,6 +364,10 @@ export {
   approveRevisionStepOutputSchema,
   requestRevisionStepReworkInputSchema,
   requestRevisionStepReworkOutputSchema,
+  kickoffRevisionStepInputSchema,
+  kickoffRevisionStepOutputSchema,
+  skipRevisionStepInputSchema,
+  skipRevisionStepOutputSchema,
   finaliseResumeRevisionInputSchema,
   finaliseResumeRevisionOutputSchema,
 } from "./resume-revision.js";
@@ -507,6 +515,14 @@ export const contract = oc.router({
     .route({ method: "POST", path: "/resume-revision/steps/rework" })
     .input(requestRevisionStepReworkInputSchema)
     .output(requestRevisionStepReworkOutputSchema),
+  kickoffRevisionStep: oc
+    .route({ method: "POST", path: "/resume-revision/steps/kickoff" })
+    .input(kickoffRevisionStepInputSchema)
+    .output(kickoffRevisionStepOutputSchema),
+  skipRevisionStep: oc
+    .route({ method: "POST", path: "/resume-revision/steps/skip" })
+    .input(skipRevisionStepInputSchema)
+    .output(skipRevisionStepOutputSchema),
   finaliseResumeRevision: oc
     .route({ method: "POST", path: "/resume-revision/workflows/finalise" })
     .input(finaliseResumeRevisionInputSchema)

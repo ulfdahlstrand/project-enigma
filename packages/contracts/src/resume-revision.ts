@@ -86,6 +86,7 @@ export const resumeRevisionWorkflowStepSchema = z.object({
   id: z.string().uuid(),
   workflowId: z.string().uuid(),
   section: resumeRevisionStepSectionSchema,
+  sectionDetail: z.string().nullable(),
   stepOrder: z.number().int(),
   status: resumeRevisionStepStatusSchema,
   /** Points to the proposal message the user accepted (mirrors a GitHub issue closing reference). */
@@ -153,6 +154,7 @@ export const listResumeRevisionWorkflowsOutputSchema = z.array(
 export const sendResumeRevisionMessageInputSchema = z.object({
   stepId: z.string().uuid(),
   content: z.string().min(1),
+  locale: z.string().optional(),
 });
 
 export const sendResumeRevisionMessageOutputSchema = z.object({
@@ -187,6 +189,33 @@ export const requestRevisionStepReworkInputSchema = z.object({
 
 export const requestRevisionStepReworkOutputSchema = z.object({
   step: resumeRevisionWorkflowStepSchema,
+});
+
+// ---------------------------------------------------------------------------
+// kickoffRevisionStep
+// ---------------------------------------------------------------------------
+
+export const kickoffRevisionStepInputSchema = z.object({
+  stepId: z.string().uuid(),
+  locale: z.string().optional(),
+});
+
+export const kickoffRevisionStepOutputSchema = z.object({
+  assistantMessage: resumeRevisionMessageSchema,
+  step: resumeRevisionWorkflowStepSchema,
+});
+
+// ---------------------------------------------------------------------------
+// skipRevisionStep
+// ---------------------------------------------------------------------------
+
+export const skipRevisionStepInputSchema = z.object({
+  stepId: z.string().uuid(),
+});
+
+export const skipRevisionStepOutputSchema = z.object({
+  step: resumeRevisionWorkflowStepSchema,
+  workflow: resumeRevisionWorkflowSchema,
 });
 
 // ---------------------------------------------------------------------------

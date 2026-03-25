@@ -27,6 +27,7 @@ export interface StepRow {
   id: string;
   workflow_id: string;
   section: string;
+  section_detail: string | null;
   step_order: number;
   status: string;
   approved_message_id: string | null;
@@ -69,6 +70,7 @@ export function mapStepRow(
     id: row.id,
     workflowId: row.workflow_id,
     section: row.section as ResumeRevisionStepSection,
+    sectionDetail: row.section_detail,
     stepOrder: row.step_order,
     status: row.status as ResumeRevisionStepStatus,
     approvedMessageId: row.approved_message_id,

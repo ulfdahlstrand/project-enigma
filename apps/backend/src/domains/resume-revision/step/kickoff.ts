@@ -9,7 +9,6 @@ import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/requ
 import {
   fetchStepWithAuth,
   fetchDiscoveryOutput,
-  fetchStepsWithMessages,
 } from "../lib/query-helpers.js";
 import { mapMessageRow, mapStepRow } from "../lib/map-to-output.js";
 import { extractSectionContent } from "../lib/section-content-extractor.js";
@@ -23,52 +22,45 @@ import type { ResumeRevisionMessage, ResumeRevisionStepSection } from "@cv-tool/
 const MODEL = "gpt-4o";
 
 // ---------------------------------------------------------------------------
-// sendResumeRevisionMessage — query logic
+// kickoffRevisionStep — query logic
 // ---------------------------------------------------------------------------
 
-export async function sendResumeRevisionMessage(
+export async function kickoffRevisionStep(
   db: Kysely<Database>,
   openaiClient: OpenAI,
   user: AuthUser,
-  input: { stepId: string; content: string; locale?: string | undefined }
+  input: { stepId: string; locale?: string | undefined }
 ) {
   const step = await fetchStepWithAuth(db, user, input.stepId);
 
-  const allowedStatuses = ["pending", "reviewing", "needs_rework"];
-  if (!allowedStatuses.includes(step.status)) {
+  if (step.status !== "pending") {
     throw new ORPCError("BAD_REQUEST", {
-      message: `Cannot send a message on a step with status "${step.status}".`,
+      message: `Can only kick off a step that is "pending". Current: "${step.status}".`,
     });
   }
 
-  // If first message on a pending step, transition to generating
-  if (step.status === "pending") {
-    await db
-      .updateTable("resume_revision_workflow_steps")
-      .set({ status: "generating", updated_at: new Date() })
-      .where("id", "=", step.id)
-      .execute();
-  }
-
-  // Persist the user message
-  const userRow = await db
-    .insertInto("resume_revision_messages")
-    .values({ step_id: step.id, role: "user", content: input.content })
-    .returningAll()
+  const existingMessageCount = await db
+    .selectFrom("resume_revision_messages")
+    .select(db.fn.countAll<number>().as("count"))
+    .where("step_id", "=", step.id)
     .executeTakeFirstOrThrow();
 
-  // Load existing messages for context (excluding the one just inserted)
-  const existingMessages = await db
-    .selectFrom("resume_revision_messages")
-    .selectAll()
-    .where("step_id", "=", step.id)
-    .where("id", "!=", userRow.id)
-    .orderBy("created_at", "asc")
+  if (Number(existingMessageCount.count) > 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Cannot kick off a step that already has messages.",
+    });
+  }
+
+  // Transition to generating before the OpenAI call
+  await db
+    .updateTable("resume_revision_workflow_steps")
+    .set({ status: "generating", updated_at: new Date() })
+    .where("id", "=", step.id)
     .execute();
 
   const sectionDetail = step.section_detail as string | null;
 
-  // Load discovery output, original section content, full CV, consultant profile, and highlighted items
+  // Load all context in parallel
   const [discoveryOutput, { sectionContent, fullCvContent }, consultantProfile, highlightedItems] =
     await Promise.all([
       fetchDiscoveryOutput(db, step.workflow_id),
@@ -76,6 +68,12 @@ export async function sendResumeRevisionMessage(
       loadConsultantProfile(db, step.workflow_id),
       loadHighlightedItems(db, step.workflow_id, step.section),
     ]);
+
+  // Synthetic user message to open the conversation — not persisted
+  const syntheticUserMessage =
+    step.section === "discovery"
+      ? "Please begin the consultation."
+      : "Please review this section and tell me your plan before proposing anything.";
 
   const prompt = buildRevisionPrompt({
     section: step.section as ResumeRevisionStepSection,
@@ -85,11 +83,8 @@ export async function sendResumeRevisionMessage(
     fullCvContent,
     highlightedItems,
     consultantProfile,
-    conversationHistory: existingMessages.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    userMessage: input.content,
+    conversationHistory: [],
+    userMessage: syntheticUserMessage,
     locale: input.locale,
   });
 
@@ -97,7 +92,6 @@ export async function sendResumeRevisionMessage(
     model: MODEL,
     messages: [
       { role: "system", content: prompt.system },
-      ...prompt.history.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: prompt.userMessage },
     ],
   });
@@ -133,7 +127,7 @@ export async function sendResumeRevisionMessage(
     }
   }
 
-  // Persist AI message
+  // Persist assistant message only (no user message row for kickoff)
   const assistantRow = await db
     .insertInto("resume_revision_messages")
     .values({
@@ -146,19 +140,14 @@ export async function sendResumeRevisionMessage(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  // After a successful AI response the step is always in a reviewable state.
-  // "generating" is only a transient status set before the OpenAI call; it
-  // must never persist after the call completes.
-  const newStatus = (
-    isValidProposal ? "reviewing" : step.status === "needs_rework" ? "needs_rework" : "reviewing"
-  ) as "reviewing" | "needs_rework";
+  // Kickoff always opens the conversation — transition to reviewing
   await db
     .updateTable("resume_revision_workflow_steps")
-    .set({ status: newStatus, updated_at: new Date() })
+    .set({ status: "reviewing", updated_at: new Date() })
     .where("id", "=", step.id)
     .execute();
 
-  // Reload step with all messages for the response
+  // Reload all messages for the step response
   const updatedMessages = await db
     .selectFrom("resume_revision_messages")
     .selectAll()
@@ -166,14 +155,13 @@ export async function sendResumeRevisionMessage(
     .orderBy("created_at", "asc")
     .execute();
 
-  const userMessage: ResumeRevisionMessage = mapMessageRow(userRow);
   const assistantMessage: ResumeRevisionMessage = mapMessageRow(assistantRow);
   const updatedStep = mapStepRow(
-    { ...step, status: newStatus, updated_at: new Date() },
+    { ...step, status: "reviewing", updated_at: new Date() },
     updatedMessages.map(mapMessageRow)
   );
 
-  return { userMessage, assistantMessage, step: updatedStep };
+  return { assistantMessage, step: updatedStep };
 }
 
 // ---------------------------------------------------------------------------
@@ -266,21 +254,21 @@ async function loadConsultantProfile(
 // oRPC handler
 // ---------------------------------------------------------------------------
 
-export const sendResumeRevisionMessageHandler = implement(
-  contract.sendResumeRevisionMessage
+export const kickoffRevisionStepHandler = implement(
+  contract.kickoffRevisionStep
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return sendResumeRevisionMessage(getDb(), getOpenAIClient(), user, input);
+  return kickoffRevisionStep(getDb(), getOpenAIClient(), user, input);
 });
 
-export function createSendResumeRevisionMessageHandler(
+export function createKickoffRevisionStepHandler(
   db: Kysely<Database>,
   openaiClient: OpenAI
 ) {
-  return implement(contract.sendResumeRevisionMessage).handler(
+  return implement(contract.kickoffRevisionStep).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return sendResumeRevisionMessage(db, openaiClient, user, input);
+      return kickoffRevisionStep(db, openaiClient, user, input);
     }
   );
 }

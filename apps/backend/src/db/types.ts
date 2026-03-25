@@ -304,6 +304,7 @@ export interface ResumeRevisionWorkflowStepTable {
   id: Generated<string>;
   workflow_id: string;
   section: ResumeRevisionStepSection;
+  section_detail: string | null;
   step_order: number;
   status: Generated<ResumeRevisionStepStatus>;
   /** The proposal message the user accepted. NULL until the step is approved. */
@@ -357,8 +358,19 @@ export interface ResumeRevisionDiscoveryOutput {
   additionalNotes: string;
 }
 
+export interface ResumeHighlightedItemTable {
+  id: Generated<string>;
+  resume_id: string;
+  text: string;
+  sort_order: Generated<number>;
+}
+
+export type ResumeHighlightedItem = Selectable<ResumeHighlightedItemTable>;
+export type NewResumeHighlightedItem = Insertable<ResumeHighlightedItemTable>;
+
 export interface Database {
   employees: EmployeeTable;
+  resume_highlighted_items: ResumeHighlightedItemTable;
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;

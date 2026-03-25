@@ -46,13 +46,30 @@ export async function approveRevisionStep(
 
   const workflowId = step.workflow_id;
   const section = step.section as ResumeRevisionStepSection;
+  const sectionDetail = step.section_detail as string | null ?? null;
 
   let newCommitId: string | null = null;
   let revisionBranchId = step.revision_branch_id;
 
   await db.transaction().execute(async (trx) => {
-    // For content sections, create a commit on the revision branch
-    if (!isDiscoverySection(section)) {
+    // highlighted_experience: write proposed items to resume_highlighted_items
+    if (section === "highlighted_experience") {
+      const resumeId = await getResumeIdForWorkflow(trx, workflowId);
+      const proposal = proposalMessage.structured_content as ResumeRevisionProposalContent | null;
+      const items = (proposal?.proposedContent as { items?: string[] } | null)?.items;
+      if (Array.isArray(items)) {
+        await trx.deleteFrom("resume_highlighted_items").where("resume_id", "=", resumeId).execute();
+        if (items.length > 0) {
+          await trx
+            .insertInto("resume_highlighted_items")
+            .values(items.map((text, i) => ({ resume_id: resumeId, text, sort_order: i })))
+            .execute();
+        }
+      }
+    }
+
+    // For other content sections, create a commit on the revision branch
+    if (!isDiscoverySection(section) && section !== "highlighted_experience") {
       // Ensure revision branch exists; create it from base branch HEAD if not
       if (revisionBranchId === null) {
         revisionBranchId = await createRevisionBranch(trx, user, {
@@ -67,7 +84,7 @@ export async function approveRevisionStep(
       const proposal = proposalMessage.structured_content as ResumeRevisionProposalContent | null;
       const proposedContent = proposal?.proposedContent ?? null;
 
-      const newContent = applySectionContent(section, baseContent, proposedContent);
+      const newContent = applySectionContent(section, baseContent, proposedContent, sectionDetail);
 
       const revBranch = await trx
         .selectFrom("resume_branches")

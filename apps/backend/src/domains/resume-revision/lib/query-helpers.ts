@@ -82,6 +82,7 @@ export async function fetchStepWithAuth(
       "s.id",
       "s.workflow_id",
       "s.section",
+      "s.section_detail",
       "s.step_order",
       "s.status",
       "s.approved_message_id",

@@ -5,6 +5,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { fetchWorkflowWithAuth, fetchWorkflowWithSteps } from "../lib/query-helpers.js";
+import { syncBranchAssignmentsFromContent } from "../lib/sync-branch-assignments.js";
 
 // ---------------------------------------------------------------------------
 // finaliseResumeRevision — query logic
@@ -24,6 +25,22 @@ export async function finaliseResumeRevision(
   }
 
   if (input.action === "keep") {
+    // Sync branch_assignments for the revision branch so it's queryable
+    if (workflowRow.revision_branch_id !== null) {
+      const revCommit = await db
+        .selectFrom("resume_branches as rb")
+        .innerJoin("resume_commits as rc", "rc.id", "rb.head_commit_id")
+        .select(["rc.content"])
+        .where("rb.id", "=", workflowRow.revision_branch_id)
+        .executeTakeFirst();
+      if (revCommit) {
+        await syncBranchAssignmentsFromContent(
+          db,
+          workflowRow.revision_branch_id,
+          revCommit.content as ResumeCommitContent
+        );
+      }
+    }
     const workflow = await fetchWorkflowWithSteps(db, user, input.workflowId);
     return {
       workflow,
@@ -94,6 +111,13 @@ export async function finaliseResumeRevision(
       .set({ updated_at: new Date() })
       .where("id", "=", input.workflowId)
       .execute();
+
+    // Sync branch_assignments for the base branch to reflect merged content
+    await syncBranchAssignmentsFromContent(
+      trx,
+      workflowRow.base_branch_id,
+      revisionCommit.content as ResumeCommitContent
+    );
   });
 
   const workflow = await fetchWorkflowWithSteps(db, user, input.workflowId);

@@ -5,9 +5,8 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
-import { STEP_SECTIONS } from "../lib/step-sections.js";
 import { mapWorkflowRow, mapStepRow } from "../lib/map-to-output.js";
-import type { ResumeRevisionWorkflow } from "@cv-tool/contracts";
+import type { ResumeRevisionWorkflow, ResumeRevisionStepSection } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
 // createResumeRevisionWorkflow — query logic
@@ -34,6 +33,57 @@ export async function createResumeRevisionWorkflow(
     throw new ORPCError("FORBIDDEN");
   }
 
+  // Load head commit content to derive skill categories
+  const branchWithCommit = await db
+    .selectFrom("resume_branches as rb")
+    .leftJoin("resume_commits as rc", "rc.id", "rb.head_commit_id")
+    .select(["rb.head_commit_id", "rc.content"])
+    .where("rb.id", "=", input.baseBranchId)
+    .executeTakeFirst();
+
+  const commitContent = branchWithCommit?.content as import("../../../db/types.js").ResumeCommitContent | null | undefined;
+  const skillCategories: string[] = commitContent?.skills
+    ? [...new Set(commitContent.skills.map((s) => s.category ?? "Okategoriserad"))].sort()
+    : [];
+
+  const assignments = (commitContent?.assignments ?? []).filter((a) => !!a.assignmentId);
+
+  const SECTIONS_BEFORE_SKILLS = ["discovery", "consultant_title", "presentation_summary"] as const;
+  const SECTIONS_AFTER_ASSIGNMENTS = ["highlighted_experience", "consistency_polish"] as const;
+
+  const stepDefinitions: Array<{ section: string; section_detail: string | null; step_order: number }> = [];
+  let order = 0;
+
+  for (const section of SECTIONS_BEFORE_SKILLS) {
+    stepDefinitions.push({ section, section_detail: null, step_order: order++ });
+  }
+
+  // One step per skill category
+  for (const category of skillCategories) {
+    stepDefinitions.push({ section: "skills", section_detail: category, step_order: order++ });
+  }
+  // One step for suggesting new categories (always added)
+  stepDefinitions.push({ section: "skills", section_detail: "__new_categories__", step_order: order++ });
+
+  // One step per assignment, keyed by assignmentId with clientName encoded for display.
+  // Format: "<assignmentId>|||<clientName>" — parsed in extractor and checklist.
+  // Falls back to a single generic step if the branch has no assignments yet.
+  if (assignments.length > 0) {
+    for (const a of assignments) {
+      stepDefinitions.push({
+        section: "assignments",
+        section_detail: `${a.assignmentId}|||${a.clientName}`,
+        step_order: order++,
+      });
+    }
+  } else {
+    stepDefinitions.push({ section: "assignments", section_detail: null, step_order: order++ });
+  }
+
+  for (const section of SECTIONS_AFTER_ASSIGNMENTS) {
+    stepDefinitions.push({ section, section_detail: null, step_order: order++ });
+  }
+
   const { workflow, steps } = await db.transaction().execute(async (trx) => {
     const wf = await trx
       .insertInto("resume_revision_workflows")
@@ -48,10 +98,11 @@ export async function createResumeRevisionWorkflow(
     const stepRows = await trx
       .insertInto("resume_revision_workflow_steps")
       .values(
-        STEP_SECTIONS.map((section, idx) => ({
+        stepDefinitions.map((def) => ({
           workflow_id: wf.id,
-          section,
-          step_order: idx,
+          section: def.section as ResumeRevisionStepSection,
+          section_detail: def.section_detail,
+          step_order: def.step_order,
         }))
       )
       .returningAll()

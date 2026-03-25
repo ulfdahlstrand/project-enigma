@@ -58,6 +58,8 @@ import {
   sendResumeRevisionMessageHandler,
   approveRevisionStepHandler,
   requestRevisionStepReworkHandler,
+  kickoffRevisionStepHandler,
+  skipRevisionStepHandler,
   finaliseResumeRevisionHandler,
 } from "./domains/resume-revision/index.js";
 
@@ -120,6 +122,8 @@ export const router = implement(contract).router({
   sendResumeRevisionMessage: sendResumeRevisionMessageHandler,
   approveRevisionStep: approveRevisionStepHandler,
   requestRevisionStepRework: requestRevisionStepReworkHandler,
+  kickoffRevisionStep: kickoffRevisionStepHandler,
+  skipRevisionStep: skipRevisionStepHandler,
   finaliseResumeRevision: finaliseResumeRevisionHandler,
 });
 
