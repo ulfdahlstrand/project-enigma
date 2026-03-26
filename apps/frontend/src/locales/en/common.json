@@ -95,7 +95,11 @@
       "docxParsed": "CV data extracted from DOCX.",
       "showExtractedJson": "Show extracted JSON",
       "hideExtractedJson": "Hide extracted JSON",
-      "stepDocxParsed": "DOCX parsed",
+      "stepUploading": "Uploading",
+      "stepExtracting": "Extracting text",
+      "stepParsing": "Parsing text",
+      "stepParsed": "Text parsed",
+      "stepImporting": "Importing",
       "stepImported": "Import complete"
     }
   },

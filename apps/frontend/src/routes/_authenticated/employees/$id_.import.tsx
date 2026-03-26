@@ -50,8 +50,9 @@ function ImportCvPage() {
   // When set, DOCX was parsed — JSON is hidden until user explicitly expands it.
   const [parsedDocxJson, setParsedDocxJson] = useState<unknown>(null);
   const [showExtractedJson, setShowExtractedJson] = useState(false);
-  // Checklist of completed steps shown in the result panel.
+  // Step checklist: completed ticks + the current in-progress label (spinner).
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [inProgressStep, setInProgressStep] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
@@ -63,6 +64,7 @@ function ImportCvPage() {
         queryClient.invalidateQueries({ queryKey: getEducationQueryKey(id) }),
         queryClient.invalidateQueries({ queryKey: [...LIST_RESUMES_QUERY_KEY, id] }),
       ]);
+      setInProgressStep(null);
       setCompletedSteps((prev) => [...prev, t("employee.import.stepImported")]);
     },
   });
@@ -77,9 +79,17 @@ function ImportCvPage() {
       setDocxError(null);
       setParseError(null);
       mutation.reset();
-      setCompletedSteps([t("employee.import.stepDocxParsed")]);
+      // Tick off all DOCX steps at once when the API responds
+      setInProgressStep(null);
+      setCompletedSteps((prev) => [
+        ...prev,
+        t("employee.import.stepExtracting"),
+        t("employee.import.stepParsing"),
+        t("employee.import.stepParsed"),
+      ]);
     },
     onError: () => {
+      setInProgressStep(null);
       setDocxError(t("employee.import.docxError"));
     },
   });
@@ -92,6 +102,7 @@ function ImportCvPage() {
       setJsonText((event.target?.result as string) ?? "");
       setParsedDocxJson(null);
       setCompletedSteps([]);
+      setInProgressStep(null);
       setParseError(null);
       mutation.reset();
     };
@@ -102,6 +113,14 @@ function ImportCvPage() {
   const handleDocxUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset checklist and show "uploading" immediately
+    setCompletedSteps([]);
+    setInProgressStep(t("employee.import.stepUploading"));
+    setParsedDocxJson(null);
+    setDocxError(null);
+    setParseError(null);
+    mutation.reset();
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const arrayBuffer = event.target?.result as ArrayBuffer;
@@ -111,6 +130,9 @@ function ImportCvPage() {
         binary += String.fromCharCode(bytes[i]!);
       }
       const base64 = btoa(binary);
+      // File is read — tick "uploading", start showing "extracting" spinner
+      setCompletedSteps([t("employee.import.stepUploading")]);
+      setInProgressStep(t("employee.import.stepExtracting"));
       docxMutation.mutate(base64);
     };
     reader.readAsArrayBuffer(file);
@@ -119,6 +141,7 @@ function ImportCvPage() {
 
   const handleImport = () => {
     setParseError(null);
+    setInProgressStep(t("employee.import.stepImporting"));
     if (parsedDocxJson !== null) {
       mutation.mutate(parsedDocxJson);
       return;
@@ -127,6 +150,7 @@ function ImportCvPage() {
     try {
       parsed = JSON.parse(jsonText);
     } catch {
+      setInProgressStep(null);
       setParseError(t("employee.import.parseError"));
       return;
     }
@@ -289,13 +313,12 @@ function ImportCvPage() {
               {t("employee.import.resultHeading")}
             </Typography>
 
-            {completedSteps.length === 0 && !docxMutation.isPending && !mutation.isPending ? (
+            {completedSteps.length === 0 && !inProgressStep ? (
               <Typography variant="body2" color="text.secondary">
                 {t("employee.import.resultPanelIdle")}
               </Typography>
             ) : (
               <Box>
-                {/* Completed steps */}
                 {completedSteps.map((step) => (
                   <Box
                     key={step}
@@ -306,11 +329,8 @@ function ImportCvPage() {
                   </Box>
                 ))}
 
-                {/* In-progress step */}
-                {docxMutation.isPending && <StatusRow label={t("employee.import.parsingDocx")} />}
-                {mutation.isPending && <StatusRow label={t("employee.import.importing")} />}
+                {inProgressStep && <StatusRow label={inProgressStep} />}
 
-                {/* Import results once done */}
                 {mutation.isSuccess && (
                   <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
                     {mutation.data.resumeCreated && (
