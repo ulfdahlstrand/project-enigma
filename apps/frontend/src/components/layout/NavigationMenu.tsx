@@ -1,8 +1,8 @@
 /**
- * NavigationMenu — sidebar navigation with settings footer.
+ * NavigationMenu — sidebar navigation with brand row and settings footer.
  *
  * White left column with pill-shaped active state (Google Drive pattern).
- * Nav items at top, language selector pinned to the bottom (Slack pattern).
+ * Brand name at top, nav items below, user menu pinned to the bottom.
  */
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
@@ -10,6 +10,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { UserMenu } from "./UserMenu";
@@ -31,6 +32,34 @@ export function NavigationMenu() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
+      {/* Brand row */}
+      <Box
+        sx={{
+          px: 2,
+          py: 1.5,
+          minHeight: 56,
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component={Link}
+          to="/"
+          sx={{
+            fontWeight: 600,
+            fontSize: "1rem",
+            color: "text.primary",
+            textDecoration: "none",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {t("header.appName")}
+        </Typography>
+      </Box>
+
       {/* Nav items */}
       <List component="nav" disablePadding sx={{ pt: 1 }}>
         {NAV_ITEMS.map(({ labelKey, to }) => {
