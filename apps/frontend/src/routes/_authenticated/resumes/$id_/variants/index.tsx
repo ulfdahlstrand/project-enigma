@@ -67,7 +67,6 @@ function VariantsPage() {
   }
 
   function openDialog() {
-    // Pre-select the most recent commit when opening the dialog
     const headCommitId = commits?.[0]?.id ?? "";
     setSelectedCommitId(headCommitId);
     setNewName("");
@@ -113,117 +112,141 @@ function VariantsPage() {
         }
       />
       <PageContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {t("resume.variants.description")}
+        </Typography>
 
-      {commits !== undefined && commits.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {t("resume.variants.noVersionsWarning")}
-        </Alert>
-      )}
+        {commits !== undefined && commits.length === 0 && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            {t("resume.variants.noVersionsWarning")}
+          </Alert>
+        )}
 
-      {!branches || branches.length === 0 ? (
-        <Typography variant="body1">{t("resume.variants.empty")}</Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table aria-label={t("resume.variants.pageTitle")}>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t("resume.variants.tableHeaderName")}</TableCell>
-                <TableCell>{t("resume.variants.tableHeaderLanguage")}</TableCell>
-                <TableCell>{t("resume.variants.tableHeaderLastSaved")}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {branches.map((branch) => {
-                const createdAt =
-                  typeof branch.createdAt === "string"
-                    ? new Date(branch.createdAt)
-                    : branch.createdAt;
+        {!branches || branches.length === 0 ? (
+          <Typography variant="body1">{t("resume.variants.empty")}</Typography>
+        ) : (
+          <TableContainer component={Paper} variant="outlined">
+            <Table aria-label={t("resume.variants.pageTitle")}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("resume.variants.tableHeaderName")}</TableCell>
+                  <TableCell>{t("resume.variants.tableHeaderLanguage")}</TableCell>
+                  <TableCell>{t("resume.variants.tableHeaderStatus")}</TableCell>
+                  <TableCell>{t("resume.variants.tableHeaderCreated")}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {branches.map((branch) => {
+                  const createdAt =
+                    typeof branch.createdAt === "string"
+                      ? new Date(branch.createdAt)
+                      : branch.createdAt;
 
-                return (
-                  <TableRow
-                    key={branch.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onClick={() =>
-                      void navigate({ to: "/resumes/$id", params: { id: resumeId } })
-                    }
-                  >
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {branch.name}
-                        {branch.isMain && (
-                          <Chip
-                            label={t("resume.variants.mainBadge")}
-                            color="primary"
-                            size="small"
-                          />
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={branch.language} size="small" />
-                    </TableCell>
-                    <TableCell>{createdAt.toLocaleDateString()}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+                  return (
+                    <TableRow key={branch.id} hover>
+                      <TableCell>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          {branch.name}
+                          {branch.isMain && (
+                            <Chip
+                              label={t("resume.variants.mainBadge")}
+                              color="primary"
+                              size="small"
+                            />
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={branch.language.toUpperCase()} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={
+                            branch.headCommitId
+                              ? t("resume.variants.statusHasVersions")
+                              : t("resume.variants.statusNoVersions")
+                          }
+                          color={branch.headCommitId ? "success" : "default"}
+                          size="small"
+                          variant={branch.headCommitId ? "filled" : "outlined"}
+                        />
+                      </TableCell>
+                      <TableCell>{createdAt.toLocaleDateString()}</TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            void navigate({
+                              to: "/resumes/$id",
+                              params: { id: resumeId },
+                              search: { branchId: branch.id },
+                            })
+                          }
+                        >
+                          {t("resume.variants.openButton")}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
-        <DialogContent>
-          {forkError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {forkError}
-            </Alert>
-          )}
-          <TextField
-            autoFocus
-            label={t("resume.variants.createDialog.nameLabel")}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            fullWidth
-            sx={{ mt: 1, mb: 2 }}
-          />
-          {commits && commits.length > 0 ? (
-            <FormControl fullWidth size="small">
-              <InputLabel>{t("resume.variants.createDialog.basedOnLabel")}</InputLabel>
-              <Select
-                value={selectedCommitId}
-                label={t("resume.variants.createDialog.basedOnLabel")}
-                onChange={(e) => setSelectedCommitId(e.target.value)}
-              >
-                {commits.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {commitLabel(c.id)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          ) : (
-            <Alert severity="info">
-              {t("resume.variants.createDialog.noVersions")}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>
-            {t("resume.variants.createDialog.cancel")}
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!newName.trim() || !selectedCommitId || forkMutation.isPending}
-            onClick={() => void handleCreate()}
-          >
-            {forkMutation.isPending
-              ? t("resume.variants.createDialog.creating")
-              : t("resume.variants.createDialog.create")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
+          <DialogContent>
+            {forkError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {forkError}
+              </Alert>
+            )}
+            <TextField
+              autoFocus
+              label={t("resume.variants.createDialog.nameLabel")}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              fullWidth
+              sx={{ mt: 1, mb: 2 }}
+            />
+            {commits && commits.length > 0 ? (
+              <FormControl fullWidth size="small">
+                <InputLabel>{t("resume.variants.createDialog.basedOnLabel")}</InputLabel>
+                <Select
+                  value={selectedCommitId}
+                  label={t("resume.variants.createDialog.basedOnLabel")}
+                  onChange={(e) => setSelectedCommitId(e.target.value)}
+                >
+                  {commits.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>
+                      {commitLabel(c.id)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <Alert severity="info">
+                {t("resume.variants.createDialog.noVersions")}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDialogOpen(false)}>
+              {t("resume.variants.createDialog.cancel")}
+            </Button>
+            <Button
+              variant="contained"
+              disabled={!newName.trim() || !selectedCommitId || forkMutation.isPending}
+              onClick={() => void handleCreate()}
+            >
+              {forkMutation.isPending
+                ? t("resume.variants.createDialog.creating")
+                : t("resume.variants.createDialog.create")}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </PageContent>
     </>
   );

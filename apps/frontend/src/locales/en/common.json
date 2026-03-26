@@ -260,7 +260,13 @@
         "basedOnPlaceholder": "Select a version",
         "noVersions": "No saved versions found. Save a version first.",
         "versionDefault": "(no message)"
-      }
+      },
+      "description": "Variants are independent copies of this resume tailored for different roles or languages. Each variant has its own edit history.",
+      "tableHeaderStatus": "Status",
+      "tableHeaderCreated": "Created",
+      "statusHasVersions": "Has saved versions",
+      "statusNoVersions": "No saved versions",
+      "openButton": "Open"
     },
     "compare": {
       "pageTitle": "Compare Versions",

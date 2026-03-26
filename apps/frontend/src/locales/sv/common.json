@@ -260,7 +260,13 @@
         "basedOnPlaceholder": "Välj en version",
         "noVersions": "Inga sparade versioner hittades. Spara en version först.",
         "versionDefault": "(inget meddelande)"
-      }
+      },
+      "description": "Varianter är oberoende kopior av detta CV anpassade för olika roller eller språk. Varje variant har sin egen redigeringshistorik.",
+      "tableHeaderStatus": "Status",
+      "tableHeaderCreated": "Skapad",
+      "statusHasVersions": "Har sparade versioner",
+      "statusNoVersions": "Inga sparade versioner",
+      "openButton": "Öppna"
     },
     "compare": {
       "pageTitle": "Jämför versioner",
