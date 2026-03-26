@@ -827,7 +827,10 @@ function ResumeDetailPage() {
         breadcrumbs={[
           { label: t("nav.employees"), to: "/employees" },
           ...(resume?.employeeId
-            ? [{ label: employee?.name ?? "…", to: `/employees/${resume.employeeId}` }]
+            ? [
+                { label: employee?.name ?? "…", to: `/employees/${resume.employeeId}` },
+                { label: t("resume.pageTitle"), to: `/resumes?employeeId=${resume.employeeId}` },
+              ]
             : []),
         ]}
         chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
