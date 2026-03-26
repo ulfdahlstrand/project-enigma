@@ -123,6 +123,7 @@
       "saveError": "Det gick inte att skapa meritförteckningen. Försök igen."
     },
     "detail": {
+      "pageTitle": "Meritförteckning",
       "loading": "Laddar meritförteckning…",
       "error": "Kunde inte ladda meritförteckning.",
       "notFound": "Meritförteckning hittades inte.",

@@ -123,6 +123,7 @@
       "saveError": "Failed to create resume. Please try again."
     },
     "detail": {
+      "pageTitle": "Resume",
       "loading": "Loading resume…",
       "error": "Failed to load resume.",
       "notFound": "Resume not found.",
