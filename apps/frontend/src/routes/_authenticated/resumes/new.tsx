@@ -1,5 +1,4 @@
-import Button from "@mui/material/Button";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -7,12 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useSearch } from "@tanstack/react-router";
 import { orpc } from "../../../orpc-client";
-import RouterButton from "../../../components/RouterButton";
 import { LIST_RESUMES_QUERY_KEY } from ".";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
 
 
 const searchSchema = z.object({
@@ -61,55 +61,48 @@ function NewResumePage() {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: 480 }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
-        {t("resume.new.pageTitle")}
-      </Typography>
+    <>
+      <PageHeader
+        title={t("resume.new.pageTitle")}
+        breadcrumbs={[{ label: t("resume.pageTitle"), to: "/resumes" }]}
+      />
+      <PageContent>
+        {mutation.isError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t("resume.new.saveError")}
+          </Alert>
+        )}
 
-      {mutation.isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("resume.new.saveError")}
-        </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label={t("resume.new.titleLabel")}
-          {...register("title")}
-          required
-          fullWidth
-          autoFocus
-        />
-        <TextField
-          label={t("resume.new.languageLabel")}
-          {...register("language")}
-          fullWidth
-          placeholder="en"
-        />
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 480 }}
+        >
+          <TextField
+            label={t("resume.new.titleLabel")}
+            {...register("title")}
+            required
+            fullWidth
+            autoFocus
+          />
+          <TextField
+            label={t("resume.new.languageLabel")}
+            {...register("language")}
+            fullWidth
+            placeholder="en"
+          />
           <Button
             type="submit"
             variant="contained"
             disabled={mutation.isPending || isSubmitting || !isValid}
             aria-label={t("resume.new.saveButton")}
+            sx={{ alignSelf: "flex-start" }}
           >
             {t("resume.new.saveButton")}
           </Button>
-          <RouterButton
-            variant="outlined"
-            to="/resumes"
-            search={employeeId ? { employeeId } : {}}
-            aria-label={t("resume.new.cancel")}
-          >
-            {t("resume.new.cancel")}
-          </RouterButton>
         </Box>
-      </Box>
-    </Box>
+      </PageContent>
+    </>
   );
 }

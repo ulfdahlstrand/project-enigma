@@ -11,13 +11,12 @@ import Button from "@mui/material/Button";
  * i18n: all visible text via useTranslation("common").
  */
 import { z } from "zod";
-import { createFileRoute, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import type { ReactNode, RefObject } from "react";
 import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
@@ -27,7 +26,6 @@ import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
 import Grow from "@mui/material/Grow";
-import CircularProgress from "@mui/material/CircularProgress";
 import Fab from "@mui/material/Fab";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
@@ -45,6 +43,7 @@ import { orpc } from "../../../orpc-client";
 import { resumeBranchesKey, useForkResumeBranch } from "../../../hooks/versioning";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import { LoadingState, ErrorState } from "../../../components/feedback";
 import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
@@ -681,13 +680,7 @@ function ResumeDetailPage() {
   // Assignments always come from the live branch_assignments join — same source for all branches
   const assignments = liveAssignments;
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("resume.detail.loading")} />
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
   if (isError) {
     const isNotFound =
@@ -696,15 +689,7 @@ function ResumeDetailPage() {
       "code" in error &&
       (error as { code: unknown }).code === "NOT_FOUND";
 
-    return (
-      <Box sx={{ mt: 2, px: 3 }}>
-        {isNotFound ? (
-          <Typography variant="body1">{t("resume.detail.notFound")}</Typography>
-        ) : (
-          <Alert severity="error">{t("resume.detail.error")}</Alert>
-        )}
-      </Box>
-    );
+    return <ErrorState message={isNotFound ? t("resume.detail.notFound") : t("resume.detail.error")} />;
   }
 
   // Use snapshot fields when a non-main branch is active, otherwise live resume fields
@@ -779,9 +764,6 @@ function ResumeDetailPage() {
 
   const toolbarActions = (
     <>
-      <RouterButton variant="text" to="/resumes">
-        {t("resume.detail.backButton")}
-      </RouterButton>
       <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       {isEditing ? (
         <>
@@ -842,6 +824,12 @@ function ResumeDetailPage() {
     <Box>
       <PageHeader
         title={resumeTitle}
+        breadcrumbs={[
+          { label: t("nav.employees"), to: "/employees" },
+          ...(resume?.employeeId
+            ? [{ label: employee?.name ?? "…", to: `/employees/${resume.employeeId}` }]
+            : []),
+        ]}
         chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
         actions={toolbarActions}
       />
