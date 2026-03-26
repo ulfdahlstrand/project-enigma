@@ -57,111 +57,120 @@ export async function kickoffRevisionStep(
     .set({ status: "generating", updated_at: new Date() })
     .where("id", "=", step.id)
     .execute();
+  try {
+    const sectionDetail = step.section_detail as string | null;
 
-  const sectionDetail = step.section_detail as string | null;
+    const [discoveryOutput, { sectionContent, fullCvContent }, consultantProfile, highlightedItems] =
+      await Promise.all([
+        fetchDiscoveryOutput(db, step.workflow_id),
+        loadOriginalSectionContent(db, step, sectionDetail),
+        loadConsultantProfile(db, step.workflow_id),
+        loadHighlightedItems(db, step.workflow_id, step.section),
+      ]);
 
-  // Load all context in parallel
-  const [discoveryOutput, { sectionContent, fullCvContent }, consultantProfile, highlightedItems] =
-    await Promise.all([
-      fetchDiscoveryOutput(db, step.workflow_id),
-      loadOriginalSectionContent(db, step, sectionDetail),
-      loadConsultantProfile(db, step.workflow_id),
-      loadHighlightedItems(db, step.workflow_id, step.section),
-    ]);
+    const syntheticUserMessage =
+      step.section === "discovery"
+        ? "Please begin the consultation."
+        : "Please review this section and tell me your plan before proposing anything.";
 
-  // Synthetic user message to open the conversation — not persisted
-  const syntheticUserMessage =
-    step.section === "discovery"
-      ? "Please begin the consultation."
-      : "Please review this section and tell me your plan before proposing anything.";
-
-  const prompt = buildRevisionPrompt({
-    section: step.section as ResumeRevisionStepSection,
-    sectionDetail,
-    discovery: discoveryOutput,
-    originalContent: sectionContent,
-    fullCvContent,
-    highlightedItems,
-    consultantProfile,
-    conversationHistory: [],
-    userMessage: syntheticUserMessage,
-    locale: input.locale,
-  });
-
-  const response = await openaiClient.chat.completions.create({
-    model: MODEL,
-    messages: [
-      { role: "system", content: prompt.system },
-      { role: "user", content: prompt.userMessage },
-    ],
-  });
-
-  const aiContent = response.choices[0]?.message?.content;
-  if (!aiContent) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR", {
-      message: "AI returned empty response",
+    const prompt = buildRevisionPrompt({
+      section: step.section as ResumeRevisionStepSection,
+      sectionDetail,
+      discovery: discoveryOutput,
+      originalContent: sectionContent,
+      fullCvContent,
+      highlightedItems,
+      consultantProfile,
+      conversationHistory: [],
+      userMessage: syntheticUserMessage,
+      locale: input.locale,
     });
-  }
 
-  // Detect if AI produced a proposal
-  const proposalResult = extractProposalFromResponse(aiContent);
-  const isValidProposal = proposalResult !== null && proposalResult.proposalJson !== null;
+    const response = await openaiClient.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: "system", content: prompt.system },
+        { role: "user", content: prompt.userMessage },
+      ],
+    });
 
-  let structuredContent: Record<string, unknown> | null = null;
-  if (isValidProposal && proposalResult !== null) {
-    const parsed = proposalResult.proposalJson as Record<string, unknown>;
-    if (step.section === "discovery") {
-      structuredContent = {
-        originalContent: null,
-        proposedContent: parsed,
-        reasoning: null,
-        changeSummary: null,
-      };
-    } else {
-      structuredContent = {
-        originalContent: parsed["originalContent"] ?? null,
-        proposedContent: parsed["proposedContent"] ?? null,
-        reasoning: (parsed["reasoning"] as string | null) ?? null,
-        changeSummary: (parsed["changeSummary"] as string | null) ?? null,
-      };
+    const aiContent = response.choices[0]?.message?.content;
+    if (!aiContent) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "AI returned empty response",
+      });
     }
+
+    const proposalResult = extractProposalFromResponse(aiContent);
+    const isValidProposal = proposalResult !== null && proposalResult.proposalJson !== null;
+
+    let structuredContent: Record<string, unknown> | null = null;
+    if (isValidProposal && proposalResult !== null) {
+      const parsed = proposalResult.proposalJson as Record<string, unknown>;
+      if (step.section === "discovery") {
+        structuredContent = {
+          originalContent: null,
+          proposedContent: {
+            ...parsed,
+            conversationSummary:
+              (parsed["conversationSummary"] as string | undefined) ??
+              proposalResult.textPart ??
+              "",
+          },
+          reasoning: null,
+          changeSummary: null,
+        };
+      } else {
+        structuredContent = {
+          originalContent: parsed["originalContent"] ?? null,
+          proposedContent: parsed["proposedContent"] ?? null,
+          reasoning: (parsed["reasoning"] as string | null) ?? null,
+          changeSummary: (parsed["changeSummary"] as string | null) ?? null,
+        };
+      }
+    }
+
+    const assistantRow = await db
+      .insertInto("resume_revision_messages")
+      .values({
+        step_id: step.id,
+        role: "assistant",
+        message_type: isValidProposal ? "proposal" : "text",
+        content: aiContent,
+        structured_content: structuredContent ? JSON.stringify(structuredContent) : null,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await db
+      .updateTable("resume_revision_workflow_steps")
+      .set({ status: "reviewing", updated_at: new Date() })
+      .where("id", "=", step.id)
+      .execute();
+
+    const updatedMessages = await db
+      .selectFrom("resume_revision_messages")
+      .selectAll()
+      .where("step_id", "=", step.id)
+      .orderBy("created_at", "asc")
+      .execute();
+
+    const assistantMessage: ResumeRevisionMessage = mapMessageRow(assistantRow);
+    const updatedStep = mapStepRow(
+      { ...step, status: "reviewing", updated_at: new Date() },
+      updatedMessages.map(mapMessageRow)
+    );
+
+    return { assistantMessage, step: updatedStep };
+  } catch (error) {
+    await db
+      .updateTable("resume_revision_workflow_steps")
+      .set({ status: "pending", updated_at: new Date() })
+      .where("id", "=", step.id)
+      .where("status", "=", "generating")
+      .execute();
+    throw error;
   }
-
-  // Persist assistant message only (no user message row for kickoff)
-  const assistantRow = await db
-    .insertInto("resume_revision_messages")
-    .values({
-      step_id: step.id,
-      role: "assistant",
-      message_type: isValidProposal ? "proposal" : "text",
-      content: aiContent,
-      structured_content: structuredContent ? JSON.stringify(structuredContent) : null,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
-
-  // Kickoff always opens the conversation — transition to reviewing
-  await db
-    .updateTable("resume_revision_workflow_steps")
-    .set({ status: "reviewing", updated_at: new Date() })
-    .where("id", "=", step.id)
-    .execute();
-
-  // Reload all messages for the step response
-  const updatedMessages = await db
-    .selectFrom("resume_revision_messages")
-    .selectAll()
-    .where("step_id", "=", step.id)
-    .orderBy("created_at", "asc")
-    .execute();
-
-  const assistantMessage: ResumeRevisionMessage = mapMessageRow(assistantRow);
-  const updatedStep = mapStepRow(
-    { ...step, status: "reviewing", updated_at: new Date() },
-    updatedMessages.map(mapMessageRow)
-  );
-
-  return { assistantMessage, step: updatedStep };
 }
 
 // ---------------------------------------------------------------------------

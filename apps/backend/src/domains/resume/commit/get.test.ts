@@ -47,10 +47,11 @@ function buildDbMock(opts: { commitRow?: unknown; employeeId?: string | null } =
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
   const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
+  const commitLeftJoin = vi.fn().mockReturnValue({ innerJoin: commitInnerJoin });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    return { innerJoin: commitInnerJoin };
+    return { leftJoin: commitLeftJoin };
   });
 
   return { db: { selectFrom } as unknown as Kysely<Database> };
@@ -102,6 +103,44 @@ describe("getResumeCommit", () => {
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
+  });
+
+  it("normalises invalid legacy assignment fields in commit content", async () => {
+    const { db } = buildDbMock({
+      commitRow: {
+        ...COMMIT_ROW,
+        content: {
+          ...COMMIT_ROW.content,
+          assignments: [
+            {
+              assignmentId: "550e8400-e29b-41d4-a716-446655440055",
+              clientName: "Legacy Co",
+              role: "Consultant",
+              description: "Legacy description",
+              startDate: "2024-01-01",
+              endDate: undefined,
+              technologies: undefined,
+              isCurrent: false,
+              keywords: undefined,
+              type: undefined,
+              highlight: undefined,
+              sortOrder: undefined,
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
+
+    expect(result.content.assignments[0]).toMatchObject({
+      endDate: null,
+      technologies: [],
+      keywords: null,
+      type: null,
+      highlight: false,
+      sortOrder: null,
+    });
   });
 });
 

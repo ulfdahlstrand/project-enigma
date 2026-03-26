@@ -451,6 +451,7 @@
       "proposed": "Föreslagen",
       "noProposal": "Inget förslag än. Starta konversationen för att få ett AI-förslag.",
       "discoveryTitle": "Revisionsmål",
+      "summary": "Konversationssammanfattning",
       "targetRole": "Målroll",
       "tone": "Ton",
       "language": "Språkpreferenser",

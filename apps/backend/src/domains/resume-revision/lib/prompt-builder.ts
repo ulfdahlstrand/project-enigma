@@ -44,7 +44,8 @@ function buildLocaleInstruction(locale: string | undefined): string {
 function buildDiscoverySystemPrompt(
   consultantProfile: ConsultantProfile,
   fullCvContent: unknown,
-  locale: string | undefined
+  locale: string | undefined,
+  forceProposal: boolean
 ): string {
   const profileBlock = `<consultant_profile>
 Name: ${consultantProfile.name}
@@ -59,6 +60,25 @@ ${JSON.stringify(fullCvContent, null, 2)}
     : "";
 
   const localeInstruction = buildLocaleInstruction(locale);
+
+  const completionInstruction = forceProposal
+    ? `The user has now confirmed that you should stop the discovery discussion and produce the structured discovery proposal immediately.
+
+Do not ask any more questions. Do not continue the consultation. Briefly acknowledge the direction, then end your response with ${PROPOSAL_DELIMITER} and the JSON object.`
+    : `Once you have gathered enough information to make confident revision decisions, end your response with the following marker on its own line, followed immediately by a JSON object:
+
+${PROPOSAL_DELIMITER}
+{
+  "targetRole": "...",
+  "tone": "...",
+  "strengthsToEmphasise": ["..."],
+  "thingsToDownplay": ["..."],
+  "languagePreferences": "...",
+  "additionalNotes": "...",
+  "conversationSummary": "A concise but specific summary of the whole discussion so far, including the intended style, constraints, unusual directions, and how later revision steps should interpret them."
+}
+
+Before that point, respond conversationally and ask follow-up questions as needed.`;
 
   return `You are a CV revision consultant at SthlmTech, conducting an initial consultation with a consultant to understand their revision goals.
 ${localeInstruction}
@@ -80,19 +100,7 @@ You already have the consultant's current CV above — use it to ask specific, i
 
 Start by greeting the consultant by name and giving a brief overview of the CV from your perspective — what stands out, and what you'd like to discuss. Then guide the conversation.
 
-Once you have gathered enough information to make confident revision decisions, end your response with the following marker on its own line, followed immediately by a JSON object:
-
-${PROPOSAL_DELIMITER}
-{
-  "targetRole": "...",
-  "tone": "...",
-  "strengthsToEmphasise": ["..."],
-  "thingsToDownplay": ["..."],
-  "languagePreferences": "...",
-  "additionalNotes": "..."
-}
-
-Before that point, respond conversationally and ask follow-up questions as needed.`;
+${completionInstruction}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +115,8 @@ function buildContentSystemPrompt(
   fullCvContent: unknown,
   sectionDetail: string | null,
   locale: string | undefined,
-  highlightedItems: string[] | undefined
+  highlightedItems: string[] | undefined,
+  forceProposal: boolean
 ): string {
   const baseSectionLabel: Record<ResumeRevisionStepSection, string> = {
     discovery: "discovery",
@@ -136,14 +145,26 @@ Name: ${consultantProfile.name}
 Current title: ${consultantProfile.title ?? "Not set"}
 </consultant_profile>`;
 
+  const strengthsToEmphasise = Array.isArray(discovery?.strengthsToEmphasise)
+    ? discovery.strengthsToEmphasise
+    : [];
+  const thingsToDownplay = Array.isArray(discovery?.thingsToDownplay)
+    ? discovery.thingsToDownplay
+    : [];
+  const conversationSummary = discovery?.conversationSummary?.trim() ?? "";
+
   const discoveryBlock = discovery
-    ? `<revision_goals>
-Target role: ${discovery.targetRole}
-Tone: ${discovery.tone}
-Strengths to emphasise: ${discovery.strengthsToEmphasise.join(", ")}
-Things to downplay: ${discovery.thingsToDownplay.join(", ")}
-Language preferences: ${discovery.languagePreferences}
-Additional notes: ${discovery.additionalNotes}
+    ? `<revision_brief>
+Conversation summary: ${conversationSummary || "No summary provided"}
+</revision_brief>
+
+<revision_goals>
+Target role: ${discovery.targetRole ?? "Not specified"}
+Tone: ${discovery.tone ?? "Not specified"}
+Strengths to emphasise: ${strengthsToEmphasise.join(", ") || "None specified"}
+Things to downplay: ${thingsToDownplay.join(", ") || "None specified"}
+Language preferences: ${discovery.languagePreferences ?? "Not specified"}
+Additional notes: ${discovery.additionalNotes ?? "None"}
 </revision_goals>`
     : "";
 
@@ -234,6 +255,14 @@ ${PROPOSAL_DELIMITER}
 
   const localeInstruction = buildLocaleInstruction(locale);
 
+  const interactionInstruction = forceProposal
+    ? `The user has now confirmed that you should produce the proposal immediately.
+
+Do not ask more questions. Do not stay in planning mode. Briefly acknowledge the direction and then produce the proposal in the required format below.`
+    : `IMPORTANT: Do NOT produce a proposal yet. Start by briefly assessing the current content. If it already meets the standard and revision goals well, say so — in that case only propose changes if there is a genuine improvement to make. If changes are needed, briefly describe your planned approach and ask if the user has any specific preferences. Wait for the user to confirm before producing a proposal.
+
+When the user confirms (e.g. "go ahead", "looks good", "kör på", "ja"), then produce your proposal using the format below.`;
+
   return `You are a CV revision assistant at SthlmTech working on the "${sectionLabel[section]}" section of a consultant's resume.
 ${localeInstruction}
 ${STHLMTECH_CV_STANDARD}
@@ -248,9 +277,9 @@ ${fullCvBlock}
 ${skillsNote || assignmentNote || highlightedNote}
 Your goal is to revise this section in line with the revision goals above, following the SthlmTech CV standard.
 
-IMPORTANT: Do NOT produce a proposal yet. Start by briefly assessing the current content. If it already meets the standard and revision goals well, say so — in that case only propose changes if there is a genuine improvement to make. If changes are needed, briefly describe your planned approach and ask if the user has any specific preferences. Wait for the user to confirm before producing a proposal.
+IMPORTANT: Treat the revision brief above as the primary interpretation of the earlier discovery conversation. If it specifies an unusual direction, tone, or framing, you must carry that into this step.
 
-When the user confirms (e.g. "go ahead", "looks good", "kör på", "ja"), then produce your proposal using the format below.
+${interactionInstruction}
 
 ${proposalInstructions}`;
 }
@@ -283,6 +312,7 @@ export interface BuildPromptParams {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   userMessage: string;
   locale?: string | undefined;
+  forceProposal?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -301,18 +331,61 @@ export function buildRevisionPrompt(params: BuildPromptParams): RevisionPrompt {
     conversationHistory,
     userMessage,
     locale,
+    forceProposal = false,
   } = params;
 
   const system =
     section === "discovery"
-      ? buildDiscoverySystemPrompt(consultantProfile, fullCvContent, locale)
-      : buildContentSystemPrompt(section, discovery, originalContent, consultantProfile, fullCvContent, sectionDetail, locale, highlightedItems);
+      ? buildDiscoverySystemPrompt(consultantProfile, fullCvContent, locale, forceProposal)
+      : buildContentSystemPrompt(section, discovery, originalContent, consultantProfile, fullCvContent, sectionDetail, locale, highlightedItems, forceProposal);
 
   // Cap history to avoid token overflows (keep the most recent 20 turns)
   const MAX_HISTORY = 20;
   const history = conversationHistory.slice(-MAX_HISTORY);
 
   return { system, history, userMessage };
+}
+
+export function isProposalTriggerMessage(message: string): boolean {
+  const normalized = message
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  if (!normalized) return false;
+
+  const triggerPhrases = [
+    "go ahead",
+    "looks good",
+    "sounds good",
+    "let's do it",
+    "lets do it",
+    "let's start",
+    "lets start",
+    "please proceed",
+    "continue with that",
+    "kör på",
+    "kor pa",
+    "kora pa",
+    "nu kör vi",
+    "nu kor vi",
+    "låt oss börja",
+    "lat oss borja",
+    "låt oss köra",
+    "lat oss kora",
+    "bra nu kör vi",
+    "ser bra ut",
+    "ja kör",
+    "ja kor",
+    "fortsätt",
+    "fortsatt",
+  ];
+
+  if (triggerPhrases.some((phrase) => normalized.includes(phrase))) {
+    return true;
+  }
+
+  return /^(ja|yes|ok|okej|okay|bra|toppen|perfekt)[!. ]*$/.test(normalized);
 }
 
 // ---------------------------------------------------------------------------

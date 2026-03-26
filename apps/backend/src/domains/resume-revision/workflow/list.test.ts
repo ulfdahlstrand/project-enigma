@@ -24,7 +24,7 @@ function makeWorkflowRow(id: string) {
     base_branch_id: "branch-1",
     revision_branch_id: null,
     created_by: MOCK_ADMIN.id,
-    status: "in_progress",
+    status: "active",
     created_at: NOW,
     updated_at: NOW,
   };

@@ -6,6 +6,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { mapWorkflowRow, mapStepRow } from "../lib/map-to-output.js";
+import { fetchWorkflowWithSteps } from "../lib/query-helpers.js";
 import type { ResumeRevisionWorkflow, ResumeRevisionStepSection } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,21 @@ export async function createResumeRevisionWorkflow(
   if (branch === undefined) throw new ORPCError("NOT_FOUND");
   if (ownerEmployeeId !== null && branch.employee_id !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
+  }
+
+  // Reuse an existing active workflow for the same resume + base branch.
+  // This prevents duplicate in-progress revisions against the same branch.
+  const existingActiveWorkflow = await db
+    .selectFrom("resume_revision_workflows")
+    .select(["id"])
+    .where("resume_id", "=", input.resumeId)
+    .where("base_branch_id", "=", input.baseBranchId)
+    .where("status", "=", "active")
+    .orderBy("created_at", "desc")
+    .executeTakeFirst();
+
+  if (existingActiveWorkflow !== undefined) {
+    return fetchWorkflowWithSteps(db, user, existingActiveWorkflow.id);
   }
 
   // Load head commit content to derive skill categories

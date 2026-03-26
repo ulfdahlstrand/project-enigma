@@ -97,13 +97,23 @@ export async function approveRevisionStep(
         .values({
           resume_id: await getResumeIdForWorkflow(trx, workflowId),
           branch_id: revisionBranchId,
-          parent_commit_id: revBranch.head_commit_id,
           content: JSON.stringify(newContent),
           message: `Approve ${section}`,
           created_by: user.id,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      if (revBranch.head_commit_id !== null) {
+        await trx
+          .insertInto("resume_commit_parents")
+          .values({
+            commit_id: commit.id,
+            parent_commit_id: revBranch.head_commit_id,
+            parent_order: 0,
+          })
+          .execute();
+      }
 
       await trx
         .updateTable("resume_branches")

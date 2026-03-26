@@ -146,8 +146,6 @@ export interface ResumeCommitTable {
   resume_id: string;
   /** Which branch this commit belongs to. SET NULL if the branch is deleted. */
   branch_id: string | null;
-  /** Points to the previous commit on this branch. NULL for the initial commit. */
-  parent_commit_id: string | null;
   /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
   content: ColumnType<ResumeCommitContent, string, string>;
   message: Generated<string>;
@@ -157,6 +155,17 @@ export interface ResumeCommitTable {
 
 export type ResumeCommit = Selectable<ResumeCommitTable>;
 export type NewResumeCommit = Insertable<ResumeCommitTable>;
+
+export interface ResumeCommitParentTable {
+  commit_id: string;
+  parent_commit_id: string;
+  /** Ordered parent list, Git-style. parent_order=0 is the primary parent. */
+  parent_order: number;
+  created_at: Generated<Date>;
+}
+
+export type ResumeCommitParent = Selectable<ResumeCommitParentTable>;
+export type NewResumeCommitParent = Insertable<ResumeCommitParentTable>;
 
 /**
  * Named variant of a resume — analogous to a git branch. Holds a pointer to
@@ -265,7 +274,7 @@ export type UserSessionUpdate = Updateable<UserSessionTable>;
 // Resume revision workflow tables
 // ---------------------------------------------------------------------------
 
-export type ResumeRevisionWorkflowStatus = "active" | "completed" | "abandoned";
+export type ResumeRevisionWorkflowStatus = "active" | "completed" | "finalized" | "abandoned";
 
 export type ResumeRevisionStepSection =
   | "discovery"
@@ -356,6 +365,7 @@ export interface ResumeRevisionDiscoveryOutput {
   thingsToDownplay: string[];
   languagePreferences: string;
   additionalNotes: string;
+  conversationSummary?: string;
 }
 
 export interface ResumeHighlightedItemTable {
@@ -375,6 +385,7 @@ export interface Database {
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
   resume_commits: ResumeCommitTable;
+  resume_commit_parents: ResumeCommitParentTable;
   resume_branches: ResumeBranchTable;
   branch_assignments: BranchAssignmentTable;
   assignments: AssignmentTable;

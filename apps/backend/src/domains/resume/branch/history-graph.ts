@@ -39,23 +39,41 @@ export async function getResumeBranchHistoryGraph(
   const branches = await db
     .selectFrom("resume_branches")
     .selectAll()
-    .where("resume_id", "=", input.resumeId)
-    .orderBy("created_at", "asc")
+    .where("resume_branches.resume_id", "=", input.resumeId)
+    .orderBy("resume_branches.created_at", "asc")
     .execute();
 
   const commits = await db
     .selectFrom("resume_commits")
+    .leftJoin("resume_commit_parents as rcp", (join) =>
+      join
+        .onRef("rcp.commit_id", "=", "resume_commits.id")
+        .on("rcp.parent_order", "=", 0)
+    )
     .select([
-      "id",
-      "resume_id",
-      "branch_id",
-      "parent_commit_id",
-      "message",
-      "created_by",
-      "created_at",
+      "resume_commits.id",
+      "resume_commits.resume_id",
+      "resume_commits.branch_id",
+      "rcp.parent_commit_id as parent_commit_id",
+      "resume_commits.message",
+      "resume_commits.created_by",
+      "resume_commits.created_at",
     ])
-    .where("resume_id", "=", input.resumeId)
-    .orderBy("created_at", "asc")
+    .where("resume_commits.resume_id", "=", input.resumeId)
+    .orderBy("resume_commits.created_at", "asc")
+    .execute();
+
+  const edges = await db
+    .selectFrom("resume_commit_parents as rcp")
+    .innerJoin("resume_commits as rc", "rc.id", "rcp.commit_id")
+    .select([
+      "rcp.commit_id",
+      "rcp.parent_commit_id",
+      "rcp.parent_order",
+    ])
+    .where("rc.resume_id", "=", input.resumeId)
+    .orderBy("rcp.commit_id", "asc")
+    .orderBy("rcp.parent_order", "asc")
     .execute();
 
   return {
@@ -78,6 +96,11 @@ export async function getResumeBranchHistoryGraph(
       message: commit.message,
       createdBy: commit.created_by,
       createdAt: commit.created_at,
+    })),
+    edges: edges.map((edge) => ({
+      commitId: edge.commit_id,
+      parentCommitId: edge.parent_commit_id,
+      parentOrder: edge.parent_order,
     })),
   };
 }

@@ -55,17 +55,22 @@ export async function listResumeCommits(
 
   const rows = await db
     .selectFrom("resume_commits")
+    .leftJoin("resume_commit_parents as rcp", (join) =>
+      join
+        .onRef("rcp.commit_id", "=", "resume_commits.id")
+        .on("rcp.parent_order", "=", 0)
+    )
     .select([
-      "id",
-      "resume_id",
-      "branch_id",
-      "parent_commit_id",
-      "message",
-      "created_by",
-      "created_at",
+      "resume_commits.id",
+      "resume_commits.resume_id",
+      "resume_commits.branch_id",
+      "rcp.parent_commit_id as parent_commit_id",
+      "resume_commits.message",
+      "resume_commits.created_by",
+      "resume_commits.created_at",
     ])
-    .where("branch_id", "=", input.branchId)
-    .orderBy("created_at", "desc")
+    .where("resume_commits.branch_id", "=", input.branchId)
+    .orderBy("resume_commits.created_at", "desc")
     .execute();
 
   return rows.map((row) => ({

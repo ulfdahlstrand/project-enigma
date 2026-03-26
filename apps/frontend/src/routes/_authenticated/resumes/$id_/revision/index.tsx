@@ -21,7 +21,7 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
-import type { ResumeRevisionDiscoveryOutput } from "@cv-tool/contracts";
+import type { ResumeRevisionDiscoveryOutput, ResumeRevisionProposalContent } from "@cv-tool/contracts";
 import { WorkflowChecklist } from "../../../../../components/revision/WorkflowChecklist";
 import { StepConversation } from "../../../../../components/revision/StepConversation";
 import { DiffPanel } from "../../../../../components/revision/DiffPanel";
@@ -62,10 +62,18 @@ function RevisionWorkflowPage() {
   const { data: workflowsList, isLoading: isLoadingList, isError: isListError } =
     useRevisionWorkflows(resumeId);
 
-  const latestWorkflow = workflowsList?.[0] ?? null;
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-
-  const workflowId = selectedWorkflowId ?? latestWorkflow?.id ?? null;
+  const selectedWorkflow = workflowsList?.find((workflow) => workflow.id === selectedWorkflowId) ?? null;
+  const workflowsForBranch = (workflowsList ?? []).filter((workflow) => workflow.baseBranchId === baseBranchId);
+  const activeWorkflowForBranch =
+    workflowsForBranch.find((workflow) => workflow.status === "active") ?? null;
+  const completedWorkflowForBranch =
+    workflowsForBranch.find((workflow) => workflow.status === "completed") ?? null;
+  const workflowId =
+    selectedWorkflow?.id ??
+    activeWorkflowForBranch?.id ??
+    completedWorkflowForBranch?.id ??
+    null;
 
   const { data: workflow, isLoading: isLoadingWorkflow, isError: isWorkflowError } =
     useRevisionWorkflow(workflowId);
@@ -84,11 +92,12 @@ function RevisionWorkflowPage() {
   const discoveryStep = steps.find((s) => s.section === "discovery");
   const discoveryOutput: ResumeRevisionDiscoveryOutput | null =
     discoveryStep?.status === "approved"
-      ? (discoveryStep.messages
+      ? ((discoveryStep.messages
           .slice()
           .reverse()
           .find((m) => m.messageType === "proposal")
-          ?.structuredContent as ResumeRevisionDiscoveryOutput | null) ?? null
+          ?.structuredContent as ResumeRevisionProposalContent | null)
+          ?.proposedContent as ResumeRevisionDiscoveryOutput | null) ?? null
       : null;
 
   // Mutations
@@ -165,8 +174,12 @@ function RevisionWorkflowPage() {
     finalise.mutate(
       { workflowId, action: "keep" },
       {
-        onSuccess: () => {
-          void navigate({ to: "/resumes/$id", params: { id: resumeId } });
+        onSuccess: (data) => {
+          void navigate({
+            to: "/resumes/$id",
+            params: { id: resumeId },
+            search: { branchId: data.resultBranchId },
+          });
         },
       }
     );
@@ -338,4 +351,3 @@ function RevisionWorkflowPage() {
     </Box>
   );
 }
-

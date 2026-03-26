@@ -136,6 +136,11 @@ const GRAPH = {
       createdAt: "2024-06-04T10:00:00Z",
     },
   ],
+  edges: [
+    { commitId: "commit-id-2", parentCommitId: "commit-id-1", parentOrder: 0 },
+    { commitId: "commit-id-3", parentCommitId: "commit-id-1", parentOrder: 0 },
+    { commitId: "commit-id-4", parentCommitId: "commit-id-3", parentOrder: 0 },
+  ],
 };
 
 // ---------------------------------------------------------------------------

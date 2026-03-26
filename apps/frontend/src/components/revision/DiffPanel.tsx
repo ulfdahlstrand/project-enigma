@@ -68,15 +68,23 @@ function DiscoveryPanel({ discovery }: { discovery: ResumeRevisionDiscoveryOutpu
     );
   }
 
+  const strengthsToEmphasise = Array.isArray(discovery.strengthsToEmphasise)
+    ? discovery.strengthsToEmphasise
+    : [];
+  const thingsToDownplay = Array.isArray(discovery.thingsToDownplay)
+    ? discovery.thingsToDownplay
+    : [];
+
   return (
     <Box>
+      <ContentBlock label={t("revision.diffPanel.summary")} value={discovery.conversationSummary} />
       <ContentBlock label={t("revision.diffPanel.targetRole")} value={discovery.targetRole} />
       <ContentBlock label={t("revision.diffPanel.tone")} value={discovery.tone} />
       <ContentBlock label={t("revision.diffPanel.language")} value={discovery.languagePreferences} />
-      <ContentBlock label={t("revision.diffPanel.emphasize")} value={discovery.strengthsToEmphasise} />
+      <ContentBlock label={t("revision.diffPanel.emphasize")} value={strengthsToEmphasise} />
       <ContentBlock
         label={t("revision.diffPanel.downplay")}
-        value={[...discovery.thingsToDownplay, discovery.additionalNotes].filter(Boolean).join("; ")}
+        value={[...thingsToDownplay, discovery.additionalNotes].filter(Boolean).join("; ")}
       />
     </Box>
   );

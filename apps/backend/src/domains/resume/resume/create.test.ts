@@ -189,7 +189,6 @@ describe("createResume query function", () => {
       expect.objectContaining({
         resume_id: RESUME_ID,
         branch_id: BRANCH_ID,
-        parent_commit_id: null,
         message: "initial",
         created_by: MOCK_ADMIN.id,
       })

@@ -144,6 +144,10 @@ function buildDbMock(opts: {
   const commitInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: commitInsertExecuteTakeFirstOrThrow });
   const commitInsertValues = vi.fn().mockReturnValue({ returningAll: commitInsertReturningAll });
 
+  // Parent commit insert (resume_commit_parents)
+  const parentCommitInsertExecute = vi.fn().mockResolvedValue(undefined);
+  const parentCommitInsertValues = vi.fn().mockReturnValue({ execute: parentCommitInsertExecute });
+
   // updateTable for advancing head_commit_id (inside transaction)
   const updateExecute = vi.fn().mockResolvedValue(undefined);
   const updateWhere = vi.fn().mockReturnValue({ execute: updateExecute });
@@ -154,6 +158,7 @@ function buildDbMock(opts: {
     if (table === "resume_branches") return { values: branchInsertValues };
     if (table === "branch_assignments") return { values: copyInsertValues };
     if (table === "resume_commits") return { values: commitInsertValues };
+    if (table === "resume_commit_parents") return { values: parentCommitInsertValues };
     return {};
   });
 
@@ -180,7 +185,7 @@ function buildDbMock(opts: {
   });
 
   const db = { selectFrom, transaction } as unknown as Kysely<Database>;
-  return { db, branchInsertValues, copyInsertValues, commitInsertValues, updateSet, commitWhere };
+  return { db, branchInsertValues, copyInsertValues, commitInsertValues, parentCommitInsertValues, updateSet, commitWhere };
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +218,7 @@ describe("forkResumeBranch", () => {
   });
 
   it("creates an initial commit on the new branch with parent_commit_id = fromCommitId", async () => {
-    const { db, commitInsertValues } = buildDbMock();
+    const { db, commitInsertValues, parentCommitInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 
@@ -221,9 +226,15 @@ describe("forkResumeBranch", () => {
       expect.objectContaining({
         resume_id: RESUME_ID,
         branch_id: NEW_BRANCH_ID,
-        parent_commit_id: COMMIT_ID,
         message: "",
         created_by: MOCK_ADMIN.id,
+      })
+    );
+    expect(parentCommitInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commit_id: INITIAL_COMMIT_ID,
+        parent_commit_id: COMMIT_ID,
+        parent_order: 0,
       })
     );
   });

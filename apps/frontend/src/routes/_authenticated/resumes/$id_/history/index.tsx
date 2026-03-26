@@ -88,6 +88,7 @@ function VersionHistoryPage() {
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
+  const graphEdges = graph?.edges ?? [];
   const isDark = theme.palette.mode === "dark";
 
   const graphLayout = useMemo(() => {
@@ -141,6 +142,7 @@ function VersionHistoryPage() {
         .map((b) => b.forkedFromCommitId)
         .filter((id): id is string => id !== null && id !== undefined)
     );
+    const mergeEdges = graphEdges.filter((edge) => edge.parentOrder > 0);
 
     const labelColumnX =
       TREE_ROW_PADDING_LEFT +
@@ -163,11 +165,12 @@ function VersionHistoryPage() {
       commitsById,
       rootBranches,
       forkCommitIds,
+      mergeEdges,
       labelColumnX,
       width,
       height,
     };
-  }, [branches, graphCommits, isDark]);
+  }, [branches, graphCommits, graphEdges, isDark]);
 
   const selectedBranch =
     branches.find((branch) => branch.id === branchIdFromSearch) ??
@@ -204,7 +207,7 @@ function VersionHistoryPage() {
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const { width, height, orderedBranches, orderedCommits, branchColorById, branchCommitsByBranchId, commitsById, forkCommitIds } = graphLayout;
+    const { width, height, orderedBranches, orderedCommits, branchColorById, branchCommitsByBranchId, commitsById, forkCommitIds, mergeEdges } = graphLayout;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
@@ -269,6 +272,45 @@ function VersionHistoryPage() {
         context.quadraticCurveTo(targetX, baseY, targetX, baseY - turnRadius);
       }
       context.lineTo(targetX, targetY);
+      context.stroke();
+    });
+
+    mergeEdges.forEach((edge) => {
+      const destinationCommit = commitsById.get(edge.commitId);
+      const sourceCommit = commitsById.get(edge.parentCommitId);
+      if (!destinationCommit?.branchId || !sourceCommit?.branchId) return;
+
+      const destinationX = localBranchX(destinationCommit.branchId);
+      const destinationY = localCommitY(destinationCommit.id);
+      const sourceX = localBranchX(sourceCommit.branchId);
+      const sourceY = localCommitY(sourceCommit.id);
+      const sourceBranch = branches.find((branch) => branch.id === sourceCommit.branchId);
+      const branchColor = sourceBranch
+        ? (branchColorById.get(sourceBranch.id) ?? "#61afef")
+        : "#61afef";
+      const isSelected = sourceCommit.branchId === selectedBranchId;
+      const lineColor = isSelected ? branchColor : `${branchColor}99`;
+      const horizontalDirection = destinationX >= sourceX ? 1 : -1;
+      const turnRadius = Math.min(
+        14,
+        Math.abs(destinationX - sourceX) / 2,
+        Math.abs(destinationY - sourceY) / 2
+      );
+
+      context.strokeStyle = lineColor;
+      context.lineWidth = isSelected ? 2.5 : 1.5;
+      context.beginPath();
+      // Start on the source branch, travel vertically first, then round toward
+      // the destination branch and finish with a horizontal segment.
+      context.moveTo(sourceX, sourceY);
+      context.lineTo(sourceX, destinationY + turnRadius);
+      context.quadraticCurveTo(
+        sourceX,
+        destinationY,
+        sourceX + turnRadius * horizontalDirection,
+        destinationY
+      );
+      context.lineTo(destinationX, destinationY);
       context.stroke();
     });
 
