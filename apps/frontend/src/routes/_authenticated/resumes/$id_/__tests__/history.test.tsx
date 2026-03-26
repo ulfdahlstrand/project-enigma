@@ -438,6 +438,12 @@ describe("UX improvements", () => {
     );
   });
 
+  it("renders the Compare versions button", async () => {
+    renderPage();
+    await screen.findByText("Initial version");
+    expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
+  });
+
   it("renders the head badge on the most recent commit in list view", async () => {
     renderPage();
     await screen.findByText("Initial version");

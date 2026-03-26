@@ -238,7 +238,8 @@
       "previewButton": "Förhandsgranska",
       "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
       "viewInResumeButton": "Visa i CV",
-      "headBadge": "Aktuell"
+      "headBadge": "Aktuell",
+      "compareButton": "Jämför versioner"
     },
     "variants": {
       "pageTitle": "Varianter",
@@ -286,7 +287,13 @@
       "after": "Efter",
       "statusAdded": "Tillagd",
       "statusRemoved": "Borttagen",
-      "statusModified": "Ändrad"
+      "statusModified": "Ändrad",
+      "description": "Välj två sparade versioner för att jämföra dem sida vid sida. Ändringar grupperas efter CV-fält, färdigheter och uppdrag.",
+      "fromLabel": "Från (äldre)",
+      "toLabel": "Till (nyare)",
+      "compareButton": "Jämför",
+      "fieldLabel": "Fält",
+      "noSelectionHint": "Välj två versioner ovan för att se vad som ändrats mellan dem."
     },
     "saveVersion": {
       "button": "Spara version",

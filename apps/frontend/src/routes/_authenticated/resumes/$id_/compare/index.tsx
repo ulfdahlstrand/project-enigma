@@ -13,9 +13,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -31,11 +32,20 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/compare/")({
   component: CompareVersionsPage,
 });
 
+type DiffStatus = "added" | "removed" | "modified" | "unchanged";
+
 function statusColor(status: string): "success" | "error" | "warning" | "default" {
   if (status === "added") return "success";
   if (status === "removed") return "error";
   if (status === "modified") return "warning";
   return "default";
+}
+
+function statusBorderColor(status: DiffStatus): string {
+  if (status === "added") return "success.main";
+  if (status === "removed") return "error.main";
+  if (status === "modified") return "warning.main";
+  return "divider";
 }
 
 function CompareVersionsPage() {
@@ -45,7 +55,6 @@ function CompareVersionsPage() {
   const [baseCommitId, setBaseCommitId] = useState<string>("");
   const [headCommitId, setHeadCommitId] = useState<string>("");
 
-  // Fetch resume to get main branch id
   const { data: resume } = useQuery({
     queryKey: ["getResume", resumeId],
     queryFn: () => orpc.getResume({ id: resumeId }),
@@ -78,6 +87,8 @@ function CompareVersionsPage() {
     return c.message ? `${c.message} (${date})` : date;
   }
 
+  const bothSelected = Boolean(baseCommitId && headCommitId);
+
   return (
     <>
       <PageHeader
@@ -88,144 +99,184 @@ function CompareVersionsPage() {
         ]}
       />
       <PageContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {t("resume.compare.description")}
+        </Typography>
+
         {commitsLoading ? (
-        <CircularProgress aria-label={t("resume.compare.loading")} />
-      ) : (
-        <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-          <FormControl sx={{ minWidth: 300 }} size="small">
-            <InputLabel>{t("resume.compare.versionALabel")}</InputLabel>
-            <Select
-              value={baseCommitId}
-              label={t("resume.compare.versionALabel")}
-              onChange={(e) => setBaseCommitId(e.target.value)}
-            >
-              <MenuItem value="">
-                <em>{t("resume.compare.selectPlaceholder")}</em>
-              </MenuItem>
-              {commitOptions.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {commitLabel(c.id)}
+          <CircularProgress aria-label={t("resume.compare.loading")} />
+        ) : (
+          <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <FormControl sx={{ minWidth: 280 }} size="small">
+              <InputLabel>{t("resume.compare.fromLabel")}</InputLabel>
+              <Select
+                value={baseCommitId}
+                label={t("resume.compare.fromLabel")}
+                onChange={(e) => setBaseCommitId(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>{t("resume.compare.selectPlaceholder")}</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 300 }} size="small">
-            <InputLabel>{t("resume.compare.versionBLabel")}</InputLabel>
-            <Select
-              value={headCommitId}
-              label={t("resume.compare.versionBLabel")}
-              onChange={(e) => setHeadCommitId(e.target.value)}
-            >
-              <MenuItem value="">
-                <em>{t("resume.compare.selectPlaceholder")}</em>
-              </MenuItem>
-              {commitOptions.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {commitLabel(c.id)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      )}
-
-      {diffLoading && <CircularProgress aria-label={t("resume.compare.loading")} />}
-
-      {diffError && (
-        <Alert severity="error">{t("resume.compare.error")}</Alert>
-      )}
-
-      {diffResult && !diffResult.diff.hasChanges && (
-        <Alert severity="info">{t("resume.compare.noChanges")}</Alert>
-      )}
-
-      {diffResult?.diff.hasChanges && (
-        <Box>
-          {/* Scalar changes */}
-          {Object.keys(diffResult.diff.scalars).length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {t("resume.compare.scalarsHeading")}
-              </Typography>
-              {Object.entries(diffResult.diff.scalars).map(([field, change]) => {
-                if (!change) return null;
-                const before = Array.isArray(change.before)
-                  ? change.before.join(", ")
-                  : String(change.before ?? "");
-                const after = Array.isArray(change.after)
-                  ? change.after.join(", ")
-                  : String(change.after ?? "");
-                return (
-                  <Box key={field} sx={{ mb: 1 }}>
-                    <Typography variant="body2" fontWeight="bold">
-                      {field}
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 2 }}>
-                      <Box sx={{ color: "error.main" }}>
-                        <Typography variant="caption">{t("resume.compare.before")}</Typography>
-                        <Typography variant="body2">{before || "—"}</Typography>
-                      </Box>
-                      <Box sx={{ color: "success.main" }}>
-                        <Typography variant="caption">{t("resume.compare.after")}</Typography>
-                        <Typography variant="body2">{after || "—"}</Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                );
-              })}
-              <Divider sx={{ my: 2 }} />
-            </Box>
-          )}
-
-          {/* Skills diff */}
-          {diffResult.diff.skills.some((s) => s.status !== "unchanged") && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {t("resume.compare.skillsHeading")}
-              </Typography>
-              {diffResult.diff.skills
-                .filter((s) => s.status !== "unchanged")
-                .map((skill) => (
-                  <Box key={skill.name} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                    <Chip
-                      label={t(`resume.compare.status${skill.status.charAt(0).toUpperCase()}${skill.status.slice(1)}`)}
-                      color={statusColor(skill.status)}
-                      size="small"
-                    />
-                    <Typography variant="body2">{skill.name}</Typography>
-                  </Box>
+                {commitOptions.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {commitLabel(c.id)}
+                  </MenuItem>
                 ))}
-              <Divider sx={{ my: 2 }} />
-            </Box>
-          )}
+              </Select>
+            </FormControl>
 
-          {/* Assignments diff */}
-          {diffResult.diff.assignments.some((a) => a.status !== "unchanged") && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {t("resume.compare.assignmentsHeading")}
-              </Typography>
-              {diffResult.diff.assignments
-                .filter((a) => a.status !== "unchanged")
-                .map((item) => {
-                  const label =
-                    item.after?.clientName ??
-                    item.before?.clientName ??
-                    item.assignmentId;
-                  return (
-                    <Box key={item.assignmentId} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                      <Chip
-                        label={t(`resume.compare.status${item.status.charAt(0).toUpperCase()}${item.status.slice(1)}`)}
-                        color={statusColor(item.status)}
-                        size="small"
-                      />
-                      <Typography variant="body2">{label}</Typography>
-                    </Box>
-                  );
-                })}
-            </Box>
-          )}
+            <FormControl sx={{ minWidth: 280 }} size="small">
+              <InputLabel>{t("resume.compare.toLabel")}</InputLabel>
+              <Select
+                value={headCommitId}
+                label={t("resume.compare.toLabel")}
+                onChange={(e) => setHeadCommitId(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>{t("resume.compare.selectPlaceholder")}</em>
+                </MenuItem>
+                {commitOptions.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {commitLabel(c.id)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        )}
+
+        {!bothSelected && !commitsLoading && (
+          <Typography variant="body2" color="text.disabled">
+            {t("resume.compare.noSelectionHint")}
+          </Typography>
+        )}
+
+        {diffLoading && <CircularProgress aria-label={t("resume.compare.loading")} />}
+
+        {diffError && (
+          <Alert severity="error">{t("resume.compare.error")}</Alert>
+        )}
+
+        {diffResult && !diffResult.diff.hasChanges && (
+          <Alert severity="info">{t("resume.compare.noChanges")}</Alert>
+        )}
+
+        {diffResult?.diff.hasChanges && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Scalar changes */}
+            {Object.keys(diffResult.diff.scalars).length > 0 && (
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+                  {t("resume.compare.scalarsHeading")}
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {Object.entries(diffResult.diff.scalars).map(([field, change]) => {
+                    if (!change) return null;
+                    const before = Array.isArray(change.before)
+                      ? change.before.join("\n\n")
+                      : String(change.before ?? "");
+                    const after = Array.isArray(change.after)
+                      ? change.after.join("\n\n")
+                      : String(change.after ?? "");
+                    return (
+                      <Card
+                        key={field}
+                        variant="outlined"
+                        sx={{ borderLeftWidth: 3, borderLeftColor: "warning.main" }}
+                      >
+                        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                            {t("resume.compare.fieldLabel")}: <strong>{field}</strong>
+                          </Typography>
+                          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                            <Box sx={{ flex: 1, minWidth: 180 }}>
+                              <Typography variant="caption" color="error.main" fontWeight={600}>
+                                {t("resume.compare.before")}
+                              </Typography>
+                              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
+                                {before || "—"}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 180 }}>
+                              <Typography variant="caption" color="success.main" fontWeight={600}>
+                                {t("resume.compare.after")}
+                              </Typography>
+                              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
+                                {after || "—"}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </Box>
+              </Box>
+            )}
+
+            {/* Skills diff */}
+            {diffResult.diff.skills.some((s) => s.status !== "unchanged") && (
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+                  {t("resume.compare.skillsHeading")}
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {diffResult.diff.skills
+                    .filter((s) => s.status !== "unchanged")
+                    .map((skill) => (
+                      <Card
+                        key={skill.name}
+                        variant="outlined"
+                        sx={{ borderLeftWidth: 3, borderLeftColor: statusBorderColor(skill.status as DiffStatus) }}
+                      >
+                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 }, display: "flex", alignItems: "center", gap: 1.5 }}>
+                          <Chip
+                            label={t(`resume.compare.status${skill.status.charAt(0).toUpperCase()}${skill.status.slice(1)}`)}
+                            color={statusColor(skill.status)}
+                            size="small"
+                          />
+                          <Typography variant="body2">{skill.name}</Typography>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Assignments diff */}
+            {diffResult.diff.assignments.some((a) => a.status !== "unchanged") && (
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+                  {t("resume.compare.assignmentsHeading")}
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {diffResult.diff.assignments
+                    .filter((a) => a.status !== "unchanged")
+                    .map((item) => {
+                      const label =
+                        item.after?.clientName ??
+                        item.before?.clientName ??
+                        item.assignmentId;
+                      return (
+                        <Card
+                          key={item.assignmentId}
+                          variant="outlined"
+                          sx={{ borderLeftWidth: 3, borderLeftColor: statusBorderColor(item.status as DiffStatus) }}
+                        >
+                          <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 }, display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Chip
+                              label={t(`resume.compare.status${item.status.charAt(0).toUpperCase()}${item.status.slice(1)}`)}
+                              color={statusColor(item.status)}
+                              size="small"
+                            />
+                            <Typography variant="body2">{label}</Typography>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                </Box>
+              </Box>
+            )}
           </Box>
         )}
       </PageContent>
