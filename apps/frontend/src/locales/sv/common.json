@@ -90,8 +90,17 @@
       "languageSv": "Svenska",
       "languageEn": "Engelska",
       "uploadDocxButton": "Tolka DOCX",
-      "parsingDocx": "Tolkar…",
-      "docxError": "Kunde inte tolka DOCX-filen. Försök igen."
+      "parsingDocx": "Tolkar DOCX…",
+      "docxError": "Kunde inte tolka DOCX-filen. Försök igen.",
+      "docxParsed": "CV-data extraherad från DOCX.",
+      "showExtractedJson": "Visa extraherad JSON",
+      "hideExtractedJson": "Dölj extraherad JSON",
+      "stepUploading": "Laddar upp",
+      "stepExtracting": "Extraherar text",
+      "stepParsing": "Tolkar text",
+      "stepParsed": "Text tolkad",
+      "stepImporting": "Importerar",
+      "stepImported": "Import färdig"
     }
   },
   "resume": {

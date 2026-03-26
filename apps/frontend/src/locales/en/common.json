@@ -90,8 +90,17 @@
       "languageSv": "Swedish",
       "languageEn": "English",
       "uploadDocxButton": "Parse DOCX",
-      "parsingDocx": "Parsing…",
-      "docxError": "Failed to parse DOCX. Please try again."
+      "parsingDocx": "Parsing DOCX…",
+      "docxError": "Failed to parse DOCX. Please try again.",
+      "docxParsed": "CV data extracted from DOCX.",
+      "showExtractedJson": "Show extracted JSON",
+      "hideExtractedJson": "Hide extracted JSON",
+      "stepUploading": "Uploading",
+      "stepExtracting": "Extracting text",
+      "stepParsing": "Parsing text",
+      "stepParsed": "Text parsed",
+      "stepImporting": "Importing",
+      "stepImported": "Import complete"
     }
   },
   "resume": {

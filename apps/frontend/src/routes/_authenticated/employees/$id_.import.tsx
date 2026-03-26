@@ -18,11 +18,13 @@ import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
+import Collapse from "@mui/material/Collapse";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
@@ -45,6 +47,12 @@ function ImportCvPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [language, setLanguage] = useState<"sv" | "en">("sv");
   const [docxError, setDocxError] = useState<string | null>(null);
+  // When set, DOCX was parsed — JSON is hidden until user explicitly expands it.
+  const [parsedDocxJson, setParsedDocxJson] = useState<unknown>(null);
+  const [showExtractedJson, setShowExtractedJson] = useState(false);
+  // Step checklist: completed ticks + the current in-progress label (spinner).
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [inProgressStep, setInProgressStep] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
@@ -56,6 +64,8 @@ function ImportCvPage() {
         queryClient.invalidateQueries({ queryKey: getEducationQueryKey(id) }),
         queryClient.invalidateQueries({ queryKey: [...LIST_RESUMES_QUERY_KEY, id] }),
       ]);
+      setInProgressStep(null);
+      setCompletedSteps((prev) => [...prev, t("employee.import.stepImported")]);
     },
   });
 
@@ -63,12 +73,23 @@ function ImportCvPage() {
     mutationFn: (docxBase64: string) =>
       orpc.parseCvDocx({ docxBase64, language }),
     onSuccess: (data) => {
+      setParsedDocxJson(data.cvJson);
       setJsonText(JSON.stringify(data.cvJson, null, 2));
+      setShowExtractedJson(false);
       setDocxError(null);
       setParseError(null);
       mutation.reset();
+      // Tick off all DOCX steps at once when the API responds
+      setInProgressStep(null);
+      setCompletedSteps((prev) => [
+        ...prev,
+        t("employee.import.stepExtracting"),
+        t("employee.import.stepParsing"),
+        t("employee.import.stepParsed"),
+      ]);
     },
     onError: () => {
+      setInProgressStep(null);
       setDocxError(t("employee.import.docxError"));
     },
   });
@@ -79,6 +100,9 @@ function ImportCvPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       setJsonText((event.target?.result as string) ?? "");
+      setParsedDocxJson(null);
+      setCompletedSteps([]);
+      setInProgressStep(null);
       setParseError(null);
       mutation.reset();
     };
@@ -89,6 +113,14 @@ function ImportCvPage() {
   const handleDocxUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset checklist and show "uploading" immediately
+    setCompletedSteps([]);
+    setInProgressStep(t("employee.import.stepUploading"));
+    setParsedDocxJson(null);
+    setDocxError(null);
+    setParseError(null);
+    mutation.reset();
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const arrayBuffer = event.target?.result as ArrayBuffer;
@@ -98,6 +130,9 @@ function ImportCvPage() {
         binary += String.fromCharCode(bytes[i]!);
       }
       const base64 = btoa(binary);
+      // File is read — tick "uploading", start showing "extracting" spinner
+      setCompletedSteps([t("employee.import.stepUploading")]);
+      setInProgressStep(t("employee.import.stepExtracting"));
       docxMutation.mutate(base64);
     };
     reader.readAsArrayBuffer(file);
@@ -106,15 +141,23 @@ function ImportCvPage() {
 
   const handleImport = () => {
     setParseError(null);
+    setInProgressStep(t("employee.import.stepImporting"));
+    if (parsedDocxJson !== null) {
+      mutation.mutate(parsedDocxJson);
+      return;
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(jsonText);
     } catch {
+      setInProgressStep(null);
       setParseError(t("employee.import.parseError"));
       return;
     }
     mutation.mutate(parsed);
   };
+
+  const canImport = (parsedDocxJson !== null || jsonText.trim().length > 0) && !mutation.isPending;
 
   return (
     <Box sx={{ p: 2 }}>
@@ -153,7 +196,7 @@ function ImportCvPage() {
           </Button>
           <Button
             variant="contained"
-            disabled={!jsonText.trim() || mutation.isPending}
+            disabled={!canImport}
             onClick={handleImport}
             aria-label={t("employee.import.importButton")}
           >
@@ -188,7 +231,8 @@ function ImportCvPage() {
 
       {/* Two-column body */}
       <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "flex-start" }}>
-        {/* Left column — input flow */}
+
+        {/* Left column — input */}
         <Box sx={{ flex: 1, minWidth: 320 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t("employee.import.pageDescription")}
@@ -199,81 +243,130 @@ function ImportCvPage() {
               {parseError}
             </Alert>
           )}
-
           {docxError && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDocxError(null)}>
               {docxError}
             </Alert>
           )}
-
           {mutation.isError && !parseError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {t("employee.import.importError")}
             </Alert>
           )}
 
-          <TextField
-            label={t("employee.import.jsonLabel")}
-            placeholder={t("employee.import.jsonPlaceholder")}
-            value={jsonText}
-            onChange={(e) => {
-              setJsonText(e.target.value);
-              setParseError(null);
-              mutation.reset();
-            }}
-            multiline
-            minRows={12}
-            fullWidth
-            sx={{ fontFamily: "monospace" }}
-            slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
-          />
+          {parsedDocxJson !== null ? (
+            /* DOCX extracted — show confirmation, hide raw JSON behind toggle */
+            <Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, color: "success.main" }}>
+                <CheckCircleOutlineIcon fontSize="small" />
+                <Typography variant="body2" fontWeight="medium">
+                  {t("employee.import.docxParsed")}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setShowExtractedJson((v) => !v)}
+                sx={{ textTransform: "none", px: 0, mb: 1 }}
+              >
+                {showExtractedJson
+                  ? t("employee.import.hideExtractedJson")
+                  : t("employee.import.showExtractedJson")}
+              </Button>
+              <Collapse in={showExtractedJson}>
+                <TextField
+                  value={jsonText}
+                  multiline
+                  minRows={12}
+                  fullWidth
+                  slotProps={{
+                    input: { readOnly: true },
+                    htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } },
+                  }}
+                />
+              </Collapse>
+            </Box>
+          ) : (
+            /* Manual mode — paste or upload JSON file */
+            <TextField
+              label={t("employee.import.jsonLabel")}
+              placeholder={t("employee.import.jsonPlaceholder")}
+              value={jsonText}
+              onChange={(e) => {
+                setJsonText(e.target.value);
+                setParseError(null);
+                mutation.reset();
+              }}
+              multiline
+              minRows={12}
+              fullWidth
+              sx={{ fontFamily: "monospace" }}
+              slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
+            />
+          )}
         </Box>
 
-        {/* Right column — result panel */}
+        {/* Right column — status / result panel */}
         <Box sx={{ width: 340, flexShrink: 0 }}>
           <Paper variant="outlined" sx={{ p: 2.5 }}>
             <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
               {t("employee.import.resultHeading")}
             </Typography>
 
-            {mutation.isSuccess ? (
-              <Box>
-                {mutation.data.resumeCreated && (
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>
-                    {t("employee.import.resumeCreated")}
-                  </Typography>
-                )}
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.assignmentsSkipped", { count: mutation.data.assignmentsSkipped })}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.educationCreated", { count: mutation.data.educationCreated })}
-                </Typography>
-                <Typography variant="body2">
-                  {t("employee.import.educationSkipped", { count: mutation.data.educationSkipped })}
-                </Typography>
-              </Box>
-            ) : mutation.isPending ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2">{t("employee.import.importing")}</Typography>
-              </Box>
-            ) : docxMutation.isPending ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2">{t("employee.import.parsingDocx")}</Typography>
-              </Box>
-            ) : (
+            {completedSteps.length === 0 && !inProgressStep ? (
               <Typography variant="body2" color="text.secondary">
                 {t("employee.import.resultPanelIdle")}
               </Typography>
+            ) : (
+              <Box>
+                {completedSteps.map((step) => (
+                  <Box
+                    key={step}
+                    sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75, color: "success.main" }}
+                  >
+                    <CheckCircleOutlineIcon sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">{step}</Typography>
+                  </Box>
+                ))}
+
+                {inProgressStep && <StatusRow label={inProgressStep} />}
+
+                {mutation.isSuccess && (
+                  <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    {mutation.data.resumeCreated && (
+                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                        {t("employee.import.resumeCreated")}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.assignmentsSkipped", { count: mutation.data.assignmentsSkipped })}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.educationCreated", { count: mutation.data.educationCreated })}
+                    </Typography>
+                    <Typography variant="body2">
+                      {t("employee.import.educationSkipped", { count: mutation.data.educationSkipped })}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             )}
           </Paper>
         </Box>
+
       </Box>
+    </Box>
+  );
+}
+
+function StatusRow({ label }: { label: string }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
+      <CircularProgress size={18} />
+      <Typography variant="body2">{label}</Typography>
     </Box>
   );
 }
