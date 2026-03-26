@@ -28,7 +28,7 @@ Every assignment description must follow this four-part structure:
 - Consultant title: concise, role-specific, no more than 5 words.
 - Presentation/summary: 3–5 sentences, covers seniority, primary expertise, and what kind of engagements the consultant thrives in.
 - Skills: grouped by category, listed in order of proficiency. Avoid skills that are not evidenced by assignments.
-- Highlighted experience: 3–5 bullet points that are the most impressive, concrete achievements across all assignments.
+- Highlighted experience: 3–6 bullet points that are the most impressive, concrete achievements across all assignments. Prioritise recent engagements (last 2–3 years) unless an older one is exceptionally strong or directly relevant to the target role.
 - Language: match the language of the existing CV (Swedish or English). Be consistent throughout.`;
 
 // ---------------------------------------------------------------------------
@@ -229,7 +229,7 @@ ${PROPOSAL_DELIMITER}
 
   const highlightedNote =
     section === "highlighted_experience"
-      ? `\nThe highlighted experience section is a curated list of 3–6 short bullet points (free text) that lift the consultant's most impressive and recent achievements — not a list of all assignments. They are often manually written and do not need to follow the assignment four-part structure. Each bullet should be concise (1–2 sentences max) and punchy.\n\nWhen you propose, suggest a revised list of bullet points as plain strings. Only include bullets that reflect genuinely strong, recent, or strategically important achievements.\n`
+      ? `\nThe highlighted experience section is a curated list of 3–6 short bullet points (free text) that lift the consultant's most impressive and recent achievements — not a list of all assignments. They are often manually written and do not need to follow the assignment four-part structure. Each bullet should be concise (1–2 sentences max) and punchy.\n\nRecency matters: prioritise achievements from the last 2–3 years. Only go further back if an older engagement is exceptionally strong or directly relevant to the target role.\n\nWhen you propose, write each bullet as a standalone sentence grounded in a specific assignment — reference the client or context, what was done, and the impact. Only include bullets that reflect genuinely strong, recent, or strategically important achievements.\n`
       : "";
 
   const localeInstruction = buildLocaleInstruction(locale);

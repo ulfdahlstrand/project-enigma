@@ -71,20 +71,20 @@ describe("extractSectionContent", () => {
     expect(result.assignments[0]).toMatchObject({ assignmentId: "asgn-1", clientName: "Acme Corp" });
   });
 
-  it("returns assignments with only id, clientName, role, startDate, endDate for highlighted_experience", () => {
+  it("returns assignments with id, clientName, role, startDate, endDate, description for highlighted_experience", () => {
     const result = extractSectionContent("highlighted_experience", BASE_CONTENT) as {
-      assignments: Array<{ assignmentId: string; clientName: string; role: string; startDate: string; endDate: string | null }>;
+      assignments: Array<{ assignmentId: string; clientName: string; role: string; startDate: string; endDate: string | null; description: string }>;
     };
     expect(result.assignments).toHaveLength(2);
     const first = result.assignments[0];
     expect(Object.keys(first)).toEqual(
-      expect.arrayContaining(["assignmentId", "clientName", "role", "startDate", "endDate"])
+      expect.arrayContaining(["assignmentId", "clientName", "role", "startDate", "endDate", "description"])
     );
-    expect(first).not.toHaveProperty("description");
     expect(first).not.toHaveProperty("technologies");
     expect(first).not.toHaveProperty("highlight");
     expect(first.assignmentId).toBe("asgn-1");
     expect(first.startDate).toBe("2023-01-01");
+    expect(first.description).toBe("Built APIs");
   });
 
   it("returns null for discovery section", () => {
