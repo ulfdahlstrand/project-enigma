@@ -479,5 +479,17 @@
       "mergeDescription": "All revision commits will be applied to your base branch. The original is preserved in history.",
       "keepDescription": "The revision branch stays as a separate branch. You can merge it later."
     }
+  },
+  "home": {
+    "welcome": "Welcome to CV Tool",
+    "subtitle": "Manage consultant profiles, assignments, and exports.",
+    "employeesCard": {
+      "title": "Employees",
+      "description": "Browse and manage employee profiles."
+    },
+    "resumesCard": {
+      "title": "Resumes",
+      "description": "Create, edit, and export consultant resumes."
+    }
   }
 }
