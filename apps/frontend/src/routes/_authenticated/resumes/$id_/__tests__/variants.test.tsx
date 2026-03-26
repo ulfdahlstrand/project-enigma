@@ -183,7 +183,7 @@ describe("Branch list", () => {
 
   it("renders language chips", async () => {
     renderPage();
-    const enChip = await screen.findByText("en");
+    const enChip = await screen.findByText("EN");
     expect(enChip).toBeInTheDocument();
   });
 
@@ -192,6 +192,39 @@ describe("Branch list", () => {
     await screen.findByText("main");
     expect(screen.getByText(enCommon.resume.variants.tableHeaderName)).toBeInTheDocument();
     expect(screen.getByText(enCommon.resume.variants.tableHeaderLanguage)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.resume.variants.tableHeaderStatus)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.resume.variants.tableHeaderCreated)).toBeInTheDocument();
+  });
+
+  it("renders the description text", async () => {
+    renderPage();
+    await screen.findByText("main");
+    expect(screen.getByText(enCommon.resume.variants.description)).toBeInTheDocument();
+  });
+
+  it("renders status chips for branches with saved versions", async () => {
+    renderPage();
+    await screen.findByText("main");
+    const statusChips = screen.getAllByText(enCommon.resume.variants.statusHasVersions);
+    expect(statusChips.length).toBeGreaterThan(0);
+  });
+
+  it("renders Open buttons for each branch", async () => {
+    renderPage();
+    await screen.findByText("main");
+    const openButtons = screen.getAllByRole("button", { name: enCommon.resume.variants.openButton });
+    expect(openButtons).toHaveLength(BRANCHES.length);
+  });
+
+  it("navigates with branchId when Open is clicked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("main");
+    const openButtons = screen.getAllByRole("button", { name: enCommon.resume.variants.openButton });
+    await user.click(openButtons[0]!);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({ search: { branchId: BRANCHES[0]!.id } })
+    );
   });
 });
 
