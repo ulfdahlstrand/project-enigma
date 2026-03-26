@@ -104,7 +104,7 @@
     }
   },
   "resume": {
-    "pageTitle": "My Resumes",
+    "pageTitle": "Resumes",
     "loading": "Loading resumes…",
     "error": "Failed to load resumes. Please try again later.",
     "empty": "No resumes found.",

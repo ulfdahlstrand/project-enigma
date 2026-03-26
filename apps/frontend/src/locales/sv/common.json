@@ -104,7 +104,7 @@
     }
   },
   "resume": {
-    "pageTitle": "Mina meritförteckningar",
+    "pageTitle": "Meritförteckningar",
     "loading": "Laddar meritförteckningar…",
     "error": "Kunde inte ladda meritförteckningar. Försök igen.",
     "empty": "Inga meritförteckningar hittades.",
