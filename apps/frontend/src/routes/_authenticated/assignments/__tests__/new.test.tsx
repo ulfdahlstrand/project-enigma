@@ -20,11 +20,18 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     createAssignment: vi.fn(),
     listAssignments: vi.fn(),
+    getResume: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 const mockCreateAssignment = orpc.createAssignment as ReturnType<typeof vi.fn>;
+const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+
+// Default: resolve with a resume that has a known title
+beforeEach(() => {
+  mockGetResume.mockResolvedValue({ id: "resume-id-1", title: "Ulf Dahlstrand EN" });
+});
 
 const mockNavigate = vi.fn();
 
@@ -115,6 +122,17 @@ describe("AC-NEW3 — Context label shown when resumeId present", () => {
   it("renders the context label", () => {
     renderPage();
     expect(screen.getByText(enCommon.assignment.new.contextLabel)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW4 — Resume title shown in breadcrumb
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW4 — Resume title shown in breadcrumb when resume is loaded", () => {
+  it("shows the resume title in the breadcrumb", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand EN")).toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +57,12 @@ function NewAssignmentPage() {
   const navigate = useNavigate();
   const { employeeId, resumeId, branchId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string; branchId?: string };
 
+  const { data: resume } = useQuery({
+    queryKey: ["getResume", resumeId],
+    queryFn: () => orpc.getResume({ id: resumeId! }),
+    enabled: !!resumeId,
+  });
+
   const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
     resolver: zodResolver(newAssignmentFormSchema),
     defaultValues: {
@@ -111,7 +117,7 @@ function NewAssignmentPage() {
         title={t("assignment.new.pageTitle")}
         breadcrumbs={[
           { label: t("resume.pageTitle"), to: "/resumes" },
-          ...(resumeId ? [{ label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
+          ...(resumeId ? [{ label: resume?.title ?? t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
         ]}
         actions={
           <Button
