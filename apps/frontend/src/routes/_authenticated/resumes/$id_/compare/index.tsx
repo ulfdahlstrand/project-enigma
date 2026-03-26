@@ -7,13 +7,12 @@
  * i18n: useTranslation("common") — no plain string literals as JSX children
  * Styling: MUI sx prop only
  */
-import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
@@ -24,6 +23,8 @@ import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../../../orpc-client";
 import { resumeCommitsKey, useResumeCommitDiff } from "../../../../../hooks/versioning";
+import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { PageContent } from "../../../../../components/layout/PageContent";
 
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/compare/")({
@@ -39,7 +40,6 @@ function statusColor(status: string): "success" | "error" | "warning" | "default
 
 function CompareVersionsPage() {
   const { t } = useTranslation("common");
-  const navigate = useNavigate();
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
 
   const [baseCommitId, setBaseCommitId] = useState<string>("");
@@ -79,20 +79,16 @@ function CompareVersionsPage() {
   }
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-        <Button
-          variant="text"
-          onClick={() => void navigate({ to: "/resumes/$id", params: { id: resumeId } })}
-        >
-          {t("resume.detail.backButton")}
-        </Button>
-        <Typography variant="h5" component="h1">
-          {t("resume.compare.pageTitle")}
-        </Typography>
-      </Box>
-
-      {commitsLoading ? (
+    <>
+      <PageHeader
+        title={t("resume.compare.pageTitle")}
+        breadcrumbs={[
+          { label: t("resume.pageTitle"), to: "/resumes" },
+          { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
+        ]}
+      />
+      <PageContent>
+        {commitsLoading ? (
         <CircularProgress aria-label={t("resume.compare.loading")} />
       ) : (
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
@@ -230,8 +226,9 @@ function CompareVersionsPage() {
                 })}
             </Box>
           )}
-        </Box>
-      )}
-    </Box>
+          </Box>
+        )}
+      </PageContent>
+    </>
   );
 }

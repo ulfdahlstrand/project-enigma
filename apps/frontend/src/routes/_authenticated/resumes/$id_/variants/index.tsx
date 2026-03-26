@@ -7,14 +7,13 @@
  * i18n: useTranslation("common") — no plain string literals as JSX children
  * Styling: MUI sx prop only
  */
-import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -33,6 +32,9 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useResumeBranches, useResumeCommits, useForkResumeBranch } from "../../../../../hooks/versioning";
+import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { PageContent } from "../../../../../components/layout/PageContent";
+import { LoadingState, ErrorState } from "../../../../../components/feedback";
 
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/variants/")({
@@ -88,43 +90,29 @@ function VariantsPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("resume.variants.loading")} />
-      </Box>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("resume.variants.error")}</Alert>
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("resume.variants.loading")} />;
+  if (isError) return <ErrorState message={t("resume.variants.error")} />;
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-        <Button
-          variant="text"
-          onClick={() => void navigate({ to: "/resumes/$id", params: { id: resumeId } })}
-        >
-          {t("resume.detail.backButton")}
-        </Button>
-        <Typography variant="h5" component="h1" sx={{ flexGrow: 1 }}>
-          {t("resume.variants.pageTitle")}
-        </Typography>
-        <Button
-          variant="contained"
-          disabled={!commits?.length}
-          onClick={openDialog}
-          title={!commits?.length ? t("resume.variants.createButtonDisabledTooltip") : undefined}
-        >
-          {t("resume.variants.createButton")}
-        </Button>
-      </Box>
+    <>
+      <PageHeader
+        title={t("resume.variants.pageTitle")}
+        breadcrumbs={[
+          { label: t("resume.pageTitle"), to: "/resumes" },
+          { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
+        ]}
+        actions={
+          <Button
+            variant="contained"
+            disabled={!commits?.length}
+            onClick={openDialog}
+            title={!commits?.length ? t("resume.variants.createButtonDisabledTooltip") : undefined}
+          >
+            {t("resume.variants.createButton")}
+          </Button>
+        }
+      />
+      <PageContent>
 
       {commits !== undefined && commits.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -236,6 +224,7 @@ function VariantsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </PageContent>
+    </>
   );
 }
