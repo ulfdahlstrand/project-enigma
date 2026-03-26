@@ -157,16 +157,16 @@ describe("Version dropdowns", () => {
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
   });
 
-  it("renders Version A dropdown label", async () => {
+  it("renders From dropdown label", async () => {
     renderPage();
     // MUI InputLabel renders text in both a <label> and a legend <span>
-    const labels = await screen.findAllByText(enCommon.resume.compare.versionALabel);
+    const labels = await screen.findAllByText(enCommon.resume.compare.fromLabel);
     expect(labels.length).toBeGreaterThan(0);
   });
 
-  it("renders Version B dropdown label", async () => {
+  it("renders To dropdown label", async () => {
     renderPage();
-    const labels = await screen.findAllByText(enCommon.resume.compare.versionBLabel);
+    const labels = await screen.findAllByText(enCommon.resume.compare.toLabel);
     expect(labels.length).toBeGreaterThan(0);
   });
 
@@ -276,5 +276,29 @@ describe("Breadcrumb navigation", () => {
     await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
     const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
     expect(resumesLink).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UX improvements
+// ---------------------------------------------------------------------------
+
+describe("UX improvements", () => {
+  beforeEach(() => {
+    mockGetResume.mockResolvedValue(RESUME);
+    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+  });
+
+  it("renders the description text", async () => {
+    renderPage();
+    await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
+    expect(screen.getByText(enCommon.resume.compare.description)).toBeInTheDocument();
+  });
+
+  it("renders the hint text when no versions are selected", async () => {
+    renderPage();
+    await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
+    expect(screen.getByText(enCommon.resume.compare.noSelectionHint)).toBeInTheDocument();
   });
 });

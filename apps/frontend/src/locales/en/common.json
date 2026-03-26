@@ -238,7 +238,8 @@
       "previewButton": "Preview",
       "description": "Each saved version is a snapshot of this resume at a point in time. Switch between branches to see their individual histories, or use the tree view for a full overview.",
       "viewInResumeButton": "View in resume",
-      "headBadge": "Current"
+      "headBadge": "Current",
+      "compareButton": "Compare versions"
     },
     "variants": {
       "pageTitle": "Variants",
@@ -286,7 +287,13 @@
       "after": "After",
       "statusAdded": "Added",
       "statusRemoved": "Removed",
-      "statusModified": "Modified"
+      "statusModified": "Modified",
+      "description": "Select two saved versions to compare them side by side. Changes are grouped by resume fields, skills, and assignments.",
+      "fromLabel": "From (older)",
+      "toLabel": "To (newer)",
+      "compareButton": "Compare",
+      "fieldLabel": "Field",
+      "noSelectionHint": "Select two versions above to see what changed between them."
     },
     "saveVersion": {
       "button": "Save version",

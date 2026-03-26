@@ -426,19 +426,33 @@ function VersionHistoryPage() {
         </ButtonGroup>
           </Box>
 
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() =>
-              void navigate({
-                to: "/resumes/$id",
-                params: { id: resumeId },
-                search: { branchId: selectedBranchId },
-              })
-            }
-          >
-            {t("resume.history.viewInResumeButton")}
-          </Button>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() =>
+                void navigate({
+                  to: "/resumes/$id/compare",
+                  params: { id: resumeId },
+                })
+              }
+            >
+              {t("resume.history.compareButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() =>
+                void navigate({
+                  to: "/resumes/$id",
+                  params: { id: resumeId },
+                  search: { branchId: selectedBranchId },
+                })
+              }
+            >
+              {t("resume.history.viewInResumeButton")}
+            </Button>
+          </Box>
         </Box>
 
       {selectedView === "tree" ? (
