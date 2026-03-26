@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
+import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -370,7 +371,12 @@ function VersionHistoryPage() {
         ]}
       />
       <PageContent>
-        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {t("resume.history.description")}
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <InputLabel>{t("resume.history.branchLabel")}</InputLabel>
           <Select
@@ -418,7 +424,22 @@ function VersionHistoryPage() {
             {t("resume.history.treeView")}
           </Button>
         </ButtonGroup>
-      </Box>
+          </Box>
+
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() =>
+              void navigate({
+                to: "/resumes/$id",
+                params: { id: resumeId },
+                search: { branchId: selectedBranchId },
+              })
+            }
+          >
+            {t("resume.history.viewInResumeButton")}
+          </Button>
+        </Box>
 
       {selectedView === "tree" ? (
         !graph || graphLayout.rootBranches.length === 0 ? (
@@ -593,10 +614,22 @@ function VersionHistoryPage() {
                     ? new Date(commit.createdAt)
                     : commit.createdAt;
                 const message = commit.message || t("resume.history.defaultMessage");
+                const isHead = selectedBranch?.headCommitId === commit.id;
 
                 return (
                   <TableRow key={commit.id}>
-                    <TableCell>{message}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {message}
+                        {isHead && (
+                          <Chip
+                            label={t("resume.history.headBadge")}
+                            color="primary"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
                     <TableCell>{savedAt.toLocaleString()}</TableCell>
                   </TableRow>
                 );

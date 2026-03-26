@@ -405,3 +405,43 @@ describe("Error state", () => {
     expect(errorMsg).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// New UX improvements
+// ---------------------------------------------------------------------------
+
+describe("UX improvements", () => {
+  beforeEach(() => {
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
+  });
+
+  it("renders the description text", async () => {
+    renderPage();
+    await screen.findByText("Initial version");
+    expect(screen.getByText(enCommon.resume.history.description)).toBeInTheDocument();
+  });
+
+  it("renders the View in resume button", async () => {
+    renderPage();
+    await screen.findByText("Initial version");
+    const btn = screen.getByRole("button", { name: enCommon.resume.history.viewInResumeButton });
+    expect(btn).toBeInTheDocument();
+  });
+
+  it("navigates with branchId when View in resume is clicked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("Initial version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.viewInResumeButton }));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({ search: expect.objectContaining({ branchId: "branch-id-1" }) })
+    );
+  });
+
+  it("renders the head badge on the most recent commit in list view", async () => {
+    renderPage();
+    await screen.findByText("Initial version");
+    const headBadges = screen.getAllByText(enCommon.resume.history.headBadge);
+    expect(headBadges.length).toBeGreaterThan(0);
+  });
+});
