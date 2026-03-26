@@ -296,7 +296,12 @@
       "isCurrentLabel": "Pågående uppdrag",
       "saveButton": "Spara",
       "cancel": "Avbryt",
-      "saveError": "Det gick inte att spara uppdraget. Försök igen."
+      "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+      "sectionClient": "Kund & Roll",
+      "sectionPeriod": "Period",
+      "sectionContent": "Innehåll",
+      "sectionSkills": "Kompetenser",
+      "contextLabel": "Lägger till uppdrag i meritförteckning"
     },
     "detail": {
       "loading": "Laddar uppdrag…",

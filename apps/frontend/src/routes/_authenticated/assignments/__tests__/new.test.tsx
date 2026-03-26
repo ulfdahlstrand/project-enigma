@@ -70,6 +70,54 @@ describe("New Assignment page", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// AC-NEW1 — Section headings rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW1 — Form section headings rendered", () => {
+  it("renders Client & Role section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionClient)).toBeInTheDocument();
+  });
+
+  it("renders Period section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionPeriod)).toBeInTheDocument();
+  });
+
+  it("renders Content section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionContent)).toBeInTheDocument();
+  });
+
+  it("renders Skills section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionSkills)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW2 — Cancel button rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW2 — Cancel link rendered", () => {
+  it("renders a Cancel link", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: enCommon.assignment.new.cancel })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW3 — Context label shown when resumeId present
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW3 — Context label shown when resumeId present", () => {
+  it("renders the context label", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.contextLabel)).toBeInTheDocument();
+  });
+});
+
 describe("Error state", () => {
   beforeEach(() => {
     mockCreateAssignment.mockRejectedValue(new Error("Server error"));
