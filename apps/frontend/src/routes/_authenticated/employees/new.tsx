@@ -20,6 +20,8 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { Link } from "@tanstack/react-router";
 import { orpc } from "../../../orpc-client";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
@@ -79,37 +81,56 @@ function NewEmployeePage() {
           </Alert>
         )}
 
-        <Box
-          component="form"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 480 }}
-        >
-          <TextField
-            label={t("employee.new.nameLabel")}
-            {...register("name")}
-            error={!!errors.name}
-            helperText={errors.name?.message ?? ""}
-            required
-            fullWidth
-          />
-          <TextField
-            label={t("employee.new.emailLabel")}
-            type="email"
-            {...register("email")}
-            error={!!errors.email}
-            helperText={errors.email?.message ?? ""}
-            required
-            fullWidth
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={mutation.isPending}
-            sx={{ alignSelf: "flex-start" }}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 480 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t("employee.new.helperText")}
+          </Typography>
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
           >
-            {t("employee.new.saveButton")}
-          </Button>
+            <TextField
+              label={t("employee.new.nameLabel")}
+              {...register("name")}
+              error={!!errors.name}
+              helperText={errors.name?.message ?? ""}
+              required
+              fullWidth
+            />
+            <TextField
+              label={t("employee.new.emailLabel")}
+              type="email"
+              {...register("email")}
+              error={!!errors.email}
+              helperText={errors.email?.message ?? ""}
+              required
+              fullWidth
+            />
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={mutation.isPending}
+              >
+                {t("employee.new.saveButton")}
+              </Button>
+              <Button
+                component={Link}
+                to="/employees"
+                variant="outlined"
+                disabled={mutation.isPending}
+              >
+                {t("employee.new.cancel")}
+              </Button>
+            </Box>
+          </Box>
+
+          <Alert severity="info" variant="outlined">
+            {t("employee.new.importHint")}
+          </Alert>
         </Box>
       </PageContent>
     </>

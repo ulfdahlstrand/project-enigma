@@ -35,6 +35,8 @@
       "submit": "Spara",
       "saving": "Sparar…",
       "cancel": "Avbryt",
+      "helperText": "Efter att du sparat tas du till den anställdes profil där du kan lägga till uppdrag och importera ett CV.",
+      "importHint": "Har du ett CV-dokument? Skapa den anställde först och använd sedan Importera CV från deras profil för att fylla i uppdragen automatiskt.",
       "error": "Det gick inte att spara den anställde. Försök igen.",
       "nameRequired": "Namn är obligatoriskt.",
       "emailInvalid": "Ange en giltig e-postadress.",
