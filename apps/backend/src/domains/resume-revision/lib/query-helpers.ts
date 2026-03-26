@@ -10,6 +10,7 @@ import {
   type WorkflowRow,
   type StepRow,
 } from "./map-to-output.js";
+import { extractProposalFromResponse } from "./prompt-builder.js";
 import type {
   ResumeRevisionWorkflow,
   ResumeRevisionWorkflowStep,
@@ -178,7 +179,7 @@ export async function fetchDiscoveryOutput(
       "m.id",
       "s.approved_message_id"
     )
-    .select(["m.structured_content"])
+    .select(["m.structured_content", "m.content"])
     .where("s.workflow_id", "=", workflowId)
     .where("s.section", "=", "discovery")
     .executeTakeFirst();
@@ -188,5 +189,16 @@ export async function fetchDiscoveryOutput(
   const payload = row.structured_content as {
     proposedContent?: ResumeRevisionDiscoveryOutput;
   };
-  return payload.proposedContent ?? null;
+  const proposedContent = payload.proposedContent ?? null;
+  if (proposedContent === null) return null;
+
+  if (proposedContent.conversationSummary?.trim()) {
+    return proposedContent;
+  }
+
+  const parsed = extractProposalFromResponse(row.content);
+  return {
+    ...proposedContent,
+    conversationSummary: parsed?.textPart?.trim() ?? "",
+  };
 }

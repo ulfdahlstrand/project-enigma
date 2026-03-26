@@ -120,9 +120,54 @@ describe("applySectionContent", () => {
     expect(result.consultantTitle).toBeNull();
   });
 
+  it("accepts a plain string consultant title proposal", () => {
+    const result = applySectionContent(
+      "consultant_title",
+      BASE_CONTENT,
+      "JavaScript Jonglör & AI Abstraktör"
+    );
+    expect(result.consultantTitle).toBe("JavaScript Jonglör & AI Abstraktör");
+  });
+
   it("preserves base skills when proposed skills array is empty", () => {
     const result = applySectionContent("skills", BASE_CONTENT, { skills: [] });
     expect(result.skills).toEqual(BASE_CONTENT.skills);
+  });
+
+  it("normalises assignment fields to schema-safe null/default values", () => {
+    const result = applySectionContent(
+      "assignments",
+      BASE_CONTENT,
+      {
+        assignments: [
+          {
+            assignmentId: "asgn-1",
+            clientName: "Acme Corp",
+            role: "Backend Engineer",
+            description: "Built APIs",
+            startDate: "2023-01-01",
+            endDate: undefined,
+            technologies: undefined,
+            isCurrent: true,
+            keywords: undefined,
+            type: undefined,
+            highlight: undefined,
+            sortOrder: undefined,
+          },
+        ],
+      },
+      "asgn-1|||Acme Corp"
+    );
+
+    expect(result.assignments).toHaveLength(2);
+    expect(result.assignments[result.assignments.length - 1]).toMatchObject({
+      endDate: null,
+      technologies: [],
+      keywords: null,
+      type: null,
+      highlight: false,
+      sortOrder: null,
+    });
   });
 
   it("returns base content unchanged for highlighted_experience (writes go to resume_highlighted_items)", () => {

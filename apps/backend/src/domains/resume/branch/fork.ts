@@ -160,13 +160,21 @@ export async function forkResumeBranch(
       .values({
         resume_id: commit.resume_id,
         branch_id: branch.id,
-        parent_commit_id: input.fromCommitId,
         content: JSON.stringify(freshContent),
         message: "",
         created_by: user.id,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    await trx
+      .insertInto("resume_commit_parents")
+      .values({
+        commit_id: initialCommit.id,
+        parent_commit_id: input.fromCommitId,
+        parent_order: 0,
+      })
+      .execute();
 
     // Advance the branch head to the new initial commit
     await trx

@@ -9,6 +9,27 @@ import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/requ
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { getResumeCommitInputSchema, getResumeCommitOutputSchema } from "@cv-tool/contracts";
 
+function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitContent {
+  return {
+    ...content,
+    consultantTitle: content.consultantTitle ?? null,
+    presentation: Array.isArray(content.presentation) ? content.presentation : [],
+    summary: content.summary ?? null,
+    skills: Array.isArray(content.skills) ? content.skills : [],
+    assignments: Array.isArray(content.assignments)
+      ? content.assignments.map((assignment) => ({
+          ...assignment,
+          endDate: assignment.endDate ?? null,
+          technologies: Array.isArray(assignment.technologies) ? assignment.technologies : [],
+          keywords: assignment.keywords ?? null,
+          type: assignment.type ?? null,
+          highlight: assignment.highlight ?? false,
+          sortOrder: assignment.sortOrder ?? null,
+        }))
+      : [],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // getResumeCommit — query logic
 // ---------------------------------------------------------------------------
@@ -38,12 +59,17 @@ export async function getResumeCommit(
 
   const row = await db
     .selectFrom("resume_commits as rc")
+    .leftJoin("resume_commit_parents as rcp", (join) =>
+      join
+        .onRef("rcp.commit_id", "=", "rc.id")
+        .on("rcp.parent_order", "=", 0)
+    )
     .innerJoin("resumes as r", "r.id", "rc.resume_id")
     .select([
       "rc.id",
       "rc.resume_id",
       "rc.branch_id",
-      "rc.parent_commit_id",
+      "rcp.parent_commit_id as parent_commit_id",
       "rc.content",
       "rc.message",
       "rc.created_by",
@@ -66,7 +92,7 @@ export async function getResumeCommit(
     resumeId: row.resume_id,
     branchId: row.branch_id,
     parentCommitId: row.parent_commit_id,
-    content: row.content as unknown as ResumeCommitContent,
+    content: normaliseCommitContent(row.content as unknown as ResumeCommitContent),
     message: row.message,
     createdBy: row.created_by,
     createdAt: row.created_at,

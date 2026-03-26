@@ -15,6 +15,7 @@ import { z } from "zod";
 export const resumeRevisionWorkflowStatusSchema = z.enum([
   "active",
   "completed",
+  "finalized",
   "abandoned",
 ]);
 export type ResumeRevisionWorkflowStatus = z.infer<typeof resumeRevisionWorkflowStatusSchema>;
@@ -79,6 +80,7 @@ export const resumeRevisionDiscoveryOutputSchema = z.object({
   thingsToDownplay: z.array(z.string()),
   languagePreferences: z.string(),
   additionalNotes: z.string(),
+  conversationSummary: z.string().optional(),
 });
 export type ResumeRevisionDiscoveryOutput = z.infer<typeof resumeRevisionDiscoveryOutputSchema>;
 

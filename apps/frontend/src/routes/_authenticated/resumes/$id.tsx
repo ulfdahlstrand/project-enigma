@@ -599,7 +599,7 @@ function ResumeDetailPage() {
   // When a non-main branch is active, load its head commit snapshot
   const isSnapshotMode = activeBranchId !== null && activeBranchId !== mainBranchId && activeBranch?.headCommitId != null;
 
-  const { data: branchCommit } = useQuery({
+  const { data: branchCommit, isError: isBranchCommitError } = useQuery({
     queryKey: ["getResumeCommit", activeBranch?.headCommitId],
     queryFn: () => orpc.getResumeCommit({ commitId: activeBranch!.headCommitId! }),
     enabled: isSnapshotMode,
@@ -690,6 +690,10 @@ function ResumeDetailPage() {
       (error as { code: unknown }).code === "NOT_FOUND";
 
     return <ErrorState message={isNotFound ? t("resume.detail.notFound") : t("resume.detail.error")} />;
+  }
+
+  if (isSnapshotMode && isBranchCommitError) {
+    return <ErrorState message={t("resume.detail.error")} />;
   }
 
   // Use snapshot fields when a non-main branch is active, otherwise live resume fields

@@ -17,6 +17,7 @@ const SV_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440032";
 const MAIN_COMMIT_ID_1 = "550e8400-e29b-41d4-a716-446655440041";
 const MAIN_COMMIT_ID_2 = "550e8400-e29b-41d4-a716-446655440042";
 const SV_COMMIT_ID_1 = "550e8400-e29b-41d4-a716-446655440043";
+const MERGE_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440044";
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 const RESUME_ROW = { id: RESUME_ID, employee_id: EMPLOYEE_ID_1 };
@@ -66,6 +67,15 @@ const COMMIT_ROWS = [
     created_at: new Date("2026-01-03T00:00:00.000Z"),
   },
   {
+    id: MERGE_COMMIT_ID,
+    resume_id: RESUME_ID,
+    branch_id: MAIN_BRANCH_ID,
+    parent_commit_id: MAIN_COMMIT_ID_2,
+    message: "Merge revision workflow",
+    created_by: CREATOR_ID,
+    created_at: new Date("2026-01-05T00:00:00.000Z"),
+  },
+  {
     id: SV_COMMIT_ID_1,
     resume_id: RESUME_ID,
     branch_id: SV_BRANCH_ID,
@@ -76,16 +86,41 @@ const COMMIT_ROWS = [
   },
 ];
 
+const COMMIT_PARENT_ROWS = [
+  {
+    commit_id: MAIN_COMMIT_ID_2,
+    parent_commit_id: MAIN_COMMIT_ID_1,
+    parent_order: 0,
+  },
+  {
+    commit_id: MERGE_COMMIT_ID,
+    parent_commit_id: MAIN_COMMIT_ID_2,
+    parent_order: 0,
+  },
+  {
+    commit_id: MERGE_COMMIT_ID,
+    parent_commit_id: SV_COMMIT_ID_1,
+    parent_order: 1,
+  },
+  {
+    commit_id: SV_COMMIT_ID_1,
+    parent_commit_id: MAIN_COMMIT_ID_1,
+    parent_order: 0,
+  },
+];
+
 function buildDbMock(opts: {
   resumeRow?: unknown;
   branchRows?: unknown[];
   commitRows?: unknown[];
+  commitParentRows?: unknown[];
   employeeId?: string | null;
 } = {}) {
   const {
     resumeRow = RESUME_ROW,
     branchRows = BRANCH_ROWS,
     commitRows = COMMIT_ROWS,
+    commitParentRows = COMMIT_PARENT_ROWS,
     employeeId = null,
   } = opts;
 
@@ -108,11 +143,19 @@ function buildDbMock(opts: {
   const commitOrderBy = vi.fn().mockReturnValue({ execute: commitExecute });
   const commitWhere = vi.fn().mockReturnValue({ orderBy: commitOrderBy });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
+  const commitLeftJoin = vi.fn().mockImplementation(() => ({ select: commitSelect }));
+  const edgeExecute = vi.fn().mockResolvedValue(commitParentRows);
+  const edgeOrderBySecond = vi.fn().mockReturnValue({ execute: edgeExecute });
+  const edgeOrderByFirst = vi.fn().mockReturnValue({ orderBy: edgeOrderBySecond });
+  const edgeWhere = vi.fn().mockReturnValue({ orderBy: edgeOrderByFirst });
+  const edgeSelect = vi.fn().mockReturnValue({ where: edgeWhere });
+  const edgeInnerJoin = vi.fn().mockReturnValue({ select: edgeSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_branches") return { selectAll: branchSelectAll };
-    if (table === "resume_commits") return { select: commitSelect };
+    if (table === "resume_commits") return { leftJoin: commitLeftJoin };
+    if (table === "resume_commit_parents as rcp") return { innerJoin: edgeInnerJoin };
     return { select: resumeSelect };
   });
 
@@ -126,7 +169,12 @@ describe("getResumeBranchHistoryGraph", () => {
     const result = await getResumeBranchHistoryGraph(db, MOCK_ADMIN, { resumeId: RESUME_ID });
 
     expect(result.branches).toHaveLength(2);
-    expect(result.commits).toHaveLength(3);
+    expect(result.commits).toHaveLength(4);
+    expect(result.edges).toContainEqual({
+      commitId: MERGE_COMMIT_ID,
+      parentCommitId: SV_COMMIT_ID_1,
+      parentOrder: 1,
+    });
     expect(result.branches[0]).toMatchObject({
       id: MAIN_BRANCH_ID,
       headCommitId: MAIN_COMMIT_ID_2,
@@ -143,7 +191,7 @@ describe("getResumeBranchHistoryGraph", () => {
       parentCommitId: MAIN_COMMIT_ID_1,
     });
     expect(branchOrderBy).toHaveBeenCalledWith("created_at", "asc");
-    expect(commitOrderBy).toHaveBeenCalledWith("created_at", "asc");
+    expect(commitOrderBy).toHaveBeenCalledWith("resume_commits.created_at", "asc");
   });
 
   it("returns empty arrays when a resume has no branches or commits", async () => {
@@ -151,7 +199,7 @@ describe("getResumeBranchHistoryGraph", () => {
 
     const result = await getResumeBranchHistoryGraph(db, MOCK_ADMIN, { resumeId: RESUME_ID });
 
-    expect(result).toEqual({ branches: [], commits: [] });
+    expect(result).toEqual({ branches: [], commits: [], edges: [] });
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
@@ -191,7 +239,8 @@ describe("createGetResumeBranchHistoryGraphHandler", () => {
     const result = await call(handler, { resumeId: RESUME_ID }, { context: { user: MOCK_ADMIN } });
 
     expect(result.branches).toHaveLength(2);
-    expect(result.commits).toHaveLength(3);
+    expect(result.commits).toHaveLength(4);
+    expect(result.edges).toHaveLength(4);
   });
 
   it("throws UNAUTHORIZED when no user is present in context", async () => {

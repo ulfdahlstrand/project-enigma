@@ -69,10 +69,11 @@ function buildDbMock(opts: {
   const commitsOrderBy = vi.fn().mockReturnValue({ execute: commitsExecute });
   const commitsWhere = vi.fn().mockReturnValue({ orderBy: commitsOrderBy });
   const commitsSelect = vi.fn().mockReturnValue({ where: commitsWhere });
+  const commitsLeftJoin = vi.fn().mockReturnValue({ select: commitsSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "resume_commits") return { select: commitsSelect };
+    if (table === "resume_commits") return { leftJoin: commitsLeftJoin };
     return { innerJoin: branchInnerJoin };
   });
 
@@ -92,7 +93,7 @@ describe("listResumeCommits", () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: COMMIT_ID_2, message: "Updated skills" });
     expect(result[1]).toMatchObject({ id: COMMIT_ID_1, message: "Initial version" });
-    expect(commitsOrderBy).toHaveBeenCalledWith("created_at", "desc");
+    expect(commitsOrderBy).toHaveBeenCalledWith("resume_commits.created_at", "desc");
   });
 
   it("returns empty array when branch has no commits", async () => {

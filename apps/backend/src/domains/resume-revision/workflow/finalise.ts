@@ -41,6 +41,12 @@ export async function finaliseResumeRevision(
         );
       }
     }
+    await db
+      .updateTable("resume_revision_workflows")
+      .set({ status: "finalized", updated_at: new Date() })
+      .where("id", "=", input.workflowId)
+      .execute();
+
     const workflow = await fetchWorkflowWithSteps(db, user, input.workflowId);
     return {
       workflow,
@@ -84,6 +90,7 @@ export async function finaliseResumeRevision(
     .select(["head_commit_id"])
     .where("id", "=", workflowRow.base_branch_id)
     .executeTakeFirst();
+  const baseParentCommitId = baseBranch?.head_commit_id ?? null;
 
   // Create a merge commit on the base branch
   await db.transaction().execute(async (trx) => {
@@ -92,13 +99,33 @@ export async function finaliseResumeRevision(
       .values({
         resume_id: workflowRow.resume_id,
         branch_id: workflowRow.base_branch_id,
-        parent_commit_id: baseBranch?.head_commit_id ?? null,
         content: JSON.stringify(revisionCommit.content as ResumeCommitContent),
         message: "Merge revision workflow",
         created_by: user.id,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    const mergeParents = [
+      baseParentCommitId !== null
+        ? {
+            commit_id: mergeCommit.id,
+            parent_commit_id: baseParentCommitId,
+            parent_order: 0,
+          }
+        : null,
+      revisionBranch.head_commit_id !== null
+        ? {
+            commit_id: mergeCommit.id,
+            parent_commit_id: revisionBranch.head_commit_id,
+            parent_order: 1,
+          }
+        : null,
+    ].filter((value): value is NonNullable<typeof value> => value !== null);
+
+    if (mergeParents.length > 0) {
+      await trx.insertInto("resume_commit_parents").values(mergeParents).execute();
+    }
 
     await trx
       .updateTable("resume_branches")
@@ -108,7 +135,7 @@ export async function finaliseResumeRevision(
 
     await trx
       .updateTable("resume_revision_workflows")
-      .set({ updated_at: new Date() })
+      .set({ status: "finalized", updated_at: new Date() })
       .where("id", "=", input.workflowId)
       .execute();
 

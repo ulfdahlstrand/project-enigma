@@ -174,9 +174,16 @@ export const getResumeBranchHistoryGraphInputSchema = z.object({
   resumeId: z.string().uuid(),
 });
 
+export const resumeCommitGraphEdgeSchema = z.object({
+  commitId: z.string().uuid(),
+  parentCommitId: z.string().uuid(),
+  parentOrder: z.number().int(),
+});
+
 export const resumeBranchHistoryGraphSchema = z.object({
   branches: z.array(resumeBranchSchema),
   commits: z.array(resumeCommitSummarySchema),
+  edges: z.array(resumeCommitGraphEdgeSchema),
 });
 
 export const getResumeBranchHistoryGraphOutputSchema = resumeBranchHistoryGraphSchema;

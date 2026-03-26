@@ -1,6 +1,20 @@
 import type { ResumeRevisionStepSection } from "@cv-tool/contracts";
 import type { ResumeCommitContent } from "../../../db/types.js";
 
+function normaliseAssignments(
+  assignments: ResumeCommitContent["assignments"]
+): ResumeCommitContent["assignments"] {
+  return assignments.map((assignment) => ({
+    ...assignment,
+    endDate: assignment.endDate ?? null,
+    technologies: Array.isArray(assignment.technologies) ? assignment.technologies : [],
+    keywords: assignment.keywords ?? null,
+    type: assignment.type ?? null,
+    highlight: assignment.highlight ?? false,
+    sortOrder: assignment.sortOrder ?? null,
+  }));
+}
+
 /** section_detail for assignments is "<assignmentId>|||<clientName>". Returns just the id part. */
 function parseAssignmentId(sectionDetail: string): string {
   return sectionDetail.split("|||")[0] ?? sectionDetail;
@@ -83,6 +97,12 @@ export function applySectionContent(
       return base;
 
     case "consultant_title":
+      if (typeof proposedContent === "string") {
+        return {
+          ...base,
+          consultantTitle: proposedContent,
+        };
+      }
       return {
         ...base,
         consultantTitle: (proposed["consultantTitle"] as string | null) ?? null,
@@ -118,8 +138,9 @@ export function applySectionContent(
     }
 
     case "assignments": {
-      const proposedAssignments =
-        (proposed["assignments"] as ResumeCommitContent["assignments"]) ?? [];
+      const proposedAssignments = normaliseAssignments(
+        (proposed["assignments"] as ResumeCommitContent["assignments"]) ?? []
+      );
       if (sectionDetail) {
         const assignmentId = parseAssignmentId(sectionDetail);
         // Replace only the single assignment with this id

@@ -451,6 +451,7 @@
       "proposed": "Proposed",
       "noProposal": "No proposal yet. Start the conversation to get an AI proposal.",
       "discoveryTitle": "Revision goals",
+      "summary": "Conversation summary",
       "targetRole": "Target role",
       "tone": "Tone",
       "language": "Language preferences",

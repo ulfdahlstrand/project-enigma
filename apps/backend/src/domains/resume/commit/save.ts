@@ -133,13 +133,23 @@ export async function saveResumeVersion(
       .values({
         resume_id: branch.resume_id,
         branch_id: input.branchId,
-        parent_commit_id: branch.head_commit_id,
         content: JSON.stringify(content),
         message: input.message ?? "",
         created_by: user.id,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (branch.head_commit_id !== null) {
+      await trx
+        .insertInto("resume_commit_parents")
+        .values({
+          commit_id: newCommit.id,
+          parent_commit_id: branch.head_commit_id,
+          parent_order: 0,
+        })
+        .execute();
+    }
 
     await trx
       .updateTable("resume_branches")
@@ -154,7 +164,7 @@ export async function saveResumeVersion(
     id: commit.id,
     resumeId: commit.resume_id,
     branchId: commit.branch_id,
-    parentCommitId: commit.parent_commit_id,
+    parentCommitId: branch.head_commit_id,
     content: commit.content as unknown as ResumeCommitContent,
     message: commit.message,
     createdBy: commit.created_by,

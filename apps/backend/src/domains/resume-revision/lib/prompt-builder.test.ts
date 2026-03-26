@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildRevisionPrompt,
   extractProposalFromResponse,
+  isProposalTriggerMessage,
   PROPOSAL_DELIMITER,
 } from "./prompt-builder.js";
 import type { BuildPromptParams } from "./prompt-builder.js";
@@ -18,6 +19,7 @@ const DISCOVERY_OUTPUT: ResumeRevisionDiscoveryOutput = {
   thingsToDownplay: ["low-level coding"],
   languagePreferences: "concise",
   additionalNotes: "Focus on impact",
+  conversationSummary: "The CV should lean into a playful April Fools framing while still keeping the structure readable.",
 };
 
 function makeParams(overrides: Partial<BuildPromptParams> = {}): BuildPromptParams {
@@ -48,6 +50,27 @@ describe("buildRevisionPrompt", () => {
     const result = buildRevisionPrompt(makeParams({ section: "skills" }));
     expect(result.system).toContain(DISCOVERY_OUTPUT.targetRole);
     expect(result.system).toContain(DISCOVERY_OUTPUT.tone);
+    expect(result.system).toContain(DISCOVERY_OUTPUT.conversationSummary ?? "");
+  });
+
+  it("tolerates incomplete discovery output in content prompts", () => {
+    const result = buildRevisionPrompt(
+      makeParams({
+        section: "consultant_title",
+        discovery: {
+          targetRole: "CTO",
+          tone: "leadership-focused",
+          strengthsToEmphasise: undefined as unknown as string[],
+          thingsToDownplay: undefined as unknown as string[],
+          languagePreferences: "concise",
+          additionalNotes: "",
+        },
+      })
+    );
+
+    expect(result.system).toContain("Strengths to emphasise: None specified");
+    expect(result.system).toContain("Things to downplay: None specified");
+    expect(result.system).toContain("Conversation summary: No summary provided");
   });
 
   it("passes the userMessage through unchanged", () => {
@@ -86,6 +109,51 @@ describe("buildRevisionPrompt", () => {
   it("includes the PROPOSAL_DELIMITER instruction in content section system prompt", () => {
     const result = buildRevisionPrompt(makeParams({ section: "consultant_title" }));
     expect(result.system).toContain(PROPOSAL_DELIMITER);
+  });
+
+  it("forces a discovery proposal when forceProposal is true", () => {
+    const result = buildRevisionPrompt(
+      makeParams({
+        section: "discovery",
+        discovery: null,
+        userMessage: "Bra, nu kör vi",
+        forceProposal: true,
+      })
+    );
+
+    expect(result.system).toContain("produce the structured discovery proposal immediately");
+    expect(result.system).toContain("Do not ask any more questions");
+  });
+
+  it("forces a content proposal when forceProposal is true", () => {
+    const result = buildRevisionPrompt(
+      makeParams({
+        section: "skills",
+        userMessage: "kör på",
+        forceProposal: true,
+      })
+    );
+
+    expect(result.system).toContain("produce the proposal immediately");
+    expect(result.system).toContain("Do not ask more questions");
+  });
+});
+
+describe("isProposalTriggerMessage", () => {
+  it("detects short confirmation messages", () => {
+    expect(isProposalTriggerMessage("ja")).toBe(true);
+    expect(isProposalTriggerMessage("Looks good")).toBe(true);
+    expect(isProposalTriggerMessage("kör på")).toBe(true);
+  });
+
+  it("detects longer Swedish confirmation messages", () => {
+    expect(isProposalTriggerMessage("bra. nu vill jag använda detta som input till alla andra kommande steg. låt oss börja")).toBe(true);
+    expect(isProposalTriggerMessage("nu kör vi")).toBe(true);
+  });
+
+  it("does not treat ordinary discussion as a proposal trigger", () => {
+    expect(isProposalTriggerMessage("Jag vill betona mer ledarskap och tona ned hands-on kodning.")).toBe(false);
+    expect(isProposalTriggerMessage("Kan du ställa fler frågor om målroll först?")).toBe(false);
   });
 });
 

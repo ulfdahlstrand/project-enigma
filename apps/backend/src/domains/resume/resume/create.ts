@@ -88,7 +88,6 @@ export async function createResume(
       .values({
         resume_id: newResume.id,
         branch_id: newBranch.id,
-        parent_commit_id: null,
         content: initialContent,
         message: "initial",
         created_by: user.id,
