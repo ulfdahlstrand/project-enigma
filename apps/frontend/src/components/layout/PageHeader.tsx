@@ -3,33 +3,45 @@
  *
  * Sits at the top of each page's content area, replacing the removed global header.
  *
- * Left side:  optional breadcrumb → title → optional chip/context
+ * Left side:  breadcrumbs (parent pages) → title → optional chip/context
  * Right side: optional action buttons
+ *
+ * The current page title is always the last breadcrumb item (auto-added).
+ * Pass parent pages via the breadcrumbs array — no need for a separate back button.
  *
  * Usage:
  *   <PageHeader
- *     title="Employee Details"
- *     breadcrumb={<RouterLink to="/employees">Employees</RouterLink>}
+ *     title="Ulf Dahlstrand"
+ *     breadcrumbs={[{ label: t("nav.employees"), to: "/employees" }]}
  *     chip={<Chip label="EN" size="small" />}
  *     actions={<Button>Save</Button>}
  *   />
  */
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
+import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+
+export interface BreadcrumbItem {
+  label: string;
+  to: string;
+}
 
 interface PageHeaderProps {
   title: string;
-  /** Optional breadcrumb node rendered above the title. */
-  breadcrumb?: ReactNode;
+  /** Parent pages rendered as links above the title. Current page is added automatically. */
+  breadcrumbs?: BreadcrumbItem[];
   /** Optional chip or badge rendered next to the title. */
   chip?: ReactNode;
   /** Optional right-aligned action buttons. */
   actions?: ReactNode;
 }
 
-export function PageHeader({ title, breadcrumb, chip, actions }: PageHeaderProps) {
+export function PageHeader({ title, breadcrumbs, chip, actions }: PageHeaderProps) {
+  const hasBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
+
   return (
     <Box
       sx={{
@@ -45,12 +57,28 @@ export function PageHeader({ title, breadcrumb, chip, actions }: PageHeaderProps
         flexWrap: "wrap",
       }}
     >
-      {/* Left: breadcrumb + title + chip */}
+      {/* Left: breadcrumbs + title + chip */}
       <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", flexGrow: 1 }}>
-        {breadcrumb && (
-          <Breadcrumbs sx={{ mb: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}>
-            {breadcrumb}
-            <Typography variant="caption" color="text.primary">{title}</Typography>
+        {hasBreadcrumbs && (
+          <Breadcrumbs
+            aria-label="breadcrumb"
+            sx={{ mb: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
+          >
+            {breadcrumbs.map((item) => (
+              <MuiLink
+                key={item.to}
+                component={Link}
+                to={item.to}
+                underline="hover"
+                color="inherit"
+                variant="caption"
+              >
+                {item.label}
+              </MuiLink>
+            ))}
+            <Typography variant="caption" color="text.primary">
+              {title}
+            </Typography>
           </Breadcrumbs>
         )}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
