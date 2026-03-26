@@ -80,6 +80,7 @@
       "parseError": "Invalid JSON — please check the format and try again.",
       "importError": "Import failed. Please try again.",
       "resultHeading": "Import complete",
+      "resultPanelIdle": "Import results will appear here.",
       "resumeCreated": "A new main resume was created with the imported assignments.",
       "assignmentsCreated": "Assignments created: {{count}}",
       "assignmentsSkipped": "Assignments skipped (duplicates): {{count}}",
