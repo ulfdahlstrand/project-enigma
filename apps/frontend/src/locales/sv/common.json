@@ -479,5 +479,17 @@
       "mergeDescription": "Alla revisionsändringar tillämpas på din basgren. Originalet bevaras i historiken.",
       "keepDescription": "Revisionsgrenen behålls som en separat gren. Du kan slå ihop den senare."
     }
+  },
+  "home": {
+    "welcome": "Välkommen till CV-verktyget",
+    "subtitle": "Hantera konsultprofiler, uppdrag och export.",
+    "employeesCard": {
+      "title": "Medarbetare",
+      "description": "Bläddra och hantera medarbetarprofiler."
+    },
+    "resumesCard": {
+      "title": "CV",
+      "description": "Skapa, redigera och exportera konsult-CV."
+    }
   }
 }
