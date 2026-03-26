@@ -278,7 +278,9 @@
     "variantSwitcher": {
       "label": "Variant",
       "manageVariants": "Hantera varianter"
-    }
+    },
+    "countLabel_one": "1 meritförteckning",
+    "countLabel_other": "{{count}} meritförteckningar"
   },
   "assignment": {
     "pageTitle": "Uppdrag",

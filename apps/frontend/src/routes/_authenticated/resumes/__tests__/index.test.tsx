@@ -40,18 +40,21 @@ vi.mock("../../../../orpc-client", () => ({
     listResumes: vi.fn(),
     getResume: vi.fn(),
     updateResume: vi.fn(),
+    getEmployee: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 
 const mockListResumes = orpc.listResumes as ReturnType<typeof vi.fn>;
+const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
+let mockSearchParams: { employeeId?: string } = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -59,7 +62,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useSearch: () => ({}),
+    useSearch: () => mockSearchParams,
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -116,6 +119,10 @@ function renderPage() {
   return { ...result, queryClient };
 }
 
+beforeEach(() => {
+  mockSearchParams = {};
+});
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -171,7 +178,7 @@ describe("Resume list rendering", () => {
 
   it("renders the page title", async () => {
     renderPage();
-    const title = await screen.findByText(enCommon.resume.pageTitle);
+    const title = await screen.findByRole("heading", { level: 1, name: enCommon.resume.pageTitle });
     expect(title).toBeInTheDocument();
   });
 
@@ -254,6 +261,66 @@ describe("Error state", () => {
     renderPage();
     const errorMsg = await screen.findByText(enCommon.resume.error);
     expect(errorMsg).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-LIST1 — Employee breadcrumb when employeeId present
+// ---------------------------------------------------------------------------
+
+describe("AC-LIST1 — Employee name shown in breadcrumb when employeeId present", () => {
+  beforeEach(() => {
+    mockSearchParams = { employeeId: "emp-id-1" };
+    mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
+    mockListResumes.mockResolvedValue(TEST_RESUMES);
+  });
+
+  it("shows the employee name in the breadcrumb", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-LIST2 — Count chip
+// ---------------------------------------------------------------------------
+
+describe("AC-LIST2 — Count chip shows number of resumes", () => {
+  beforeEach(() => {
+    mockSearchParams = { employeeId: "emp-id-1" };
+    mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
+  });
+
+  it("shows '2 resumes' chip for two resumes", async () => {
+    mockListResumes.mockResolvedValue(TEST_RESUMES);
+    renderPage();
+    expect(await screen.findByText("2 resumes")).toBeInTheDocument();
+  });
+
+  it("shows '1 resume' chip for a single resume", async () => {
+    mockListResumes.mockResolvedValue([TEST_RESUMES[0]!]);
+    renderPage();
+    expect(await screen.findByText("1 resume")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-LIST3 — Empty state action button when employeeId present
+// ---------------------------------------------------------------------------
+
+describe("AC-LIST3 — Empty state shows Add resume action when employeeId present", () => {
+  beforeEach(() => {
+    mockSearchParams = { employeeId: "emp-id-1" };
+    mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
+    mockListResumes.mockResolvedValue([]);
+  });
+
+  it("renders an Add resume link in the empty state", async () => {
+    renderPage();
+    await screen.findByText(enCommon.resume.empty);
+    // Two "Add resume" links expected: one in the header actions, one in the empty state body
+    const addLinks = screen.getAllByRole("link", { name: enCommon.resume.addResume });
+    expect(addLinks.length).toBeGreaterThanOrEqual(2);
   });
 });
 

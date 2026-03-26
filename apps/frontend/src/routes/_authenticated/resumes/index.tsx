@@ -20,6 +20,7 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -52,6 +53,12 @@ function ResumeListPage() {
     queryFn: () => orpc.listResumes(employeeId ? { employeeId } : {}),
   });
 
+  const { data: employee } = useQuery({
+    queryKey: ["getEmployee", employeeId],
+    queryFn: () => orpc.getEmployee({ id: employeeId! }),
+    enabled: !!employeeId,
+  });
+
   if (isLoading) return <LoadingState label={t("resume.loading")} />;
   if (isError) return <ErrorState message={t("resume.error")} />;
 
@@ -59,6 +66,15 @@ function ResumeListPage() {
     <>
       <PageHeader
         title={t("resume.pageTitle")}
+        breadcrumbs={[
+          { label: t("nav.employees"), to: "/employees" },
+          ...(employeeId ? [{ label: employee?.name ?? "…", to: `/employees/${employeeId}` }] : []),
+        ]}
+        chip={
+          resumes && employeeId ? (
+            <Chip label={t("resume.countLabel", { count: resumes.length })} size="small" />
+          ) : undefined
+        }
         actions={
           employeeId ? (
             <RouterButton variant="contained" to="/resumes/new" search={{ employeeId }}>
@@ -69,7 +85,14 @@ function ResumeListPage() {
       />
       <PageContent>
       {resumes && resumes.length === 0 ? (
-        <EmptyState message={t("resume.empty")} />
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+          <EmptyState message={t("resume.empty")} />
+          {employeeId && (
+            <RouterButton variant="outlined" to="/resumes/new" search={{ employeeId }}>
+              {t("resume.addResume")}
+            </RouterButton>
+          )}
+        </Box>
       ) : (
         <TableContainer component={Paper}>
           <Table aria-label={t("resume.pageTitle")}>
@@ -78,6 +101,7 @@ function ResumeListPage() {
                 <TableCell>{t("resume.tableHeaderTitle")}</TableCell>
                 <TableCell>{t("resume.tableHeaderLanguage")}</TableCell>
                 <TableCell>{t("resume.tableHeaderMain")}</TableCell>
+                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -98,6 +122,9 @@ function ResumeListPage() {
                     {resume.isMain ? (
                       <Chip label={t("resume.mainBadge")} color="primary" size="small" />
                     ) : null}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: "text.disabled", width: 40 }}>
+                    <ChevronRightIcon sx={{ display: "block" }} />
                   </TableCell>
                 </TableRow>
               ))}
