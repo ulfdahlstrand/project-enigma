@@ -829,7 +829,7 @@ function ResumeDetailPage() {
           ...(resume?.employeeId
             ? [
                 { label: employee?.name ?? "…", to: `/employees/${resume.employeeId}` },
-                { label: t("resume.pageTitle"), to: `/resumes?employeeId=${resume.employeeId}` },
+                { label: t("nav.resumes"), to: `/resumes?employeeId=${resume.employeeId}` },
               ]
             : []),
         ]}
