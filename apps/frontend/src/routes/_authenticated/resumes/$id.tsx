@@ -1,4 +1,3 @@
-import Button from "@mui/material/Button";
 /**
  * /resumes/$id route — resume detail rendered as A4 document pages.
  *
@@ -17,16 +16,25 @@ import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import type { ReactNode, RefObject } from "react";
 import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
+import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import EditIcon from "@mui/icons-material/Edit";
+import HistoryIcon from "@mui/icons-material/History";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
 import Grow from "@mui/material/Grow";
 import Fab from "@mui/material/Fab";
+import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
@@ -40,7 +48,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
-import { resumeBranchesKey, useForkResumeBranch } from "../../../hooks/versioning";
+import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../../hooks/versioning";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
@@ -568,6 +576,66 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit split button — primary: edit CV, secondary: revise with AI
+// ---------------------------------------------------------------------------
+
+function EditSplitButton({
+  resumeId,
+  activeBranchId,
+  onEdit,
+}: {
+  resumeId: string;
+  activeBranchId: string | null;
+  onEdit: () => void;
+}) {
+  const { t } = useTranslation("common");
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const anchorRef = useState<HTMLDivElement | null>(null);
+
+  return (
+    <>
+      <ButtonGroup variant="contained" ref={(el) => { anchorRef[1](el); }}>
+        <Button startIcon={<EditIcon />} onClick={onEdit}>
+          {t("resume.detail.editButton")}
+        </Button>
+        <Button
+          size="small"
+          onClick={() => setOpen((p) => !p)}
+          aria-label={t("resume.detail.editMenuLabel")}
+        >
+          <ArrowDropDownIcon />
+        </Button>
+      </ButtonGroup>
+      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal sx={{ zIndex: 1300 }}>
+        {({ TransitionProps }) => (
+          <Grow {...TransitionProps}>
+            <Paper>
+              <ClickAwayListener onClickAway={() => setOpen(false)}>
+                <MenuList autoFocusItem>
+                  <MenuItem
+                    onClick={() => {
+                      setOpen(false);
+                      void navigate({
+                        to: "/resumes/$id/revision",
+                        params: { id: resumeId },
+                        ...(activeBranchId ? { search: { branchId: activeBranchId } } : {}),
+                      });
+                    }}
+                  >
+                    {t("revision.reviseButton")}
+                  </MenuItem>
+                </MenuList>
+              </ClickAwayListener>
+            </Paper>
+          </Grow>
+        )}
+      </Popper>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -624,6 +692,7 @@ function ResumeDetailPage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
@@ -647,6 +716,9 @@ function ResumeDetailPage() {
     },
   });
   const forkResumeBranch = useForkResumeBranch();
+
+  const historyBranchId = activeBranchId ?? mainBranchId ?? "";
+  const { data: recentCommits = [] } = useResumeCommits(historyBranchId);
 
   const [showFullAssignments, setShowFullAssignments] = useState(true);
 
@@ -783,36 +855,16 @@ function ResumeDetailPage() {
         </>
       ) : (
         <>
-          <Button variant="outlined" onClick={() => setIsEditing(true)}>
-            {t("resume.detail.editButton")}
-          </Button>
-          <RouterButton
-            variant="outlined"
-            to="/resumes/$id/history"
-            params={{ id }}
-            {...(activeBranchId ? { search: { branchId: activeBranchId } } : {})}
-          >
-            {t("resume.history.pageTitle")}
-          </RouterButton>
-          <RouterButton
-            variant="outlined"
-            to="/resumes/$id/revision"
-            params={{ id }}
-            {...(activeBranchId ? { search: { branchId: activeBranchId } } : {})}
-          >
-            {t("revision.reviseButton")}
-          </RouterButton>
-          <RouterButton
-            variant="outlined"
-            to="/assignments/new"
-            search={{
-              resumeId: id,
-              employeeId: resume?.employeeId,
-              ...(activeBranchId ? { branchId: activeBranchId } : {}),
-            }}
-          >
-            {t("resume.detail.addAssignment")}
-          </RouterButton>
+          <EditSplitButton
+            resumeId={id}
+            activeBranchId={activeBranchId}
+            onEdit={() => setIsEditing(true)}
+          />
+          <Tooltip title={t("resume.history.pageTitle")}>
+            <IconButton onClick={() => setHistoryOpen(true)} size="small">
+              <HistoryIcon />
+            </IconButton>
+          </Tooltip>
         </>
       )}
       {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
@@ -902,8 +954,8 @@ function ResumeDetailPage() {
           </DocumentPage>
         )}
 
-        {/* AI improvement FAB — sits to the right of the document at presentation height */}
-        {!isEditing && presentation.length > 0 && (
+        {/* AI improvement FAB — sits to the right of the document at presentation height, only while editing */}
+        {isEditing && !isSnapshotMode && presentation.length > 0 && (
           <ImprovePresentationFab
             resumeId={id}
             presentation={presentation}
@@ -1108,7 +1160,95 @@ function ResumeDetailPage() {
             </Fab>
           </Tooltip>
         )}
+
+        {/* Add assignment FAB — visible only while editing, below the toggle FAB position */}
+        {hasAssignments && isEditing && !isSnapshotMode && (
+          <Tooltip title={t("resume.detail.addAssignment")} placement="left">
+            <Fab
+              size="small"
+              aria-label={t("resume.detail.addAssignment")}
+              onClick={() => void navigate({
+                to: "/assignments/new",
+                search: {
+                  resumeId: id,
+                  employeeId: resume?.employeeId,
+                  ...(activeBranchId ? { branchId: activeBranchId } : {}),
+                },
+              })}
+              sx={{
+                position: "absolute",
+                left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
+                top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
+                zIndex: 10,
+                bgcolor: "transparent",
+                color: "action.active",
+                boxShadow: 0,
+                opacity: 0.5,
+                transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+                "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+              }}
+            >
+              <AddIcon fontSize="small" />
+            </Fab>
+          </Tooltip>
+        )}
       </Box>
+
+      {/* Version history drawer */}
+      <Drawer
+        anchor="right"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        slotProps={{ paper: { sx: { width: 320 } } }}
+      >
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            {t("resume.detail.historyDrawer.title")}
+          </Typography>
+          <RouterButton
+            variant="text"
+            size="small"
+            to="/resumes/$id/history"
+            params={{ id }}
+            {...(activeBranchId ? { search: { branchId: activeBranchId } } : {})}
+            sx={{ mt: 0.5, px: 0 }}
+            onClick={() => setHistoryOpen(false)}
+          >
+            {t("resume.detail.historyDrawer.viewAll")}
+          </RouterButton>
+        </Box>
+        <List dense disablePadding>
+          {recentCommits.length === 0 ? (
+            <ListItem>
+              <ListItemText
+                primary={t("resume.detail.historyDrawer.noCommits")}
+                slotProps={{ primary: { color: "text.secondary", variant: "body2" } }}
+              />
+            </ListItem>
+          ) : (
+            recentCommits.slice(0, 20).map((commit) => (
+              <ListItem key={commit.id} divider>
+                <ListItemText
+                  primary={commit.message || t("resume.detail.historyDrawer.defaultMessage")}
+                  secondary={
+                    commit.createdAt
+                      ? new Date(commit.createdAt).toLocaleDateString(language === "sv" ? "sv-SE" : "en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : undefined
+                  }
+                  slotProps={{
+                    primary: { variant: "body2" },
+                    secondary: { variant: "caption" },
+                  }}
+                />
+              </ListItem>
+            ))
+          )}
+        </List>
+      </Drawer>
     </Box>
   )
 }
