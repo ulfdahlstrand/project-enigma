@@ -209,7 +209,8 @@
       "skillSaving": "Sparar…",
       "skillAddError": "Det gick inte att lägga till kompetensen. Försök igen.",
       "skillUpdateError": "Det gick inte att uppdatera kompetensen. Försök igen.",
-      "skillDeleteError": "Det gick inte att ta bort kompetensen. Försök igen."
+      "skillDeleteError": "Det gick inte att ta bort kompetensen. Försök igen.",
+      "profileHeading": "Profil"
     },
     "history": {
       "pageTitle": "Versionshistorik",

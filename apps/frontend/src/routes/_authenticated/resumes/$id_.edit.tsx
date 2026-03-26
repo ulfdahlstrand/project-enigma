@@ -18,8 +18,10 @@ import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { getResumeQueryKey } from "./$id";
 import { SkillsEditor } from "../../../components/SkillsEditor";
@@ -115,48 +117,62 @@ function ResumeEditPage() {
       />
       <PageContent>
         {mutation.isSuccess && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {t("resume.edit.saveSuccess")}
-        </Alert>
-      )}
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {t("resume.edit.saveSuccess")}
+          </Alert>
+        )}
 
-      {mutation.isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("resume.edit.saveError")}
-        </Alert>
-      )}
+        {mutation.isError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {t("resume.edit.saveError")}
+          </Alert>
+        )}
 
-      <Box
-        id="resume-edit-form"
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label={t("resume.edit.consultantTitleLabel")}
-          {...register("consultantTitle")}
-          fullWidth
-        />
-        <TextField
-          label={t("resume.edit.presentationLabel")}
-          helperText={t("resume.edit.presentationHelper")}
-          {...register("presentation")}
-          multiline
-          minRows={4}
-          fullWidth
-        />
-        <TextField
-          label={t("resume.edit.summaryLabel")}
-          {...register("summary")}
-          multiline
-          minRows={4}
-          fullWidth
-        />
-      </Box>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                {t("resume.edit.profileHeading")}
+              </Typography>
+              <Box
+                id="resume-edit-form"
+                component="form"
+                onSubmit={handleSubmit(onSubmit)}
+                sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+              >
+                <TextField
+                  label={t("resume.edit.consultantTitleLabel")}
+                  {...register("consultantTitle")}
+                  fullWidth
+                />
+                <TextField
+                  label={t("resume.edit.presentationLabel")}
+                  helperText={t("resume.edit.presentationHelper")}
+                  {...register("presentation")}
+                  multiline
+                  minRows={4}
+                  fullWidth
+                />
+                <TextField
+                  label={t("resume.edit.summaryLabel")}
+                  {...register("summary")}
+                  multiline
+                  minRows={4}
+                  fullWidth
+                />
+              </Box>
+            </CardContent>
+          </Card>
 
-      <Divider sx={{ my: 4 }} />
-
-      <SkillsEditor resumeId={id} skills={resume?.skills ?? []} queryKey={queryKey} />
+          <Card variant="outlined">
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                {t("resume.edit.skillsHeading")}
+              </Typography>
+              <SkillsEditor resumeId={id} skills={resume?.skills ?? []} queryKey={queryKey} />
+            </CardContent>
+          </Card>
+        </Box>
       </PageContent>
     </>
   );

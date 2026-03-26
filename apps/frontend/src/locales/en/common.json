@@ -209,7 +209,8 @@
       "skillSaving": "Saving…",
       "skillAddError": "Failed to add skill. Please try again.",
       "skillUpdateError": "Failed to update skill. Please try again.",
-      "skillDeleteError": "Failed to delete skill. Please try again."
+      "skillDeleteError": "Failed to delete skill. Please try again.",
+      "profileHeading": "Profile"
     },
     "history": {
       "pageTitle": "Version History",
