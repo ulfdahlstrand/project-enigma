@@ -159,7 +159,14 @@
       },
       "assignmentToggleFull": "Show full assignment details",
       "assignmentToggleSummary": "Show compact assignment list",
-      "assignmentTechnologies": "Technologies"
+      "assignmentTechnologies": "Technologies",
+      "editMenuLabel": "Open edit options",
+      "historyDrawer": {
+        "title": "Recent changes",
+        "viewAll": "View full history",
+        "noCommits": "No saved versions yet.",
+        "defaultMessage": "(no message)"
+      }
     },
     "edit": {
       "assignment": {

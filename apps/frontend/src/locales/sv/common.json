@@ -159,7 +159,14 @@
       },
       "assignmentToggleFull": "Visa fullständiga uppdragsdetaljer",
       "assignmentToggleSummary": "Visa kompakt uppdragslista",
-      "assignmentTechnologies": "Teknologier"
+      "assignmentTechnologies": "Teknologier",
+      "editMenuLabel": "Öppna redigeringsalternativ",
+      "historyDrawer": {
+        "title": "Senaste ändringar",
+        "viewAll": "Visa fullständig historik",
+        "noCommits": "Inga sparade versioner ännu.",
+        "defaultMessage": "(inget meddelande)"
+      }
     },
     "edit": {
       "assignment": {

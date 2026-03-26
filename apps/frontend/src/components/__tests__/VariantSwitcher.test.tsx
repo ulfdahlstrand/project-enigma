@@ -90,16 +90,18 @@ describe("Hidden state", () => {
 });
 
 describe("Single branch state", () => {
-  it("shows manage variants link when there is only one branch", () => {
+  it("renders the dropdown even when there is only one branch", () => {
     mockUseResumeBranches.mockReturnValue({ data: ONE_BRANCH });
     renderSwitcher();
-    expect(screen.getByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("does not render the dropdown when there is only one branch", () => {
+  it("shows manage variants option inside the dropdown when there is only one branch", async () => {
     mockUseResumeBranches.mockReturnValue({ data: ONE_BRANCH });
+    const user = userEvent.setup();
     renderSwitcher();
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("combobox"));
+    expect(await screen.findByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
   });
 });
 
@@ -122,10 +124,12 @@ describe("Visible state", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("shows manage variants link alongside the dropdown", () => {
+  it("shows manage variants option inside the dropdown", async () => {
     mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
+    const user = userEvent.setup();
     renderSwitcher();
-    expect(screen.getByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox"));
+    expect(await screen.findByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
   });
 });
 

@@ -279,14 +279,13 @@ describe("Navigation", () => {
     expect(resumesLink).toBeInTheDocument();
   });
 
-  it("renders a History link to the resume history page", async () => {
+  it("renders a History button that opens the history drawer", async () => {
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
-    const historyLink = screen.getByRole("link", {
+    const historyButton = screen.getByRole("button", {
       name: enCommon.resume.history.pageTitle,
     });
-    expect(historyLink).toBeInTheDocument();
-    expect(historyLink).toHaveAttribute("href", `/resumes/${TEST_RESUME_ID}/history`);
+    expect(historyButton).toBeInTheDocument();
   });
 });
 
