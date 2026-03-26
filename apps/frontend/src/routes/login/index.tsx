@@ -10,6 +10,8 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../../auth/auth-context";
 import { ensureAuthSession } from "../../auth/session-store";
@@ -29,6 +31,7 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <Box
@@ -37,32 +40,79 @@ export function LoginPage() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "60vh",
-        gap: 3,
+        minHeight: "100vh",
+        bgcolor: "background.default",
       }}
     >
-      <Typography variant="h4" component="h1">
-        {t("header.appName")}
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ width: "100%", maxWidth: 360 }}>
-          {t("auth.loginError")}
-        </Alert>
-      )}
-
-      <GoogleLogin
-        onSuccess={(response) => {
-          if (response.credential) {
-            login(response.credential)
-              .then(() => navigate({ to: "/employees" }))
-              .catch(() => setError(true));
-          } else {
-            setError(true);
-          }
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 3,
+          width: "100%",
+          maxWidth: 400,
+          px: 3,
         }}
-        onError={() => setError(true)}
-      />
+      >
+        <Box sx={{ textAlign: "center", mb: 1 }}>
+          <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
+            {t("header.appName")}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {t("auth.loginSubtitle")}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ width: "100%" }} />
+
+        {error && (
+          <Alert severity="error" sx={{ width: "100%" }}>
+            {t("auth.loginError")}
+          </Alert>
+        )}
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            width: "100%",
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">
+                {t("auth.loggingIn")}
+              </Typography>
+            </Box>
+          ) : (
+            <GoogleLogin
+              onSuccess={(response) => {
+                if (response.credential) {
+                  setIsLoading(true);
+                  setError(false);
+                  login(response.credential)
+                    .then(() => navigate({ to: "/employees" }))
+                    .catch(() => {
+                      setIsLoading(false);
+                      setError(true);
+                    });
+                } else {
+                  setError(true);
+                }
+              }}
+              onError={() => setError(true)}
+            />
+          )}
+        </Box>
+
+        <Typography variant="caption" color="text.disabled" sx={{ textAlign: "center" }}>
+          {t("auth.loginHelp")}
+        </Typography>
+      </Box>
     </Box>
   );
 }
