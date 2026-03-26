@@ -10,7 +10,7 @@
  * (queryKey definition) and this form (cache invalidation on success) reference
  * the same value — per the architectural requirement for query key co-location.
  */
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
