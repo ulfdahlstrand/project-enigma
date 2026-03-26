@@ -116,11 +116,20 @@ function buildDbMock(opts: {
   const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
   const assignmentsInnerJoin = vi.fn().mockReturnValue({ select: assignmentsSelect });
 
-  // Insert commit
+  // Insert resume_commits
   const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedCommit);
   const insertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: insertExecuteTakeFirstOrThrow });
   const insertValues = vi.fn().mockReturnValue({ returningAll: insertReturningAll });
-  const insertInto = vi.fn().mockReturnValue({ values: insertValues });
+
+  // Insert resume_commit_parents
+  const parentInsertExecute = vi.fn().mockResolvedValue(undefined);
+  const parentInsertValues = vi.fn().mockReturnValue({ execute: parentInsertExecute });
+
+  const insertInto = vi.fn().mockImplementation((table: string) => {
+    if (table === "resume_commits") return { values: insertValues };
+    if (table === "resume_commit_parents") return { values: parentInsertValues };
+    return { values: insertValues };
+  });
 
   // Update branch
   const updateExecute = vi.fn().mockResolvedValue(undefined);
@@ -145,7 +154,7 @@ function buildDbMock(opts: {
   });
 
   const db = { selectFrom, transaction } as unknown as Kysely<Database>;
-  return { db, insertValues, updateSet, branchWhere };
+  return { db, insertValues, parentInsertValues, updateSet, branchWhere };
 }
 
 // ---------------------------------------------------------------------------
@@ -162,7 +171,6 @@ describe("saveResumeVersion", () => {
       expect.objectContaining({
         resume_id: RESUME_ID,
         branch_id: BRANCH_ID,
-        parent_commit_id: null,
         message: "My version",
         created_by: MOCK_ADMIN.id,
       })
@@ -200,12 +208,16 @@ describe("saveResumeVersion", () => {
 
   it("sets parent_commit_id to the current HEAD of the branch", async () => {
     const branchWithHead = { ...BRANCH_ROW, head_commit_id: "prev-commit-id" };
-    const { db, insertValues } = buildDbMock({ branchRow: branchWithHead });
+    const { db, parentInsertValues } = buildDbMock({ branchRow: branchWithHead });
 
     await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
-    expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ parent_commit_id: "prev-commit-id" })
+    expect(parentInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commit_id: COMMIT_ID,
+        parent_commit_id: "prev-commit-id",
+        parent_order: 0,
+      })
     );
   });
 

@@ -185,17 +185,17 @@ describe("getResumeBranchHistoryGraph", () => {
       forkedFromCommitId: MAIN_COMMIT_ID_1,
       headCommitId: SV_COMMIT_ID_1,
     });
-    expect(result.commits[2]).toMatchObject({
+    expect(result.commits[3]).toMatchObject({
       id: SV_COMMIT_ID_1,
       branchId: SV_BRANCH_ID,
       parentCommitId: MAIN_COMMIT_ID_1,
     });
-    expect(branchOrderBy).toHaveBeenCalledWith("created_at", "asc");
+    expect(branchOrderBy).toHaveBeenCalledWith("resume_branches.created_at", "asc");
     expect(commitOrderBy).toHaveBeenCalledWith("resume_commits.created_at", "asc");
   });
 
   it("returns empty arrays when a resume has no branches or commits", async () => {
-    const { db } = buildDbMock({ branchRows: [], commitRows: [] });
+    const { db } = buildDbMock({ branchRows: [], commitRows: [], commitParentRows: [] });
 
     const result = await getResumeBranchHistoryGraph(db, MOCK_ADMIN, { resumeId: RESUME_ID });
 
