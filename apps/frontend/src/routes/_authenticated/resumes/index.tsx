@@ -12,7 +12,6 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
@@ -21,8 +20,8 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Link } from "@tanstack/react-router";
 import { orpc } from "../../../orpc-client";
+import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
 import { LoadingState, ErrorState, EmptyState } from "../../../components/feedback";
@@ -62,9 +61,9 @@ function ResumeListPage() {
         title={t("resume.pageTitle")}
         actions={
           employeeId ? (
-            <Button variant="contained" component={Link} to="/resumes/new" search={{ employeeId }}>
+            <RouterButton variant="contained" to="/resumes/new" search={{ employeeId }}>
               {t("resume.addResume")}
-            </Button>
+            </RouterButton>
           ) : undefined
         }
       />

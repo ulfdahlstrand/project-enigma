@@ -144,7 +144,7 @@ function EmployeeDetailPage() {
   return (
     <>
       <PageHeader
-        title={employee.name}
+        title={employee?.name ?? ""}
         breadcrumbs={[{ label: t("nav.employees"), to: "/employees" }]}
         actions={
           <>
