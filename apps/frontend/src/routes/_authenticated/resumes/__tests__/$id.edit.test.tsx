@@ -297,6 +297,24 @@ describe("Save — error", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Section headings
+// ---------------------------------------------------------------------------
+
+describe("Section headings", () => {
+  it("renders the profile section heading", async () => {
+    renderPage();
+    const heading = await screen.findByText(enCommon.resume.edit.profileHeading);
+    expect(heading).toBeInTheDocument();
+  });
+
+  it("renders the skills section heading", async () => {
+    renderPage();
+    const heading = await screen.findByText(enCommon.resume.edit.skillsHeading);
+    expect(heading).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Route export
 // ---------------------------------------------------------------------------
 
