@@ -57,12 +57,22 @@ export function PageHeader({ title, breadcrumbs, chip, actions }: PageHeaderProp
         flexWrap: "wrap",
       }}
     >
-      {/* Left: breadcrumbs + title + chip */}
+      {/* Left: title + chip + breadcrumbs */}
       <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", flexGrow: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ fontWeight: 500, color: "text.primary", lineHeight: 1.2 }}
+          >
+            {title}
+          </Typography>
+          {chip}
+        </Box>
         {hasBreadcrumbs && (
           <Breadcrumbs
             aria-label="breadcrumb"
-            sx={{ mb: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
+            sx={{ mt: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
           >
             {breadcrumbs.map((item) => (
               <MuiLink
@@ -81,16 +91,6 @@ export function PageHeader({ title, breadcrumbs, chip, actions }: PageHeaderProp
             </Typography>
           </Breadcrumbs>
         )}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography
-            variant="h5"
-            component="h1"
-            sx={{ fontWeight: 500, color: "text.primary", lineHeight: 1.2 }}
-          >
-            {title}
-          </Typography>
-          {chip}
-        </Box>
       </Box>
 
       {/* Right: actions */}
