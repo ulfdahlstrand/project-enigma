@@ -1,4 +1,3 @@
-import Button from "@mui/material/Button";
 /**
  * /employees/:id/import route — import CV JSON for an employee.
  *
@@ -17,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
 import Paper from "@mui/material/Paper";
@@ -27,9 +27,10 @@ import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../../orpc-client";
-import RouterButton from "../../../components/RouterButton";
 import { getEducationQueryKey } from "./$id";
 import { LIST_RESUMES_QUERY_KEY } from "../resumes";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
 
 
 export const Route = createFileRoute("/_authenticated/employees/$id_/import")({
@@ -160,77 +161,72 @@ function ImportCvPage() {
   const canImport = (parsedDocxJson !== null || jsonText.trim().length > 0) && !mutation.isPending;
 
   return (
-    <Box sx={{ p: 2 }}>
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h4" component="h1">
-          {t("employee.import.pageTitle")}
-        </Typography>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <ToggleButtonGroup
-            value={language}
-            exclusive
-            onChange={(_e, val) => { if (val) setLanguage(val as "sv" | "en"); }}
-            size="small"
-            aria-label={t("employee.import.languageLabel")}
-          >
-            <ToggleButton value="sv">{t("employee.import.languageSv")}</ToggleButton>
-            <ToggleButton value="en">{t("employee.import.languageEn")}</ToggleButton>
-          </ToggleButtonGroup>
-          <Button
-            variant="outlined"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label={t("employee.import.uploadButton")}
-          >
-            {t("employee.import.uploadButton")}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => docxInputRef.current?.click()}
-            disabled={docxMutation.isPending}
-            aria-label={t("employee.import.uploadDocxButton")}
-          >
-            {docxMutation.isPending
-              ? t("employee.import.parsingDocx")
-              : t("employee.import.uploadDocxButton")}
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!canImport}
-            onClick={handleImport}
-            aria-label={t("employee.import.importButton")}
-          >
-            {mutation.isPending
-              ? t("employee.import.importing")
-              : t("employee.import.importButton")}
-          </Button>
-          <RouterButton
-            variant="outlined"
-            to="/employees/$id"
-            params={{ id }}
-            aria-label={t("employee.import.backButton")}
-          >
-            {t("employee.import.backButton")}
-          </RouterButton>
-        </Box>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          style={{ display: "none" }}
-          onChange={handleFileUpload}
-        />
-        <input
-          ref={docxInputRef}
-          type="file"
-          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          style={{ display: "none" }}
-          onChange={handleDocxUpload}
-        />
-      </Box>
-
-      {/* Two-column body */}
-      <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "flex-start" }}>
+    <>
+      <PageHeader
+        title={t("employee.import.pageTitle")}
+        breadcrumbs={[
+          { label: t("nav.employees"), to: "/employees" },
+          { label: t("employee.detail.pageTitle"), to: `/employees/${id}` },
+        ]}
+        actions={
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <ToggleButtonGroup
+              value={language}
+              exclusive
+              onChange={(_e, val) => { if (val) setLanguage(val as "sv" | "en"); }}
+              size="small"
+              aria-label={t("employee.import.languageLabel")}
+            >
+              <ToggleButton value="sv">{t("employee.import.languageSv")}</ToggleButton>
+              <ToggleButton value="en">{t("employee.import.languageEn")}</ToggleButton>
+            </ToggleButtonGroup>
+            <Button
+              variant="outlined"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label={t("employee.import.uploadButton")}
+            >
+              {t("employee.import.uploadButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => docxInputRef.current?.click()}
+              disabled={docxMutation.isPending}
+              aria-label={t("employee.import.uploadDocxButton")}
+            >
+              {docxMutation.isPending
+                ? t("employee.import.parsingDocx")
+                : t("employee.import.uploadDocxButton")}
+            </Button>
+            <Button
+              variant="contained"
+              disabled={!canImport}
+              onClick={handleImport}
+              aria-label={t("employee.import.importButton")}
+            >
+              {mutation.isPending
+                ? t("employee.import.importing")
+                : t("employee.import.importButton")}
+            </Button>
+          </Box>
+        }
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleFileUpload}
+      />
+      <input
+        ref={docxInputRef}
+        type="file"
+        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        style={{ display: "none" }}
+        onChange={handleDocxUpload}
+      />
+      <PageContent>
+        {/* Two-column body */}
+        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "flex-start" }}>
 
         {/* Left column — input */}
         <Box sx={{ flex: 1, minWidth: 320 }}>
@@ -357,8 +353,9 @@ function ImportCvPage() {
           </Paper>
         </Box>
 
-      </Box>
-    </Box>
+        </Box>
+      </PageContent>
+    </>
   );
 }
 
