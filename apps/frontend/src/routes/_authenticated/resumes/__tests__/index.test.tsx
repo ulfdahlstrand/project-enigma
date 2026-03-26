@@ -286,12 +286,7 @@ describe("AC-LIST1 — Employee name shown in breadcrumb when employeeId present
 // ---------------------------------------------------------------------------
 
 describe("AC-LIST2 — Count chip shows number of resumes", () => {
-  beforeEach(() => {
-    mockSearchParams = { employeeId: "emp-id-1" };
-    mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
-  });
-
-  it("shows '2 resumes' chip for two resumes", async () => {
+  it("shows '2 resumes' chip for two resumes (no employeeId)", async () => {
     mockListResumes.mockResolvedValue(TEST_RESUMES);
     renderPage();
     expect(await screen.findByText("2 resumes")).toBeInTheDocument();
@@ -300,6 +295,43 @@ describe("AC-LIST2 — Count chip shows number of resumes", () => {
   it("shows '1 resume' chip for a single resume", async () => {
     mockListResumes.mockResolvedValue([TEST_RESUMES[0]!]);
     renderPage();
+    expect(await screen.findByText("1 resume")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-LIST4 — Search / filter
+// ---------------------------------------------------------------------------
+
+describe("AC-LIST4 — Search input filters resume list by title", () => {
+  beforeEach(() => {
+    mockListResumes.mockResolvedValue(TEST_RESUMES);
+  });
+
+  it("renders a search input with the correct placeholder", async () => {
+    renderPage();
+    await screen.findByText(TEST_RESUMES[0]!.title);
+    expect(screen.getByPlaceholderText(enCommon.resume.searchPlaceholder)).toBeInTheDocument();
+  });
+
+  it("filters resumes by title when user types", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText(TEST_RESUMES[0]!.title);
+
+    await user.type(screen.getByPlaceholderText(enCommon.resume.searchPlaceholder), "Senior");
+
+    expect(screen.getByText(TEST_RESUMES[0]!.title)).toBeInTheDocument();
+    expect(screen.queryByText(TEST_RESUMES[1]!.title)).toBeNull();
+  });
+
+  it("updates the count chip to reflect filtered results", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("2 resumes");
+
+    await user.type(screen.getByPlaceholderText(enCommon.resume.searchPlaceholder), "Senior");
+
     expect(await screen.findByText("1 resume")).toBeInTheDocument();
   });
 });

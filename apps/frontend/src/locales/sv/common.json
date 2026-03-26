@@ -280,7 +280,8 @@
       "manageVariants": "Hantera varianter"
     },
     "countLabel_one": "1 meritförteckning",
-    "countLabel_other": "{{count}} meritförteckningar"
+    "countLabel_other": "{{count}} meritförteckningar",
+    "searchPlaceholder": "Sök meritförteckningar…"
   },
   "assignment": {
     "pageTitle": "Uppdrag",

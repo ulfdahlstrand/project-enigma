@@ -9,11 +9,15 @@
  */
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import InputAdornment from "@mui/material/InputAdornment";
 import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import SearchIcon from "@mui/icons-material/Search";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -43,6 +47,7 @@ function ResumeListPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     data: resumes,
@@ -59,8 +64,17 @@ function ResumeListPage() {
     enabled: !!employeeId,
   });
 
+  const filteredResumes = useMemo(() => {
+    if (!resumes) return [];
+    if (!searchQuery.trim()) return resumes;
+    const q = searchQuery.toLowerCase();
+    return resumes.filter((r) => r.title.toLowerCase().includes(q));
+  }, [resumes, searchQuery]);
+
   if (isLoading) return <LoadingState label={t("resume.loading")} />;
   if (isError) return <ErrorState message={t("resume.error")} />;
+
+  const count = filteredResumes.length;
 
   return (
     <>
@@ -71,8 +85,8 @@ function ResumeListPage() {
           ...(employeeId ? [{ label: employee?.name ?? "…", to: `/employees/${employeeId}` }] : []),
         ]}
         chip={
-          resumes && employeeId ? (
-            <Chip label={t("resume.countLabel", { count: resumes.length })} size="small" />
+          resumes && resumes.length > 0 ? (
+            <Chip label={t("resume.countLabel", { count })} size="small" variant="outlined" />
           ) : undefined
         }
         actions={
@@ -94,43 +108,61 @@ function ResumeListPage() {
           )}
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table aria-label={t("resume.pageTitle")}>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t("resume.tableHeaderTitle")}</TableCell>
-                <TableCell>{t("resume.tableHeaderLanguage")}</TableCell>
-                <TableCell>{t("resume.tableHeaderMain")}</TableCell>
-                <TableCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {resumes?.map((resume) => (
-                <TableRow
-                  key={resume.id}
-                  hover
-                  sx={{ cursor: "pointer" }}
-                  onClick={() =>
-                    void navigate({ to: "/resumes/$id", params: { id: resume.id } })
-                  }
-                >
-                  <TableCell>{resume.title}</TableCell>
-                  <TableCell>
-                    <Chip label={resume.language} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    {resume.isMain ? (
-                      <Chip label={t("resume.mainBadge")} color="primary" size="small" />
-                    ) : null}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "text.disabled", width: 40 }}>
-                    <ChevronRightIcon sx={{ display: "block" }} />
-                  </TableCell>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            size="small"
+            placeholder={t("resume.searchPlaceholder")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{ maxWidth: 320 }}
+          />
+          <TableContainer component={Paper}>
+            <Table aria-label={t("resume.pageTitle")}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("resume.tableHeaderTitle")}</TableCell>
+                  <TableCell>{t("resume.tableHeaderLanguage")}</TableCell>
+                  <TableCell>{t("resume.tableHeaderMain")}</TableCell>
+                  <TableCell />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredResumes.map((resume) => (
+                  <TableRow
+                    key={resume.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() =>
+                      void navigate({ to: "/resumes/$id", params: { id: resume.id } })
+                    }
+                  >
+                    <TableCell>{resume.title}</TableCell>
+                    <TableCell>
+                      <Chip label={resume.language} size="small" />
+                    </TableCell>
+                    <TableCell>
+                      {resume.isMain ? (
+                        <Chip label={t("resume.mainBadge")} color="primary" size="small" />
+                      ) : null}
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: "text.disabled", width: 40 }}>
+                      <ChevronRightIcon sx={{ display: "block" }} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       )}
       </PageContent>
     </>
