@@ -20,11 +20,13 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     createResume: vi.fn(),
     listResumes: vi.fn(),
+    getEmployee: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 const mockCreateResume = orpc.createResume as ReturnType<typeof vi.fn>;
+const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 
 const mockNavigate = vi.fn();
 
@@ -49,6 +51,10 @@ function renderPage() {
   const queryClient = buildTestQueryClient();
   return renderWithProviders(<NewResumePage />, { queryClient });
 }
+
+beforeEach(() => {
+  mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
+});
 
 afterEach(() => vi.clearAllMocks());
 
@@ -120,5 +126,65 @@ describe("Error state", () => {
     await user.click(screen.getByRole("button", { name: enCommon.resume.new.saveButton }));
     const errorMsg = await screen.findByText(enCommon.resume.new.saveError);
     expect(errorMsg).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW1 — Helper text rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW1 — Helper text rendered", () => {
+  it("renders the helper text below the title field", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.resume.new.helperText)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW2 — Language select with EN/SV options
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW2 — Language select renders EN and SV options", () => {
+  it("renders English and Swedish as selectable options", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const select = screen.getByRole("combobox", { name: new RegExp(enCommon.resume.new.languageLabel, "i") });
+    await user.click(select);
+    expect(await screen.findByRole("option", { name: enCommon.resume.new.languageOptionEn })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: enCommon.resume.new.languageOptionSv })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW3 — Cancel link rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW3 — Cancel link rendered", () => {
+  it("renders a Cancel link", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: enCommon.resume.new.cancel })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW4 — Employee breadcrumb shown
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW4 — Employee name shown in breadcrumb", () => {
+  it("shows the employee name when employeeId is present", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW5 — Save button in PageHeader actions
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW5 — Save button in PageHeader actions", () => {
+  it("save button is a submit button rendered outside the form body", () => {
+    renderPage();
+    const saveBtn = screen.getByRole("button", { name: enCommon.resume.new.saveButton });
+    expect(saveBtn).toHaveAttribute("form", "new-resume-form");
   });
 });
