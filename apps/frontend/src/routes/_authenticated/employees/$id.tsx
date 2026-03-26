@@ -18,7 +18,6 @@ import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
@@ -29,6 +28,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
 import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
+import { LoadingState, ErrorState } from "../../../components/feedback";
 
 export const getEmployeeQueryKey = (id: string) =>
   ["getEmployee", id] as const;
@@ -117,13 +119,7 @@ function EmployeeDetailPage() {
     createEducationMutation.mutate({ type, value: newEntryValue.trim() });
   };
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("employee.detail.loading")} />
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("employee.detail.loading")} />;
 
   if (isError) {
     const isNotFound =
@@ -132,19 +128,7 @@ function EmployeeDetailPage() {
       "code" in error &&
       (error as { code: unknown }).code === "NOT_FOUND";
 
-    if (isNotFound) {
-      return (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1">{t("employee.detail.notFound")}</Typography>
-        </Box>
-      );
-    }
-
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("employee.detail.saveError")}</Alert>
-      </Box>
-    );
+    return <ErrorState message={isNotFound ? t("employee.detail.notFound") : t("employee.detail.saveError")} />;
   }
 
   const degrees = educationList.filter((e) => e.type === "degree");
@@ -158,44 +142,41 @@ function EmployeeDetailPage() {
   ];
 
   return (
-    <Box sx={{ p: 2 }}>
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-        <Typography variant="h4" component="h1">
-          {t("employee.detail.pageTitle")}
-        </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <RouterButton variant="outlined" to="/employees/$id/import" params={{ id }}>
-            {t("employee.detail.importCvButton")}
-          </RouterButton>
-          <RouterButton variant="outlined" to="/resumes" search={{ employeeId: id }}>
-            {t("employee.detail.viewResumes")}
-          </RouterButton>
-          <Button
-            type="submit"
-            form="employee-identity-form"
-            variant="contained"
-            disabled={mutation.isPending}
-            aria-label={t("employee.detail.saveButton")}
-          >
-            {t("employee.detail.saveButton")}
-          </Button>
-        </Box>
-      </Box>
+    <>
+      <PageHeader
+        title={employee.name}
+        breadcrumbs={[{ label: t("nav.employees"), to: "/employees" }]}
+        actions={
+          <>
+            <RouterButton variant="outlined" to="/employees/$id/import" params={{ id }}>
+              {t("employee.detail.importCvButton")}
+            </RouterButton>
+            <Button
+              type="submit"
+              form="employee-identity-form"
+              variant="contained"
+              disabled={mutation.isPending}
+              aria-label={t("employee.detail.saveButton")}
+            >
+              {t("employee.detail.saveButton")}
+            </Button>
+          </>
+        }
+      />
+      <PageContent>
+        {mutation.isSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {t("employee.detail.saveSuccess")}
+          </Alert>
+        )}
+        {mutation.isError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t("employee.detail.saveError")}
+          </Alert>
+        )}
 
-      {mutation.isSuccess && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {t("employee.detail.saveSuccess")}
-        </Alert>
-      )}
-      {mutation.isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("employee.detail.saveError")}
-        </Alert>
-      )}
-
-      {/* Two-column body */}
-      <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {/* Two-column body */}
+        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {/* Left — identity form */}
         <Box sx={{ width: 560, flexShrink: 0 }}>
           <Box
@@ -332,7 +313,8 @@ function EmployeeDetailPage() {
             </Box>
           ))}
         </Box>
-      </Box>
-    </Box>
+        </Box>
+      </PageContent>
+    </>
   );
 }
