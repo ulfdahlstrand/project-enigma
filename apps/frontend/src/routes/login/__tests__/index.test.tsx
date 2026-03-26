@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
+import { render, screen, act, waitFor, within } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -136,5 +136,25 @@ describe("LoginPage", () => {
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" })
     );
+  });
+
+  it("renders the login subtitle", () => {
+    renderLogin();
+    expect(screen.getByText(enCommon.auth.loginSubtitle)).toBeInTheDocument();
+  });
+
+  it("renders the help text", () => {
+    renderLogin();
+    expect(screen.getByText(enCommon.auth.loginHelp)).toBeInTheDocument();
+  });
+
+  it("shows loading state after clicking sign in", async () => {
+    renderLogin();
+    await act(async () => {
+      screen.getByRole("button", { name: /sign in with google/i }).click();
+    });
+    // After click, the Google button should be replaced by progress indicator
+    expect(screen.queryByRole("button", { name: /sign in with google/i })).toBeNull();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 });

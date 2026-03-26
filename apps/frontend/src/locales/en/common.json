@@ -3,6 +3,9 @@
   "auth": {
     "signInWithGoogle": "Sign in with Google",
     "signOut": "Sign out",
+    "loginSubtitle": "Create, maintain, and export consultant CVs.",
+    "loginHelp": "Contact your administrator if you are unable to sign in.",
+    "loggingIn": "Signing in…",
     "loginError": "Sign-in failed. Please try again."
   },
   "header": {
