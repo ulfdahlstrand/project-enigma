@@ -235,7 +235,10 @@
       "tableHeaderSavedAt": "Sparad",
       "tableHeaderSavedBy": "Sparad av",
       "defaultMessage": "(inget meddelande)",
-      "previewButton": "Förhandsgranska"
+      "previewButton": "Förhandsgranska",
+      "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
+      "viewInResumeButton": "Visa i CV",
+      "headBadge": "Aktuell"
     },
     "variants": {
       "pageTitle": "Varianter",

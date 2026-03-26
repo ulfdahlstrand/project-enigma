@@ -235,7 +235,10 @@
       "tableHeaderSavedAt": "Saved",
       "tableHeaderSavedBy": "Saved by",
       "defaultMessage": "(no message)",
-      "previewButton": "Preview"
+      "previewButton": "Preview",
+      "description": "Each saved version is a snapshot of this resume at a point in time. Switch between branches to see their individual histories, or use the tree view for a full overview.",
+      "viewInResumeButton": "View in resume",
+      "headBadge": "Current"
     },
     "variants": {
       "pageTitle": "Variants",
