@@ -125,7 +125,10 @@
       "languageLabel": "Språk",
       "saveButton": "Skapa",
       "cancel": "Avbryt",
-      "saveError": "Det gick inte att skapa meritförteckningen. Försök igen."
+      "saveError": "Det gick inte att skapa meritförteckningen. Försök igen.",
+      "helperText": "Ge din meritförteckning en titel. Du kan skapa flera meritförteckningar på olika språk eller för olika roller.",
+      "languageOptionEn": "Engelska",
+      "languageOptionSv": "Svenska"
     },
     "detail": {
       "pageTitle": "Meritförteckning",

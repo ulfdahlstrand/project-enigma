@@ -125,7 +125,10 @@
       "languageLabel": "Language",
       "saveButton": "Create",
       "cancel": "Cancel",
-      "saveError": "Failed to create resume. Please try again."
+      "saveError": "Failed to create resume. Please try again.",
+      "helperText": "Give your resume a title. You can create multiple resumes in different languages or for different roles.",
+      "languageOptionEn": "English",
+      "languageOptionSv": "Swedish"
     },
     "detail": {
       "pageTitle": "Resume",
