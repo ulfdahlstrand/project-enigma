@@ -861,7 +861,7 @@ function ResumeDetailPage() {
             onEdit={() => setIsEditing(true)}
           />
           <Tooltip title={t("resume.history.pageTitle")}>
-            <IconButton onClick={() => setHistoryOpen(true)} size="small">
+            <IconButton onClick={() => setHistoryOpen(true)} size="small" aria-label={t("resume.history.pageTitle")}>
               <HistoryIcon />
             </IconButton>
           </Tooltip>
