@@ -134,7 +134,7 @@ describe("Form rendering", () => {
 
   it("renders the page title", async () => {
     renderPage();
-    const pageTitle = await screen.findByText(enCommon.resume.edit.pageTitle);
+    const pageTitle = await screen.findByRole("heading", { level: 1, name: enCommon.resume.edit.pageTitle });
     expect(pageTitle).toBeInTheDocument();
   });
 
@@ -153,13 +153,12 @@ describe("Form rendering", () => {
     expect(saveBtn).toBeInTheDocument();
   });
 
-  it("renders a Back button", async () => {
+  it("renders a breadcrumb link to /resumes", async () => {
     renderPage();
     await screen.findByDisplayValue(TEST_RESUME.summary!);
-    const backBtn = screen.getByRole("button", {
-      name: enCommon.resume.edit.backButton,
-    });
-    expect(backBtn).toBeInTheDocument();
+    const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
+    expect(resumesLink).toBeInTheDocument();
+    expect(resumesLink).toHaveAttribute("href", "/resumes");
   });
 });
 

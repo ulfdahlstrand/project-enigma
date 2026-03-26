@@ -249,7 +249,7 @@ describe("Skills list", () => {
     mockGetResume.mockResolvedValue(TEST_RESUME_NO_SKILLS);
     renderPage();
     // Wait for resume to load, then verify skills page is absent
-    await screen.findByText(TEST_RESUME.title);
+    await screen.findAllByText(TEST_RESUME.title);
     expect(screen.queryByText(enCommon.resume.detail.consultantProfileLabel)).toBeNull();
   });
 });
@@ -272,11 +272,11 @@ describe("Navigation", () => {
     expect(editBtn).toBeInTheDocument();
   });
 
-  it("renders a Back link to /resumes", async () => {
+  it("renders a breadcrumb link to /resumes", async () => {
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
-    const backLink = screen.getByText(enCommon.resume.detail.backButton);
-    expect(backLink).toBeInTheDocument();
+    const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
+    expect(resumesLink).toBeInTheDocument();
   });
 
   it("renders a History link to the resume history page", async () => {

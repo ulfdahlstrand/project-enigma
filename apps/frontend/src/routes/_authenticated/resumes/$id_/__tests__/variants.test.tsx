@@ -159,7 +159,7 @@ describe("Branch list", () => {
 
   it("renders the page title", async () => {
     renderPage();
-    const title = await screen.findByText(enCommon.resume.variants.pageTitle);
+    const title = await screen.findByRole("heading", { level: 1, name: enCommon.resume.variants.pageTitle });
     expect(title).toBeInTheDocument();
   });
 
@@ -248,7 +248,7 @@ describe("Create variant dialog", () => {
   it("disables the Create variant button when no commits exist", async () => {
     mockUseResumeCommits.mockReturnValue({ data: [] });
     renderPage();
-    await screen.findByText(enCommon.resume.variants.pageTitle);
+    await screen.findByRole("heading", { level: 1, name: enCommon.resume.variants.pageTitle });
     const createBtn = screen.getByRole("button", { name: enCommon.resume.variants.createButton });
     expect(createBtn).toBeDisabled();
   });
@@ -293,19 +293,14 @@ describe("Create variant dialog", () => {
 // Navigation
 // ---------------------------------------------------------------------------
 
-describe("Back button", () => {
-  it("navigates to /resumes/$id when back button is clicked", async () => {
+describe("Breadcrumb navigation", () => {
+  it("renders a breadcrumb link back to the resumes list", async () => {
     mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false, isError: false });
     mockUseResumeCommits.mockReturnValue({ data: COMMITS });
-    const user = userEvent.setup();
     renderPage();
 
-    const backBtn = await screen.findByText(enCommon.resume.detail.backButton);
-    await user.click(backBtn);
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id",
-      params: { id: "resume-id-1" },
-    });
+    await screen.findByRole("heading", { level: 1, name: enCommon.resume.variants.pageTitle });
+    const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
+    expect(resumesLink).toBeInTheDocument();
   });
 });
