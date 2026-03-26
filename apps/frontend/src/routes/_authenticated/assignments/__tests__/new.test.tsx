@@ -21,16 +21,19 @@ vi.mock("../../../../orpc-client", () => ({
     createAssignment: vi.fn(),
     listAssignments: vi.fn(),
     getResume: vi.fn(),
+    getEmployee: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 const mockCreateAssignment = orpc.createAssignment as ReturnType<typeof vi.fn>;
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 
-// Default: resolve with a resume that has a known title
+// Default: resolve with known resume and employee
 beforeEach(() => {
   mockGetResume.mockResolvedValue({ id: "resume-id-1", title: "Ulf Dahlstrand EN" });
+  mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
 });
 
 const mockNavigate = vi.fn();
@@ -129,7 +132,12 @@ describe("AC-NEW3 — Context label shown when resumeId present", () => {
 // AC-NEW4 — Resume title shown in breadcrumb
 // ---------------------------------------------------------------------------
 
-describe("AC-NEW4 — Resume title shown in breadcrumb when resume is loaded", () => {
+describe("AC-NEW4 — Full breadcrumb chain matches resume detail structure", () => {
+  it("shows the employee name in the breadcrumb", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand")).toBeInTheDocument();
+  });
+
   it("shows the resume title in the breadcrumb", async () => {
     renderPage();
     expect(await screen.findByText("Ulf Dahlstrand EN")).toBeInTheDocument();

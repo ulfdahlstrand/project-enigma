@@ -63,6 +63,12 @@ function NewAssignmentPage() {
     enabled: !!resumeId,
   });
 
+  const { data: employee } = useQuery({
+    queryKey: ["getEmployee", employeeId],
+    queryFn: () => orpc.getEmployee({ id: employeeId! }),
+    enabled: !!employeeId,
+  });
+
   const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
     resolver: zodResolver(newAssignmentFormSchema),
     defaultValues: {
@@ -116,7 +122,9 @@ function NewAssignmentPage() {
       <PageHeader
         title={t("assignment.new.pageTitle")}
         breadcrumbs={[
-          { label: t("resume.pageTitle"), to: "/resumes" },
+          { label: t("nav.employees"), to: "/employees" },
+          ...(employeeId ? [{ label: employee?.name ?? "…", to: `/employees/${employeeId}` }] : []),
+          ...(employeeId ? [{ label: t("nav.resumes"), to: `/resumes?employeeId=${employeeId}` }] : []),
           ...(resumeId ? [{ label: resume?.title ?? t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
         ]}
         actions={
