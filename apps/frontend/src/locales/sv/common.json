@@ -25,6 +25,9 @@
     "tableHeaderName": "Namn",
     "tableHeaderEmail": "E-post",
     "addPerson": "Lägg till anställd",
+    "searchPlaceholder": "Sök anställda…",
+    "countLabel_one": "{{count}} anställd",
+    "countLabel_other": "{{count}} anställda",
     "new": {
       "pageTitle": "Lägg till anställd",
       "nameLabel": "Namn",

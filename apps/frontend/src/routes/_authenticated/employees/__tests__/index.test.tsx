@@ -20,7 +20,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
@@ -225,3 +225,121 @@ describe("AC6 — Multiple employees: name and email rendered for each", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Shared fixture for new UX tests
+// ---------------------------------------------------------------------------
+
+const threeEmployees = [
+  {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    name: "Alice Johnson",
+    email: "alice@example.com",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "550e8400-e29b-41d4-a716-446655440002",
+    name: "Bob Smith",
+    email: "bob@example.com",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "550e8400-e29b-41d4-a716-446655440003",
+    name: "Carol White",
+    email: "carol@example.com",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// AC-NEW1 — Search input renders
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW1 — Search input renders with correct placeholder", () => {
+  beforeEach(() => {
+    mockListEmployees.mockResolvedValue(threeEmployees);
+  });
+
+  it("renders a search text field with the translated placeholder", async () => {
+    renderEmployeePage();
+    const input = await screen.findByPlaceholderText(enCommon.employee.searchPlaceholder);
+    expect(input).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW2 — Search filters by name
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW2 — Search filters employees by name", () => {
+  beforeEach(() => {
+    mockListEmployees.mockResolvedValue(threeEmployees);
+  });
+
+  it("shows only matching employees when searching by name", async () => {
+    renderEmployeePage();
+    const input = await screen.findByPlaceholderText(enCommon.employee.searchPlaceholder);
+    fireEvent.change(input, { target: { value: "Alice" } });
+    expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
+    expect(screen.queryByText("Bob Smith")).not.toBeInTheDocument();
+    expect(screen.queryByText("Carol White")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW3 — Search filters by email
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW3 — Search filters employees by email", () => {
+  beforeEach(() => {
+    mockListEmployees.mockResolvedValue(threeEmployees);
+  });
+
+  it("shows only matching employees when searching by email", async () => {
+    renderEmployeePage();
+    const input = await screen.findByPlaceholderText(enCommon.employee.searchPlaceholder);
+    fireEvent.change(input, { target: { value: "bob@" } });
+    expect(screen.getByText("Bob Smith")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Johnson")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW4 — Employee count chip shows correct count
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW4 — Count chip shows the number of employees", () => {
+  it("shows '3 employees' when there are three employees", async () => {
+    mockListEmployees.mockResolvedValue(threeEmployees);
+    renderEmployeePage();
+    const chip = await screen.findByText("3 employees");
+    expect(chip).toBeInTheDocument();
+  });
+
+  it("shows '1 employee' (singular) when there is one employee", async () => {
+    mockListEmployees.mockResolvedValue([threeEmployees[0]]);
+    renderEmployeePage();
+    const chip = await screen.findByText("1 employee");
+    expect(chip).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW5 — Avatar initials rendered per row
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW5 — Avatar initials rendered for each employee", () => {
+  beforeEach(() => {
+    mockListEmployees.mockResolvedValue(threeEmployees);
+  });
+
+  it("renders initials avatar for each employee", async () => {
+    renderEmployeePage();
+    // "AJ" for Alice Johnson, "BS" for Bob Smith, "CW" for Carol White
+    expect(await screen.findByText("AJ")).toBeInTheDocument();
+    expect(screen.getByText("BS")).toBeInTheDocument();
+    expect(screen.getByText("CW")).toBeInTheDocument();
+  });
+});
