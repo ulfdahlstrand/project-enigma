@@ -93,9 +93,10 @@
       "parsingDocx": "Parsing DOCX…",
       "docxError": "Failed to parse DOCX. Please try again.",
       "docxParsed": "CV data extracted from DOCX.",
-      "docxParsedReady": "CV data extracted. Click Import to proceed.",
       "showExtractedJson": "Show extracted JSON",
-      "hideExtractedJson": "Hide extracted JSON"
+      "hideExtractedJson": "Hide extracted JSON",
+      "stepDocxParsed": "DOCX parsed",
+      "stepImported": "Import complete"
     }
   },
   "resume": {

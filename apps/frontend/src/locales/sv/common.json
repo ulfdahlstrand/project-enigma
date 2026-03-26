@@ -93,9 +93,10 @@
       "parsingDocx": "Tolkar DOCX…",
       "docxError": "Kunde inte tolka DOCX-filen. Försök igen.",
       "docxParsed": "CV-data extraherad från DOCX.",
-      "docxParsedReady": "CV-data extraherad. Klicka på Importera för att fortsätta.",
       "showExtractedJson": "Visa extraherad JSON",
-      "hideExtractedJson": "Dölj extraherad JSON"
+      "hideExtractedJson": "Dölj extraherad JSON",
+      "stepDocxParsed": "DOCX tolkad",
+      "stepImported": "Import klar"
     }
   },
   "resume": {

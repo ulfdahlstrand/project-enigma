@@ -50,6 +50,8 @@ function ImportCvPage() {
   // When set, DOCX was parsed — JSON is hidden until user explicitly expands it.
   const [parsedDocxJson, setParsedDocxJson] = useState<unknown>(null);
   const [showExtractedJson, setShowExtractedJson] = useState(false);
+  // Checklist of completed steps shown in the result panel.
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
@@ -61,6 +63,7 @@ function ImportCvPage() {
         queryClient.invalidateQueries({ queryKey: getEducationQueryKey(id) }),
         queryClient.invalidateQueries({ queryKey: [...LIST_RESUMES_QUERY_KEY, id] }),
       ]);
+      setCompletedSteps((prev) => [...prev, t("employee.import.stepImported")]);
     },
   });
 
@@ -74,6 +77,7 @@ function ImportCvPage() {
       setDocxError(null);
       setParseError(null);
       mutation.reset();
+      setCompletedSteps([t("employee.import.stepDocxParsed")]);
     },
     onError: () => {
       setDocxError(t("employee.import.docxError"));
@@ -87,6 +91,7 @@ function ImportCvPage() {
     reader.onload = (event) => {
       setJsonText((event.target?.result as string) ?? "");
       setParsedDocxJson(null);
+      setCompletedSteps([]);
       setParseError(null);
       mutation.reset();
     };
@@ -284,39 +289,50 @@ function ImportCvPage() {
               {t("employee.import.resultHeading")}
             </Typography>
 
-            {mutation.isSuccess ? (
-              <Box>
-                {mutation.data.resumeCreated && (
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>
-                    {t("employee.import.resumeCreated")}
-                  </Typography>
-                )}
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.assignmentsSkipped", { count: mutation.data.assignmentsSkipped })}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  {t("employee.import.educationCreated", { count: mutation.data.educationCreated })}
-                </Typography>
-                <Typography variant="body2">
-                  {t("employee.import.educationSkipped", { count: mutation.data.educationSkipped })}
-                </Typography>
-              </Box>
-            ) : mutation.isPending ? (
-              <StatusRow label={t("employee.import.importing")} />
-            ) : docxMutation.isPending ? (
-              <StatusRow label={t("employee.import.parsingDocx")} />
-            ) : parsedDocxJson !== null ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "success.main" }}>
-                <CheckCircleOutlineIcon fontSize="small" />
-                <Typography variant="body2">{t("employee.import.docxParsedReady")}</Typography>
-              </Box>
-            ) : (
+            {completedSteps.length === 0 && !docxMutation.isPending && !mutation.isPending ? (
               <Typography variant="body2" color="text.secondary">
                 {t("employee.import.resultPanelIdle")}
               </Typography>
+            ) : (
+              <Box>
+                {/* Completed steps */}
+                {completedSteps.map((step) => (
+                  <Box
+                    key={step}
+                    sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75, color: "success.main" }}
+                  >
+                    <CheckCircleOutlineIcon sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">{step}</Typography>
+                  </Box>
+                ))}
+
+                {/* In-progress step */}
+                {docxMutation.isPending && <StatusRow label={t("employee.import.parsingDocx")} />}
+                {mutation.isPending && <StatusRow label={t("employee.import.importing")} />}
+
+                {/* Import results once done */}
+                {mutation.isSuccess && (
+                  <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    {mutation.data.resumeCreated && (
+                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                        {t("employee.import.resumeCreated")}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.assignmentsCreated", { count: mutation.data.assignmentsCreated })}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.assignmentsSkipped", { count: mutation.data.assignmentsSkipped })}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {t("employee.import.educationCreated", { count: mutation.data.educationCreated })}
+                    </Typography>
+                    <Typography variant="body2">
+                      {t("employee.import.educationSkipped", { count: mutation.data.educationSkipped })}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             )}
           </Paper>
         </Box>
