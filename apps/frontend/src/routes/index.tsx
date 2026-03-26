@@ -29,8 +29,8 @@ function HomePage() {
           {t("home.subtitle")}
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid container spacing={3} component="div">
+          <Grid item xs={12} sm={6}>
             <Card variant="outlined">
               <CardActionArea component={Link} to="/employees">
                 <CardContent sx={{ p: 3 }}>
@@ -45,7 +45,7 @@ function HomePage() {
             </Card>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <Card variant="outlined">
               <CardActionArea component={Link} to="/resumes">
                 <CardContent sx={{ p: 3 }}>
