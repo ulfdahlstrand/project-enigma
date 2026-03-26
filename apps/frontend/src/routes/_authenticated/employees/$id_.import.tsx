@@ -17,12 +17,14 @@ import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Collapse from "@mui/material/Collapse";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { cvJsonSchema } from "@cv-tool/contracts";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
@@ -45,6 +47,9 @@ function ImportCvPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [language, setLanguage] = useState<"sv" | "en">("sv");
   const [docxError, setDocxError] = useState<string | null>(null);
+  // Holds the structured JSON extracted from DOCX — null means manual paste mode
+  const [parsedDocxJson, setParsedDocxJson] = useState<unknown>(null);
+  const [showExtractedJson, setShowExtractedJson] = useState(false);
 
   const mutation = useMutation({
     mutationFn: (cvJson: unknown) => {
@@ -63,7 +68,9 @@ function ImportCvPage() {
     mutationFn: (docxBase64: string) =>
       orpc.parseCvDocx({ docxBase64, language }),
     onSuccess: (data) => {
+      setParsedDocxJson(data.cvJson);
       setJsonText(JSON.stringify(data.cvJson, null, 2));
+      setShowExtractedJson(false);
       setDocxError(null);
       setParseError(null);
       mutation.reset();
@@ -79,6 +86,7 @@ function ImportCvPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       setJsonText((event.target?.result as string) ?? "");
+      setParsedDocxJson(null);
       setParseError(null);
       mutation.reset();
     };
@@ -106,6 +114,10 @@ function ImportCvPage() {
 
   const handleImport = () => {
     setParseError(null);
+    if (parsedDocxJson !== null) {
+      mutation.mutate(parsedDocxJson);
+      return;
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(jsonText);
@@ -115,6 +127,8 @@ function ImportCvPage() {
     }
     mutation.mutate(parsed);
   };
+
+  const canImport = parsedDocxJson !== null || jsonText.trim().length > 0;
 
   return (
     <Box sx={{ p: 2 }}>
@@ -153,7 +167,7 @@ function ImportCvPage() {
           </Button>
           <Button
             variant="contained"
-            disabled={!jsonText.trim() || mutation.isPending}
+            disabled={!canImport || mutation.isPending}
             onClick={handleImport}
             aria-label={t("employee.import.importButton")}
           >
@@ -188,7 +202,7 @@ function ImportCvPage() {
 
       {/* Two-column body */}
       <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "flex-start" }}>
-        {/* Left column — input flow */}
+        {/* Left column — input */}
         <Box sx={{ flex: 1, minWidth: 320 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t("employee.import.pageDescription")}
@@ -212,24 +226,68 @@ function ImportCvPage() {
             </Alert>
           )}
 
-          <TextField
-            label={t("employee.import.jsonLabel")}
-            placeholder={t("employee.import.jsonPlaceholder")}
-            value={jsonText}
-            onChange={(e) => {
-              setJsonText(e.target.value);
-              setParseError(null);
-              mutation.reset();
-            }}
-            multiline
-            minRows={12}
-            fullWidth
-            sx={{ fontFamily: "monospace" }}
-            slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
-          />
+          {/* DOCX extracted — show summary + collapsible JSON details */}
+          {parsedDocxJson !== null ? (
+            <Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  mb: 1.5,
+                  color: "success.main",
+                }}
+              >
+                <CheckCircleOutlineIcon fontSize="small" />
+                <Typography variant="body2" fontWeight="medium">
+                  {t("employee.import.docxParsed")}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setShowExtractedJson((v) => !v)}
+                sx={{ mb: 1, textTransform: "none", px: 0 }}
+              >
+                {showExtractedJson
+                  ? t("employee.import.hideExtractedJson")
+                  : t("employee.import.showExtractedJson")}
+              </Button>
+              <Collapse in={showExtractedJson}>
+                <TextField
+                  value={jsonText}
+                  multiline
+                  minRows={12}
+                  fullWidth
+                  slotProps={{
+                    input: { readOnly: true },
+                    htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } },
+                  }}
+                  sx={{ fontFamily: "monospace" }}
+                />
+              </Collapse>
+            </Box>
+          ) : (
+            /* Manual paste / JSON file upload mode */
+            <TextField
+              label={t("employee.import.jsonLabel")}
+              placeholder={t("employee.import.jsonPlaceholder")}
+              value={jsonText}
+              onChange={(e) => {
+                setJsonText(e.target.value);
+                setParseError(null);
+                mutation.reset();
+              }}
+              multiline
+              minRows={12}
+              fullWidth
+              sx={{ fontFamily: "monospace" }}
+              slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
+            />
+          )}
         </Box>
 
-        {/* Right column — result panel */}
+        {/* Right column — status / result panel */}
         <Box sx={{ width: 340, flexShrink: 0 }}>
           <Paper variant="outlined" sx={{ p: 2.5 }}>
             <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
@@ -257,14 +315,13 @@ function ImportCvPage() {
                 </Typography>
               </Box>
             ) : mutation.isPending ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2">{t("employee.import.importing")}</Typography>
-              </Box>
+              <StatusRow label={t("employee.import.importing")} />
             ) : docxMutation.isPending ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2">{t("employee.import.parsingDocx")}</Typography>
+              <StatusRow label={t("employee.import.parsingDocx")} />
+            ) : parsedDocxJson !== null ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "success.main" }}>
+                <CheckCircleOutlineIcon fontSize="small" />
+                <Typography variant="body2">{t("employee.import.docxParsedReady")}</Typography>
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">
@@ -274,6 +331,15 @@ function ImportCvPage() {
           </Paper>
         </Box>
       </Box>
+    </Box>
+  );
+}
+
+function StatusRow({ label }: { label: string }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "text.secondary" }}>
+      <CircularProgress size={18} />
+      <Typography variant="body2">{label}</Typography>
     </Box>
   );
 }
