@@ -18,8 +18,6 @@ import { useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -125,14 +123,67 @@ function ImportCvPage() {
         <Typography variant="h4" component="h1">
           {t("employee.import.pageTitle")}
         </Typography>
-        <RouterButton
-          variant="outlined"
-          to="/employees/$id"
-          params={{ id }}
-          aria-label={t("employee.import.backButton")}
-        >
-          {t("employee.import.backButton")}
-        </RouterButton>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <ToggleButtonGroup
+            value={language}
+            exclusive
+            onChange={(_e, val) => { if (val) setLanguage(val as "sv" | "en"); }}
+            size="small"
+            aria-label={t("employee.import.languageLabel")}
+          >
+            <ToggleButton value="sv">{t("employee.import.languageSv")}</ToggleButton>
+            <ToggleButton value="en">{t("employee.import.languageEn")}</ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="outlined"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label={t("employee.import.uploadButton")}
+          >
+            {t("employee.import.uploadButton")}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => docxInputRef.current?.click()}
+            disabled={docxMutation.isPending}
+            aria-label={t("employee.import.uploadDocxButton")}
+          >
+            {docxMutation.isPending
+              ? t("employee.import.parsingDocx")
+              : t("employee.import.uploadDocxButton")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!jsonText.trim() || mutation.isPending}
+            onClick={handleImport}
+            aria-label={t("employee.import.importButton")}
+          >
+            {mutation.isPending
+              ? t("employee.import.importing")
+              : t("employee.import.importButton")}
+          </Button>
+          <RouterButton
+            variant="outlined"
+            to="/employees/$id"
+            params={{ id }}
+            aria-label={t("employee.import.backButton")}
+          >
+            {t("employee.import.backButton")}
+          </RouterButton>
+        </Box>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: "none" }}
+          onChange={handleFileUpload}
+        />
+        <input
+          ref={docxInputRef}
+          type="file"
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          style={{ display: "none" }}
+          onChange={handleDocxUpload}
+        />
       </Box>
 
       {/* Two-column body */}
@@ -142,20 +193,6 @@ function ImportCvPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t("employee.import.pageDescription")}
           </Typography>
-
-          <FormControl sx={{ mb: 2 }}>
-            <FormLabel sx={{ mb: 0.5 }}>{t("employee.import.languageLabel")}</FormLabel>
-            <ToggleButtonGroup
-              value={language}
-              exclusive
-              onChange={(_e, val) => { if (val) setLanguage(val as "sv" | "en"); }}
-              size="small"
-              aria-label={t("employee.import.languageLabel")}
-            >
-              <ToggleButton value="sv">{t("employee.import.languageSv")}</ToggleButton>
-              <ToggleButton value="en">{t("employee.import.languageEn")}</ToggleButton>
-            </ToggleButtonGroup>
-          </FormControl>
 
           {parseError && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -187,53 +224,9 @@ function ImportCvPage() {
             multiline
             minRows={12}
             fullWidth
-            sx={{ mb: 2, fontFamily: "monospace" }}
+            sx={{ fontFamily: "monospace" }}
             slotProps={{ htmlInput: { style: { fontFamily: "monospace", fontSize: 13 } } }}
           />
-
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="contained"
-              disabled={!jsonText.trim() || mutation.isPending}
-              onClick={handleImport}
-              aria-label={t("employee.import.importButton")}
-            >
-              {mutation.isPending
-                ? t("employee.import.importing")
-                : t("employee.import.importButton")}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label={t("employee.import.uploadButton")}
-            >
-              {t("employee.import.uploadButton")}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => docxInputRef.current?.click()}
-              disabled={docxMutation.isPending}
-              aria-label={t("employee.import.uploadDocxButton")}
-            >
-              {docxMutation.isPending
-                ? t("employee.import.parsingDocx")
-                : t("employee.import.uploadDocxButton")}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: "none" }}
-              onChange={handleFileUpload}
-            />
-            <input
-              ref={docxInputRef}
-              type="file"
-              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              style={{ display: "none" }}
-              onChange={handleDocxUpload}
-            />
-          </Box>
         </Box>
 
         {/* Right column — result panel */}
