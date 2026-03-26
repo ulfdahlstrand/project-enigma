@@ -128,6 +128,7 @@
       "saveError": "Det gick inte att skapa meritförteckningen. Försök igen."
     },
     "detail": {
+      "pageTitle": "Meritförteckning",
       "loading": "Laddar meritförteckning…",
       "error": "Kunde inte ladda meritförteckning.",
       "notFound": "Meritförteckning hittades inte.",
@@ -301,7 +302,12 @@
       "isCurrentLabel": "Pågående uppdrag",
       "saveButton": "Spara",
       "cancel": "Avbryt",
-      "saveError": "Det gick inte att spara uppdraget. Försök igen."
+      "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+      "sectionClient": "Kund & Roll",
+      "sectionPeriod": "Period",
+      "sectionContent": "Innehåll",
+      "sectionSkills": "Kompetenser",
+      "contextLabel": "Lägger till uppdrag i meritförteckning"
     },
     "detail": {
       "loading": "Laddar uppdrag…",

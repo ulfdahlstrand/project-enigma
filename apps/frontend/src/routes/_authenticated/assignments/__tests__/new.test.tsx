@@ -20,11 +20,21 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     createAssignment: vi.fn(),
     listAssignments: vi.fn(),
+    getResume: vi.fn(),
+    getEmployee: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 const mockCreateAssignment = orpc.createAssignment as ReturnType<typeof vi.fn>;
+const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
+
+// Default: resolve with known resume and employee
+beforeEach(() => {
+  mockGetResume.mockResolvedValue({ id: "resume-id-1", title: "Ulf Dahlstrand EN" });
+  mockGetEmployee.mockResolvedValue({ id: "emp-id-1", name: "Ulf Dahlstrand", email: "ulf@example.com" });
+});
 
 const mockNavigate = vi.fn();
 
@@ -67,6 +77,70 @@ describe("New Assignment page", () => {
     renderPage();
     expect(screen.getByLabelText(new RegExp(enCommon.assignment.new.clientNameLabel, "i"))).toBeInTheDocument();
     expect(screen.getByLabelText(new RegExp(enCommon.assignment.new.roleLabel, "i"))).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW1 — Section headings rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW1 — Form section headings rendered", () => {
+  it("renders Client & Role section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionClient)).toBeInTheDocument();
+  });
+
+  it("renders Period section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionPeriod)).toBeInTheDocument();
+  });
+
+  it("renders Content section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionContent)).toBeInTheDocument();
+  });
+
+  it("renders Skills section heading", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.sectionSkills)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW2 — Cancel button rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW2 — Cancel link rendered", () => {
+  it("renders a Cancel link", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: enCommon.assignment.new.cancel })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW3 — Context label shown when resumeId present
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW3 — Context label shown when resumeId present", () => {
+  it("renders the context label", () => {
+    renderPage();
+    expect(screen.getByText(enCommon.assignment.new.contextLabel)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW4 — Resume title shown in breadcrumb
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW4 — Full breadcrumb chain matches resume detail structure", () => {
+  it("shows the employee name in the breadcrumb", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand")).toBeInTheDocument();
+  });
+
+  it("shows the resume title in the breadcrumb", async () => {
+    renderPage();
+    expect(await screen.findByText("Ulf Dahlstrand EN")).toBeInTheDocument();
   });
 });
 

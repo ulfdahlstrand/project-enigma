@@ -128,6 +128,7 @@
       "saveError": "Failed to create resume. Please try again."
     },
     "detail": {
+      "pageTitle": "Resume",
       "loading": "Loading resume…",
       "error": "Failed to load resume.",
       "notFound": "Resume not found.",
@@ -301,7 +302,12 @@
       "isCurrentLabel": "Currently active",
       "saveButton": "Save",
       "cancel": "Cancel",
-      "saveError": "Failed to save assignment. Please try again."
+      "saveError": "Failed to save assignment. Please try again.",
+      "sectionClient": "Client & Role",
+      "sectionPeriod": "Period",
+      "sectionContent": "Content",
+      "sectionSkills": "Skills",
+      "contextLabel": "Adding assignment to resume"
     },
     "detail": {
       "loading": "Loading assignment…",

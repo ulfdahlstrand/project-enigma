@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,8 +8,10 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { useSearch } from "@tanstack/react-router";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -39,10 +41,33 @@ export const Route = createFileRoute("/_authenticated/assignments/new")({
   component: NewAssignmentPage,
 });
 
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <Box sx={{ pt: 1 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        {children}
+      </Typography>
+      <Divider />
+    </Box>
+  );
+}
+
 function NewAssignmentPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { employeeId, resumeId, branchId } = useSearch({ strict: false }) as { employeeId?: string; resumeId?: string; branchId?: string };
+
+  const { data: resume } = useQuery({
+    queryKey: ["getResume", resumeId],
+    queryFn: () => orpc.getResume({ id: resumeId! }),
+    enabled: !!resumeId,
+  });
+
+  const { data: employee } = useQuery({
+    queryKey: ["getEmployee", employeeId],
+    queryFn: () => orpc.getEmployee({ id: employeeId! }),
+    enabled: !!employeeId,
+  });
 
   const { register, handleSubmit, control } = useForm<NewAssignmentFormValues>({
     resolver: zodResolver(newAssignmentFormSchema),
@@ -90,13 +115,17 @@ function NewAssignmentPage() {
     });
   };
 
+  const cancelTo = resumeId ? `/resumes/${resumeId}` : "/resumes";
+
   return (
     <>
       <PageHeader
         title={t("assignment.new.pageTitle")}
         breadcrumbs={[
-          { label: t("resume.pageTitle"), to: "/resumes" },
-          ...(resumeId ? [{ label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
+          { label: t("nav.employees"), to: "/employees" },
+          ...(employeeId ? [{ label: employee?.name ?? "…", to: `/employees/${employeeId}` }] : []),
+          ...(employeeId ? [{ label: t("nav.resumes"), to: `/resumes?employeeId=${employeeId}` }] : []),
+          ...(resumeId ? [{ label: resume?.title ?? t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
         ]}
         actions={
           <Button
@@ -112,79 +141,108 @@ function NewAssignmentPage() {
       />
       <PageContent>
         {mutation.isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("assignment.new.saveError")}
-        </Alert>
-      )}
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t("assignment.new.saveError")}
+          </Alert>
+        )}
 
-      <Box
-        id="new-assignment-form"
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 560 }}
-      >
-        <TextField
-          label={t("assignment.new.clientNameLabel")}
-          {...register("clientName")}
-          required
-          fullWidth
-        />
-        <TextField
-          label={t("assignment.new.roleLabel")}
-          {...register("role")}
-          required
-          fullWidth
-        />
-        <TextField
-          label={t("assignment.new.descriptionLabel")}
-          {...register("description")}
-          multiline
-          minRows={4}
-          fullWidth
-        />
-        <TextField
-          label={t("assignment.new.startDateLabel")}
-          type="date"
-          {...register("startDate")}
-          required
-          fullWidth
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <TextField
-          label={t("assignment.new.endDateLabel")}
-          type="date"
-          {...register("endDate")}
-          fullWidth
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <TextField
-          label={t("assignment.new.technologiesLabel")}
-          {...register("technologiesRaw")}
-          fullWidth
-          placeholder="React, TypeScript, Node.js"
-        />
-        <TextField
-          label={t("assignment.new.keywordsLabel")}
-          {...register("keywords")}
-          fullWidth
-        />
-        <Controller
-          name="isCurrent"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={field.value}
-                  onChange={field.onChange}
-                />
-              }
-              label={t("assignment.new.isCurrentLabel")}
-            />
+        <Box
+          id="new-assignment-form"
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 560 }}
+        >
+          {resumeId && (
+            <Typography variant="body2" color="text.secondary">
+              {t("assignment.new.contextLabel")}
+            </Typography>
           )}
-        />
-      </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <SectionHeading>{t("assignment.new.sectionClient")}</SectionHeading>
+            <TextField
+              label={t("assignment.new.clientNameLabel")}
+              {...register("clientName")}
+              required
+              fullWidth
+            />
+            <TextField
+              label={t("assignment.new.roleLabel")}
+              {...register("role")}
+              required
+              fullWidth
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <SectionHeading>{t("assignment.new.sectionPeriod")}</SectionHeading>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <TextField
+                label={t("assignment.new.startDateLabel")}
+                type="date"
+                {...register("startDate")}
+                required
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label={t("assignment.new.endDateLabel")}
+                type="date"
+                {...register("endDate")}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+            <Controller
+              name="isCurrent"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox checked={field.value} onChange={field.onChange} />}
+                  label={t("assignment.new.isCurrentLabel")}
+                />
+              )}
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <SectionHeading>{t("assignment.new.sectionContent")}</SectionHeading>
+            <TextField
+              label={t("assignment.new.descriptionLabel")}
+              {...register("description")}
+              multiline
+              minRows={4}
+              fullWidth
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <SectionHeading>{t("assignment.new.sectionSkills")}</SectionHeading>
+            <TextField
+              label={t("assignment.new.technologiesLabel")}
+              {...register("technologiesRaw")}
+              fullWidth
+              placeholder="React, TypeScript, Node.js"
+            />
+            <TextField
+              label={t("assignment.new.keywordsLabel")}
+              {...register("keywords")}
+              fullWidth
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              component={Link}
+              to={cancelTo}
+              variant="outlined"
+              disabled={mutation.isPending}
+            >
+              {t("assignment.new.cancel")}
+            </Button>
+          </Box>
+        </Box>
       </PageContent>
     </>
   );
