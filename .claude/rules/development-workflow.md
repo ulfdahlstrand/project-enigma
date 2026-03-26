@@ -1,8 +1,8 @@
 # Development Workflow
 
-> This file extends [common/git-workflow.md](./git-workflow.md) with the full feature development process that happens before git operations.
+> This file describes the implementation detail process. For the full end-to-end task flow — from checking GitHub issues through to post-merge cleanup — see [flower-workflow.md](./flower-workflow.md).
 
-The Feature Implementation Workflow describes the development pipeline: research, planning, TDD, code review, and then committing to git.
+The Feature Implementation Workflow describes the implementation pipeline: research, planning, TDD, code review, and then committing to git.
 
 ## Feature Implementation Workflow
 
@@ -14,7 +14,8 @@ The Feature Implementation Workflow describes the development pipeline: research
    - Prefer adopting or porting a proven approach over writing net-new code when it meets the requirement.
 
 1. **Plan First**
-   - Use **planner** agent to create implementation plan
+   - If the GitHub issue already contains a plan or requirements, use that as the starting point for the detailed implementation plan rather than starting from scratch.
+   - Use the **planner** agent to produce or refine a structured implementation plan.
    - Generate planning docs before coding: PRD, architecture, system_design, tech_doc, task_list
    - Identify dependencies and risks
    - Break down into phases
