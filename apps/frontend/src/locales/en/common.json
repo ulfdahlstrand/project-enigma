@@ -25,6 +25,9 @@
     "tableHeaderName": "Name",
     "tableHeaderEmail": "Email",
     "addPerson": "Add employee",
+    "searchPlaceholder": "Search employees…",
+    "countLabel_one": "{{count}} employee",
+    "countLabel_other": "{{count}} employees",
     "new": {
       "pageTitle": "Add employee",
       "nameLabel": "Name",
