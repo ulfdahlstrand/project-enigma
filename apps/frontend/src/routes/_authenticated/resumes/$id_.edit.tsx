@@ -8,7 +8,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, redirect, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
@@ -18,13 +18,14 @@ import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { getResumeQueryKey } from "./$id";
 import { SkillsEditor } from "../../../components/SkillsEditor";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
+import { LoadingState } from "../../../components/feedback";
 
 
 const editResumeFormSchema = z.object({
@@ -42,7 +43,6 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/edit")({
 function ResumeEditPage() {
   const { t } = useTranslation("common");
   const { id } = useParams({ strict: false }) as { id: string };
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const queryKey = getResumeQueryKey(id);
@@ -91,25 +91,30 @@ function ResumeEditPage() {
     mutation.mutate(data);
   };
 
-  const handleBack = () => {
-    void navigate({ to: "/resumes/$id", params: { id } });
-  };
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("resume.edit.pageTitle")} />
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("resume.edit.pageTitle")} />;
 
   return (
-    <Box sx={{ p: 2, maxWidth: 720 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t("resume.edit.pageTitle")}
-      </Typography>
-
-      {mutation.isSuccess && (
+    <>
+      <PageHeader
+        title={t("resume.edit.pageTitle")}
+        breadcrumbs={[
+          { label: t("resume.pageTitle"), to: "/resumes" },
+          { label: resume?.title ?? "…", to: `/resumes/${id}` },
+        ]}
+        actions={
+          <Button
+            type="submit"
+            form="resume-edit-form"
+            variant="contained"
+            disabled={mutation.isPending}
+            aria-label={t("resume.edit.saveButton")}
+          >
+            {mutation.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
+          </Button>
+        }
+      />
+      <PageContent>
+        {mutation.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {t("resume.edit.saveSuccess")}
         </Alert>
@@ -122,6 +127,7 @@ function ResumeEditPage() {
       )}
 
       <Box
+        id="resume-edit-form"
         component="form"
         onSubmit={handleSubmit(onSubmit)}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
@@ -146,30 +152,13 @@ function ResumeEditPage() {
           minRows={4}
           fullWidth
         />
-
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={mutation.isPending}
-            aria-label={t("resume.edit.saveButton")}
-          >
-            {mutation.isPending ? t("resume.edit.saving") : t("resume.edit.saveButton")}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleBack}
-            aria-label={t("resume.edit.backButton")}
-          >
-            {t("resume.edit.backButton")}
-          </Button>
-        </Box>
       </Box>
 
       <Divider sx={{ my: 4 }} />
 
       <SkillsEditor resumeId={id} skills={resume?.skills ?? []} queryKey={queryKey} />
-    </Box>
+      </PageContent>
+    </>
   );
 }
 

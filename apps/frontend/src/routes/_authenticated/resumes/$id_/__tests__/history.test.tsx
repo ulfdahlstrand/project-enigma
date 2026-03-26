@@ -197,7 +197,7 @@ describe("Commit list", () => {
 
   it("renders the page title", async () => {
     renderPage();
-    const title = await screen.findByText(enCommon.resume.history.pageTitle);
+    const title = await screen.findByRole("heading", { level: 1, name: enCommon.resume.history.pageTitle });
     expect(title).toBeInTheDocument();
   });
 
@@ -375,20 +375,16 @@ describe("View controls", () => {
 // Navigation
 // ---------------------------------------------------------------------------
 
-describe("Back button", () => {
+describe("Breadcrumb navigation", () => {
   beforeEach(() => {
     mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
   });
 
-  it("navigates to /resumes/$id when back button is clicked", async () => {
-    const user = userEvent.setup();
+  it("renders a breadcrumb link back to the resumes list", async () => {
     renderPage();
-    const backBtn = await screen.findByText(enCommon.resume.detail.backButton);
-    await user.click(backBtn);
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id",
-      params: { id: "resume-id-1" },
-    });
+    await screen.findByText("Initial version");
+    const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
+    expect(resumesLink).toBeInTheDocument();
   });
 });
 

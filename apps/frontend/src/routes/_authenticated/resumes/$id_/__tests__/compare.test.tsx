@@ -172,7 +172,7 @@ describe("Version dropdowns", () => {
 
   it("renders page title", async () => {
     renderPage();
-    const title = await screen.findByText(enCommon.resume.compare.pageTitle);
+    const title = await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
     expect(title).toBeInTheDocument();
   });
 });
@@ -265,21 +265,16 @@ describe("Error state", () => {
 // Navigation
 // ---------------------------------------------------------------------------
 
-describe("Back button", () => {
-  it("navigates to /resumes/$id when back button is clicked", async () => {
+describe("Breadcrumb navigation", () => {
+  it("renders a breadcrumb link back to the resumes list", async () => {
     mockGetResume.mockResolvedValue(RESUME);
     mockListCommits.mockResolvedValue(COMMITS);
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
 
-    const user = userEvent.setup();
     renderPage();
 
-    const backBtn = await screen.findByText(enCommon.resume.detail.backButton);
-    await user.click(backBtn);
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id",
-      params: { id: "resume-id-1" },
-    });
+    await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
+    const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
+    expect(resumesLink).toBeInTheDocument();
   });
 });

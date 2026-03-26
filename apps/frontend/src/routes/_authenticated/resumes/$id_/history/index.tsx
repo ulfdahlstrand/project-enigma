@@ -9,14 +9,12 @@
  * Styling: MUI sx prop only
  */
 import { z } from "zod";
-import { createFileRoute, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
-import CircularProgress from "@mui/material/CircularProgress";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -32,6 +30,9 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 import { useResumeBranchHistoryGraph } from "../../../../../hooks/versioning";
+import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { PageContent } from "../../../../../components/layout/PageContent";
+import { LoadingState, ErrorState } from "../../../../../components/feedback";
 
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
@@ -314,37 +315,20 @@ function VersionHistoryPage() {
     graphSurfaceColor,
   ]);
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress aria-label={t("resume.history.loading")} />
-      </Box>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{t("resume.history.error")}</Alert>
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("resume.history.loading")} />;
+  if (isError) return <ErrorState message={t("resume.history.error")} />;
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-        <Button
-          variant="text"
-          onClick={() => void navigate({ to: "/resumes/$id", params: { id: resumeId } })}
-        >
-          {t("resume.detail.backButton")}
-        </Button>
-        <Typography variant="h5" component="h1">
-          {t("resume.history.pageTitle")}
-        </Typography>
-      </Box>
-
-      <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
+    <>
+      <PageHeader
+        title={t("resume.history.pageTitle")}
+        breadcrumbs={[
+          { label: t("resume.pageTitle"), to: "/resumes" },
+          { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
+        ]}
+      />
+      <PageContent>
+        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <InputLabel>{t("resume.history.branchLabel")}</InputLabel>
           <Select
@@ -578,7 +562,8 @@ function VersionHistoryPage() {
             </TableBody>
           </Table>
         </TableContainer>
-      )}
-    </Box>
+        )}
+      </PageContent>
+    </>
   );
 }

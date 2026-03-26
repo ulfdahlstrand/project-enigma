@@ -55,17 +55,12 @@ afterEach(() => vi.clearAllMocks());
 describe("New Assignment page", () => {
   it("renders the page title", () => {
     renderPage();
-    expect(screen.getByText(enCommon.assignment.new.pageTitle)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: enCommon.assignment.new.pageTitle })).toBeInTheDocument();
   });
 
   it("renders the save button", () => {
     renderPage();
     expect(screen.getByRole("button", { name: enCommon.assignment.new.saveButton })).toBeInTheDocument();
-  });
-
-  it("renders the cancel button", () => {
-    renderPage();
-    expect(screen.getByRole("link", { name: enCommon.assignment.new.cancel })).toBeInTheDocument();
   });
 
   it("renders clientName, role, startDate fields", () => {

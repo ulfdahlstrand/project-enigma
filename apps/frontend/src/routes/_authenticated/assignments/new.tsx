@@ -1,5 +1,4 @@
-import Button from "@mui/material/Button";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -7,13 +6,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
-import RouterButton from "../../../components/RouterButton";
 import { useSearch } from "@tanstack/react-router";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
 
 const searchSchema = z.object({
   employeeId: z.string().optional(),
@@ -91,22 +91,38 @@ function NewAssignmentPage() {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: 560 }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
-        {t("assignment.new.pageTitle")}
-      </Typography>
-
-      {mutation.isError && (
+    <>
+      <PageHeader
+        title={t("assignment.new.pageTitle")}
+        breadcrumbs={[
+          { label: t("resume.pageTitle"), to: "/resumes" },
+          ...(resumeId ? [{ label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` }] : []),
+        ]}
+        actions={
+          <Button
+            type="submit"
+            form="new-assignment-form"
+            variant="contained"
+            disabled={mutation.isPending}
+            aria-label={t("assignment.new.saveButton")}
+          >
+            {t("assignment.new.saveButton")}
+          </Button>
+        }
+      />
+      <PageContent>
+        {mutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("assignment.new.saveError")}
         </Alert>
       )}
 
       <Box
+        id="new-assignment-form"
         component="form"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+        sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 560 }}
       >
         <TextField
           label={t("assignment.new.clientNameLabel")}
@@ -168,28 +184,8 @@ function NewAssignmentPage() {
             />
           )}
         />
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={mutation.isPending}
-            aria-label={t("assignment.new.saveButton")}
-          >
-            {t("assignment.new.saveButton")}
-          </Button>
-          {resumeId && (
-            <RouterButton
-              variant="outlined"
-              to="/resumes/$id"
-              params={{ id: resumeId }}
-              search={branchId ? { branchId } : {}}
-              aria-label={t("assignment.new.cancel")}
-            >
-              {t("assignment.new.cancel")}
-            </RouterButton>
-          )}
-        </Box>
       </Box>
-    </Box>
+      </PageContent>
+    </>
   );
 }

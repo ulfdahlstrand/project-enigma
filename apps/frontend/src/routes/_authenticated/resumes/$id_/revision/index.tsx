@@ -38,6 +38,8 @@ import {
   useSkipRevisionStep,
 } from "../../../../../hooks/revision";
 import { useResumeBranches } from "../../../../../hooks/versioning";
+import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { LoadingState, ErrorState } from "../../../../../components/feedback";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/revision/")({
   validateSearch: z.object({
@@ -172,51 +174,21 @@ function RevisionWorkflowPage() {
 
   // ─── Loading / error states ────────────────────────────────────────────────
 
-  if (isLoadingList || isLoadingWorkflow) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
-        <CircularProgress aria-label={t("revision.loading")} />
-      </Box>
-    );
-  }
-
-  if (isListError || isWorkflowError) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t("revision.error")}</Alert>
-      </Box>
-    );
-  }
+  if (isLoadingList || isLoadingWorkflow) return <LoadingState label={t("revision.loading")} />;
+  if (isListError || isWorkflowError) return <ErrorState message={t("revision.error")} />;
 
   // ─── Start screen — no workflow yet ───────────────────────────────────────
 
   if (!workflowId || !workflow) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "calc(100vh - 120px)",
-          gap: 3,
-          px: 4,
-        }}
-      >
-        <Box sx={{ textAlign: "center", maxWidth: 480 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-            {t("revision.startTitle")}
-          </Typography>
-          <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
-            {t("revision.startDescription")}
-          </Typography>
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
-            <Button
-              variant="text"
-              onClick={() => void navigate({ to: "/resumes/$id", params: { id: resumeId } })}
-            >
-              {t("revision.backButton")}
-            </Button>
+      <>
+        <PageHeader
+          title={t("revision.pageTitle")}
+          breadcrumbs={[
+            { label: t("resume.pageTitle"), to: "/resumes" },
+            { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
+          ]}
+          actions={
             <Button
               variant="contained"
               onClick={handleCreateWorkflow}
@@ -224,27 +196,61 @@ function RevisionWorkflowPage() {
             >
               {createWorkflow.isPending ? t("revision.starting") : t("revision.startButton")}
             </Button>
+          }
+        />
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "calc(100vh - 176px)",
+            gap: 3,
+            px: 4,
+          }}
+        >
+          <Box sx={{ textAlign: "center", maxWidth: 480 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+              {t("revision.startTitle")}
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
+              {t("revision.startDescription")}
+            </Typography>
+            {createWorkflow.isError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {t("revision.createError")}
+              </Alert>
+            )}
           </Box>
-          {createWorkflow.isError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {t("revision.createError")}
-            </Alert>
-          )}
         </Box>
-      </Box>
+      </>
     );
   }
 
   // ─── Completed → Final review ──────────────────────────────────────────────
 
+  const approvedCount = steps.filter((s) => s.status === "approved").length;
+  const currentStepIndex = steps.findIndex((s) => s.id === activeStep?.id) + 1;
+
+  const revisionPageHeader = (current: number) => (
+    <PageHeader
+      title={t("revision.pageTitle")}
+      breadcrumbs={[
+        { label: t("resume.pageTitle"), to: "/resumes" },
+        { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
+      ]}
+      chip={
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          {t("revision.topBar.step", { current, total: steps.length })}
+        </Typography>
+      }
+    />
+  );
+
   if (isCompleted) {
     return (
-      <Box sx={{ height: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
-        <TopBar
-          resumeId={resumeId}
-          current={steps.filter((s) => s.status === "approved").length}
-          total={steps.length}
-        />
+      <Box sx={{ height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+        {revisionPageHeader(approvedCount)}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <FinalReview
             workflowId={workflow.id}
@@ -260,11 +266,9 @@ function RevisionWorkflowPage() {
 
   // ─── Main three-column layout ──────────────────────────────────────────────
 
-  const currentStepIndex = steps.findIndex((s) => s.id === activeStep?.id) + 1;
-
   return (
-    <Box sx={{ height: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
-      <TopBar resumeId={resumeId} current={currentStepIndex} total={steps.length} />
+    <Box sx={{ height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+      {revisionPageHeader(currentStepIndex)}
 
       <Box sx={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
         {/* Left: checklist */}
@@ -335,42 +339,3 @@ function RevisionWorkflowPage() {
   );
 }
 
-interface TopBarProps {
-  resumeId: string;
-  current: number;
-  total: number;
-}
-
-function TopBar({ resumeId, current, total }: TopBarProps) {
-  const { t } = useTranslation("common");
-  const navigate = useNavigate();
-
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        px: 2,
-        py: 1,
-        borderBottom: "1px solid",
-        borderColor: "divider",
-        gap: 2,
-        flexShrink: 0,
-      }}
-    >
-      <Button
-        variant="text"
-        size="small"
-        onClick={() => void navigate({ to: "/resumes/$id", params: { id: resumeId } })}
-      >
-        {t("revision.backButton")}
-      </Button>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
-        {t("revision.pageTitle")}
-      </Typography>
-      <Typography variant="caption" sx={{ color: "text.secondary" }}>
-        {t("revision.topBar.step", { current, total })}
-      </Typography>
-    </Box>
-  );
-}

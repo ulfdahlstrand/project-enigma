@@ -55,7 +55,7 @@ afterEach(() => vi.clearAllMocks());
 describe("New Resume page", () => {
   it("renders the page title", () => {
     renderPage();
-    expect(screen.getByText(enCommon.resume.new.pageTitle)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: enCommon.resume.new.pageTitle })).toBeInTheDocument();
   });
 
   it("renders title and language fields", () => {
@@ -64,10 +64,9 @@ describe("New Resume page", () => {
     expect(screen.getByLabelText(new RegExp(enCommon.resume.new.languageLabel, "i"))).toBeInTheDocument();
   });
 
-  it("renders save and cancel buttons", () => {
+  it("renders save button", () => {
     renderPage();
     expect(screen.getByRole("button", { name: enCommon.resume.new.saveButton })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: enCommon.resume.new.cancel })).toBeInTheDocument();
   });
 
   it("save button is disabled when title is empty", () => {

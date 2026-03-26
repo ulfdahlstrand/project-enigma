@@ -10,7 +10,7 @@
  * (queryKey definition) and this form (cache invalidation on success) reference
  * the same value — per the architectural requirement for query key co-location.
  */
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -20,8 +20,9 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
 
 /**
  * Co-located query key for the listEmployees query.
@@ -66,49 +67,51 @@ function NewEmployeePage() {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: 480 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t("employee.new.pageTitle")}
-      </Typography>
+    <>
+      <PageHeader
+        title={t("employee.new.pageTitle")}
+        breadcrumbs={[{ label: t("nav.employees"), to: "/employees" }]}
+      />
+      <PageContent>
+        {mutation.isError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t("employee.new.apiError")}
+          </Alert>
+        )}
 
-      {mutation.isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("employee.new.apiError")}
-        </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label={t("employee.new.nameLabel")}
-          {...register("name")}
-          error={!!errors.name}
-          helperText={errors.name?.message ?? ""}
-          required
-          fullWidth
-        />
-        <TextField
-          label={t("employee.new.emailLabel")}
-          type="email"
-          {...register("email")}
-          error={!!errors.email}
-          helperText={errors.email?.message ?? ""}
-          required
-          fullWidth
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={mutation.isPending}
-          sx={{ alignSelf: "flex-start" }}
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 480 }}
         >
-          {t("employee.new.saveButton")}
-        </Button>
-      </Box>
-    </Box>
+          <TextField
+            label={t("employee.new.nameLabel")}
+            {...register("name")}
+            error={!!errors.name}
+            helperText={errors.name?.message ?? ""}
+            required
+            fullWidth
+          />
+          <TextField
+            label={t("employee.new.emailLabel")}
+            type="email"
+            {...register("email")}
+            error={!!errors.email}
+            helperText={errors.email?.message ?? ""}
+            required
+            fullWidth
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={mutation.isPending}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {t("employee.new.saveButton")}
+          </Button>
+        </Box>
+      </PageContent>
+    </>
   );
 }

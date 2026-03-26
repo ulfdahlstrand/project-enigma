@@ -59,6 +59,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    Link: React.forwardRef(function MockLink(
+      { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
+      ref: React.Ref<HTMLAnchorElement>
+    ) {
+      return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
+    }),
   };
 });
 

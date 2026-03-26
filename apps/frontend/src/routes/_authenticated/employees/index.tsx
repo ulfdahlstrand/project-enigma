@@ -5,13 +5,10 @@
  * Styling: MUI sx prop only.
  * i18n: all text via useTranslation("common").
  */
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -19,12 +16,12 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageContent } from "../../../components/layout/PageContent";
+import { LoadingState, ErrorState, EmptyState } from "../../../components/feedback";
 
 export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
-
 
 export const Route = createFileRoute("/_authenticated/employees/")({
   component: EmployeePage,
@@ -39,21 +36,8 @@ function EmployeePage() {
     queryFn: () => orpc.listEmployees({}),
   });
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
-        <CircularProgress aria-label={t("employee.loading")} />
-      </Box>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t("employee.error")}</Alert>
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingState label={t("employee.loading")} />;
+  if (isError) return <ErrorState message={t("employee.error")} />;
 
   return (
     <>
@@ -65,11 +49,9 @@ function EmployeePage() {
           </Button>
         }
       />
-      <Box sx={{ p: 3 }}>
+      <PageContent>
         {employees && employees.length === 0 ? (
-          <Typography variant="body1" color="text.secondary">
-            {t("employee.empty")}
-          </Typography>
+          <EmptyState message={t("employee.empty")} />
         ) : (
           <TableContainer component={Paper}>
             <Table aria-label={t("employee.pageTitle")}>
@@ -97,7 +79,7 @@ function EmployeePage() {
             </Table>
           </TableContainer>
         )}
-      </Box>
+      </PageContent>
     </>
   );
 }
