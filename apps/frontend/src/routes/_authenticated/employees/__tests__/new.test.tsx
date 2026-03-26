@@ -501,3 +501,60 @@ describe("AC6 — Error Alert shown on createEmployee failure; form input retain
   });
 });
 
+// ---------------------------------------------------------------------------
+// AC-NEW1 — Helper text rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW1 — Helper text explains what happens after saving", () => {
+  beforeEach(() => {
+    mockCreateEmployee.mockResolvedValue({ id: "abc-123" });
+  });
+
+  it("renders the helper text describing next steps", () => {
+    renderPage();
+    expect(
+      screen.getByText(enCommon.employee.new.helperText)
+    ).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW2 — Cancel button rendered and links to /employees
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW2 — Cancel button rendered", () => {
+  beforeEach(() => {
+    mockCreateEmployee.mockResolvedValue({ id: "abc-123" });
+  });
+
+  it("renders a Cancel link", () => {
+    renderPage();
+    expect(
+      screen.getByRole("link", { name: enCommon.employee.new.cancel })
+    ).toBeInTheDocument();
+  });
+
+  it("Cancel button links to /employees", () => {
+    renderPage();
+    const cancelBtn = screen.getByRole("link", { name: enCommon.employee.new.cancel });
+    expect(cancelBtn).toHaveAttribute("href", "/employees");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-NEW3 — Import hint rendered
+// ---------------------------------------------------------------------------
+
+describe("AC-NEW3 — Import hint callout rendered", () => {
+  beforeEach(() => {
+    mockCreateEmployee.mockResolvedValue({ id: "abc-123" });
+  });
+
+  it("renders the import hint text", () => {
+    renderPage();
+    expect(
+      screen.getByText(enCommon.employee.new.importHint)
+    ).toBeInTheDocument();
+  });
+});
+

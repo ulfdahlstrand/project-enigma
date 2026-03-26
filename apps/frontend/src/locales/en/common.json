@@ -32,6 +32,8 @@
       "submit": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
+      "helperText": "After saving, you'll be taken to the employee's profile where you can add assignments and import a CV.",
+      "importHint": "Already have a CV document? Create the employee first, then use Import CV from their profile to auto-fill assignments.",
       "error": "Failed to save employee. Please try again.",
       "nameRequired": "Name is required.",
       "emailInvalid": "Please enter a valid email address.",
