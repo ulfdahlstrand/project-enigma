@@ -278,7 +278,10 @@
     "variantSwitcher": {
       "label": "Variant",
       "manageVariants": "Manage variants"
-    }
+    },
+    "countLabel_one": "1 resume",
+    "countLabel_other": "{{count}} resumes",
+    "searchPlaceholder": "Search resumes…"
   },
   "assignment": {
     "pageTitle": "Assignments",
