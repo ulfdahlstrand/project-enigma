@@ -5,7 +5,10 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { fetchWorkflowWithAuth, fetchWorkflowWithSteps } from "../lib/query-helpers.js";
-import { syncBranchAssignmentsFromContent } from "../lib/sync-branch-assignments.js";
+import {
+  syncBranchAssignmentsFromContent,
+  normaliseAssignmentIds,
+} from "../lib/sync-branch-assignments.js";
 
 // ---------------------------------------------------------------------------
 // finaliseResumeRevision — query logic
@@ -30,14 +33,26 @@ export async function finaliseResumeRevision(
       const revCommit = await db
         .selectFrom("resume_branches as rb")
         .innerJoin("resume_commits as rc", "rc.id", "rb.head_commit_id")
-        .select(["rc.content"])
+        .select(["rc.id as commit_id", "rc.content"])
         .where("rb.id", "=", workflowRow.revision_branch_id)
         .executeTakeFirst();
       if (revCommit) {
+        const normalisedContent = await normaliseAssignmentIds(
+          db,
+          workflowRow.employee_id,
+          revCommit.content as ResumeCommitContent
+        );
+        if (normalisedContent !== (revCommit.content as ResumeCommitContent)) {
+          await db
+            .updateTable("resume_commits")
+            .set({ content: JSON.stringify(normalisedContent) })
+            .where("id", "=", revCommit.commit_id)
+            .execute();
+        }
         await syncBranchAssignmentsFromContent(
           db,
           workflowRow.revision_branch_id,
-          revCommit.content as ResumeCommitContent
+          normalisedContent
         );
       }
     }
@@ -92,6 +107,12 @@ export async function finaliseResumeRevision(
     .executeTakeFirst();
   const baseParentCommitId = baseBranch?.head_commit_id ?? null;
 
+  const normalisedContent = await normaliseAssignmentIds(
+    db,
+    workflowRow.employee_id,
+    revisionCommit.content as ResumeCommitContent
+  );
+
   // Create a merge commit on the base branch
   await db.transaction().execute(async (trx) => {
     const mergeCommit = await trx
@@ -99,7 +120,7 @@ export async function finaliseResumeRevision(
       .values({
         resume_id: workflowRow.resume_id,
         branch_id: workflowRow.base_branch_id,
-        content: JSON.stringify(revisionCommit.content as ResumeCommitContent),
+        content: JSON.stringify(normalisedContent),
         message: "Merge revision workflow",
         created_by: user.id,
       })
@@ -143,7 +164,7 @@ export async function finaliseResumeRevision(
     await syncBranchAssignmentsFromContent(
       trx,
       workflowRow.base_branch_id,
-      revisionCommit.content as ResumeCommitContent
+      normalisedContent
     );
   });
 

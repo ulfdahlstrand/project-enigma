@@ -32,6 +32,7 @@ function buildDbMock() {
   });
 
   const revisionCommitExecuteTakeFirst = vi.fn().mockResolvedValue({
+    commit_id: "550e8400-e29b-41d4-a716-446655440099",
     content: { assignments: [], skills: [] },
   });
   const revisionCommitWhere = vi.fn().mockReturnValue({
