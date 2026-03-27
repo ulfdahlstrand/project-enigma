@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@cv-tool/contracts": "*",
+    "@cv-tool/utils": "*",
     "@orpc/openapi": "^1.13.6",
     "@orpc/server": "^1.13.6",
     "@orpc/zod": "^1.13.6",

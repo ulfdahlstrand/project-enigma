@@ -5,22 +5,20 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { buildExportData } from "../lib/build-export-data.js";
+import { PDF_CSS, PDF_FONT_LINKS } from "./pdf-styles.js";
+import { getPdfTranslations } from "./pdf-translations.js";
+import { toQuarter } from "@cv-tool/utils";
 import puppeteer from "puppeteer";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const LOGO_DATA_URI = `data:image/svg+xml;base64,${readFileSync(join(__dirname, "sthlmtech_logo.svg")).toString("base64")}`;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function fmtDate(d: Date | string | null | undefined): string {
-  if (!d) return "present";
-  const date = d instanceof Date ? d : new Date(d);
-  return date.toISOString().slice(0, 7);
-}
-
-function toQuarter(d: Date | string): string {
-  const date = d instanceof Date ? d : new Date(d);
-  return `Q${Math.ceil((date.getMonth() + 1) / 3)} ${date.getFullYear()}`;
-}
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -32,60 +30,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-// ---------------------------------------------------------------------------
-// Static translations
-// ---------------------------------------------------------------------------
-
-interface PdfTranslations {
-  experienceHeading: string;
-  experienceSummaryHeading: string;
-  specialSkillsHeading: string;
-  atClient: string;
-  consultantProfile: string;
-  present: string;
-  technologies: string;
-  keywords: string;
-  educationHeading: string;
-  degrees: string;
-  certifications: string;
-  languages: string;
-}
-
-const PDF_TRANSLATIONS: Record<string, PdfTranslations> = {
-  en: {
-    experienceHeading: "Experience",
-    experienceSummaryHeading: "EXAMPLES OF EXPERIENCE",
-    specialSkillsHeading: "SPECIAL SKILLS",
-    atClient: "at",
-    consultantProfile: "Consultant profile",
-    present: "Present",
-    technologies: "TECHNOLOGIES",
-    keywords: "KEYWORDS",
-    educationHeading: "Övrigt",
-    degrees: "DEGREES",
-    certifications: "CERTIFICATIONS",
-    languages: "LANGUAGES",
-  },
-  sv: {
-    experienceHeading: "Urval av kvalifikationer",
-    experienceSummaryHeading: "EXEMPEL PÅ ERFARENHET",
-    specialSkillsHeading: "SPECIALKUNSKAPER",
-    atClient: "hos",
-    consultantProfile: "Konsultprofil",
-    present: "Pågående",
-    technologies: "TEKNIKER",
-    keywords: "NYCKELORD",
-    educationHeading: "Övrigt",
-    degrees: "UTBILDNING",
-    certifications: "CERTIFIERINGAR",
-    languages: "SPRÅK",
-  },
-};
-
-function getPdfTranslations(language: string | null | undefined): PdfTranslations {
-  return PDF_TRANSLATIONS[language ?? "en"] ?? (PDF_TRANSLATIONS["en"] as PdfTranslations);
 }
 
 // ---------------------------------------------------------------------------
@@ -176,14 +120,16 @@ function buildHtml(data: {
   // ---------------------------------------------------------------------------
 
   const assignmentsHtml = data.assignments.length > 0
-    ? `<div class="section section-break">
+    ? `<div class="section section-break assignments-section">
           <h6 class="assignments-heading">${t.experienceHeading}</h6>
           <div class="assignments-list">
             ${data.assignments.map((a) => {
               const startQ = toQuarter(a.start_date);
-              const endQ = a.is_current ? t.present : (a.end_date ? toQuarter(a.end_date) : "—");
-              const period = `${escapeHtml(startQ)} – ${escapeHtml(endQ)}`;
-              const subtitle = `${escapeHtml(a.client_name)} &nbsp;&nbsp; ${period}`;
+              const endQ = a.is_current ? t.present : (a.end_date ? toQuarter(a.end_date) : null);
+              const period = endQ && endQ !== startQ
+                ? `${escapeHtml(startQ)} – ${escapeHtml(endQ)}`
+                : escapeHtml(startQ);
+              const subtitle = `${escapeHtml(a.client_name)} ${period}`;
               const descHtml = a.description
                 ? a.description.split(/\n+/).filter(Boolean).map((p) => `<p class="body2 justified">${escapeHtml(p)}</p>`).join("")
                 : "";
@@ -214,89 +160,8 @@ function buildHtml(data: {
 <html lang="${escapeHtml(data.language ?? "en")}">
 <head>
 <meta charset="UTF-8" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;700&family=Open+Sans:wght@400&display=swap" rel="stylesheet" />
-<style>
-  @page {
-    size: A4;
-    margin: 104px 80px 80px;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: Constantia, "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-    font-size: 10pt;
-    color: #111;
-  }
-
-  /* Logical sections — each starts on a new page */
-  .section { display: block; }
-  .section-break { page-break-after: always; }
-
-  /* Cover page */
-  .cover-section { padding-top: 320px; }
-
-  /* Cover page — typography */
-  .name-h1 { font-family: "Josefin Sans", sans-serif; font-size: 28pt; font-weight: 700; line-height: 1.1; margin-bottom: 6px; }
-  .title-h3 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 700; color: #111; margin-bottom: 20px; }
-  .profile-h3 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 300; color: #111; margin-bottom: 20px; }
-  .contact { font-size: 9pt; color: #555; margin-bottom: 16px; }
-  .presentation { font-size: 10pt; line-height: 1.6; text-align: justify; margin-bottom: 8px; }
-
-  /* Info box (summary + experience list) */
-  .info-box { background: #f5f5f5; padding: 16px 20px; margin-top: 20px; }
-  .info-box-label { font-family: "Josefin Sans", sans-serif; font-size: 9pt; font-weight: 700; letter-spacing: 0.08em; color: #111; margin-bottom: 6px; }
-  .info-box-body { font-family: "Open Sans", sans-serif; font-size: 10pt; color: #555; line-height: 1.6; margin-bottom: 14px; }
-  .exp-summary-heading { margin-top: 4px; }
-  .exp-summary-list { list-style: disc; padding-left: 18px; margin: 0; }
-  .exp-summary-item { font-family: "Open Sans", sans-serif; font-size: 10pt; color: #555; line-height: 1.8; }
-
-  /* Skills page */
-  .name-h2 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 700; line-height: 1.1; margin-bottom: 0; }
-  .profile-h3 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 300; color: #111; margin-bottom: 12px; }
-  .skills-columns {
-    column-count: 2;
-    column-gap: 32px;
-    margin-top: 8px;
-  }
-
-  /* Category blocks */
-  .category-block { margin-bottom: 12px; page-break-inside: avoid; }
-  .category-header { background: #f5f5f5; padding: 4px 10px; margin-bottom: 3px; }
-  .category-title { font-family: "Josefin Sans", sans-serif; font-size: 10pt; font-weight: 700; letter-spacing: 0.04em; color: #111; }
-  .skill-list { font-family: "Open Sans", sans-serif; font-size: 8pt; color: #333; line-height: 1.6; }
-
-  /* Education */
-  .section-h4 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 700; margin-bottom: 12px; margin-top: 24px; }
-  .edu-group { margin-bottom: 12px; page-break-inside: avoid; }
-  .edu-label { font-family: "Josefin Sans", sans-serif; font-size: 12pt; font-weight: 700; color: #111; margin-bottom: 4px; }
-  .edu-value { font-family: "Open Sans", sans-serif; font-size: 10pt; color: #333; line-height: 1.6; }
-
-  /* Assignments page */
-  .assignments-heading { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 700; margin-bottom: 16px; }
-  .divider { border: none; border-top: 1px solid #e0e0e0; margin-bottom: 24px; }
-  .assignments-list { display: flex; flex-direction: column; gap: 36px; }
-  .assignment { page-break-inside: avoid; break-inside: avoid; padding-top: 4px; }
-  .role-heading {
-    font-family: "Josefin Sans", sans-serif;
-    font-size: 14pt;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .subtitle { font-family: "Josefin Sans", sans-serif; font-size: 12pt; font-weight: 400; color: #111; margin-bottom: 10px; }
-  .tech-box { background: #f5f5f5; padding: 10px 14px; margin-top: 14px; }
-  .tech-line { margin-bottom: 6px; }
-  .tech-line:last-child { margin-bottom: 0; }
-  .tech-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.05em; margin-right: 8px; }
-
-  /* Utilities */
-  .body2 { font-size: 10pt; line-height: 1.65; }
-  .secondary { color: #555; }
-  .justified { text-align: justify; margin-bottom: 10px; }
-  .justified:last-of-type { margin-bottom: 0; }
-</style>
+${PDF_FONT_LINKS}
+<style>${PDF_CSS}</style>
 </head>
 <body>
   <!-- Page 1: Cover -->
@@ -349,6 +214,7 @@ export async function exportResumePdf(
 
   const html = buildHtml({
     name,
+    language,
     consultantTitle: data.consultantTitle,
     email: data.email,
     presentation: data.presentation,
@@ -368,7 +234,18 @@ export async function exportResumePdf(
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
     pdfBuffer = Buffer.from(
-      await page.pdf({ format: "A4", printBackground: true })
+      await page.pdf({
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: "<span></span>",
+        footerTemplate: `
+          <div style="width:100%;display:flex;align-items:center;justify-content:center;position:relative;padding:0 80px;box-sizing:border-box;">
+            <span style="font-size:9pt;font-family:Constantia,'Palatino Linotype',serif;color:#555;" class="pageNumber"></span>
+            <img src="${LOGO_DATA_URI}" style="position:absolute;right:80px;bottom:24px;width:80px;height:auto;" />
+          </div>`,
+        margin: { top: "112px", right: "80px", bottom: "80px", left: "80px" },
+      })
     );
   } finally {
     await browser.close();
