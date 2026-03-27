@@ -181,9 +181,10 @@ ${JSON.stringify(originalContent, null, 2)}
 ${JSON.stringify(originalContent, null, 2)}
 </original_content>`;
 
-  // For consistency_polish, also include the full CV so the AI can see everything
+  // fullCvBlock: only for discovery (where originalContent is null).
+  // consistency_polish already has the full CV as originalContent, so no duplication.
   const fullCvBlock =
-    section === "consistency_polish" && fullCvContent
+    section !== "consistency_polish" && section !== "highlighted_experience" && fullCvContent
       ? `<full_cv>
 ${JSON.stringify(fullCvContent, null, 2)}
 </full_cv>`
