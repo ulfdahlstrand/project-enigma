@@ -1,4 +1,5 @@
 import React, { useState, useRef, useLayoutEffect } from "react";
+import { toQuarter } from "@cv-tool/utils";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,10 +51,6 @@ function toDateInput(d: string | Date | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
-function toQuarter(d: string | Date): string {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return `Q${Math.ceil((date.getMonth() + 1) / 3)} ${date.getFullYear()}`;
-}
 
 // ---------------------------------------------------------------------------
 // Draft state shape

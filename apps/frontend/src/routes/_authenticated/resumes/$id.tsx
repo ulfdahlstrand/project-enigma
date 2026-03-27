@@ -10,6 +10,7 @@
  * i18n: all visible text via useTranslation("common").
  */
 import { z } from "zod";
+import { toQuarter, sortAssignments } from "@cv-tool/utils";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
@@ -775,11 +776,7 @@ function ResumeDetailPage() {
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
-  // Sort: current assignments first, then by start date descending
-  const sortedAssignments = [...assignments].sort((a, b) => {
-    if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-    return (b.startDate ?? "").toString().localeCompare((a.startDate ?? "").toString());
-  });
+  const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
 
   const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
   const skills = snapshotContent?.skills
@@ -1000,10 +997,6 @@ function ResumeDetailPage() {
                 /* Full document-style view */
                 (<Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {sortedAssignments.map((a) => {
-                    const toQuarter = (d: string | Date) => {
-                      const date = typeof d === "string" ? new Date(d) : d;
-                      return `Q${Math.ceil((date.getMonth() + 1) / 3)} ${date.getFullYear()}`;
-                    };
                     const startQ = a.startDate ? toQuarter(a.startDate) : "";
                     const endQ = a.isCurrent
                       ? t("resume.detail.assignmentPresent")

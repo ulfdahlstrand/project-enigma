@@ -1,6 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
 import { resumeCommitContentSchema } from "@cv-tool/contracts";
+import { sortAssignments } from "@cv-tool/utils";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import type { AuthUser } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
@@ -68,7 +69,6 @@ async function buildFromLive(
       .where("rb.is_main", "=", true)
       .where("a.deleted_at", "is", null)
       .orderBy("ba.is_current", "desc")
-      .orderBy("ba.end_date", "desc")
       .orderBy("ba.start_date", "desc")
       .execute(),
     db
@@ -97,21 +97,25 @@ async function buildFromLive(
       category: s.category,
       level: s.level,
     })),
-    assignments: assignments.map((a) => ({
-      role: a.role,
-      client_name: a.client_name,
-      start_date: typeof a.start_date === "string" ? a.start_date : a.start_date.toISOString(),
-      end_date: a.end_date
-        ? typeof a.end_date === "string"
-          ? a.end_date
-          : a.end_date.toISOString()
-        : null,
-      is_current: a.is_current,
-      type: a.type,
-      technologies: (a.technologies as string[]) ?? [],
-      keywords: a.keywords,
-      description: a.description ?? "",
-    })),
+    assignments: sortAssignments(
+      assignments.map((a) => ({
+        role: a.role,
+        client_name: a.client_name,
+        start_date: typeof a.start_date === "string" ? a.start_date : a.start_date.toISOString(),
+        end_date: a.end_date
+          ? typeof a.end_date === "string"
+            ? a.end_date
+            : a.end_date.toISOString()
+          : null,
+        is_current: a.is_current,
+        type: a.type,
+        technologies: (a.technologies as string[]) ?? [],
+        keywords: a.keywords,
+        description: a.description ?? "",
+      })),
+      (a) => a.is_current,
+      (a) => a.start_date
+    ),
     education: education.map((e) => ({ type: e.type, value: e.value })),
   };
 }
@@ -168,17 +172,21 @@ async function buildFromSnapshot(
       category: s.category,
       level: s.level,
     })),
-    assignments: content.assignments.map((a) => ({
-      role: a.role,
-      client_name: a.clientName,
-      start_date: a.startDate,
-      end_date: a.endDate,
-      is_current: a.isCurrent,
-      type: a.type,
-      technologies: a.technologies,
-      keywords: a.keywords,
-      description: a.description,
-    })),
+    assignments: sortAssignments(
+      content.assignments.map((a) => ({
+        role: a.role,
+        client_name: a.clientName,
+        start_date: a.startDate,
+        end_date: a.endDate,
+        is_current: a.isCurrent,
+        type: a.type,
+        technologies: a.technologies,
+        keywords: a.keywords,
+        description: a.description,
+      })),
+      (a) => a.is_current,
+      (a) => a.start_date
+    ),
     education: education.map((e) => ({ type: e.type, value: e.value })),
   };
 }

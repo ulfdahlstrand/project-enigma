@@ -5,17 +5,20 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { buildExportData } from "../lib/build-export-data.js";
+import { PDF_CSS, PDF_FONT_LINKS } from "./pdf-styles.js";
+import { getPdfTranslations } from "./pdf-translations.js";
+import { toQuarter } from "@cv-tool/utils";
 import puppeteer from "puppeteer";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const LOGO_DATA_URI = `data:image/svg+xml;base64,${readFileSync(join(__dirname, "sthlmtech_logo.svg")).toString("base64")}`;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function fmtDate(d: Date | string | null | undefined): string {
-  if (!d) return "present";
-  const date = d instanceof Date ? d : new Date(d);
-  return date.toISOString().slice(0, 7);
-}
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -52,20 +55,23 @@ function buildHtml(data: {
     description: string | null;
   }>;
   education: Array<{ type: string; value: string }>;
+  language?: string;
 }): string {
-  const header = data.consultantTitle
-    ? `${escapeHtml(data.name)} — ${escapeHtml(data.consultantTitle)}`
-    : escapeHtml(data.name);
+  const t = getPdfTranslations(data.language);
+
+  // ---------------------------------------------------------------------------
+  // Page 1 — Cover
+  // ---------------------------------------------------------------------------
 
   const presentationHtml = data.presentation
-    .map((p) => `<p>${escapeHtml(p)}</p>`)
+    .map((p) => `<p class="presentation">${escapeHtml(p)}</p>`)
     .join("\n");
 
-  const summaryHtml = data.summary
-    ? `<section><h2>Summary</h2><p>${escapeHtml(data.summary)}</p></section>`
-    : "";
 
-  // Skills grouped by category
+  // ---------------------------------------------------------------------------
+  // Page 2 — Skills + Education (two-column)
+  // ---------------------------------------------------------------------------
+
   const byCategory = new Map<string, string[]>();
   for (const s of data.skills) {
     const cat = s.category ?? "General";
@@ -73,87 +79,121 @@ function buildHtml(data: {
     existing.push(s.name);
     byCategory.set(cat, existing);
   }
-  const skillsHtml =
-    byCategory.size > 0
-      ? `<section><h2>Skills</h2>${[...byCategory.entries()]
-          .map(
-            ([cat, names]) =>
-              `<div class="skill-group"><strong>${escapeHtml(cat)}:</strong> ${names.map(escapeHtml).join(", ")}</div>`
-          )
-          .join("\n")}</section>`
-      : "";
 
-  // Experience
-  const experienceHtml =
-    data.assignments.length > 0
-      ? `<section><h2>Experience</h2>${data.assignments
-          .map((a) => {
-            const period = `${fmtDate(a.start_date)} – ${a.is_current ? "present" : fmtDate(a.end_date)}`;
-            const techLine =
-              a.technologies.length > 0
-                ? `<p><strong>Technologies:</strong> ${a.technologies.map(escapeHtml).join(", ")}</p>`
-                : "";
-            const typeLine = a.type
-              ? `<p><strong>Type:</strong> ${escapeHtml(a.type)}</p>`
-              : "";
-            const kwLine = a.keywords
-              ? `<p><strong>Keywords:</strong> ${escapeHtml(a.keywords)}</p>`
-              : "";
-            const descLine = a.description
-              ? `<p>${escapeHtml(a.description)}</p>`
-              : "";
-            return `<div class="assignment">
-  <h3>${escapeHtml(a.role)} @ ${escapeHtml(a.client_name)}</h3>
-  <p class="period">${period}</p>
-  ${typeLine}${techLine}${kwLine}${descLine}
-</div>`;
-          })
-          .join("\n")}</section>`
-      : "";
+  const skillBlocksHtml = [...byCategory.entries()]
+    .map(
+      ([cat, names]) => `
+      <div class="category-block">
+        <div class="category-header"><span class="category-title">${escapeHtml(cat).toUpperCase()}</span></div>
+        <p class="skill-list">${names.map(escapeHtml).join(", ")}</p>
+      </div>`
+    )
+    .join("\n");
 
-  // Education
   const degrees = data.education.filter((e) => e.type === "degree").map((e) => e.value);
   const certs = data.education.filter((e) => e.type === "certification").map((e) => e.value);
   const langs = data.education.filter((e) => e.type === "language").map((e) => e.value);
-  const eduSections: string[] = [];
+  const eduItems: string[] = [];
   if (degrees.length > 0)
-    eduSections.push(`<h3>Degrees</h3><ul>${degrees.map((d) => `<li>${escapeHtml(d)}</li>`).join("")}</ul>`);
+    eduItems.push(`<div class="edu-group"><p class="edu-label">${t.degrees}</p>${degrees.map((d) => `<p class="edu-value">${escapeHtml(d)}</p>`).join("")}</div>`);
   if (certs.length > 0)
-    eduSections.push(`<h3>Certifications</h3><ul>${certs.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>`);
+    eduItems.push(`<div class="edu-group"><p class="edu-label">${t.certifications}</p>${certs.map((c) => `<p class="edu-value">${escapeHtml(c)}</p>`).join("")}</div>`);
   if (langs.length > 0)
-    eduSections.push(`<h3>Languages</h3><ul>${langs.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`);
-  const educationHtml =
-    eduSections.length > 0
-      ? `<section><h2>Education</h2>${eduSections.join("\n")}</section>`
-      : "";
+    eduItems.push(`<div class="edu-group"><p class="edu-label">${t.languages}</p>${langs.map((l) => `<p class="edu-value">${escapeHtml(l)}</p>`).join("")}</div>`);
+  const educationHtml = eduItems.length > 0
+    ? `<div class="edu-section"><h4 class="section-h4">${t.educationHeading}</h4>${eduItems.join("")}</div>`
+    : "";
+
+  const skillsPageHtml = byCategory.size > 0 || eduItems.length > 0
+    ? `<div class="section section-break">
+          <h2 class="name-h2">${escapeHtml(data.name)}</h2>
+          <h3 class="profile-h3">${t.consultantProfile}</h3>
+          <div class="skills-columns">
+            ${skillBlocksHtml}
+            ${educationHtml}
+          </div>
+      </div>`
+    : "";
+
+  // ---------------------------------------------------------------------------
+  // Page 3 — Assignments
+  // ---------------------------------------------------------------------------
+
+  const assignmentsHtml = data.assignments.length > 0
+    ? `<div class="section section-break assignments-section">
+          <h6 class="assignments-heading">${t.experienceHeading}</h6>
+          <div class="assignments-list">
+            ${data.assignments.map((a) => {
+              const startQ = toQuarter(a.start_date);
+              const endQ = a.is_current ? t.present : (a.end_date ? toQuarter(a.end_date) : null);
+              const period = endQ && endQ !== startQ
+                ? `${escapeHtml(startQ)} – ${escapeHtml(endQ)}`
+                : escapeHtml(startQ);
+              const subtitle = `${escapeHtml(a.client_name)} ${period}`;
+              const descHtml = a.description
+                ? a.description.split(/\n+/).filter(Boolean).map((p) => `<p class="body2 justified">${escapeHtml(p)}</p>`).join("")
+                : "";
+              const hasTech = a.technologies.length > 0;
+              const hasKeywords = Boolean(a.keywords);
+              const techBoxHtml = hasTech || hasKeywords
+                ? `<div class="tech-box">
+                    ${hasTech ? `<p class="tech-line"><span class="tech-label">${t.technologies}</span> <span class="body2">${a.technologies.map(escapeHtml).join(", ")}</span></p>` : ""}
+                    ${hasKeywords ? `<p class="tech-line"><span class="tech-label">${t.keywords}</span> <span class="body2">${escapeHtml(a.keywords!)}</span></p>` : ""}
+                   </div>`
+                : "";
+              return `<div class="assignment">
+                <h3 class="role-heading">${escapeHtml(a.role).toUpperCase()}</h3>
+                <p class="subtitle">${subtitle}</p>
+                ${descHtml}
+                ${techBoxHtml}
+              </div>`;
+            }).join("\n")}
+          </div>
+      </div>`
+    : "";
+
+  // ---------------------------------------------------------------------------
+  // Full HTML document
+  // ---------------------------------------------------------------------------
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(data.language ?? "en")}">
 <head>
 <meta charset="UTF-8" />
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; max-width: 800px; margin: 0 auto; padding: 24px; }
-  h1 { font-size: 20pt; margin-bottom: 4px; }
-  h2 { font-size: 13pt; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 24px; }
-  h3 { font-size: 11pt; margin: 12px 0 2px; }
-  p { margin: 4px 0; }
-  .contact { color: #555; margin-bottom: 8px; }
-  .assignment { margin-bottom: 16px; }
-  .period { color: #555; font-size: 10pt; margin: 0; }
-  .skill-group { margin-bottom: 6px; }
-  ul { margin: 4px 0; padding-left: 20px; }
-  li { margin-bottom: 2px; }
-  section { margin-bottom: 8px; }
-</style>
+${PDF_FONT_LINKS}
+<style>${PDF_CSS}</style>
 </head>
 <body>
-  <h1>${header}</h1>
-  ${data.email ? `<p class="contact">${escapeHtml(data.email)}</p>` : ""}
-  ${presentationHtml}
-  ${summaryHtml}
-  ${skillsHtml}
-  ${experienceHtml}
-  ${educationHtml}
+  <!-- Page 1: Cover -->
+  <div class="section section-break cover-section">
+    <h1 class="name-h1">${escapeHtml(data.name)}</h1>
+    ${data.consultantTitle ? `<h3 class="title-h3">${escapeHtml(data.consultantTitle)}</h3>` : ""}
+    ${presentationHtml}
+    ${(() => {
+      const sorted = [...data.assignments].sort((a, b) => {
+        if (a.is_current !== b.is_current) return a.is_current ? -1 : 1;
+        return (b.start_date ?? "").toString().localeCompare((a.start_date ?? "").toString());
+      });
+      const highlighted = sorted.slice(0, 5);
+      const showBox = data.summary || highlighted.length > 0;
+      if (!showBox) return "";
+      return `<div class="info-box">
+      ${data.summary ? `
+        <p class="info-box-label">${t.specialSkillsHeading}</p>
+        <p class="info-box-body">${escapeHtml(data.summary)}</p>
+      ` : ""}
+      ${highlighted.length > 0 ? `
+        <p class="info-box-label exp-summary-heading">${t.experienceSummaryHeading}</p>
+        <ul class="exp-summary-list">
+          ${highlighted.map((a) => `<li class="exp-summary-item">${escapeHtml(a.role)} ${t.atClient} ${escapeHtml(a.client_name)}</li>`).join("")}
+        </ul>
+      ` : ""}
+    </div>`;
+    })()}
+  </div>
+
+  ${skillsPageHtml}
+  ${assignmentsHtml}
 </body>
 </html>`;
 }
@@ -174,6 +214,7 @@ export async function exportResumePdf(
 
   const html = buildHtml({
     name,
+    language,
     consultantTitle: data.consultantTitle,
     email: data.email,
     presentation: data.presentation,
@@ -193,7 +234,18 @@ export async function exportResumePdf(
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
     pdfBuffer = Buffer.from(
-      await page.pdf({ format: "A4", printBackground: true })
+      await page.pdf({
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: "<span></span>",
+        footerTemplate: `
+          <div style="width:100%;display:flex;align-items:center;justify-content:center;position:relative;padding:0 80px;box-sizing:border-box;">
+            <span style="font-size:9pt;font-family:Constantia,'Palatino Linotype',serif;color:#555;" class="pageNumber"></span>
+            <img src="${LOGO_DATA_URI}" style="position:absolute;right:80px;bottom:24px;width:80px;height:auto;" />
+          </div>`,
+        margin: { top: "112px", right: "80px", bottom: "80px", left: "80px" },
+      })
     );
   } finally {
     await browser.close();
