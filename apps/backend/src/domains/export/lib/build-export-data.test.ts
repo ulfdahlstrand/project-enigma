@@ -146,10 +146,9 @@ function buildDbMock(opts: {
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
 
-  // Assignments chain — two innerJoins (resume_branches + assignments), three wheres, three orderBys
+  // Assignments chain — two innerJoins (resume_branches + assignments), three wheres, two orderBys
   const assignExec = vi.fn().mockResolvedValue(assignmentRows);
-  const assignOrderBy3 = vi.fn().mockReturnValue({ execute: assignExec });
-  const assignOrderBy2 = vi.fn().mockReturnValue({ orderBy: assignOrderBy3 });
+  const assignOrderBy2 = vi.fn().mockReturnValue({ execute: assignExec });
   const assignOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignOrderBy2 });
   const assignWhere3 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
   const assignWhere2 = vi.fn().mockReturnValue({ where: assignWhere3 });
