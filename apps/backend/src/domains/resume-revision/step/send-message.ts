@@ -192,13 +192,20 @@ export async function sendResumeRevisionMessage(
 
 async function loadOriginalSectionContent(
   db: Kysely<Database>,
-  step: { section: string; base_branch_id: string },
+  step: { section: string; base_branch_id: string; revision_branch_id: string | null },
   sectionDetail: string | null
 ): Promise<{ sectionContent: unknown; fullCvContent: unknown }> {
+  // For highlighted_experience, the AI needs the assignments as they look after
+  // the assignment revision steps. Those are on the revision branch, not the base.
+  const branchId =
+    step.section === "highlighted_experience" && step.revision_branch_id !== null
+      ? step.revision_branch_id
+      : step.base_branch_id;
+
   const branch = await db
     .selectFrom("resume_branches")
     .select(["head_commit_id"])
-    .where("id", "=", step.base_branch_id)
+    .where("id", "=", branchId)
     .executeTakeFirst();
 
   if (branch?.head_commit_id === undefined) {

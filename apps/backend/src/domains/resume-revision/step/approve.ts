@@ -9,6 +9,7 @@ import {
   fetchWorkflowWithSteps,
 } from "../lib/query-helpers.js";
 import { applySectionContent } from "../lib/section-content-extractor.js";
+import { normaliseAssignmentIds } from "../lib/sync-branch-assignments.js";
 import { isDiscoverySection } from "../lib/step-sections.js";
 import type { ResumeRevisionProposalContent, ResumeRevisionStepSection } from "@cv-tool/contracts";
 
@@ -84,7 +85,8 @@ export async function approveRevisionStep(
       const proposal = proposalMessage.structured_content as ResumeRevisionProposalContent | null;
       const proposedContent = proposal?.proposedContent ?? null;
 
-      const newContent = applySectionContent(section, baseContent, proposedContent, sectionDetail);
+      const rawContent = applySectionContent(section, baseContent, proposedContent, sectionDetail);
+      const newContent = await normaliseAssignmentIds(trx, step.employee_id, rawContent);
 
       const revBranch = await trx
         .selectFrom("resume_branches")
