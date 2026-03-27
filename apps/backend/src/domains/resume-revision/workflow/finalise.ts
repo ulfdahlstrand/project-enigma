@@ -1,14 +1,17 @@
 import { implement, ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
+import type OpenAI from "openai";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
+import { getOpenAIClient } from "../../ai/lib/openai-client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { fetchWorkflowWithAuth, fetchWorkflowWithSteps } from "../lib/query-helpers.js";
 import {
   syncBranchAssignmentsFromContent,
   normaliseAssignmentIds,
 } from "../lib/sync-branch-assignments.js";
+import { generateMergeCommitMessage } from "../lib/haiku-helpers.js";
 
 // ---------------------------------------------------------------------------
 // finaliseResumeRevision — query logic
@@ -16,6 +19,7 @@ import {
 
 export async function finaliseResumeRevision(
   db: Kysely<Database>,
+  openaiClient: OpenAI,
   user: AuthUser,
   input: { workflowId: string; action: "merge" | "keep" }
 ) {
@@ -113,6 +117,19 @@ export async function finaliseResumeRevision(
     revisionCommit.content as ResumeCommitContent
   );
 
+  // Generate merge commit message via Haiku using revision branch commit messages
+  const revisionCommitMessages = await db
+    .selectFrom("resume_commits")
+    .select(["message"])
+    .where("branch_id", "=", workflowRow.revision_branch_id)
+    .orderBy("created_at", "asc")
+    .execute();
+
+  const mergeMessage = await generateMergeCommitMessage(
+    openaiClient,
+    revisionCommitMessages.map((c) => c.message).filter(Boolean)
+  );
+
   // Create a merge commit on the base branch
   await db.transaction().execute(async (trx) => {
     const mergeCommit = await trx
@@ -121,7 +138,7 @@ export async function finaliseResumeRevision(
         resume_id: workflowRow.resume_id,
         branch_id: workflowRow.base_branch_id,
         content: JSON.stringify(normalisedContent),
-        message: "Merge revision workflow",
+        message: mergeMessage,
         created_by: user.id,
       })
       .returningAll()
@@ -180,14 +197,17 @@ export const finaliseResumeRevisionHandler = implement(
   contract.finaliseResumeRevision
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return finaliseResumeRevision(getDb(), user, input);
+  return finaliseResumeRevision(getDb(), getOpenAIClient(), user, input);
 });
 
-export function createFinaliseResumeRevisionHandler(db: Kysely<Database>) {
+export function createFinaliseResumeRevisionHandler(
+  db: Kysely<Database>,
+  openaiClient: OpenAI
+) {
   return implement(contract.finaliseResumeRevision).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return finaliseResumeRevision(db, user, input);
+      return finaliseResumeRevision(db, openaiClient, user, input);
     }
   );
 }

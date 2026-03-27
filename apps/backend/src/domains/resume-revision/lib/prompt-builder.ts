@@ -211,8 +211,11 @@ ${PROPOSAL_DELIMITER}
   "originalContent": <the relevant original content>,
   "proposedContent": <the full revised content>,
   "reasoning": "...",
-  "changeSummary": "..."
-}`
+  "changeSummary": "...",
+  "furtherSuggestions": ["2–4 concrete improvements not addressed in this revision, each as a short action item"]
+}
+
+IMPORTANT: furtherSuggestions must list genuine improvements worth doing in a future revision — things not already fixed here. Be specific (e.g. "Add measurable results to the Acme Corp assignment").`
       : section === "assignments"
         ? `When ready to propose a revision, include:
 

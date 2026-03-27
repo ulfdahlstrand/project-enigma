@@ -17,6 +17,7 @@ import {
   extractProposalFromResponse,
   type ConsultantProfile,
 } from "../lib/prompt-builder.js";
+import { generateBranchSummary } from "../lib/haiku-helpers.js";
 import type { ResumeRevisionMessage, ResumeRevisionStepSection } from "@cv-tool/contracts";
 
 const MODEL = "gpt-4o";
@@ -60,12 +61,29 @@ export async function kickoffRevisionStep(
   // ---------------------------------------------------------------------------
   if (step.section !== "discovery") {
     const discoveryOutput = await fetchDiscoveryOutput(db, step.workflow_id);
-    const confirmationText = buildConfirmationMessage(
+    let confirmationText = buildConfirmationMessage(
       step.section as ResumeRevisionStepSection,
       sectionDetail,
       discoveryOutput,
       input.locale
     );
+
+    // For consistency_polish: enrich with AI-generated branch summary and suggestions
+    if (step.section === "consistency_polish" && step.revision_branch_id !== null) {
+      const branchSummary = await loadRevisionBranchSummary(
+        db,
+        openaiClient,
+        step.revision_branch_id
+      );
+      if (branchSummary !== null) {
+        const sv = (input.locale ?? "sv").startsWith("sv");
+        confirmationText = appendBranchSummaryToConfirmation(
+          confirmationText,
+          branchSummary,
+          sv
+        );
+      }
+    }
 
     const assistantRow = await db
       .insertInto("resume_revision_messages")
@@ -295,6 +313,53 @@ async function loadConsultantProfile(
       ? presentationValue.join("\n") || null
       : presentationValue,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Haiku-assisted branch summary for consistency_polish kickoff
+// ---------------------------------------------------------------------------
+
+async function loadRevisionBranchSummary(
+  db: Kysely<Database>,
+  openaiClient: OpenAI,
+  revisionBranchId: string
+): Promise<import("../lib/haiku-helpers.js").BranchSummary | null> {
+  const commits = await db
+    .selectFrom("resume_commits")
+    .select(["message"])
+    .where("branch_id", "=", revisionBranchId)
+    .orderBy("created_at", "asc")
+    .execute();
+
+  const messages = commits.map((c) => c.message).filter(Boolean);
+  if (messages.length === 0) return null;
+
+  return generateBranchSummary(openaiClient, messages);
+}
+
+function appendBranchSummaryToConfirmation(
+  confirmationText: string,
+  branchSummary: { branchName: string; summary: string },
+  sv: boolean
+): string {
+  if (sv) {
+    return [
+      confirmationText,
+      "",
+      `**Förslag på grennamn:** \`${branchSummary.branchName}\``,
+      "",
+      `**Sammanfattning av gjorda revisioner:**`,
+      branchSummary.summary,
+    ].join("\n");
+  }
+  return [
+    confirmationText,
+    "",
+    `**Suggested branch name:** \`${branchSummary.branchName}\``,
+    "",
+    `**Summary of revisions made:**`,
+    branchSummary.summary,
+  ].join("\n");
 }
 
 // ---------------------------------------------------------------------------
