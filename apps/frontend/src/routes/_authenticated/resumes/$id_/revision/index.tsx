@@ -217,7 +217,7 @@ function RevisionWorkflowPage() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            minHeight: "calc(100vh - 176px)",
+            minHeight: "calc(100vh - 120px)",
             gap: 3,
             px: 4,
           }}
@@ -262,7 +262,7 @@ function RevisionWorkflowPage() {
 
   if (isCompleted) {
     return (
-      <Box sx={{ height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+      <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
         {revisionPageHeader(approvedCount)}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <FinalReview
@@ -280,7 +280,7 @@ function RevisionWorkflowPage() {
   // ─── Main three-column layout ──────────────────────────────────────────────
 
   return (
-    <Box sx={{ height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       {revisionPageHeader(currentStepIndex)}
 
       <Box sx={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
