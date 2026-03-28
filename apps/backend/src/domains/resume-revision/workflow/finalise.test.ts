@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Kysely } from "kysely";
+import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
 import { finaliseResumeRevision } from "./finalise.js";
 import { MOCK_ADMIN } from "../../../test-helpers/mock-users.js";
@@ -86,14 +87,25 @@ function buildDbMock() {
   });
 
   const db = { selectFrom, updateTable } as unknown as Kysely<Database>;
-  return { db, updateSet };
+
+  const mockOpenAI = {
+    chat: {
+      completions: {
+        create: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: "Revise CV presentation and skills" } }],
+        }),
+      },
+    },
+  } as unknown as OpenAI;
+
+  return { db, updateSet, mockOpenAI };
 }
 
 describe("finaliseResumeRevision", () => {
   it("marks keep workflows as finalized", async () => {
-    const { db, updateSet } = buildDbMock();
+    const { db, updateSet, mockOpenAI } = buildDbMock();
 
-    await finaliseResumeRevision(db, MOCK_ADMIN, {
+    await finaliseResumeRevision(db, mockOpenAI, MOCK_ADMIN, {
       workflowId: WORKFLOW_ID,
       action: "keep",
     });

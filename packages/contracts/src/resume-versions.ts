@@ -22,7 +22,7 @@ export const resumeCommitSkillSchema = z.object({
 });
 
 export const resumeCommitAssignmentSchema = z.object({
-  assignmentId: z.string().uuid(),
+  assignmentId: z.string(),
   clientName: z.string(),
   role: z.string(),
   description: z.string(),

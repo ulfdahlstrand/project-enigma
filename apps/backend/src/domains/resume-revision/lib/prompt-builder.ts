@@ -181,9 +181,10 @@ ${JSON.stringify(originalContent, null, 2)}
 ${JSON.stringify(originalContent, null, 2)}
 </original_content>`;
 
-  // For consistency_polish, also include the full CV so the AI can see everything
+  // fullCvBlock: only for discovery (where originalContent is null).
+  // consistency_polish already has the full CV as originalContent, so no duplication.
   const fullCvBlock =
-    section === "consistency_polish" && fullCvContent
+    section !== "consistency_polish" && section !== "highlighted_experience" && fullCvContent
       ? `<full_cv>
 ${JSON.stringify(fullCvContent, null, 2)}
 </full_cv>`
@@ -210,8 +211,11 @@ ${PROPOSAL_DELIMITER}
   "originalContent": <the relevant original content>,
   "proposedContent": <the full revised content>,
   "reasoning": "...",
-  "changeSummary": "..."
-}`
+  "changeSummary": "...",
+  "furtherSuggestions": ["2–4 concrete improvements not addressed in this revision, each as a short action item"]
+}
+
+IMPORTANT: furtherSuggestions must list genuine improvements worth doing in a future revision — things not already fixed here. Be specific (e.g. "Add measurable results to the Acme Corp assignment").`
       : section === "assignments"
         ? `When ready to propose a revision, include:
 
@@ -244,8 +248,8 @@ ${PROPOSAL_DELIMITER}
   const skillsNote =
     section === "skills"
       ? sectionDetail === "__new_categories__"
-        ? `\nYour task is to suggest NEW skill categories and skills that would strengthen this consultant's profile based on their assignments and revision goals. The existing skills are shown above for reference. Propose 2-4 new categories with 3-6 skills each.\n`
-        : `\nYou are ONLY revising the "${sectionDetail}" skill category. Do not modify other categories. Propose revised or reordered skills for this category only.\n`
+        ? `\nYour task is to suggest NEW skill categories and skills that would strengthen this consultant's profile based on their assignments and revision goals. The existing skills are shown above for reference. Propose 2-4 new categories with 3-6 skills each.\n\nCRITICAL: Only suggest skills that are clearly evidenced by the consultant's existing assignments. Do NOT invent or assume skills that are not demonstrated in the CV. If you notice a skill that seems clearly missing and relevant, ask the user whether to add it before including it in any proposal — never add unconfirmed skills on your own.\n`
+        : `\nYou are ONLY revising the "${sectionDetail}" skill category. Do not modify other categories. Propose revised or reordered skills for this category only.\n\nCRITICAL: You may reorder, rename, or remove skills within this category, but you must NEVER add a new skill unless the user has explicitly asked for it. If you believe a skill is clearly missing and evidenced by the assignments, ask the user first and wait for their approval before including it in the proposal.\n`
       : "";
 
   const highlightedNote =
@@ -263,6 +267,11 @@ Do not ask more questions. Do not stay in planning mode. Briefly acknowledge the
 
 When the user confirms (e.g. "go ahead", "looks good", "kör på", "ja"), then produce your proposal using the format below.`;
 
+  const skillsAdditionGuard =
+    section === "skills"
+      ? `\nSKILLS RULE — NO SILENT ADDITIONS: Never silently add a skill to the proposal. If a skill is not already in the consultant's profile, only include it if the user has explicitly approved it during this conversation. If you spot a gap, flag it conversationally and wait for a yes before proceeding.\n`
+      : "";
+
   return `You are a CV revision assistant at SthlmTech working on the "${sectionLabel[section]}" section of a consultant's resume.
 ${localeInstruction}
 ${STHLMTECH_CV_STANDARD}
@@ -274,7 +283,7 @@ ${discoveryBlock}
 ${originalBlock}
 
 ${fullCvBlock}
-${skillsNote || assignmentNote || highlightedNote}
+${skillsNote || assignmentNote || highlightedNote}${skillsAdditionGuard}
 Your goal is to revise this section in line with the revision goals above, following the SthlmTech CV standard.
 
 IMPORTANT: Treat the revision brief above as the primary interpretation of the earlier discovery conversation. If it specifies an unusual direction, tone, or framing, you must carry that into this step.

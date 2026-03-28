@@ -1,15 +1,19 @@
 import { implement, ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { Kysely } from "kysely";
+import type OpenAI from "openai";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
+import { getOpenAIClient } from "../../ai/lib/openai-client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import {
   fetchStepWithAuth,
   fetchWorkflowWithSteps,
 } from "../lib/query-helpers.js";
 import { applySectionContent } from "../lib/section-content-extractor.js";
+import { normaliseAssignmentIds } from "../lib/sync-branch-assignments.js";
 import { isDiscoverySection } from "../lib/step-sections.js";
+import { generateCommitMessage } from "../lib/haiku-helpers.js";
 import type { ResumeRevisionProposalContent, ResumeRevisionStepSection } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +22,7 @@ import type { ResumeRevisionProposalContent, ResumeRevisionStepSection } from "@
 
 export async function approveRevisionStep(
   db: Kysely<Database>,
+  openaiClient: OpenAI,
   user: AuthUser,
   input: { stepId: string }
 ) {
@@ -84,7 +89,8 @@ export async function approveRevisionStep(
       const proposal = proposalMessage.structured_content as ResumeRevisionProposalContent | null;
       const proposedContent = proposal?.proposedContent ?? null;
 
-      const newContent = applySectionContent(section, baseContent, proposedContent, sectionDetail);
+      const rawContent = applySectionContent(section, baseContent, proposedContent, sectionDetail);
+      const newContent = await normaliseAssignmentIds(trx, step.employee_id, rawContent);
 
       const revBranch = await trx
         .selectFrom("resume_branches")
@@ -168,6 +174,27 @@ export async function approveRevisionStep(
         .execute();
     }
   });
+
+  // Generate a descriptive commit message via Haiku (best-effort)
+  if (newCommitId !== null) {
+    const proposal = proposalMessage.structured_content as ResumeRevisionProposalContent | null;
+    const changeSummary = (proposal?.changeSummary as string | null | undefined) ?? null;
+    const fallback = `Approve ${section}${sectionDetail ? ` — ${sectionDetail.split("|||")[1] ?? sectionDetail}` : ""}`;
+    const aiMessage = await generateCommitMessage(
+      openaiClient,
+      section,
+      sectionDetail,
+      changeSummary,
+      fallback
+    );
+    if (aiMessage !== fallback) {
+      await db
+        .updateTable("resume_commits")
+        .set({ message: aiMessage })
+        .where("id", "=", newCommitId)
+        .execute();
+    }
+  }
 
   const workflow = await fetchWorkflowWithSteps(db, user, workflowId);
   const approvedStep = workflow.steps.find((s) => s.id === step.id);
@@ -253,14 +280,17 @@ export const approveRevisionStepHandler = implement(
   contract.approveRevisionStep
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return approveRevisionStep(getDb(), user, input);
+  return approveRevisionStep(getDb(), getOpenAIClient(), user, input);
 });
 
-export function createApproveRevisionStepHandler(db: Kysely<Database>) {
+export function createApproveRevisionStepHandler(
+  db: Kysely<Database>,
+  openaiClient: OpenAI
+) {
   return implement(contract.approveRevisionStep).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return approveRevisionStep(db, user, input);
+      return approveRevisionStep(db, openaiClient, user, input);
     }
   );
 }

@@ -17,11 +17,13 @@ function isValidDateString(s: unknown): s is string {
 /**
  * Normalises AI-generated assignment content so it can be safely persisted.
  *
- * AI output may violate the schema in two ways:
+ * AI output may violate the schema in several ways:
  *   1. `assignmentId` is not a valid UUID (e.g. "1", "2"). Fix: insert an
  *      identity record into `assignments` and replace the fake ID.
- *   2. `startDate` is null/empty/invalid. Fix: fall back to today's date so
- *      the non-nullable DB column can be written.
+ *   2. `startDate` is null/empty/invalid. Fix: fall back to today's date.
+ *   3. `endDate` is a word like "Present" instead of a date or null. Fix: set
+ *      to null and mark `isCurrent: true`.
+ *   4. `isCurrent` is missing entirely. Fix: infer from endDate nullability.
  *
  * Returns a new content object (immutable). If nothing needs fixing the
  * original object is returned unchanged.
@@ -31,12 +33,18 @@ export async function normaliseAssignmentIds(
   employeeId: string,
   content: ResumeCommitContent
 ): Promise<ResumeCommitContent> {
+  const raw = content.assignments as Array<Record<string, unknown>>;
+
   const needsNewId = content.assignments.filter((a) => !isUuid(a.assignmentId));
-  const needsDateFix = content.assignments.filter(
-    (a) => !isValidDateString(a.startDate)
+  const needsFix = raw.some(
+    (a) =>
+      !isUuid(String(a["assignmentId"] ?? "")) ||
+      !isValidDateString(a["startDate"]) ||
+      (typeof a["endDate"] === "string" && !isValidDateString(a["endDate"]) && a["endDate"] !== null) ||
+      !("isCurrent" in a)
   );
 
-  if (needsNewId.length === 0 && needsDateFix.length === 0) return content;
+  if (needsNewId.length === 0 && !needsFix) return content;
 
   const idMap = new Map<string, string>();
   for (const a of needsNewId) {
@@ -53,13 +61,32 @@ export async function normaliseAssignmentIds(
   return {
     ...content,
     assignments: content.assignments.map((a) => {
+      const raw = a as unknown as Record<string, unknown>;
       const newId = idMap.get(a.assignmentId);
-      const needsDate = !isValidDateString(a.startDate);
-      if (!newId && !needsDate) return a;
+      const fixedStartDate = !isValidDateString(a.startDate) ? today : a.startDate;
+      // "Present" or any non-date string in endDate → null + isCurrent true
+      const endDateIsPresent =
+        typeof a.endDate === "string" && !isValidDateString(a.endDate);
+      const fixedEndDate = endDateIsPresent ? null : a.endDate;
+      const fixedIsCurrent =
+        "isCurrent" in raw
+          ? a.isCurrent
+          : endDateIsPresent || a.endDate === null;
+
+      const unchanged =
+        !newId &&
+        fixedStartDate === a.startDate &&
+        fixedEndDate === a.endDate &&
+        fixedIsCurrent === a.isCurrent;
+
+      if (unchanged) return a;
+
       return {
         ...a,
         ...(newId ? { assignmentId: newId } : {}),
-        ...(needsDate ? { startDate: today } : {}),
+        startDate: fixedStartDate,
+        endDate: fixedEndDate,
+        isCurrent: fixedIsCurrent,
       };
     }),
   };
