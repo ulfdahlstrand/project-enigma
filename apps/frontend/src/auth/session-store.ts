@@ -90,10 +90,6 @@ export function refreshAuthSession(): Promise<AuthSessionSnapshot> {
   return loadCurrentSession(true);
 }
 
-export function setAuthenticatedUser(user: CurrentSessionUser): void {
-  setSnapshot({ status: "authenticated", user });
-}
-
 export function clearAuthSession(): void {
   inFlightRequest = null;
   setSnapshot({ status: "unauthenticated", user: null });
