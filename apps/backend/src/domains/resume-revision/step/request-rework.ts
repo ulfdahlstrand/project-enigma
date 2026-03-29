@@ -64,12 +64,3 @@ export const requestRevisionStepReworkHandler = implement(
   const user = requireAuth(context as AuthContext);
   return requestRevisionStepRework(getDb(), user, input);
 });
-
-export function createRequestRevisionStepReworkHandler(db: Kysely<Database>) {
-  return implement(contract.requestRevisionStepRework).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return requestRevisionStepRework(db, user, input);
-    }
-  );
-}

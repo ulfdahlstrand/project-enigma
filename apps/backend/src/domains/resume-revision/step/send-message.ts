@@ -281,15 +281,3 @@ export const sendResumeRevisionMessageHandler = implement(
   const user = requireAuth(context as AuthContext);
   return sendResumeRevisionMessage(getDb(), getOpenAIClient(), user, input);
 });
-
-export function createSendResumeRevisionMessageHandler(
-  db: Kysely<Database>,
-  openaiClient: OpenAI
-) {
-  return implement(contract.sendResumeRevisionMessage).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return sendResumeRevisionMessage(db, openaiClient, user, input);
-    }
-  );
-}
