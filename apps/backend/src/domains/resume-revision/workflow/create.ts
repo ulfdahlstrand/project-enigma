@@ -144,12 +144,3 @@ export const createResumeRevisionWorkflowHandler = implement(
   const user = requireAuth(context as AuthContext);
   return createResumeRevisionWorkflow(getDb(), user, input);
 });
-
-export function createCreateResumeRevisionWorkflowHandler(db: Kysely<Database>) {
-  return implement(contract.createResumeRevisionWorkflow).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return createResumeRevisionWorkflow(db, user, input);
-    }
-  );
-}

@@ -38,10 +38,3 @@ export const createResumeSkillHandler = implement(contract.createResumeSkill).ha
     return createResumeSkill(getDb(), input);
   }
 );
-
-export function createCreateResumeSkillHandler(db: Kysely<Database>) {
-  return implement(contract.createResumeSkill).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return createResumeSkill(db, input);
-  });
-}

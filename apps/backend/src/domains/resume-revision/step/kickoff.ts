@@ -269,15 +269,3 @@ export const kickoffRevisionStepHandler = implement(
   const user = requireAuth(context as AuthContext);
   return kickoffRevisionStep(getDb(), getOpenAIClient(), user, input);
 });
-
-export function createKickoffRevisionStepHandler(
-  db: Kysely<Database>,
-  openaiClient: OpenAI
-) {
-  return implement(contract.kickoffRevisionStep).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return kickoffRevisionStep(db, openaiClient, user, input);
-    }
-  );
-}

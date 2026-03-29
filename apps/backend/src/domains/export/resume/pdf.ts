@@ -282,12 +282,3 @@ export const exportResumePdfHandler = implement(
   const user = requireAuth(context as AuthContext);
   return exportResumePdf(getDb(), user, input.resumeId, input.commitId);
 });
-
-export function createExportResumePdfHandler(db: Kysely<Database>) {
-  return implement(contract.exportResumePdf).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return exportResumePdf(db, user, input.resumeId, input.commitId);
-    }
-  );
-}

@@ -26,10 +26,3 @@ export const listEducationHandler = implement(contract.listEducation).handler(
     return listEducation(getDb(), input.employeeId);
   }
 );
-
-export function createListEducationHandler(db: Kysely<Database>) {
-  return implement(contract.listEducation).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return listEducation(db, input.employeeId);
-  });
-}

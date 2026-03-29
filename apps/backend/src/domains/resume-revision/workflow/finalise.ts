@@ -182,12 +182,3 @@ export const finaliseResumeRevisionHandler = implement(
   const user = requireAuth(context as AuthContext);
   return finaliseResumeRevision(getDb(), user, input);
 });
-
-export function createFinaliseResumeRevisionHandler(db: Kysely<Database>) {
-  return implement(contract.finaliseResumeRevision).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return finaliseResumeRevision(db, user, input);
-    }
-  );
-}

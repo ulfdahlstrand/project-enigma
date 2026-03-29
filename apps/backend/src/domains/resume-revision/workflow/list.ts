@@ -87,12 +87,3 @@ export const listResumeRevisionWorkflowsHandler = implement(
   const user = requireAuth(context as AuthContext);
   return listResumeRevisionWorkflows(getDb(), user, input);
 });
-
-export function createListResumeRevisionWorkflowsHandler(db: Kysely<Database>) {
-  return implement(contract.listResumeRevisionWorkflows).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return listResumeRevisionWorkflows(db, user, input);
-    }
-  );
-}

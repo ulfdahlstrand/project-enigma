@@ -255,12 +255,3 @@ export const approveRevisionStepHandler = implement(
   const user = requireAuth(context as AuthContext);
   return approveRevisionStep(getDb(), user, input);
 });
-
-export function createApproveRevisionStepHandler(db: Kysely<Database>) {
-  return implement(contract.approveRevisionStep).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return approveRevisionStep(db, user, input);
-    }
-  );
-}

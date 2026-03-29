@@ -52,20 +52,3 @@ export const createEmployeeHandler = implement(contract.createEmployee).handler(
     return createEmployee(getDb(), input.name, input.email);
   }
 );
-
-// ---------------------------------------------------------------------------
-// Factory variant — used to inject a custom Kysely instance (e.g. in tests)
-// ---------------------------------------------------------------------------
-
-/**
- * Creates a `createEmployee` oRPC handler backed by the given Kysely instance.
- * Intended for use in unit tests via dependency injection.
- *
- * @param db - Kysely instance to inject (real or mock).
- */
-export function createCreateEmployeeHandler(db: Kysely<Database>) {
-  return implement(contract.createEmployee).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return createEmployee(db, input.name, input.email);
-  });
-}

@@ -171,12 +171,3 @@ export const exportResumeMarkdownHandler = implement(
   const user = requireAuth(context as AuthContext);
   return exportResumeMarkdown(getDb(), user, input.resumeId, input.commitId);
 });
-
-export function createExportResumeMarkdownHandler(db: Kysely<Database>) {
-  return implement(contract.exportResumeMarkdown).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return exportResumeMarkdown(db, user, input.resumeId, input.commitId);
-    }
-  );
-}
