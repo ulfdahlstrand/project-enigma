@@ -82,12 +82,3 @@ export const skipRevisionStepHandler = implement(
   const user = requireAuth(context as AuthContext);
   return skipRevisionStep(getDb(), user, input);
 });
-
-export function createSkipRevisionStepHandler(db: Kysely<Database>) {
-  return implement(contract.skipRevisionStep).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return skipRevisionStep(db, user, input);
-    }
-  );
-}

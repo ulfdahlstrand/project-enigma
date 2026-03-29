@@ -25,10 +25,3 @@ export const deleteEducationHandler = implement(contract.deleteEducation).handle
     return deleteEducation(getDb(), input.id);
   }
 );
-
-export function createDeleteEducationHandler(db: Kysely<Database>) {
-  return implement(contract.deleteEducation).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return deleteEducation(db, input.id);
-  });
-}

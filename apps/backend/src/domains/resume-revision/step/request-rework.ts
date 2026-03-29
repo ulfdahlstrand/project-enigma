@@ -8,7 +8,6 @@ import {
   fetchStepWithAuth,
   fetchStepsWithMessages,
 } from "../lib/query-helpers.js";
-import { mapStepRow } from "../lib/map-to-output.js";
 
 // ---------------------------------------------------------------------------
 // requestRevisionStepRework — query logic
@@ -65,12 +64,3 @@ export const requestRevisionStepReworkHandler = implement(
   const user = requireAuth(context as AuthContext);
   return requestRevisionStepRework(getDb(), user, input);
 });
-
-export function createRequestRevisionStepReworkHandler(db: Kysely<Database>) {
-  return implement(contract.requestRevisionStepRework).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return requestRevisionStepRework(db, user, input);
-    }
-  );
-}

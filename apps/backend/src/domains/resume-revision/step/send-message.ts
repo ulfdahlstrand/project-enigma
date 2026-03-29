@@ -9,7 +9,6 @@ import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/requ
 import {
   fetchStepWithAuth,
   fetchDiscoveryOutput,
-  fetchStepsWithMessages,
 } from "../lib/query-helpers.js";
 import { mapMessageRow, mapStepRow } from "../lib/map-to-output.js";
 import { extractSectionContent } from "../lib/section-content-extractor.js";
@@ -282,15 +281,3 @@ export const sendResumeRevisionMessageHandler = implement(
   const user = requireAuth(context as AuthContext);
   return sendResumeRevisionMessage(getDb(), getOpenAIClient(), user, input);
 });
-
-export function createSendResumeRevisionMessageHandler(
-  db: Kysely<Database>,
-  openaiClient: OpenAI
-) {
-  return implement(contract.sendResumeRevisionMessage).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return sendResumeRevisionMessage(db, openaiClient, user, input);
-    }
-  );
-}

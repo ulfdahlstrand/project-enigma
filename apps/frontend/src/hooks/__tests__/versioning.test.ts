@@ -9,7 +9,7 @@
  *   - useSaveResumeVersion — calls orpc.saveResumeVersion, invalidates commits key
  *   - useForkResumeBranch — calls orpc.forkResumeBranch, invalidates branches key
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

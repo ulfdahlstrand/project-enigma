@@ -281,7 +281,7 @@ export function WorkflowChecklist({ steps, selectedStepId, onStepClick }: Workfl
       </Paper>
 
       {/* Step list */}
-      {items.map((item, i) => {
+      {items.map((item) => {
         if (item.kind === "skills-header") {
           return (
             <GroupHeader

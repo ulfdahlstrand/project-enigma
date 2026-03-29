@@ -11,7 +11,6 @@
  *   - Success snackbar appears after save
  *   - Error alert appears when save fails
  */
-import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

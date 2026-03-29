@@ -11,7 +11,6 @@ import {
   TextRun,
   HeadingLevel,
   Packer,
-  BorderStyle,
 } from "docx";
 
 // ---------------------------------------------------------------------------
@@ -196,12 +195,3 @@ export const exportResumeDocxHandler = implement(
   const user = requireAuth(context as AuthContext);
   return exportResumeDocx(getDb(), user, input.resumeId, input.commitId);
 });
-
-export function createExportResumeDocxHandler(db: Kysely<Database>) {
-  return implement(contract.exportResumeDocx).handler(
-    async ({ input, context }) => {
-      const user = requireAuth(context as AuthContext);
-      return exportResumeDocx(db, user, input.resumeId, input.commitId);
-    }
-  );
-}

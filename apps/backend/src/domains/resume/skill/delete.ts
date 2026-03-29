@@ -25,10 +25,3 @@ export const deleteResumeSkillHandler = implement(contract.deleteResumeSkill).ha
     return deleteResumeSkill(getDb(), input.id);
   }
 );
-
-export function createDeleteResumeSkillHandler(db: Kysely<Database>) {
-  return implement(contract.deleteResumeSkill).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return deleteResumeSkill(db, input.id);
-  });
-}

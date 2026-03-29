@@ -31,10 +31,3 @@ export const createEducationHandler = implement(contract.createEducation).handle
     return createEducation(getDb(), input);
   }
 );
-
-export function createCreateEducationHandler(db: Kysely<Database>) {
-  return implement(contract.createEducation).handler(async ({ input, context }) => {
-    requireAuth(context as AuthContext);
-    return createEducation(db, input);
-  });
-}
