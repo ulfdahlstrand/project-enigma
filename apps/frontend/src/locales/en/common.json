@@ -428,6 +428,22 @@
     "starting": "Starting…",
     "backButton": "Back to resume",
     "reviseButton": "Revise with AI",
+    "inline": {
+      "branchBadge": "AI revision mode",
+      "checklistTitle": "Revision checklist",
+      "checklistDescription": "The checklist will appear here after AI understands your goal and starts a revision branch.",
+      "checklistWaitingTitle": "Waiting for revision plan",
+      "checklistWaitingDescription": "Tell AI what you want to change. Once the direction is clear, suggested tasks will appear here.",
+      "chatTitle": "AI revision chat",
+      "chatDescription": "Discuss the full resume here while staying inside the editor.",
+      "initialPrompt": "What would you like to change in this resume?",
+      "inputPlaceholder": "Describe the revision you want to make…",
+      "sendButton": "Continue",
+      "closeButton": "Close",
+      "diffHint": "You will be able to open the diff from this panel.",
+      "assistantLabel": "AI",
+      "userLabel": "You"
+    },
     "topBar": {
       "step": "Step {{current}} of {{total}}"
     },

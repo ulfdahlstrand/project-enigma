@@ -36,6 +36,7 @@ import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
@@ -581,16 +582,13 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
 // ---------------------------------------------------------------------------
 
 function EditSplitButton({
-  resumeId,
-  activeBranchId,
   onEdit,
+  onReviseWithAi,
 }: {
-  resumeId: string;
-  activeBranchId: string | null;
   onEdit: () => void;
+  onReviseWithAi: () => void;
 }) {
   const { t } = useTranslation("common");
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const anchorRef = useState<HTMLDivElement | null>(null);
 
@@ -617,11 +615,7 @@ function EditSplitButton({
                   <MenuItem
                     onClick={() => {
                       setOpen(false);
-                      void navigate({
-                        to: "/resumes/$id/revision",
-                        params: { id: resumeId },
-                        ...(activeBranchId ? { search: { branchId: activeBranchId } } : {}),
-                      });
+                      onReviseWithAi();
                     }}
                   >
                     {t("revision.reviseButton")}
@@ -633,6 +627,137 @@ function EditSplitButton({
         )}
       </Popper>
     </>
+  );
+}
+
+interface InlineRevisionMessage {
+  id: string;
+  role: "assistant" | "user";
+  content: string;
+}
+
+function InlineRevisionChecklist() {
+  const { t } = useTranslation("common");
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        width: { xs: "100%", lg: 280 },
+        flexShrink: 0,
+        alignSelf: { xs: "stretch", lg: "flex-start" },
+        position: { xs: "static", lg: "sticky" },
+        top: 24,
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Typography variant="overline" color="text.secondary">
+          {t("revision.inline.branchBadge")}
+        </Typography>
+        <Typography variant="h6" sx={{ mt: 0.5 }}>
+          {t("revision.inline.checklistTitle")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {t("revision.inline.checklistDescription")}
+        </Typography>
+      </Box>
+      <Divider />
+      <List disablePadding>
+        <ListItem>
+          <ListItemText
+            primary={t("revision.inline.checklistWaitingTitle")}
+            secondary={t("revision.inline.checklistWaitingDescription")}
+          />
+        </ListItem>
+      </List>
+    </Paper>
+  );
+}
+
+function InlineRevisionChat({
+  messages,
+  draft,
+  onDraftChange,
+  onSend,
+  onClose,
+}: {
+  messages: InlineRevisionMessage[];
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("common");
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        width: { xs: "100%", xl: 360 },
+        flexShrink: 0,
+        alignSelf: { xs: "stretch", xl: "flex-start" },
+        position: { xs: "static", xl: "sticky" },
+        top: 24,
+      }}
+    >
+      <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", gap: 1 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h6">{t("revision.inline.chatTitle")}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {t("revision.inline.chatDescription")}
+          </Typography>
+        </Box>
+        <Button size="small" onClick={onClose}>
+          {t("revision.inline.closeButton")}
+        </Button>
+      </Box>
+      <Divider />
+      <Stack spacing={1.5} sx={{ p: 2 }}>
+        {messages.map((message) => (
+          <Box
+            key={message.id}
+            sx={{
+              alignSelf: message.role === "assistant" ? "flex-start" : "flex-end",
+              maxWidth: "100%",
+              px: 1.5,
+              py: 1.25,
+              borderRadius: 2,
+              bgcolor: message.role === "assistant" ? "action.hover" : "primary.main",
+              color: message.role === "assistant" ? "text.primary" : "primary.contrastText",
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ display: "block", mb: 0.5, textTransform: "uppercase", opacity: 0.75 }}
+            >
+              {message.role === "assistant"
+                ? t("revision.inline.assistantLabel")
+                : t("revision.inline.userLabel")}
+            </Typography>
+            <Typography variant="body2">{message.content}</Typography>
+          </Box>
+        ))}
+      </Stack>
+      <Divider />
+      <Box sx={{ p: 2 }}>
+        <TextField
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          multiline
+          minRows={3}
+          fullWidth
+          placeholder={t("revision.inline.inputPlaceholder")}
+        />
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1.5, gap: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            {t("revision.inline.diffHint")}
+          </Typography>
+          <Button variant="contained" onClick={onSend} disabled={!draft.trim()}>
+            {t("revision.inline.sendButton")}
+          </Button>
+        </Box>
+      </Box>
+    </Paper>
   );
 }
 
@@ -693,6 +818,15 @@ function ResumeDetailPage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isInlineRevisionOpen, setIsInlineRevisionOpen] = useState(false);
+  const [inlineRevisionDraft, setInlineRevisionDraft] = useState("");
+  const [inlineRevisionMessages, setInlineRevisionMessages] = useState<InlineRevisionMessage[]>([
+    {
+      id: "assistant-intro",
+      role: "assistant",
+      content: t("revision.inline.initialPrompt"),
+    },
+  ]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
@@ -748,6 +882,12 @@ function ResumeDetailPage() {
       setDraftSummary(summary ?? "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setIsInlineRevisionOpen(false);
+    }
   }, [isEditing]);
 
   // Assignments always come from the live branch_assignments join — same source for all branches
@@ -835,6 +975,32 @@ function ResumeDetailPage() {
     });
   };
 
+  const handleOpenInlineRevision = () => {
+    setIsEditing(true);
+    setIsInlineRevisionOpen(true);
+  };
+
+  const handleCloseInlineRevision = () => {
+    setIsInlineRevisionOpen(false);
+  };
+
+  const handleSendInlineRevisionMessage = () => {
+    const content = inlineRevisionDraft.trim();
+    if (!content) {
+      return;
+    }
+
+    setInlineRevisionMessages((current) => [
+      ...current,
+      {
+        id: `user-${current.length}`,
+        role: "user",
+        content,
+      },
+    ]);
+    setInlineRevisionDraft("");
+  };
+
   const toolbarActions = (
     <>
       <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
@@ -857,9 +1023,8 @@ function ResumeDetailPage() {
       ) : (
         <>
           <EditSplitButton
-            resumeId={id}
-            activeBranchId={activeBranchId}
             onEdit={() => setIsEditing(true)}
+            onReviseWithAi={handleOpenInlineRevision}
           />
           <Tooltip title={t("resume.history.pageTitle")}>
             <IconButton onClick={() => setHistoryOpen(true)} size="small" aria-label={t("resume.history.pageTitle")}>
@@ -889,21 +1054,46 @@ function ResumeDetailPage() {
         chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
         actions={toolbarActions}
       />
-      {/* Gray canvas */}
       <Box
-        ref={canvasRef}
         sx={{
-          position: "relative",
           bgcolor: "background.default",
           minHeight: "calc(100vh - 56px)",
           py: 4,
-          px: 2,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 3,
+          px: { xs: 2, md: 3 },
         }}
       >
+        {isInlineRevisionOpen && (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", lg: "row" },
+              alignItems: { xs: "stretch", lg: "flex-start" },
+              justifyContent: "center",
+              gap: 3,
+              mb: 3,
+            }}
+          >
+            <InlineRevisionChecklist />
+            <InlineRevisionChat
+              messages={inlineRevisionMessages}
+              draft={inlineRevisionDraft}
+              onDraftChange={setInlineRevisionDraft}
+              onSend={handleSendInlineRevisionMessage}
+              onClose={handleCloseInlineRevision}
+            />
+          </Box>
+        )}
+        {/* Gray canvas */}
+        <Box
+          ref={canvasRef}
+          sx={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+          }}
+        >
         {/* Page 1 — Cover */}
         <DocumentPage
           title={resumeTitle}
@@ -1189,6 +1379,7 @@ function ResumeDetailPage() {
             </Fab>
           </Tooltip>
         )}
+        </Box>
       </Box>
 
       {/* Version history drawer */}

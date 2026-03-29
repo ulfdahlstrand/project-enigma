@@ -428,6 +428,22 @@
     "starting": "Startar…",
     "backButton": "Tillbaka till CV",
     "reviseButton": "Revidera med AI",
+    "inline": {
+      "branchBadge": "AI-revisionsläge",
+      "checklistTitle": "Revisionschecklista",
+      "checklistDescription": "Checklistan visas här när AI har förstått målet och startat en revisionsgren.",
+      "checklistWaitingTitle": "Väntar på revisionsplan",
+      "checklistWaitingDescription": "Berätta vad du vill ändra. När riktningen är tydlig dyker föreslagna uppgifter upp här.",
+      "chatTitle": "AI-revisionschatt",
+      "chatDescription": "Diskutera hela CV:t här utan att lämna editorn.",
+      "initialPrompt": "Vad vill du ändra i det här CV:t?",
+      "inputPlaceholder": "Beskriv revisionen du vill göra…",
+      "sendButton": "Fortsätt",
+      "closeButton": "Stäng",
+      "diffHint": "Du kommer kunna öppna diffen från den här panelen.",
+      "assistantLabel": "AI",
+      "userLabel": "Du"
+    },
     "topBar": {
       "step": "Steg {{current}} av {{total}}"
     },
