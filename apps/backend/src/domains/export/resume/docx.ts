@@ -11,7 +11,6 @@ import {
   TextRun,
   HeadingLevel,
   Packer,
-  BorderStyle,
 } from "docx";
 
 // ---------------------------------------------------------------------------

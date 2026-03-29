@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { toQuarter } from "@cv-tool/utils";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";

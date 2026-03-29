@@ -1,6 +1,5 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, waitFor, within } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";

@@ -6,7 +6,6 @@
  *   - Clicking it calls openAssistant with correct entity info, system prompt, and callbacks
  *   - Does NOT render inline preview states (those are handled inside the panel)
  */
-import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

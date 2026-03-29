@@ -8,7 +8,6 @@ import {
   fetchStepWithAuth,
   fetchStepsWithMessages,
 } from "../lib/query-helpers.js";
-import { mapStepRow } from "../lib/map-to-output.js";
 
 // ---------------------------------------------------------------------------
 // requestRevisionStepRework — query logic

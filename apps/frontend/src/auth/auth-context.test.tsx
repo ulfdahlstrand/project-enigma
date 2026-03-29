@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./auth-context";

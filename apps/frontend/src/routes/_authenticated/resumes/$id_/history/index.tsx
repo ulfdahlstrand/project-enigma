@@ -44,10 +44,6 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   component: VersionHistoryPage,
 });
 
-function formatCommitLabel(message: string, fallback: string) {
-  return message || fallback;
-}
-
 function sortByCreatedAt<T extends { createdAt: string | Date }>(items: T[]) {
   return [...items].sort((a, b) => {
     const aDate = typeof a.createdAt === "string" ? a.createdAt : a.createdAt.toISOString();

@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
 import { resumeCommitContentSchema } from "@cv-tool/contracts";
 import { sortAssignments } from "@cv-tool/utils";
-import type { Database, ResumeCommitContent } from "../../../db/types.js";
+import type { Database } from "../../../db/types.js";
 import type { AuthUser } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 

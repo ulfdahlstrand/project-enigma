@@ -9,7 +9,6 @@ import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/requ
 import {
   fetchStepWithAuth,
   fetchDiscoveryOutput,
-  fetchStepsWithMessages,
 } from "../lib/query-helpers.js";
 import { mapMessageRow, mapStepRow } from "../lib/map-to-output.js";
 import { extractSectionContent } from "../lib/section-content-extractor.js";
