@@ -436,6 +436,7 @@
       "checklistWaitingDescription": "Berätta vad du vill ändra. När riktningen är tydlig dyker föreslagna uppgifter upp här.",
       "chatTitle": "AI-revisionschatt",
       "chatDescription": "Diskutera hela CV:t här utan att lämna editorn.",
+      "conversationTitle": "CV-revision",
       "initialPrompt": "Vad vill du ändra i det här CV:t?",
       "inputPlaceholder": "Beskriv revisionen du vill göra…",
       "sendButton": "Fortsätt",

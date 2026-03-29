@@ -36,7 +36,6 @@ import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
@@ -57,9 +56,11 @@ import { LoadingState, ErrorState } from "../../../components/feedback";
 import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
+import { AIAssistantChat } from "../../../components/ai-assistant/AIAssistantChat";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
 import { SkillsEditor } from "../../../components/SkillsEditor";
 import { AssignmentEditor } from "../../../components/AssignmentEditor";
+import { useAIAssistantContext } from "../../../lib/ai-assistant-context";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -74,6 +75,16 @@ const FOOTER_HEIGHT = 40;
 
 // How many assignments to show as bullets on the cover page
 const COVER_HIGHLIGHT_COUNT = 5;
+const INLINE_REVISION_SYSTEM_PROMPT = [
+  "You are helping a user plan a full resume revision.",
+  "This conversation happens before any section-specific edits.",
+  "Your job is to clarify the user's goal, target role, tone, scope, and constraints for the whole resume.",
+  "Do not rewrite the resume yet.",
+  "Do not emit JSON suggestion blocks in this initial conversation.",
+  "Ask focused follow-up questions only when needed.",
+  "Once the user's intent is clear, summarise the agreed direction in concise plain language.",
+].join(" ");
+const INLINE_REVISION_KICKOFF_MESSAGE = "Ask the user what they want to change in the full resume before any edits are made.";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
@@ -630,12 +641,6 @@ function EditSplitButton({
   );
 }
 
-interface InlineRevisionMessage {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-}
-
 function InlineRevisionChecklist() {
   const { t } = useTranslation("common");
 
@@ -674,19 +679,7 @@ function InlineRevisionChecklist() {
   );
 }
 
-function InlineRevisionChat({
-  messages,
-  draft,
-  onDraftChange,
-  onSend,
-  onClose,
-}: {
-  messages: InlineRevisionMessage[];
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onSend: () => void;
-  onClose: () => void;
-}) {
+function InlineRevisionAssistantPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation("common");
 
   return (
@@ -712,50 +705,8 @@ function InlineRevisionChat({
         </Button>
       </Box>
       <Divider />
-      <Stack spacing={1.5} sx={{ p: 2 }}>
-        {messages.map((message) => (
-          <Box
-            key={message.id}
-            sx={{
-              alignSelf: message.role === "assistant" ? "flex-start" : "flex-end",
-              maxWidth: "100%",
-              px: 1.5,
-              py: 1.25,
-              borderRadius: 2,
-              bgcolor: message.role === "assistant" ? "action.hover" : "primary.main",
-              color: message.role === "assistant" ? "text.primary" : "primary.contrastText",
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ display: "block", mb: 0.5, textTransform: "uppercase", opacity: 0.75 }}
-            >
-              {message.role === "assistant"
-                ? t("revision.inline.assistantLabel")
-                : t("revision.inline.userLabel")}
-            </Typography>
-            <Typography variant="body2">{message.content}</Typography>
-          </Box>
-        ))}
-      </Stack>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <TextField
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          multiline
-          minRows={3}
-          fullWidth
-          placeholder={t("revision.inline.inputPlaceholder")}
-        />
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1.5, gap: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            {t("revision.inline.diffHint")}
-          </Typography>
-          <Button variant="contained" onClick={onSend} disabled={!draft.trim()}>
-            {t("revision.inline.sendButton")}
-          </Button>
-        </Box>
+      <Box sx={{ height: 560, minHeight: 420 }}>
+        <AIAssistantChat />
       </Box>
     </Paper>
   );
@@ -773,6 +724,13 @@ function ResumeDetailPage() {
   const { branchId: selectedBranchId } = useSearch({ strict: false }) as any as { branchId?: string };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const {
+    openAssistant,
+    hideDrawer,
+    closeAssistant,
+    entityType: assistantEntityType,
+    entityId: assistantEntityId,
+  } = useAIAssistantContext();
 
   const { data: resume, isLoading, isError, error } = useQuery({
     queryKey: getResumeQueryKey(id),
@@ -819,14 +777,6 @@ function ResumeDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isInlineRevisionOpen, setIsInlineRevisionOpen] = useState(false);
-  const [inlineRevisionDraft, setInlineRevisionDraft] = useState("");
-  const [inlineRevisionMessages, setInlineRevisionMessages] = useState<InlineRevisionMessage[]>([
-    {
-      id: "assistant-intro",
-      role: "assistant",
-      content: t("revision.inline.initialPrompt"),
-    },
-  ]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
@@ -978,27 +928,28 @@ function ResumeDetailPage() {
   const handleOpenInlineRevision = () => {
     setIsEditing(true);
     setIsInlineRevisionOpen(true);
+    if (assistantEntityType !== "resume" || assistantEntityId !== id) {
+      openAssistant({
+        entityType: "resume",
+        entityId: id,
+        title: t("revision.inline.conversationTitle"),
+        systemPrompt: INLINE_REVISION_SYSTEM_PROMPT,
+        kickoffMessage: INLINE_REVISION_KICKOFF_MESSAGE,
+        originalContent: [
+          resumeTitle,
+          consultantTitle ?? "",
+          presentation.join("\n\n"),
+          summary ?? "",
+        ].filter(Boolean).join("\n\n"),
+        onAccept: () => {},
+      });
+    }
+    hideDrawer();
   };
 
   const handleCloseInlineRevision = () => {
     setIsInlineRevisionOpen(false);
-  };
-
-  const handleSendInlineRevisionMessage = () => {
-    const content = inlineRevisionDraft.trim();
-    if (!content) {
-      return;
-    }
-
-    setInlineRevisionMessages((current) => [
-      ...current,
-      {
-        id: `user-${current.length}`,
-        role: "user",
-        content,
-      },
-    ]);
-    setInlineRevisionDraft("");
+    closeAssistant();
   };
 
   const toolbarActions = (
@@ -1074,13 +1025,7 @@ function ResumeDetailPage() {
             }}
           >
             <InlineRevisionChecklist />
-            <InlineRevisionChat
-              messages={inlineRevisionMessages}
-              draft={inlineRevisionDraft}
-              onDraftChange={setInlineRevisionDraft}
-              onSend={handleSendInlineRevisionMessage}
-              onClose={handleCloseInlineRevision}
-            />
+            <InlineRevisionAssistantPanel onClose={handleCloseInlineRevision} />
           </Box>
         )}
         {/* Gray canvas */}

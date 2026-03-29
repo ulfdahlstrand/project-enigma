@@ -436,6 +436,7 @@
       "checklistWaitingDescription": "Tell AI what you want to change. Once the direction is clear, suggested tasks will appear here.",
       "chatTitle": "AI revision chat",
       "chatDescription": "Discuss the full resume here while staying inside the editor.",
+      "conversationTitle": "Resume revision",
       "initialPrompt": "What would you like to change in this resume?",
       "inputPlaceholder": "Describe the revision you want to make…",
       "sendButton": "Continue",
