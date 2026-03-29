@@ -19,6 +19,7 @@ import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
@@ -36,7 +37,6 @@ import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import Slide from "@mui/material/Slide";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
@@ -57,11 +57,9 @@ import { LoadingState, ErrorState } from "../../../components/feedback";
 import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
-import { AIAssistantChat } from "../../../components/ai-assistant/AIAssistantChat";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
 import { SkillsEditor } from "../../../components/SkillsEditor";
 import { AssignmentEditor } from "../../../components/AssignmentEditor";
-import { useAIAssistantContext } from "../../../lib/ai-assistant-context";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -73,21 +71,11 @@ const PAGE_MX = "80px";
 const PAGE_MY = "56px";
 const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
-const AI_PANEL_WIDTH = 420;
+const INLINE_REVISION_CHECKLIST_WIDTH = 220;
+const INLINE_REVISION_CHAT_WIDTH = 360;
 
 // How many assignments to show as bullets on the cover page
 const COVER_HIGHLIGHT_COUNT = 5;
-const INLINE_REVISION_SYSTEM_PROMPT = [
-  "You are helping a user plan a full resume revision.",
-  "This conversation happens before any section-specific edits.",
-  "Your job is to clarify the user's goal, target role, tone, scope, and constraints for the whole resume.",
-  "Do not rewrite the resume yet.",
-  "Do not emit JSON suggestion blocks in this initial conversation.",
-  "Ask focused follow-up questions only when needed.",
-  "Once the user's intent is clear, summarise the agreed direction in concise plain language.",
-].join(" ");
-const INLINE_REVISION_KICKOFF_MESSAGE = "Ask the user what they want to change in the full resume before any edits are made.";
-
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
     branchId: z.string().optional(),
@@ -643,18 +631,25 @@ function EditSplitButton({
   );
 }
 
-function InlineRevisionChecklist() {
+function InlineRevisionChecklist({
+  branchName,
+  onOpenHistory,
+  onOpenCompare,
+}: {
+  branchName: string;
+  onOpenHistory: () => void;
+  onOpenCompare: () => void;
+}) {
   const { t } = useTranslation("common");
 
   return (
     <Paper
       variant="outlined"
       sx={{
-        width: { xs: "100%", lg: 280 },
+        width: "100%",
         flexShrink: 0,
-        alignSelf: { xs: "stretch", lg: "flex-start" },
-        position: { xs: "static", lg: "sticky" },
-        top: 24,
+        borderRadius: 0,
+        boxShadow: 0,
       }}
     >
       <Box sx={{ p: 2 }}>
@@ -667,6 +662,11 @@ function InlineRevisionChecklist() {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {t("revision.inline.checklistDescription")}
         </Typography>
+        <Chip
+          size="small"
+          label={t("revision.inline.branchName", { branchName })}
+          sx={{ mt: 1.5 }}
+        />
       </Box>
       <Divider />
       <List disablePadding>
@@ -676,42 +676,109 @@ function InlineRevisionChecklist() {
             secondary={t("revision.inline.checklistWaitingDescription")}
           />
         </ListItem>
+        <ListItem>
+          <ListItemText
+            primary={t("revision.inline.intentStatusTitle")}
+            secondary={t("revision.inline.intentStatusDescription")}
+          />
+        </ListItem>
+        <ListItem>
+          <ListItemText
+            primary={t("revision.inline.branchStatusTitle")}
+            secondary={t("revision.inline.branchStatusDescription")}
+          />
+        </ListItem>
+        <ListItem>
+          <ListItemText
+            primary={t("revision.inline.diffStatusTitle")}
+            secondary={t("revision.inline.diffStatusDescription")}
+          />
+        </ListItem>
       </List>
+      <Divider />
+      <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+        <Button variant="outlined" size="small" startIcon={<HistoryIcon />} onClick={onOpenHistory}>
+          {t("revision.inline.historyButton")}
+        </Button>
+        <Button variant="outlined" size="small" onClick={onOpenCompare}>
+          {t("revision.inline.compareButton")}
+        </Button>
+      </Box>
     </Paper>
   );
 }
 
-function InlineRevisionAssistantPanel({ onClose }: { onClose: () => void }) {
+function InlineRevisionChatPanel({
+  branchName,
+  onClose,
+}: {
+  branchName: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation("common");
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        width: { xs: "100%", lg: AI_PANEL_WIDTH },
-        flexShrink: 0,
-        alignSelf: { xs: "stretch", lg: "flex-start" },
-        position: { xs: "static", lg: "sticky" },
-        top: 24,
-        boxShadow: 3,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
       }}
     >
       <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", gap: 1 }}>
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h6">{t("revision.inline.chatTitle")}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {t("revision.inline.chatDescription")}
           </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+            {t("revision.inline.chatContext", { branchName })}
+          </Typography>
         </Box>
-        <Button size="small" onClick={onClose}>
-          {t("revision.inline.closeButton")}
-        </Button>
+        <IconButton size="small" onClick={onClose} aria-label={t("revision.inline.closeButton")}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
       </Box>
       <Divider />
-      <Box sx={{ height: 560, minHeight: 420 }}>
-        <AIAssistantChat />
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", p: 3 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "background.default",
+              maxWidth: 320,
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              {t("revision.inline.initialPrompt")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("revision.inline.chatHint")}
+            </Typography>
+          </Paper>
+
+          <Box sx={{ mt: 2, maxWidth: 320 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75 }}>
+              {t("revision.inline.examplesTitle")}
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: "text.secondary" }}>
+              <Typography component="li" variant="body2" sx={{ mb: 0.75 }}>
+                {t("revision.inline.exampleSpelling")}
+              </Typography>
+              <Typography component="li" variant="body2" sx={{ mb: 0.75 }}>
+                {t("revision.inline.exampleTone")}
+              </Typography>
+              <Typography component="li" variant="body2">
+                {t("revision.inline.exampleFocus")}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
-    </Paper>
+    </Box>
   );
 }
 
@@ -727,13 +794,6 @@ function ResumeDetailPage() {
   const { branchId: selectedBranchId } = useSearch({ strict: false }) as any as { branchId?: string };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const {
-    openAssistant,
-    hideDrawer,
-    closeAssistant,
-    entityType: assistantEntityType,
-    entityId: assistantEntityId,
-  } = useAIAssistantContext();
 
   const { data: resume, isLoading, isError, error } = useQuery({
     queryKey: getResumeQueryKey(id),
@@ -750,6 +810,7 @@ function ResumeDetailPage() {
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
   const activeBranchId = selectedBranchId ?? mainBranchId ?? null;
   const activeBranch = branches?.find((b) => b.id === activeBranchId);
+  const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
 
   // When a non-main branch is active, load its head commit snapshot
   const isSnapshotMode = activeBranchId !== null && activeBranchId !== mainBranchId && activeBranch?.headCommitId != null;
@@ -931,31 +992,65 @@ function ResumeDetailPage() {
   const handleOpenInlineRevision = () => {
     setIsEditing(true);
     setIsInlineRevisionOpen(true);
-    if (assistantEntityType !== "resume" || assistantEntityId !== id) {
-      openAssistant({
-        entityType: "resume",
-        entityId: id,
-        title: t("revision.inline.conversationTitle"),
-        systemPrompt: INLINE_REVISION_SYSTEM_PROMPT,
-        kickoffMessage: INLINE_REVISION_KICKOFF_MESSAGE,
-        originalContent: [
-          resumeTitle,
-          consultantTitle ?? "",
-          presentation.join("\n\n"),
-          summary ?? "",
-        ].filter(Boolean).join("\n\n"),
-        onAccept: () => {},
-      });
-    }
-    hideDrawer();
   };
 
   const handleCloseInlineRevision = () => {
     setIsInlineRevisionOpen(false);
-    closeAssistant();
   };
 
-  const toolbarActions = (
+  const handleExitEditing = () => {
+    setIsInlineRevisionOpen(false);
+    setIsEditing(false);
+  };
+
+  const handleOpenHistoryPage = () => {
+    void navigate({
+      to: "/resumes/$id/history",
+      params: { id },
+      search: activeBranchId ? { branchId: activeBranchId } : {},
+    });
+  };
+
+  const handleOpenComparePage = () => {
+    void navigate({
+      to: "/resumes/$id/compare",
+      params: { id },
+    });
+  };
+
+  const headerChip = isInlineRevisionOpen ? (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+      <Chip size="small" color="primary" label={t("revision.inline.modeChip")} />
+      <Chip size="small" variant="outlined" label={activeBranchName} />
+      {language ? <Chip label={language.toUpperCase()} size="small" /> : null}
+    </Box>
+  ) : (
+    language ? <Chip label={language.toUpperCase()} size="small" /> : undefined
+  );
+
+  const toolbarActions = isInlineRevisionOpen ? (
+    <>
+      <Button variant="outlined" startIcon={<HistoryIcon />} onClick={handleOpenHistoryPage}>
+        {t("revision.inline.historyButton")}
+      </Button>
+      <Button variant="outlined" onClick={handleOpenComparePage}>
+        {t("revision.inline.compareButton")}
+      </Button>
+      <ResumeSaveSplitButton
+        onSaveCurrent={handleSave}
+        onSaveAsNewVersion={handleSaveAsNewVersion}
+        canSaveAsNewVersion={baseCommitId !== null}
+        isPending={
+          updateResume.isPending ||
+          saveVersion.isPending ||
+          forkResumeBranch.isPending
+        }
+      />
+      <Button variant="outlined" onClick={handleCloseInlineRevision}>
+        {t("revision.inline.closeButton")}
+      </Button>
+    </>
+  ) : (
     <>
       <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       {isEditing ? (
@@ -970,7 +1065,7 @@ function ResumeDetailPage() {
               forkResumeBranch.isPending
             }
           />
-          <Button variant="outlined" onClick={() => setIsEditing(false)}>
+          <Button variant="outlined" onClick={handleExitEditing}>
             {t("resume.edit.backButton")}
           </Button>
         </>
@@ -1005,234 +1100,281 @@ function ResumeDetailPage() {
               ]
             : []),
         ]}
-        chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
+        chip={headerChip}
         actions={toolbarActions}
       />
       <Box
         sx={{
           bgcolor: "background.default",
           minHeight: "calc(100vh - 56px)",
-          py: 4,
-          px: { xs: 2, md: 3 },
+          height: isInlineRevisionOpen ? "calc(100vh - 56px)" : undefined,
+          py: isInlineRevisionOpen ? 0 : 4,
+          px: isInlineRevisionOpen ? 0 : { xs: 2, md: 3 },
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {isInlineRevisionOpen && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", lg: "row" },
-              alignItems: { xs: "stretch", lg: "flex-start" },
-              justifyContent: "center",
-              gap: 3,
-              mb: 3,
-            }}
-          >
-            <InlineRevisionChecklist />
-            <Slide
-              in={isInlineRevisionOpen}
-              direction="left"
-              mountOnEnter
-              unmountOnExit
-              appear
-            >
-              <Box sx={{ width: { xs: "100%", lg: AI_PANEL_WIDTH } }}>
-                <InlineRevisionAssistantPanel onClose={handleCloseInlineRevision} />
-              </Box>
-            </Slide>
-          </Box>
-        )}
-        {/* Gray canvas */}
         <Box
-          ref={canvasRef}
           sx={{
-            position: "relative",
+            width: "100%",
+            flex: isInlineRevisionOpen ? 1 : "0 0 auto",
+            minHeight: isInlineRevisionOpen ? 0 : undefined,
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 3,
+            flexDirection: { xs: "column", lg: "row" },
+            alignItems: "stretch",
+            justifyContent: "center",
+            gap: isInlineRevisionOpen ? 0 : 3,
+            overflow: isInlineRevisionOpen ? "hidden" : "visible",
           }}
         >
-        {/* Page 1 — Cover */}
-        <DocumentPage
-          title={resumeTitle}
-          language={language}
-          page={1}
-          totalPages={totalPages}
-          hideHeader
-        >
-          <CoverPageContent
-            employeeName={employee?.name ?? ""}
-            consultantTitle={consultantTitle}
-            presentation={presentation}
-            summary={summary}
-            highlightedAssignments={highlighted}
-            presentationRef={presentationRef}
-            isEditing={isEditing}
-            draftTitle={draftTitle}
-            draftPresentation={draftPresentation}
-            draftSummary={draftSummary}
-            onDraftTitleChange={setDraftTitle}
-            onDraftPresentationChange={setDraftPresentation}
-            onDraftSummaryChange={setDraftSummary}
-          />
-        </DocumentPage>
-
-        {/* Page 2 — Skills */}
-        {showSkillsPage && skillsPage !== null && (
-          <DocumentPage
-            title={resumeTitle}
-            language={language}
-            page={skillsPage}
-            totalPages={totalPages}
-          >
-            {isEditing && !isSnapshotMode ? (
-              <SkillsEditor
-                resumeId={id}
-                skills={resume?.skills ?? []}
-                queryKey={getResumeQueryKey(id)}
+          {isInlineRevisionOpen && (
+            <Box
+              sx={{
+                width: { xs: "100%", lg: INLINE_REVISION_CHECKLIST_WIDTH },
+                order: { xs: 0, lg: 0 },
+                flexShrink: 0,
+                overflow: "auto",
+                borderRight: { xs: "none", lg: "1px solid" },
+                borderBottom: { xs: "1px solid", lg: "none" },
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                p: 1.5,
+                maxHeight: { xs: 320, lg: "none" },
+              }}
+            >
+              <InlineRevisionChecklist
+                branchName={activeBranchName}
+                onOpenHistory={handleOpenHistoryPage}
+                onOpenCompare={handleOpenComparePage}
               />
-            ) : (
-              <SkillsPageContent
-                employeeName={employee?.name ?? ""}
-                skills={skills}
-                degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-                certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-                languages={education.filter((e) => e.type === "language").map((e) => e.value)}
-              />
-            )}
-          </DocumentPage>
-        )}
+            </Box>
+          )}
 
-        {/* AI improvement FAB — sits to the right of the document at presentation height, only while editing */}
-        {isEditing && !isSnapshotMode && presentation.length > 0 && (
-          <ImprovePresentationFab
-            resumeId={id}
-            presentation={presentation}
-            consultantTitle={consultantTitle}
-            employeeName={employee?.name}
-            top={fabTop}
-            onAccept={(improved) => {
-              const paragraphs = improved
-                .split(/\n\n+/)
-                .map((p) => p.trim())
-                .filter(Boolean);
-              updateResume.mutate({ presentation: paragraphs });
+          <Box
+            sx={{
+              flex: "1 1 auto",
+              order: { xs: 2, lg: 1 },
+              minWidth: 0,
+              minHeight: isInlineRevisionOpen ? 0 : undefined,
+              overflow: isInlineRevisionOpen ? "auto" : "hidden",
+              p: isInlineRevisionOpen ? 2 : 0,
             }}
-          />
-        )}
+          >
+            {isInlineRevisionOpen && (
+              <Paper
+                variant="outlined"
+                sx={{
+                  mb: 2,
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: 0,
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                  <Chip size="small" color="primary" label={t("revision.inline.documentBadge")} />
+                  <Typography variant="subtitle2">
+                    {t("revision.inline.documentTitle")}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                  {t("revision.inline.documentDescription")}
+                </Typography>
+              </Paper>
+            )}
 
-        {/* Page 3 — Assignments (compact table or full card view) */}
-        {hasAssignments && assignmentsPage !== null && (
-          <Box ref={assignmentsSectionRef} sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            {/* Gray canvas */}
+            <Box
+              ref={canvasRef}
+              sx={{
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+            {/* Page 1 — Cover */}
             <DocumentPage
               title={resumeTitle}
               language={language}
-              page={assignmentsPage}
+              page={1}
               totalPages={totalPages}
+              hideHeader
             >
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                {t("resume.detail.assignmentsHeading")}
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
+              <CoverPageContent
+                employeeName={employee?.name ?? ""}
+                consultantTitle={consultantTitle}
+                presentation={presentation}
+                summary={summary}
+                highlightedAssignments={highlighted}
+                presentationRef={presentationRef}
+                isEditing={isEditing}
+                draftTitle={draftTitle}
+                draftPresentation={draftPresentation}
+                draftSummary={draftSummary}
+                onDraftTitleChange={setDraftTitle}
+                onDraftPresentationChange={setDraftPresentation}
+                onDraftSummaryChange={setDraftSummary}
+              />
+            </DocumentPage>
 
-              {isEditing && !isSnapshotMode ? (
-                <AssignmentEditor
-                  assignments={sortedAssignments}
-                  queryKey={["listBranchAssignmentsFull", activeBranchId]}
-                  canvasEl={canvasRef.current}
-                />
-              ) : showFullAssignments ? (
-                /* Full document-style view */
-                (<Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {sortedAssignments.map((a) => {
-                    const startQ = a.startDate ? toQuarter(a.startDate) : "";
-                    const endQ = a.isCurrent
-                      ? t("resume.detail.assignmentPresent")
-                      : a.endDate
-                      ? toQuarter(a.endDate)
-                      : "—";
-                    const technologies = ("technologies" in a && Array.isArray(a.technologies))
-                      ? a.technologies as string[]
-                      : [];
-                    const keywords = ("keywords" in a && typeof a.keywords === "string" && a.keywords)
-                      ? a.keywords
-                      : "";
-                    const description = ("description" in a && typeof a.description === "string")
-                      ? a.description
-                      : "";
-                    const paragraphs = description.split(/\n+/).filter(Boolean);
+            {/* Page 2 — Skills */}
+            {showSkillsPage && skillsPage !== null && (
+              <DocumentPage
+                title={resumeTitle}
+                language={language}
+                page={skillsPage}
+                totalPages={totalPages}
+              >
+                {isEditing && !isSnapshotMode ? (
+                  <SkillsEditor
+                    resumeId={id}
+                    skills={resume?.skills ?? []}
+                    queryKey={getResumeQueryKey(id)}
+                  />
+                ) : (
+                  <SkillsPageContent
+                    employeeName={employee?.name ?? ""}
+                    skills={skills}
+                    degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+                    certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+                    languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+                  />
+                )}
+              </DocumentPage>
+            )}
 
-                    return (
-                      <Box
-                        key={a.id}
-                      >
-                        {/* Role heading */}
-                        <Typography
-                          variant="h6"
-                          component="h3"
-                          sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", mb: 0.5 }}
-                        >
-                          {a.role}
-                        </Typography>
+            {/* AI improvement FAB — sits to the right of the document at presentation height, only while editing */}
+            {isEditing && !isInlineRevisionOpen && !isSnapshotMode && presentation.length > 0 && (
+              <ImprovePresentationFab
+                resumeId={id}
+                presentation={presentation}
+                consultantTitle={consultantTitle}
+                employeeName={employee?.name}
+                top={fabTop}
+                onAccept={(improved) => {
+                  const paragraphs = improved
+                    .split(/\n\n+/)
+                    .map((p) => p.trim())
+                    .filter(Boolean);
+                  updateResume.mutate({ presentation: paragraphs });
+                }}
+              />
+            )}
 
-                        {/* Client + period subtitle */}
-                        <Typography variant="subtitle1" sx={{ fontWeight: 400, mb: 1.5 }}>
-                          {a.clientName} {startQ} – {endQ}
-                        </Typography>
+            {/* Page 3 — Assignments (compact table or full card view) */}
+            {hasAssignments && assignmentsPage !== null && (
+              <Box ref={assignmentsSectionRef} sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                <DocumentPage
+                  title={resumeTitle}
+                  language={language}
+                  page={assignmentsPage}
+                  totalPages={totalPages}
+                >
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                    {t("resume.detail.assignmentsHeading")}
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
 
-                        {/* Description paragraphs */}
-                        {paragraphs.length > 0 ? (
-                          <Box sx={{ mb: 2 }}>
-                            {paragraphs.map((para, i) => (
-                              <Typography
-                                key={i}
-                                variant="body2"
-                                sx={{ textAlign: "justify", mb: i < paragraphs.length - 1 ? 1.5 : 0 }}
-                              >
-                                {para}
-                              </Typography>
-                            ))}
-                          </Box>
-                        ) : null}
+                  {isEditing && !isSnapshotMode ? (
+                    <AssignmentEditor
+                      assignments={sortedAssignments}
+                      queryKey={["listBranchAssignmentsFull", activeBranchId]}
+                      canvasEl={canvasRef.current}
+                    />
+                  ) : showFullAssignments ? (
+                    /* Full document-style view */
+                    (<Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {sortedAssignments.map((a) => {
+                        const startQ = a.startDate ? toQuarter(a.startDate) : "";
+                        const endQ = a.isCurrent
+                          ? t("resume.detail.assignmentPresent")
+                          : a.endDate
+                          ? toQuarter(a.endDate)
+                          : "—";
+                        const technologies = ("technologies" in a && Array.isArray(a.technologies))
+                          ? a.technologies as string[]
+                          : [];
+                        const keywords = ("keywords" in a && typeof a.keywords === "string" && a.keywords)
+                          ? a.keywords
+                          : "";
+                        const description = ("description" in a && typeof a.description === "string")
+                          ? a.description
+                          : "";
+                        const paragraphs = description.split(/\n+/).filter(Boolean);
 
-                        {/* Technologies + keywords box */}
-                        {(technologies.length > 0 || keywords) && (
+                        return (
                           <Box
-                            sx={{
-                              bgcolor: "action.hover",
-                              border: "none",
-                              borderRadius: 0,
-                              px: 1.5,
-                              py: 1,
-                              mt: 2,
-                            }}
+                            key={a.id}
                           >
-                            {technologies.length > 0 && (
-                              <Typography variant="body2" sx={{ mb: keywords ? 0.5 : 0 }}>
-                                <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
-                                  {t("resume.detail.assignmentTechnologies")}:{" "}
-                                </Box>
-                                {technologies.join(", ")}
-                              </Typography>
-                            )}
-                            {keywords && (
-                              <Typography variant="body2">
-                                <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
-                                  {t("assignment.new.keywordsLabel")}:{" "}
-                                </Box>
-                                {keywords}
-                              </Typography>
+                            {/* Role heading */}
+                            <Typography
+                              variant="h6"
+                              component="h3"
+                              sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", mb: 0.5 }}
+                            >
+                              {a.role}
+                            </Typography>
+
+                            {/* Client + period subtitle */}
+                            <Typography variant="subtitle1" sx={{ fontWeight: 400, mb: 1.5 }}>
+                              {a.clientName} {startQ} – {endQ}
+                            </Typography>
+
+                            {/* Description paragraphs */}
+                            {paragraphs.length > 0 ? (
+                              <Box sx={{ mb: 2 }}>
+                                {paragraphs.map((para, i) => (
+                                  <Typography
+                                    key={i}
+                                    variant="body2"
+                                    sx={{ textAlign: "justify", mb: i < paragraphs.length - 1 ? 1.5 : 0 }}
+                                  >
+                                    {para}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            ) : null}
+
+                            {/* Technologies + keywords box */}
+                            {(technologies.length > 0 || keywords) && (
+                              <Box
+                                sx={{
+                                  bgcolor: "action.hover",
+                                  border: "none",
+                                  borderRadius: 0,
+                                  px: 1.5,
+                                  py: 1,
+                                  mt: 2,
+                                }}
+                              >
+                                {technologies.length > 0 && (
+                                  <Typography variant="body2" sx={{ mb: keywords ? 0.5 : 0 }}>
+                                    <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                                      {t("resume.detail.assignmentTechnologies")}:{" "}
+                                    </Box>
+                                    {technologies.join(", ")}
+                                  </Typography>
+                                )}
+                                {keywords && (
+                                  <Typography variant="body2">
+                                    <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                                      {t("assignment.new.keywordsLabel")}:{" "}
+                                    </Box>
+                                    {keywords}
+                                  </Typography>
+                                )}
+                              </Box>
                             )}
                           </Box>
-                        )}
-                      </Box>
-                    );
-                  })}
-                </Box>)
-              ) : (
-                /* Compact table view */
-                (<TableContainer>
-                  <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
+                        );
+                      })}
+                    </Box>)
+                  ) : (
+                    /* Compact table view */
+                    (<TableContainer>
+                      <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
                     <TableHead>
                       <TableRow>
                         <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
@@ -1264,79 +1406,105 @@ function ResumeDetailPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </TableContainer>)
-              )}
-            </DocumentPage>
+                      </Table>
+                    </TableContainer>)
+                  )}
+                </DocumentPage>
 
+              </Box>
+            )}
+
+            {/* Assignments view toggle FAB — sits to the right of the assignments section */}
+            {hasAssignments && !isEditing && !isInlineRevisionOpen && (
+              <Tooltip
+                title={showFullAssignments
+                  ? t("resume.detail.assignmentToggleSummary")
+                  : t("resume.detail.assignmentToggleFull")}
+                placement="left"
+              >
+                <Fab
+                  size="small"
+                  aria-label={showFullAssignments
+                    ? t("resume.detail.assignmentToggleSummary")
+                    : t("resume.detail.assignmentToggleFull")}
+                  onClick={() => setShowFullAssignments((v) => !v)}
+                  sx={{
+                    position: "absolute",
+                    left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
+                    top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
+                    zIndex: 10,
+                    bgcolor: "transparent",
+                    color: "action.active",
+                    boxShadow: 0,
+                    opacity: 0.5,
+                    transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+                    "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+                  }}
+                >
+                  {showFullAssignments
+                    ? <FormatListBulletedIcon fontSize="small" />
+                    : <ViewAgendaIcon fontSize="small" />}
+                </Fab>
+              </Tooltip>
+            )}
+
+            {/* Add assignment FAB — visible only while editing, below the toggle FAB position */}
+            {hasAssignments && isEditing && !isInlineRevisionOpen && !isSnapshotMode && (
+              <Tooltip title={t("resume.detail.addAssignment")} placement="left">
+                <Fab
+                  size="small"
+                  aria-label={t("resume.detail.addAssignment")}
+                  onClick={() => void navigate({
+                    to: "/assignments/new",
+                    search: {
+                      resumeId: id,
+                      employeeId: resume?.employeeId,
+                      ...(activeBranchId ? { branchId: activeBranchId } : {}),
+                    },
+                  })}
+                  sx={{
+                    position: "absolute",
+                    left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
+                    top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
+                    zIndex: 10,
+                    bgcolor: "transparent",
+                    color: "action.active",
+                    boxShadow: 0,
+                    opacity: 0.5,
+                    transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+                    "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+                  }}
+                >
+                  <AddIcon fontSize="small" />
+                </Fab>
+              </Tooltip>
+            )}
+            </Box>
           </Box>
-        )}
 
-        {/* Assignments view toggle FAB — sits to the right of the assignments section */}
-        {hasAssignments && !isEditing && (
-          <Tooltip
-            title={showFullAssignments
-              ? t("resume.detail.assignmentToggleSummary")
-              : t("resume.detail.assignmentToggleFull")}
-            placement="left"
-          >
-            <Fab
-              size="small"
-              aria-label={showFullAssignments
-                ? t("resume.detail.assignmentToggleSummary")
-                : t("resume.detail.assignmentToggleFull")}
-              onClick={() => setShowFullAssignments((v) => !v)}
+          {isInlineRevisionOpen && (
+            <Box
               sx={{
-                position: "absolute",
-                left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
-                top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
-                zIndex: 10,
-                bgcolor: "transparent",
-                color: "action.active",
-                boxShadow: 0,
-                opacity: 0.5,
-                transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
-                "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+                width: { xs: "100%", lg: INLINE_REVISION_CHAT_WIDTH },
+                order: { xs: 1, lg: 2 },
+                flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                borderLeft: { xs: "none", lg: "1px solid" },
+                borderBottom: { xs: "1px solid", lg: "none" },
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                minHeight: 0,
+                maxHeight: { xs: 320, lg: "none" },
               }}
             >
-              {showFullAssignments
-                ? <FormatListBulletedIcon fontSize="small" />
-                : <ViewAgendaIcon fontSize="small" />}
-            </Fab>
-          </Tooltip>
-        )}
-
-        {/* Add assignment FAB — visible only while editing, below the toggle FAB position */}
-        {hasAssignments && isEditing && !isSnapshotMode && (
-          <Tooltip title={t("resume.detail.addAssignment")} placement="left">
-            <Fab
-              size="small"
-              aria-label={t("resume.detail.addAssignment")}
-              onClick={() => void navigate({
-                to: "/assignments/new",
-                search: {
-                  resumeId: id,
-                  employeeId: resume?.employeeId,
-                  ...(activeBranchId ? { branchId: activeBranchId } : {}),
-                },
-              })}
-              sx={{
-                position: "absolute",
-                left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
-                top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
-                zIndex: 10,
-                bgcolor: "transparent",
-                color: "action.active",
-                boxShadow: 0,
-                opacity: 0.5,
-                transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
-                "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
-              }}
-            >
-              <AddIcon fontSize="small" />
-            </Fab>
-          </Tooltip>
-        )}
+              <InlineRevisionChatPanel
+                branchName={activeBranchName}
+                onClose={handleCloseInlineRevision}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
 

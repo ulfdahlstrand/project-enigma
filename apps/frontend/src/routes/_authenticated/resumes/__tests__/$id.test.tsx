@@ -40,11 +40,6 @@ vi.mock("../../../../orpc-client", () => ({
     listResumes: vi.fn(),
     getResume: vi.fn(),
     updateResume: vi.fn(),
-    createAIConversation: vi.fn(),
-    getAIConversation: vi.fn(),
-    sendAIMessage: vi.fn(),
-    closeAIConversation: vi.fn(),
-    listAIConversations: vi.fn(),
     listBranchAssignmentsFull: vi.fn(),
     listResumeBranches: vi.fn(),
     getResumeCommit: vi.fn(),
@@ -56,8 +51,6 @@ vi.mock("../../../../orpc-client", () => ({
 import { orpc } from "../../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
-const mockCreateAIConversation = orpc.createAIConversation as ReturnType<typeof vi.fn>;
-const mockGetAIConversation = orpc.getAIConversation as ReturnType<typeof vi.fn>;
 const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
@@ -168,37 +161,6 @@ beforeEach(() => {
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
-  mockCreateAIConversation.mockResolvedValue({
-    id: "conversation-1",
-    createdBy: "user-1",
-    entityType: "resume",
-    entityId: TEST_RESUME_ID,
-    systemPrompt: "prompt",
-    title: "Resume revision",
-    isClosed: false,
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-  });
-  mockGetAIConversation.mockResolvedValue({
-    id: "conversation-1",
-    createdBy: "user-1",
-    entityType: "resume",
-    entityId: TEST_RESUME_ID,
-    systemPrompt: "prompt",
-    title: "Resume revision",
-    isClosed: false,
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-    messages: [
-      {
-        id: "message-1",
-        conversationId: "conversation-1",
-        role: "assistant",
-        content: "What would you like to change in this resume?",
-        createdAt: "2024-01-01T00:00:00Z",
-      },
-    ],
-  });
 });
 
 afterEach(() => {
@@ -335,8 +297,9 @@ describe("Navigation", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: enCommon.revision.reviseButton }));
 
     expect(await screen.findByText(enCommon.revision.inline.checklistTitle)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.checklistWaitingTitle)).toBeInTheDocument();
     expect(screen.getByText(enCommon.revision.inline.chatTitle)).toBeInTheDocument();
-    expect(await screen.findByText(enCommon.revision.inline.initialPrompt)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.initialPrompt)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
