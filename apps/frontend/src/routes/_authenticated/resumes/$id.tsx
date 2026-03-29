@@ -36,6 +36,7 @@ import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import Slide from "@mui/material/Slide";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
@@ -72,6 +73,7 @@ const PAGE_MX = "80px";
 const PAGE_MY = "56px";
 const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
+const AI_PANEL_WIDTH = 420;
 
 // How many assignments to show as bullets on the cover page
 const COVER_HIGHLIGHT_COUNT = 5;
@@ -686,11 +688,12 @@ function InlineRevisionAssistantPanel({ onClose }: { onClose: () => void }) {
     <Paper
       variant="outlined"
       sx={{
-        width: { xs: "100%", xl: 360 },
+        width: { xs: "100%", lg: AI_PANEL_WIDTH },
         flexShrink: 0,
-        alignSelf: { xs: "stretch", xl: "flex-start" },
-        position: { xs: "static", xl: "sticky" },
+        alignSelf: { xs: "stretch", lg: "flex-start" },
+        position: { xs: "static", lg: "sticky" },
         top: 24,
+        boxShadow: 3,
       }}
     >
       <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", gap: 1 }}>
@@ -1025,7 +1028,17 @@ function ResumeDetailPage() {
             }}
           >
             <InlineRevisionChecklist />
-            <InlineRevisionAssistantPanel onClose={handleCloseInlineRevision} />
+            <Slide
+              in={isInlineRevisionOpen}
+              direction="left"
+              mountOnEnter
+              unmountOnExit
+              appear
+            >
+              <Box sx={{ width: { xs: "100%", lg: AI_PANEL_WIDTH } }}>
+                <InlineRevisionAssistantPanel onClose={handleCloseInlineRevision} />
+              </Box>
+            </Slide>
           </Box>
         )}
         {/* Gray canvas */}
