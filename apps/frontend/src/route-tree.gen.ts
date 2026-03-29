@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
-import { Route as AuthenticatedTestIndexRouteImport } from './routes/_authenticated/test/index'
 import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authenticated/resumes/index'
 import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees/index'
 import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authenticated/resumes/new'
@@ -20,7 +19,6 @@ import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
 import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
 import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
-import { Route as AuthenticatedResumesIdEditRouteImport } from './routes/_authenticated/resumes/$id_.edit'
 import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
 import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
 import { Route as AuthenticatedResumesIdRevisionIndexRouteImport } from './routes/_authenticated/resumes/$id_/revision/index'
@@ -40,11 +38,6 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
   id: '/login/',
   path: '/login/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedTestIndexRoute = AuthenticatedTestIndexRouteImport.update({
-  id: '/test/',
-  path: '/test/',
-  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedResumesIndexRoute =
   AuthenticatedResumesIndexRouteImport.update({
@@ -84,12 +77,6 @@ const AuthenticatedAssignmentsNewRoute =
   AuthenticatedAssignmentsNewRouteImport.update({
     id: '/assignments/new',
     path: '/assignments/new',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedResumesIdEditRoute =
-  AuthenticatedResumesIdEditRouteImport.update({
-    id: '/resumes/$id_/edit',
-    path: '/resumes/$id/edit',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedEmployeesIdImportRoute =
@@ -133,9 +120,7 @@ export interface FileRoutesByFullPath {
   '/resumes/new': typeof AuthenticatedResumesNewRoute
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/resumes/': typeof AuthenticatedResumesIndexRoute
-  '/test/': typeof AuthenticatedTestIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
-  '/resumes/$id/edit': typeof AuthenticatedResumesIdEditRoute
   '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/revision/': typeof AuthenticatedResumesIdRevisionIndexRoute
@@ -151,9 +136,7 @@ export interface FileRoutesByTo {
   '/resumes/new': typeof AuthenticatedResumesNewRoute
   '/employees': typeof AuthenticatedEmployeesIndexRoute
   '/resumes': typeof AuthenticatedResumesIndexRoute
-  '/test': typeof AuthenticatedTestIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
-  '/resumes/$id/edit': typeof AuthenticatedResumesIdEditRoute
   '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/history': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/revision': typeof AuthenticatedResumesIdRevisionIndexRoute
@@ -171,9 +154,7 @@ export interface FileRoutesById {
   '/_authenticated/resumes/new': typeof AuthenticatedResumesNewRoute
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
-  '/_authenticated/test/': typeof AuthenticatedTestIndexRoute
   '/_authenticated/employees/$id_/import': typeof AuthenticatedEmployeesIdImportRoute
-  '/_authenticated/resumes/$id_/edit': typeof AuthenticatedResumesIdEditRoute
   '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/_authenticated/resumes/$id_/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/_authenticated/resumes/$id_/revision/': typeof AuthenticatedResumesIdRevisionIndexRoute
@@ -191,9 +172,7 @@ export interface FileRouteTypes {
     | '/resumes/new'
     | '/employees/'
     | '/resumes/'
-    | '/test/'
     | '/employees/$id/import'
-    | '/resumes/$id/edit'
     | '/resumes/$id/compare/'
     | '/resumes/$id/history/'
     | '/resumes/$id/revision/'
@@ -209,9 +188,7 @@ export interface FileRouteTypes {
     | '/resumes/new'
     | '/employees'
     | '/resumes'
-    | '/test'
     | '/employees/$id/import'
-    | '/resumes/$id/edit'
     | '/resumes/$id/compare'
     | '/resumes/$id/history'
     | '/resumes/$id/revision'
@@ -228,9 +205,7 @@ export interface FileRouteTypes {
     | '/_authenticated/resumes/new'
     | '/_authenticated/employees/'
     | '/_authenticated/resumes/'
-    | '/_authenticated/test/'
     | '/_authenticated/employees/$id_/import'
-    | '/_authenticated/resumes/$id_/edit'
     | '/_authenticated/resumes/$id_/compare/'
     | '/_authenticated/resumes/$id_/history/'
     | '/_authenticated/resumes/$id_/revision/'
@@ -265,13 +240,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/login/'
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/test/': {
-      id: '/_authenticated/test/'
-      path: '/test'
-      fullPath: '/test/'
-      preLoaderRoute: typeof AuthenticatedTestIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/resumes/': {
       id: '/_authenticated/resumes/'
@@ -322,13 +290,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssignmentsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/resumes/$id_/edit': {
-      id: '/_authenticated/resumes/$id_/edit'
-      path: '/resumes/$id/edit'
-      fullPath: '/resumes/$id/edit'
-      preLoaderRoute: typeof AuthenticatedResumesIdEditRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/employees/$id_/import': {
       id: '/_authenticated/employees/$id_/import'
       path: '/employees/$id/import'
@@ -375,9 +336,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedResumesNewRoute: typeof AuthenticatedResumesNewRoute
   AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
   AuthenticatedResumesIndexRoute: typeof AuthenticatedResumesIndexRoute
-  AuthenticatedTestIndexRoute: typeof AuthenticatedTestIndexRoute
   AuthenticatedEmployeesIdImportRoute: typeof AuthenticatedEmployeesIdImportRoute
-  AuthenticatedResumesIdEditRoute: typeof AuthenticatedResumesIdEditRoute
   AuthenticatedResumesIdCompareIndexRoute: typeof AuthenticatedResumesIdCompareIndexRoute
   AuthenticatedResumesIdHistoryIndexRoute: typeof AuthenticatedResumesIdHistoryIndexRoute
   AuthenticatedResumesIdRevisionIndexRoute: typeof AuthenticatedResumesIdRevisionIndexRoute
@@ -392,9 +351,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedResumesNewRoute: AuthenticatedResumesNewRoute,
   AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,
   AuthenticatedResumesIndexRoute: AuthenticatedResumesIndexRoute,
-  AuthenticatedTestIndexRoute: AuthenticatedTestIndexRoute,
   AuthenticatedEmployeesIdImportRoute: AuthenticatedEmployeesIdImportRoute,
-  AuthenticatedResumesIdEditRoute: AuthenticatedResumesIdEditRoute,
   AuthenticatedResumesIdCompareIndexRoute:
     AuthenticatedResumesIdCompareIndexRoute,
   AuthenticatedResumesIdHistoryIndexRoute:
