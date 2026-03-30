@@ -52,17 +52,6 @@ import {
   exportResumeMarkdownHandler,
 } from "./domains/export/index.js";
 import { getCurrentSessionHandler } from "./domains/auth/index.js";
-import {
-  createResumeRevisionWorkflowHandler,
-  getResumeRevisionWorkflowHandler,
-  listResumeRevisionWorkflowsHandler,
-  sendResumeRevisionMessageHandler,
-  approveRevisionStepHandler,
-  requestRevisionStepReworkHandler,
-  kickoffRevisionStepHandler,
-  skipRevisionStepHandler,
-  finaliseResumeRevisionHandler,
-} from "./domains/resume-revision/index.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -118,15 +107,6 @@ export const router = implement(contract).router({
   getAIConversation: getAIConversationHandler,
   listAIConversations: listAIConversationsHandler,
   closeAIConversation: closeAIConversationHandler,
-  createResumeRevisionWorkflow: createResumeRevisionWorkflowHandler,
-  getResumeRevisionWorkflow: getResumeRevisionWorkflowHandler,
-  listResumeRevisionWorkflows: listResumeRevisionWorkflowsHandler,
-  sendResumeRevisionMessage: sendResumeRevisionMessageHandler,
-  approveRevisionStep: approveRevisionStepHandler,
-  requestRevisionStepRework: requestRevisionStepReworkHandler,
-  kickoffRevisionStep: kickoffRevisionStepHandler,
-  skipRevisionStep: skipRevisionStepHandler,
-  finaliseResumeRevision: finaliseResumeRevisionHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

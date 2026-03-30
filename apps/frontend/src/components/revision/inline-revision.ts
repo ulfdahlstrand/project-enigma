@@ -65,23 +65,47 @@ export function buildInlineRevisionWorkItemAutomationMessage(workItems: Revision
 }
 
 export function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): RevisionWorkItems | null {
-  const assignmentActions = plan.actions.filter((action) => action.assignmentId);
-
-  if (assignmentActions.length === 0) {
+  if (plan.actions.length === 0) {
     return null;
   }
 
   return {
     summary: plan.summary,
-    items: assignmentActions.map((action, index) => ({
+    items: plan.actions.map((action, index) => ({
       id: action.id || `work-item-${index + 1}`,
       title: action.title,
       description: action.description,
-      section: "assignment",
+      section: inferRevisionWorkItemSection(action),
       assignmentId: action.assignmentId,
       status: "pending" as const,
     })),
   };
+}
+
+function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
+  if (action.assignmentId) {
+    return "assignment";
+  }
+
+  const haystack = `${action.title} ${action.description}`.toLowerCase();
+
+  if (haystack.includes("presentation") || haystack.includes("profil") || haystack.includes("intro")) {
+    return "presentation";
+  }
+
+  if (haystack.includes("summary") || haystack.includes("sammanfatt")) {
+    return "summary";
+  }
+
+  if (haystack.includes("consultant title") || haystack.includes("konsulttitel") || haystack.includes("title")) {
+    return "consultantTitle";
+  }
+
+  if (haystack.includes("skill")) {
+    return "skills";
+  }
+
+  return "presentation";
 }
 
 export function appendUniqueRevisionSuggestions(
@@ -107,5 +131,51 @@ export function appendUniqueRevisionSuggestions(
   return {
     summary: incoming.summary || existing.summary,
     suggestions: nextSuggestions,
+  };
+}
+
+export function markWorkItemsCompletedFromSuggestions(
+  workItems: RevisionWorkItems | null,
+  suggestions: RevisionSuggestions,
+): RevisionWorkItems | null {
+  if (!workItems) {
+    return workItems;
+  }
+
+  const completedIds = new Set<string>();
+
+  for (const suggestion of suggestions.suggestions) {
+    const prefixedWorkItemId = suggestion.id.split(":")[0] ?? suggestion.id;
+    if (workItems.items.some((item) => item.id === prefixedWorkItemId)) {
+      completedIds.add(prefixedWorkItemId);
+      continue;
+    }
+
+    const matchingItem = workItems.items.find((item) => {
+      if (item.status === "completed" || item.status === "no_changes_needed") {
+        return false;
+      }
+
+      if (suggestion.assignmentId && item.assignmentId) {
+        return item.assignmentId === suggestion.assignmentId;
+      }
+
+      return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
+    });
+
+    if (matchingItem) {
+      completedIds.add(matchingItem.id);
+    }
+  }
+
+  if (completedIds.size === 0) {
+    return workItems;
+  }
+
+  return {
+    ...workItems,
+    items: workItems.items.map((item) =>
+      completedIds.has(item.id) ? { ...item, status: "completed" } : item,
+    ),
   };
 }
