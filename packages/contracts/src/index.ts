@@ -105,26 +105,6 @@ import {
   closeAIConversationInputSchema,
   closeAIConversationOutputSchema,
 } from "./ai-conversations.js";
-import {
-  createResumeRevisionWorkflowInputSchema,
-  createResumeRevisionWorkflowOutputSchema,
-  getResumeRevisionWorkflowInputSchema,
-  getResumeRevisionWorkflowOutputSchema,
-  listResumeRevisionWorkflowsInputSchema,
-  listResumeRevisionWorkflowsOutputSchema,
-  sendResumeRevisionMessageInputSchema,
-  sendResumeRevisionMessageOutputSchema,
-  approveRevisionStepInputSchema,
-  approveRevisionStepOutputSchema,
-  requestRevisionStepReworkInputSchema,
-  requestRevisionStepReworkOutputSchema,
-  kickoffRevisionStepInputSchema,
-  kickoffRevisionStepOutputSchema,
-  skipRevisionStepInputSchema,
-  skipRevisionStepOutputSchema,
-  finaliseResumeRevisionInputSchema,
-  finaliseResumeRevisionOutputSchema,
-} from "./resume-revision.js";
 
 // ---------------------------------------------------------------------------
 // Health procedure — Zod schemas
@@ -347,45 +327,6 @@ export type {
   CloseAIConversationOutput,
 } from "./ai-conversations.js";
 
-export {
-  resumeRevisionWorkflowStatusSchema,
-  resumeRevisionStepSectionSchema,
-  resumeRevisionStepStatusSchema,
-  resumeRevisionProposalContentSchema,
-  resumeRevisionMessageSchema,
-  resumeRevisionDiscoveryOutputSchema,
-  resumeRevisionWorkflowStepSchema,
-  resumeRevisionWorkflowSchema,
-  createResumeRevisionWorkflowInputSchema,
-  createResumeRevisionWorkflowOutputSchema,
-  getResumeRevisionWorkflowInputSchema,
-  getResumeRevisionWorkflowOutputSchema,
-  listResumeRevisionWorkflowsInputSchema,
-  listResumeRevisionWorkflowsOutputSchema,
-  sendResumeRevisionMessageInputSchema,
-  sendResumeRevisionMessageOutputSchema,
-  approveRevisionStepInputSchema,
-  approveRevisionStepOutputSchema,
-  requestRevisionStepReworkInputSchema,
-  requestRevisionStepReworkOutputSchema,
-  kickoffRevisionStepInputSchema,
-  kickoffRevisionStepOutputSchema,
-  skipRevisionStepInputSchema,
-  skipRevisionStepOutputSchema,
-  finaliseResumeRevisionInputSchema,
-  finaliseResumeRevisionOutputSchema,
-} from "./resume-revision.js";
-export type {
-  ResumeRevisionWorkflowStatus,
-  ResumeRevisionStepSection,
-  ResumeRevisionStepStatus,
-  ResumeRevisionProposalContent,
-  ResumeRevisionMessage,
-  ResumeRevisionDiscoveryOutput,
-  ResumeRevisionWorkflowStep,
-  ResumeRevisionWorkflow,
-} from "./resume-revision.js";
-
 // ---------------------------------------------------------------------------
 // Router contract
 // ---------------------------------------------------------------------------
@@ -498,42 +439,6 @@ export const contract = oc.router({
     .route({ method: "POST", path: "/ai/conversations/close" })
     .input(closeAIConversationInputSchema)
     .output(closeAIConversationOutputSchema),
-  createResumeRevisionWorkflow: oc
-    .route({ method: "POST", path: "/resume-revision/workflows" })
-    .input(createResumeRevisionWorkflowInputSchema)
-    .output(createResumeRevisionWorkflowOutputSchema),
-  getResumeRevisionWorkflow: oc
-    .route({ method: "GET", path: "/resume-revision/workflows/{workflowId}" })
-    .input(getResumeRevisionWorkflowInputSchema)
-    .output(getResumeRevisionWorkflowOutputSchema),
-  listResumeRevisionWorkflows: oc
-    .route({ method: "GET", path: "/resume-revision/workflows" })
-    .input(listResumeRevisionWorkflowsInputSchema)
-    .output(listResumeRevisionWorkflowsOutputSchema),
-  sendResumeRevisionMessage: oc
-    .route({ method: "POST", path: "/resume-revision/steps/message" })
-    .input(sendResumeRevisionMessageInputSchema)
-    .output(sendResumeRevisionMessageOutputSchema),
-  approveRevisionStep: oc
-    .route({ method: "POST", path: "/resume-revision/steps/approve" })
-    .input(approveRevisionStepInputSchema)
-    .output(approveRevisionStepOutputSchema),
-  requestRevisionStepRework: oc
-    .route({ method: "POST", path: "/resume-revision/steps/rework" })
-    .input(requestRevisionStepReworkInputSchema)
-    .output(requestRevisionStepReworkOutputSchema),
-  kickoffRevisionStep: oc
-    .route({ method: "POST", path: "/resume-revision/steps/kickoff" })
-    .input(kickoffRevisionStepInputSchema)
-    .output(kickoffRevisionStepOutputSchema),
-  skipRevisionStep: oc
-    .route({ method: "POST", path: "/resume-revision/steps/skip" })
-    .input(skipRevisionStepInputSchema)
-    .output(skipRevisionStepOutputSchema),
-  finaliseResumeRevision: oc
-    .route({ method: "POST", path: "/resume-revision/workflows/finalise" })
-    .input(finaliseResumeRevisionInputSchema)
-    .output(finaliseResumeRevisionOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

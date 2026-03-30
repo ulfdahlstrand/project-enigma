@@ -6,7 +6,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
-import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "../../resume-revision/lib/sync-branch-assignments.js";
+import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "../lib/sync-branch-assignments.js";
 import { syncLiveResumeFromContent } from "../lib/sync-live-resume-from-content.js";
 import type { finaliseResumeBranchInputSchema, finaliseResumeBranchOutputSchema } from "@cv-tool/contracts";
 
