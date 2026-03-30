@@ -226,7 +226,7 @@ describe("forkResumeBranch", () => {
       expect.objectContaining({
         resume_id: RESUME_ID,
         branch_id: NEW_BRANCH_ID,
-        message: "",
+        message: "Create revision branch: Fork",
         created_by: MOCK_ADMIN.id,
       })
     );
