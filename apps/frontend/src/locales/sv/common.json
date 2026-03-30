@@ -400,7 +400,14 @@
     "toolStatus": {
       "inspect_resume": "Inspekterar CV:t",
       "inspect_revision_plan": "Läser revisionsplanen",
+      "list_resume_assignments": "Läser uppdragslistan",
+      "inspect_assignment": "Läser exakt uppdragstext",
       "inspect_resume_section": "Läser exakt sektionstext",
+      "inspect_resume_sections": "Läser hela CV:ts redigerbara innehåll",
+      "inspect_resume_skills": "Läser kompetensstrukturen",
+      "set_revision_work_items": "Arbetslistan är skapad",
+      "mark_revision_work_item_no_changes_needed": "Inga ändringar behövs för posten",
+      "set_assignment_suggestions": "Korrigeringar föreslagna för uppdraget",
       "set_revision_plan": "CV inspekterat, plan redo för granskning",
       "set_revision_suggestions": "Korrigeringar föreslagna, redo för granskning"
     },
@@ -439,7 +446,8 @@
     "reviseButton": "Revidera med AI",
     "inline": {
       "branchBadge": "AI-revisionsläge",
-      "checklistTitle": "Revisionschecklista",
+    "checklistTitle": "Revisionschecklista",
+    "workItemsTitle": "Arbetslista",
       "checklistDescription": "Checklistan visas här när AI har förstått målet och startat en revisionsgren.",
       "checklistWaitingTitle": "Väntar på revisionsplan",
       "checklistWaitingDescription": "Berätta vad du vill ändra. När riktningen är tydlig dyker föreslagna uppgifter upp här.",

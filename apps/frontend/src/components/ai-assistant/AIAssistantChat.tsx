@@ -294,7 +294,14 @@ function AssistantMessageContent({ content }: { content: string }) {
   const redundantToolStatuses = [
     t("aiAssistant.toolStatus.inspect_resume"),
     t("aiAssistant.toolStatus.inspect_revision_plan"),
+    t("aiAssistant.toolStatus.list_resume_assignments"),
+    t("aiAssistant.toolStatus.inspect_assignment"),
     t("aiAssistant.toolStatus.inspect_resume_section"),
+    t("aiAssistant.toolStatus.inspect_resume_sections"),
+    t("aiAssistant.toolStatus.inspect_resume_skills"),
+    t("aiAssistant.toolStatus.set_revision_work_items"),
+    t("aiAssistant.toolStatus.mark_revision_work_item_no_changes_needed"),
+    t("aiAssistant.toolStatus.set_assignment_suggestions"),
     t("aiAssistant.toolStatus.set_revision_plan"),
     t("aiAssistant.toolStatus.set_revision_suggestions"),
   ];
@@ -397,6 +404,10 @@ interface AIAssistantChatProps {
   toolRegistry?: AIToolRegistry | null;
   toolContext?: AIToolContext | null;
   autoStartMessage?: string | null | undefined;
+  automation?: {
+    key: string;
+    message: string;
+  } | null | undefined;
   guardrail?: {
     isSatisfied: boolean;
     reminderMessage: string;
@@ -447,6 +458,7 @@ export function AIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
   autoStartMessage = null,
+  automation = null,
   guardrail = null,
 }: AIAssistantChatProps = {}) {
   const { t } = useTranslation("common");
@@ -476,6 +488,8 @@ export function AIAssistantChat({
   const processedToolCallsRef = useRef<Set<string>>(new Set());
   const processedGuardrailMessagesRef = useRef<Set<string>>(new Set());
   const processedAutoStartConversationsRef = useRef<Set<string>>(new Set());
+  const processedAutomationKeysRef = useRef<Set<string>>(new Set());
+  const [activeToolExecutionCount, setActiveToolExecutionCount] = useState(0);
 
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
@@ -498,6 +512,7 @@ export function AIAssistantChat({
   );
   const isAnalysing =
     sendMessage.isPending ||
+    activeToolExecutionCount > 0 ||
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
 
   // Find the latest suggestion from assistant messages
@@ -568,19 +583,24 @@ export function AIAssistantChat({
     processedToolCallsRef.current.add(nextToolCall.key);
 
     void (async () => {
-      const result = await executeAIToolCall(
-        toolRegistry,
-        {
-          toolName: nextToolCall.toolCall.toolName,
-          input: nextToolCall.toolCall.input ?? {},
-        },
-        toolContext,
-      );
+      setActiveToolExecutionCount((count) => count + 1);
+      try {
+        const result = await executeAIToolCall(
+          toolRegistry,
+          {
+            toolName: nextToolCall.toolCall.toolName,
+            input: nextToolCall.toolCall.input ?? {},
+          },
+          toolContext,
+        );
 
-      await sendMessage.mutateAsync({
-        conversationId: activeConversationId,
-        userMessage: buildToolResultMessage(result),
-      });
+        await sendMessage.mutateAsync({
+          conversationId: activeConversationId,
+          userMessage: buildToolResultMessage(result),
+        });
+      } finally {
+        setActiveToolExecutionCount((count) => Math.max(0, count - 1));
+      }
     })();
   }, [
     activeConversationId,
@@ -595,6 +615,7 @@ export function AIAssistantChat({
       !autoStartMessage ||
       !activeConversationId ||
       sendMessage.isPending ||
+      activeToolExecutionCount > 0 ||
       processedAutoStartConversationsRef.current.has(activeConversationId)
     ) {
       return;
@@ -613,8 +634,39 @@ export function AIAssistantChat({
     });
   }, [
     activeConversationId,
+    activeToolExecutionCount,
     autoStartMessage,
     messages,
+    sendMessage,
+  ]);
+
+  useEffect(() => {
+    if (
+      !automation ||
+      !activeConversationId ||
+      sendMessage.isPending ||
+      hasPendingToolCall ||
+      activeToolExecutionCount > 0
+    ) {
+      return;
+    }
+
+    const scopedKey = `${activeConversationId}:${automation.key}`;
+    if (processedAutomationKeysRef.current.has(scopedKey)) {
+      return;
+    }
+
+    processedAutomationKeysRef.current.add(scopedKey);
+
+    void sendMessage.mutateAsync({
+      conversationId: activeConversationId,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${automation.message}`,
+    });
+  }, [
+    activeConversationId,
+    activeToolExecutionCount,
+    automation,
+    hasPendingToolCall,
     sendMessage,
   ]);
 
@@ -626,6 +678,7 @@ export function AIAssistantChat({
       !latestRawAssistantMessage ||
       !latestUserMessage ||
       hasPendingToolCall ||
+      activeToolExecutionCount > 0 ||
       isToolResultMessage(latestUserMessage.content) ||
       isInternalGuardrailMessage(latestUserMessage.content) ||
       sendMessage.isPending
@@ -649,6 +702,7 @@ export function AIAssistantChat({
     });
   }, [
     activeConversationId,
+    activeToolExecutionCount,
     guardrail,
     latestRawAssistantMessage,
     latestUserMessage,

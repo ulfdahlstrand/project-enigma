@@ -72,7 +72,6 @@ import { AIAssistantChat } from "../../../components/ai-assistant/AIAssistantCha
 import { DiffReviewDialog } from "../../../components/ai-assistant/DiffReviewDialog";
 import { FinalReview } from "../../../components/revision/FinalReview";
 import {
-  buildResumeRevisionActionAutoStart,
   buildResumeRevisionActionPrompt,
   buildResumeRevisionKickoff,
   buildResumeRevisionPrompt,
@@ -83,6 +82,7 @@ import {
   createResumeActionToolRegistry,
   createResumePlanningToolRegistry,
   type RevisionPlan,
+  type RevisionWorkItems,
   type RevisionSuggestions,
 } from "../../../lib/ai-tools/registries/resume-tools";
 import { useAIAssistantContext } from "../../../lib/ai-assistant-context";
@@ -130,6 +130,79 @@ function buildInlineRevisionBranchName(plan: RevisionPlan) {
 
 function buildInlineRevisionSuggestionCommitMessage(suggestion: RevisionSuggestions["suggestions"][number]) {
   return `Apply AI suggestion: ${suggestion.title}`;
+}
+
+function buildInlineRevisionWorkItemAutomationMessage(workItems: RevisionWorkItems | null) {
+  if (!workItems || workItems.items.length === 0) {
+    return null;
+  }
+
+  const nextPendingItem = workItems.items.find((item) => item.status === "pending");
+  if (!nextPendingItem) {
+    return null;
+  }
+
+  return {
+    key: `process-${nextPendingItem.id}`,
+    message: [
+      `Process only this work item now: ${nextPendingItem.id}.`,
+      `Title: ${nextPendingItem.title}.`,
+      `Description: ${nextPendingItem.description}.`,
+      nextPendingItem.assignmentId
+        ? `Inspect assignment ${nextPendingItem.assignmentId} and decide the outcome for this work item only.`
+        : `Inspect the exact source text for section ${nextPendingItem.section} and decide the outcome for this work item only.`,
+      "If changes are needed, create suggestions for this work item.",
+      "If no changes are needed, mark this work item as no changes needed.",
+      "Do not revisit completed work items.",
+      "Return a tool call now.",
+    ].join(" "),
+  };
+}
+
+function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): RevisionWorkItems | null {
+  const assignmentActions = plan.actions.filter((action) => action.assignmentId);
+
+  if (assignmentActions.length === 0) {
+    return null;
+  }
+
+  return {
+    summary: plan.summary,
+    items: assignmentActions.map((action, index) => ({
+      id: action.id || `work-item-${index + 1}`,
+      title: action.title,
+      description: action.description,
+      section: "assignment",
+      assignmentId: action.assignmentId,
+      status: "pending" as const,
+    })),
+  };
+}
+
+function appendUniqueRevisionSuggestions(
+  existing: RevisionSuggestions | null,
+  incoming: RevisionSuggestions,
+): RevisionSuggestions {
+  if (!existing) {
+    return incoming;
+  }
+
+  const nextSuggestions = [...existing.suggestions];
+
+  for (const suggestion of incoming.suggestions) {
+    const existingIndex = nextSuggestions.findIndex((item) => item.id === suggestion.id);
+
+    if (existingIndex >= 0) {
+      nextSuggestions[existingIndex] = suggestion;
+    } else {
+      nextSuggestions.push(suggestion);
+    }
+  }
+
+  return {
+    summary: incoming.summary || existing.summary,
+    suggestions: nextSuggestions,
+  };
 }
 
 // How many assignments to show as bullets on the cover page
@@ -694,11 +767,11 @@ function InlineRevisionChecklist({
   sourceBranchName,
   branchName,
   plan,
+  workItems,
   suggestions,
   selectedSuggestionId,
   onSelectSuggestion,
   onReviewSuggestion,
-  onDismissSuggestion,
   onMoveToActions,
   isMovingToActions,
   onMoveToFinalize,
@@ -710,11 +783,11 @@ function InlineRevisionChecklist({
   sourceBranchName: string;
   branchName: string;
   plan: RevisionPlan | null;
+  workItems: RevisionWorkItems | null;
   suggestions: RevisionSuggestions["suggestions"];
   selectedSuggestionId: string | null;
   onSelectSuggestion: (suggestionId: string) => void;
   onReviewSuggestion: (suggestionId: string) => void;
-  onDismissSuggestion: (suggestionId: string) => void;
   onMoveToActions: () => void;
   isMovingToActions: boolean;
   onMoveToFinalize: () => void;
@@ -725,12 +798,15 @@ function InlineRevisionChecklist({
   const { t } = useTranslation("common");
   const reviewedSuggestions = suggestions.filter((suggestion) => suggestion.status !== "pending");
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted");
+  const completedWorkItems = workItems?.items.filter((item) => item.status !== "pending" && item.status !== "in_progress") ?? [];
   const planDoneCount = plan?.actions.filter((action) => action.status === "done").length ?? 0;
   const suggestionHandledCount = suggestions.filter((suggestion) => suggestion.status !== "pending").length;
-  const progressCount = stage === "actions" ? suggestionHandledCount : planDoneCount;
+  const progressCount = stage === "actions"
+    ? (workItems?.items.length ? completedWorkItems.length : suggestionHandledCount)
+    : planDoneCount;
   const progressTotal =
     stage === "actions"
-      ? suggestions.length
+      ? (workItems?.items.length ?? suggestions.length)
       : plan?.actions.length ?? 0;
   const progressWidth = progressTotal > 0 ? (progressCount / progressTotal) * 100 : 0;
   const getPlanStatusKey = (status: RevisionPlan["actions"][number]["status"]) => {
@@ -901,6 +977,55 @@ function InlineRevisionChecklist({
           )}
           {stage === "actions" && (
             <>
+              {workItems?.items.length ? (
+                <>
+                  <Divider />
+                  <Box sx={{ px: 1.5, pt: 1.25, pb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("revision.inline.workItemsTitle")}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", flexDirection: "column", p: 0.5 }}>
+                    {workItems.items.map((item, index) => (
+                      <Box
+                        key={item.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 1,
+                          px: 1,
+                          py: 0.85,
+                          borderBottom: index < workItems.items.length - 1 ? "1px solid" : "none",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
+                          {renderStatusIcon(
+                            item.status === "completed"
+                              ? "accepted"
+                              : item.status === "no_changes_needed"
+                                ? "done"
+                                : "pending",
+                          )}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                            {item.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                            {item.description}
+                          </Typography>
+                          {item.note ? (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                              {item.note}
+                            </Typography>
+                          ) : null}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              ) : null}
               <Divider />
               <Box sx={{ px: 1.5, pt: 1.25, pb: 0.5 }}>
                 <Typography variant="caption" color="text.secondary">
@@ -1065,6 +1190,7 @@ function InlineRevisionChatPanel({
   toolRegistry,
   toolContext,
   autoStartMessage,
+  automation,
   guardrail,
 }: {
   stage: InlineRevisionStage;
@@ -1075,6 +1201,10 @@ function InlineRevisionChatPanel({
   toolRegistry: AIToolRegistry;
   toolContext: AIToolContext;
   autoStartMessage?: string | null;
+  automation?: {
+    key: string;
+    message: string;
+  } | null;
   guardrail: {
     isSatisfied: boolean;
     reminderMessage: string;
@@ -1119,6 +1249,7 @@ function InlineRevisionChatPanel({
           toolRegistry={toolRegistry}
           toolContext={toolContext}
           autoStartMessage={autoStartMessage}
+          automation={automation}
           guardrail={guardrail}
         />
       </Box>
@@ -1200,6 +1331,7 @@ function ResumeDetailPage() {
   const [draftSummary, setDraftSummary] = useState("");
   const [inlineRevisionStage, setInlineRevisionStage] = useState<InlineRevisionStage>("planning");
   const [inlineRevisionPlan, setInlineRevisionPlan] = useState<RevisionPlan | null>(null);
+  const [inlineRevisionWorkItems, setInlineRevisionWorkItems] = useState<RevisionWorkItems | null>(null);
   const [inlineRevisionSuggestions, setInlineRevisionSuggestions] = useState<RevisionSuggestions | null>(null);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
   const [reviewSuggestionId, setReviewSuggestionId] = useState<string | null>(null);
@@ -1329,9 +1461,12 @@ function ResumeDetailPage() {
     skills: skills.map((skill) => ({
       name: skill.name,
       category: skill.category ?? null,
+      sortOrder: skill.sortOrder ?? 0,
     })),
     assignments: sortedAssignments.map((assignment) => ({
-      id: assignment.id,
+      id: "assignmentId" in assignment && typeof assignment.assignmentId === "string"
+        ? assignment.assignmentId
+        : assignment.id,
       clientName: assignment.clientName,
       role: assignment.role,
       description: "description" in assignment && typeof assignment.description === "string"
@@ -1359,6 +1494,70 @@ function ResumeDetailPage() {
   });
   const inlineRevisionActionToolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
+    setRevisionWorkItems: setInlineRevisionWorkItems,
+    markRevisionWorkItemNoChangesNeeded: ({ workItemId, note }) => {
+      setInlineRevisionWorkItems((prev) => {
+        if (!prev) return prev;
+
+        const target = prev.items.find((item) => item.id === workItemId);
+        if (!target || target.status === "completed" || target.status === "no_changes_needed") {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === workItemId ? { ...item, status: "no_changes_needed", note } : item
+          ),
+        };
+      });
+    },
+    appendRevisionSuggestions: (incoming) => {
+      setInlineRevisionWorkItems((prev) => {
+        if (!prev) return prev;
+        const terminalIds = new Set(
+          prev.items
+            .filter((item) => item.status === "completed" || item.status === "no_changes_needed")
+            .map((item) => item.id),
+        );
+        const handledIds = new Set(
+          incoming.suggestions
+            .map((suggestion) => suggestion.id.split(":")[0] ?? suggestion.id)
+            .filter((value): value is string => Boolean(value) && !terminalIds.has(value)),
+        );
+
+        if (handledIds.size === 0) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            handledIds.has(item.id) ? { ...item, status: "completed" } : item
+          ),
+        };
+      });
+      setInlineRevisionSuggestions((prev) => {
+        const allowedIds = new Set(
+          (inlineRevisionWorkItems?.items ?? [])
+            .filter((item) => item.status !== "completed" && item.status !== "no_changes_needed")
+            .map((item) => item.id),
+        );
+        const filteredIncoming = {
+          ...incoming,
+          suggestions: incoming.suggestions.filter((suggestion) => {
+            const workItemId = suggestion.id.split(":")[0] ?? suggestion.id;
+            return allowedIds.size === 0 || allowedIds.has(workItemId);
+          }),
+        };
+
+        if (filteredIncoming.suggestions.length === 0) {
+          return prev;
+        }
+
+        return appendUniqueRevisionSuggestions(prev, filteredIncoming);
+      });
+    },
     setRevisionSuggestions: setInlineRevisionSuggestions,
   });
   const inlineRevisionPlanningToolContext: AIToolContext = {
@@ -1378,12 +1577,19 @@ function ResumeDetailPage() {
   const inlineRevisionGuardrail =
     inlineRevisionStage === "actions"
       ? {
-          isSatisfied: (inlineRevisionSuggestions?.suggestions.length ?? 0) > 0,
+          isSatisfied:
+            (inlineRevisionWorkItems?.items.length ?? 0) > 0 &&
+            (inlineRevisionWorkItems?.items.every(
+              (item) => item.status === "completed" || item.status === "no_changes_needed",
+            ) ?? false),
           reminderMessage: [
             "You must use the available tools for this stage.",
             "Use the approved plan that was already provided in the kickoff context.",
-            "Inspect the exact source text you need with inspect_resume_section, then create concrete suggestions with set_revision_suggestions.",
-            "Do not claim that changes are applied or complete until suggestions have been created.",
+            "The approved work items already define the allowed scope for this action step.",
+            "Do not create extra work items or inspect assignments outside the approved plan.",
+            "Use inspect_assignment or inspect_resume_section to read exact source text for each work item.",
+            "For each work item, either create concrete suggestions or mark it as no changes needed.",
+            "Do not claim that changes are applied or complete until every work item has been handled.",
             "Return a tool call now.",
           ].join(" "),
         }
@@ -1392,10 +1598,15 @@ function ResumeDetailPage() {
           reminderMessage: [
             "You must use the available tools for this stage.",
             "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
+            "If the user's goal is broad, such as proofreading the whole CV, the plan must include multiple section-based actions and must not collapse to a single typo or a single section.",
             "Do not continue with free-text execution updates until the plan has been created.",
             "Return a tool call now.",
         ].join(" "),
         };
+  const inlineRevisionActionAutomation =
+    inlineRevisionStage === "actions"
+      ? buildInlineRevisionWorkItemAutomationMessage(inlineRevisionWorkItems)
+      : null;
 
   useEffect(() => {
     if (!pendingInlineRevisionActionBranchId || !inlineRevisionPlan) {
@@ -1409,6 +1620,8 @@ function ResumeDetailPage() {
     const planActionLines = inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`);
     setInlineRevisionStage("actions");
     setPendingInlineRevisionActionBranchId(null);
+    setInlineRevisionWorkItems(buildInlineRevisionWorkItemsFromPlan(inlineRevisionPlan));
+    setInlineRevisionSuggestions(null);
 
     if (
       assistantEntityType !== "resume-revision-actions" ||
@@ -1749,6 +1962,7 @@ function ResumeDetailPage() {
     setInlineRevisionSourceBranchId(activeBranchId);
     setInlineRevisionPlanningSessionId(crypto.randomUUID());
     setInlineRevisionPlan(null);
+    setInlineRevisionWorkItems(null);
     setInlineRevisionSuggestions(null);
     setSelectedSuggestionId(null);
     setPendingInlineRevisionActionBranchId(null);
@@ -1760,6 +1974,7 @@ function ResumeDetailPage() {
     setIsEditing(false);
     setInlineRevisionStage("planning");
     setInlineRevisionPlan(null);
+    setInlineRevisionWorkItems(null);
     setInlineRevisionSuggestions(null);
     setSelectedSuggestionId(null);
     setReviewSuggestionId(null);
@@ -1767,6 +1982,7 @@ function ResumeDetailPage() {
     setInlineRevisionSourceBranchName(null);
     setInlineRevisionSourceBranchId(null);
     setInlineRevisionPlanningSessionId(null);
+    setInlineRevisionWorkItems(null);
     setPendingInlineRevisionActionBranchId(null);
     closeAssistant();
   };
@@ -1786,8 +2002,11 @@ function ResumeDetailPage() {
     draftSummary !== (summary ?? "");
 
   const isReadyToFinalize =
-    (inlineRevisionSuggestions?.suggestions.length ?? 0) > 0 &&
-    (inlineRevisionSuggestions?.suggestions.every((suggestion) => suggestion.status !== "pending") ?? false);
+    (inlineRevisionWorkItems?.items.length ?? 0) > 0 &&
+    (inlineRevisionWorkItems?.items.every(
+      (item) => item.status === "completed" || item.status === "no_changes_needed",
+    ) ?? false) &&
+    (inlineRevisionSuggestions?.suggestions.every((suggestion) => suggestion.status !== "pending") ?? true);
 
   const handlePrepareInlineRevisionFinalize = async () => {
     if (!activeBranchId) {
@@ -2027,11 +2246,11 @@ function ResumeDetailPage() {
                 sourceBranchName={inlineRevisionSourceBranchName ?? activeBranchName}
                 branchName={activeBranchName}
                 plan={inlineRevisionPlan}
+                workItems={inlineRevisionWorkItems}
                 suggestions={inlineRevisionSuggestions?.suggestions ?? []}
                 selectedSuggestionId={selectedSuggestionId}
                 onSelectSuggestion={scrollSuggestionIntoView}
                 onReviewSuggestion={openSuggestionReview}
-                onDismissSuggestion={dismissInlineSuggestion}
                 onMoveToActions={openInlineRevisionActions}
                 isMovingToActions={
                   pendingInlineRevisionActionBranchId !== null ||
@@ -2429,14 +2648,8 @@ function ResumeDetailPage() {
                     ? inlineRevisionActionToolContext
                     : inlineRevisionPlanningToolContext
                 }
-                autoStartMessage={
-                  inlineRevisionStage === "actions" && inlineRevisionPlan
-                    ? buildResumeRevisionActionAutoStart(
-                        inlineRevisionPlan.summary,
-                        inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`),
-                      )
-                    : null
-                }
+                autoStartMessage={null}
+                automation={inlineRevisionActionAutomation}
                 guardrail={inlineRevisionGuardrail}
               />
             </Box>

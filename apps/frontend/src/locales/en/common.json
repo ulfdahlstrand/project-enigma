@@ -400,7 +400,14 @@
     "toolStatus": {
       "inspect_resume": "Inspecting resume",
       "inspect_revision_plan": "Reading revision plan",
+      "list_resume_assignments": "Reading the assignment list",
+      "inspect_assignment": "Reading exact assignment text",
       "inspect_resume_section": "Reading exact section text",
+      "inspect_resume_sections": "Reading the full editable resume content",
+      "inspect_resume_skills": "Reading the skills structure",
+      "set_revision_work_items": "Worklist created",
+      "mark_revision_work_item_no_changes_needed": "No changes needed for this item",
+      "set_assignment_suggestions": "Corrections proposed for this assignment",
       "set_revision_plan": "Resume inspected, plan ready for review",
       "set_revision_suggestions": "Corrections proposed, ready for review"
     },
@@ -439,7 +446,8 @@
     "reviseButton": "Revise with AI",
     "inline": {
       "branchBadge": "AI revision mode",
-      "checklistTitle": "Revision checklist",
+    "checklistTitle": "Revision checklist",
+    "workItemsTitle": "Worklist",
       "checklistDescription": "The checklist will appear here after AI understands your goal and starts a revision branch.",
       "checklistWaitingTitle": "Waiting for revision plan",
       "checklistWaitingDescription": "Tell AI what you want to change. Once the direction is clear, suggested tasks will appear here.",

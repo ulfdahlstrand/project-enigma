@@ -12,6 +12,7 @@ import { logoutHandler } from "./auth/logout-handler.js";
 import { resolveUser } from "./auth/resolve-user.js";
 import type { User } from "./db/types.js";
 import { getDb } from "./db/client.js";
+import { logger } from "./infra/logger.js";
 
 export type AppContext = { user: User | null };
 
@@ -30,7 +31,9 @@ const handler = new OpenAPIHandler(router, {
   plugins: [new CORSPlugin()],
   interceptors: [
     onError((error) => {
-      console.error("[backend] unhandled error:", error);
+      logger.error("Unhandled backend error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }),
   ],
 });
@@ -80,6 +83,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`[backend] Server listening on port ${port}`);
-  console.log(`[backend] OpenAPI spec at http://localhost:${port}/openapi.json`);
+  logger.info("Server listening", { port });
+  logger.info("OpenAPI spec ready", { url: `http://localhost:${port}/openapi.json` });
 });

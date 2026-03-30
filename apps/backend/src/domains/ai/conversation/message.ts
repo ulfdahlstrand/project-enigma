@@ -10,6 +10,7 @@ import {
   generateConversationTitle,
   MIN_USER_MESSAGES_FOR_TITLE,
 } from "../lib/generate-title.js";
+import { logger } from "../../../infra/logger.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -21,6 +22,12 @@ export async function sendAIMessage(
   openaiClient: OpenAI,
   input: { conversationId: string; userMessage: string }
 ) {
+  logger.info("AI message received", {
+    conversationId: input.conversationId,
+    userMessageLength: input.userMessage.length,
+    userMessagePreview: input.userMessage.slice(0, 180),
+  });
+
   const conversation = await db
     .selectFrom("ai_conversations")
     .selectAll()
@@ -37,6 +44,11 @@ export async function sendAIMessage(
     .where("conversation_id", "=", input.conversationId)
     .orderBy("created_at", "asc")
     .execute();
+
+  logger.debug("AI conversation history loaded", {
+    conversationId: input.conversationId,
+    historyCount: existingMessages.length,
+  });
 
   // Persist the user message first
   await db
@@ -83,6 +95,13 @@ export async function sendAIMessage(
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  logger.info("AI message responded", {
+    conversationId: input.conversationId,
+    assistantMessageId: assistantRow.id,
+    assistantMessageLength: assistantContent.length,
+    assistantMessagePreview: assistantContent.slice(0, 180),
+  });
+
   // Generate a title after the 2nd user message if none exists yet (fire-and-forget)
   const userMessageCount = existingMessages.filter((m) => m.role === "user").length + 1;
   if (userMessageCount >= MIN_USER_MESSAGES_FOR_TITLE && conversation.title === null) {
@@ -93,6 +112,10 @@ export async function sendAIMessage(
     ];
     void generateConversationTitle(openaiClient, allMessages).then((title) => {
       if (title) {
+        logger.debug("AI conversation title generated", {
+          conversationId: input.conversationId,
+          title,
+        });
         void db
           .updateTable("ai_conversations")
           .set({ updated_at: new Date(), title })
