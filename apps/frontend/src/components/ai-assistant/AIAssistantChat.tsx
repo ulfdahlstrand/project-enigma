@@ -555,7 +555,10 @@ export function AIAssistantChat({
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const target = messagesEndRef.current;
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ behavior: "smooth" });
+    }
   }, [visibleMessages.length]);
 
   useEffect(() => {

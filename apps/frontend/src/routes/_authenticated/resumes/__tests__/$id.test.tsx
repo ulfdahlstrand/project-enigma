@@ -299,7 +299,7 @@ describe("Navigation", () => {
     expect(await screen.findByText(enCommon.revision.inline.checklistTitle)).toBeInTheDocument();
     expect(screen.getByText(enCommon.revision.inline.checklistWaitingTitle)).toBeInTheDocument();
     expect(screen.getByText(enCommon.revision.inline.chatTitle)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.revision.inline.initialPrompt)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.chatDescription)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
