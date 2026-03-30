@@ -1,10 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_AUTH_FILE } from "./support/auth";
+import { backendBaseUrl, resetE2EData } from "./support/backend";
 
 test.use({ storageState: E2E_AUTH_FILE });
-
-const backendBaseUrl = process.env["PLAYWRIGHT_API_URL"]
-  ?? `http://127.0.0.1:${process.env["PLAYWRIGHT_BACKEND_PORT"] ?? 3101}`;
 
 type PresentationFixture = {
   resumeId: string;
@@ -12,6 +10,8 @@ type PresentationFixture = {
 };
 
 async function bootstrapPresentationScenario(page: Page): Promise<PresentationFixture> {
+  await resetE2EData(page.request);
+
   const resumeTitle = `Playwright Presentation Revision ${Date.now()}`;
   const bootstrapResponse = await page.request.post(`${backendBaseUrl}/test/e2e/bootstrap-revision`, {
     data: {
@@ -37,7 +37,7 @@ async function bootstrapPresentationScenario(page: Page): Promise<PresentationFi
   return { ...fixture, resumeTitle };
 }
 
-test.fail("can progress from revision planning into presentation spelling actions from the resumes list", async ({ page }) => {
+test("can progress from revision planning into presentation spelling actions from the resumes list", async ({ page }) => {
   const fixture = await bootstrapPresentationScenario(page);
 
   await page.goto("/resumes");

@@ -16,6 +16,7 @@ import { getDb } from "./db/client.js";
 import { logger } from "./infra/logger.js";
 import {
   e2eBootstrapRevisionHandler,
+  e2eResetHandler,
   e2eRevisionStateHandler,
   e2eScriptedAIHandler,
 } from "./test-helpers/e2e-handlers.js";
@@ -66,6 +67,10 @@ export async function createAppServer() {
     }
     if (req.method === "POST" && req.url === "/test/e2e/scripted-ai") {
       await e2eScriptedAIHandler(req, res);
+      return;
+    }
+    if (req.method === "POST" && req.url === "/test/e2e/reset") {
+      await e2eResetHandler(req, res);
       return;
     }
     if (req.method === "POST" && req.url === "/test/e2e/bootstrap-revision") {

@@ -193,6 +193,253 @@ function buildSinglePresentationRevisionScenario() {
   return { client, calls };
 }
 
+type SupportedSingleSection = "consultantTitle" | "presentation" | "summary" | "assignment";
+
+function buildSingleSectionRevisionScenario(section: SupportedSingleSection, assignmentId?: string) {
+  const calls: Array<Parameters<OpenAI["chat"]["completions"]["create"]>[0]> = [];
+
+  const sectionLabelMap: Record<Exclude<SupportedSingleSection, "assignment">, string> = {
+    consultantTitle: "consultant title",
+    presentation: "presentation",
+    summary: "summary",
+  };
+
+  const sectionActionMap: Record<Exclude<SupportedSingleSection, "assignment">, {
+    actionId: string;
+    title: string;
+    description: string;
+    inspectToolCall: string;
+    suggestionTitle: string;
+    suggestionDescription: string;
+    suggestedText: string;
+  }> = {
+    consultantTitle: {
+      actionId: "action-consultant-title",
+      title: "Review consultant title",
+      description: "Check the consultant title for spelling issues.",
+      inspectToolCall: '{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"consultantTitle"}}',
+      suggestionTitle: "Fix spelling in consultant title",
+      suggestionDescription: "Correct the misspelled word in the consultant title.",
+      suggestedText: "Tech Lead / Senior Engineer",
+    },
+    presentation: {
+      actionId: "action-presentation",
+      title: "Review presentation",
+      description: "Check the presentation text for spelling issues.",
+      inspectToolCall: '{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"presentation"}}',
+      suggestionTitle: "Fix spelling in presentation",
+      suggestionDescription: "Correct the misspelled word in the presentation.",
+      suggestedText: "Ulf är en teknisk ledare med lång erfarenhet av systemutveckling och avancerade tekniska roller med felstavningen teknisk.",
+    },
+    summary: {
+      actionId: "action-summary",
+      title: "Review summary",
+      description: "Check the summary text for spelling issues.",
+      inspectToolCall: '{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"summary"}}',
+      suggestionTitle: "Fix spelling in summary",
+      suggestionDescription: "Correct the misspelled word in the summary.",
+      suggestedText: "Senior engineer with korrekt summary text.",
+    },
+  };
+
+  const client = {
+    chat: {
+      completions: {
+        create: async (input: Parameters<OpenAI["chat"]["completions"]["create"]>[0]) => {
+          calls.push(input);
+          const lastMessage = getMessageText(input.messages.at(-1)?.content);
+          const systemMessage = getMessageText(input.messages[0]?.content);
+
+          if (systemMessage.includes("You summarise conversations in 2–4 words")) {
+            return {
+              id: `chatcmpl-test-${calls.length}`,
+              object: "chat.completion",
+              created: Date.now(),
+              model: typeof input.model === "string" ? input.model : "gpt-4o",
+              choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Section revision" } }],
+              usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+          }
+
+          let content = "Section revision";
+
+          if (
+            lastMessage.includes("Help me plan a revision flow.")
+            || lastMessage.includes("Greet the user briefly")
+            || lastMessage.includes("what outcome they want from the revision")
+          ) {
+            content = "Hej! Jag kan hjälpa dig att planera revideringen.";
+          } else if (lastMessage.includes("use the available tools for this stage") || lastMessage.toLowerCase().includes("fix spelling")) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```';
+          } else if (lastMessage.includes('"toolName":"inspect_resume"')) {
+            if (section === "assignment") {
+              content = `\`\`\`json
+{"type":"tool_call","toolName":"set_revision_plan","input":{"summary":"Fix spelling in the assignment","actions":[{"id":"action-assignment","title":"Review assignment","description":"Check the assignment description for spelling issues.","assignmentId":"${assignmentId}","status":"pending"}]}}
+\`\`\``;
+            } else {
+              const sectionData = sectionActionMap[section];
+              content = `\`\`\`json
+{"type":"tool_call","toolName":"set_revision_plan","input":{"summary":"Fix spelling in the ${sectionLabelMap[section]}","actions":[{"id":"${sectionData.actionId}","title":"${sectionData.title}","description":"${sectionData.description}","status":"pending"}]}}
+\`\`\``;
+            }
+          } else if (lastMessage.includes('"toolName":"set_revision_plan"')) {
+            content = "The revision plan is ready for review.";
+          } else if (
+            lastMessage.includes("[[internal_autostart]]")
+            || lastMessage.includes("Process only this work item now:")
+          ) {
+            if (section === "assignment") {
+              content = `\`\`\`json
+{"type":"tool_call","toolName":"inspect_assignment","input":{"assignmentId":"${assignmentId}"}}
+\`\`\``;
+            } else {
+              content = `\`\`\`json
+${sectionActionMap[section].inspectToolCall}
+\`\`\``;
+            }
+          } else if (lastMessage.includes('"toolName":"inspect_assignment"')) {
+            content = `\`\`\`json
+{"type":"tool_call","toolName":"set_assignment_suggestions","input":{"workItemId":"action-assignment","summary":"Suggested spelling fix for the assignment","suggestions":[{"id":"suggestion-assignment","title":"Fix spelling in assignment","description":"Correct the misspelled phrase in the assignment description.","section":"assignment","assignmentId":"${assignmentId}","suggestedText":"Detta uppdrag innehåller felstavningen faktureringsrelaterade API:ers.","status":"pending"}]}}
+\`\`\``;
+          } else if (lastMessage.includes('"toolName":"inspect_resume_section"')) {
+            const sectionData = sectionActionMap[section as Exclude<SupportedSingleSection, "assignment">];
+            content = `\`\`\`json
+{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"Suggested spelling fix for the ${sectionLabelMap[section as Exclude<SupportedSingleSection, "assignment">]}","suggestions":[{"id":"suggestion-${section}","title":"${sectionData.suggestionTitle}","description":"${sectionData.suggestionDescription}","section":"${section}","suggestedText":"${sectionData.suggestedText}","status":"pending"}]}}
+\`\`\``;
+          } else if (
+            lastMessage.includes('"toolName":"set_revision_suggestions"')
+            || lastMessage.includes('"toolName":"set_assignment_suggestions"')
+          ) {
+            content = "Corrections proposed, ready for review.";
+          }
+
+          return {
+            id: `chatcmpl-test-${calls.length}`,
+            object: "chat.completion",
+            created: Date.now(),
+            model: typeof input.model === "string" ? input.model : "gpt-4o",
+            choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
+            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+          } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+        },
+      },
+    },
+  } as unknown as OpenAI;
+
+  return { client, calls };
+}
+
+function buildWholeCvRevisionScenario(assignmentIds: string[]) {
+  const calls: Array<Parameters<OpenAI["chat"]["completions"]["create"]>[0]> = [];
+
+  const actions = [
+    { id: "action-consultant-title", title: "Review consultant title", description: "Check the consultant title for spelling issues." },
+    { id: "action-presentation", title: "Review presentation", description: "Check the presentation text for spelling issues." },
+    { id: "action-summary", title: "Review summary", description: "Check the summary text for spelling issues." },
+    ...assignmentIds.map((assignmentId, index) => ({
+      id: `action-assignment-${index + 1}`,
+      title: `Review assignment ${index + 1}`,
+      description: `Check assignment ${index + 1} for spelling issues.`,
+      assignmentId,
+    })),
+  ];
+
+  const client = {
+    chat: {
+      completions: {
+        create: async (input: Parameters<OpenAI["chat"]["completions"]["create"]>[0]) => {
+          calls.push(input);
+          const lastMessage = getMessageText(input.messages.at(-1)?.content);
+          const systemMessage = getMessageText(input.messages[0]?.content);
+
+          if (systemMessage.includes("You summarise conversations in 2–4 words")) {
+            return {
+              id: `chatcmpl-test-${calls.length}`,
+              object: "chat.completion",
+              created: Date.now(),
+              model: typeof input.model === "string" ? input.model : "gpt-4o",
+              choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Whole CV revision" } }],
+              usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+          }
+
+          let content = "Whole CV revision";
+
+          if (
+            lastMessage.includes("Help me plan a revision flow.")
+            || lastMessage.includes("Greet the user briefly")
+            || lastMessage.includes("what outcome they want from the revision")
+          ) {
+            content = "Hej! Jag kan hjälpa dig att planera revideringen.";
+          } else if (lastMessage.includes("use the available tools for this stage") || lastMessage.toLowerCase().includes("fix all spelling")) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```';
+          } else if (lastMessage.includes('"toolName":"inspect_resume"')) {
+            content = [
+              "```json",
+              JSON.stringify({
+                type: "tool_call",
+                toolName: "set_revision_plan",
+                input: {
+                  summary: "Fix spelling across the whole CV",
+                  actions: actions.map((action) => ({ ...action, status: "pending" })),
+                },
+              }),
+              "```",
+            ].join("\n");
+          } else if (lastMessage.includes('"toolName":"set_revision_plan"')) {
+            content = "The revision plan is ready for review.";
+          } else if (lastMessage.includes("Process only this work item now: action-consultant-title")) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"consultantTitle"}}\n```';
+          } else if (lastMessage.includes("Process only this work item now: action-presentation")) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"presentation"}}\n```';
+          } else if (lastMessage.includes("Process only this work item now: action-summary")) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"summary"}}\n```';
+          } else if (lastMessage.includes("Process only this work item now: action-assignment-")) {
+            const matchedAssignment = actions.find(
+              (action): action is (typeof actions)[number] & { assignmentId: string } =>
+                "assignmentId" in action && lastMessage.includes(action.id),
+            );
+            content = `\`\`\`json
+{"type":"tool_call","toolName":"inspect_assignment","input":{"assignmentId":"${matchedAssignment?.assignmentId ?? assignmentIds[0]}"}}
+\`\`\``;
+          } else if (
+            lastMessage.includes('"toolName":"set_revision_suggestions"')
+            || lastMessage.includes('"toolName":"set_assignment_suggestions"')
+          ) {
+            content = "Corrections proposed, ready for review.";
+          } else if (lastMessage.includes('"section":"consultantTitle"')) {
+            content = '```json\n{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"Fix consultant title spelling","suggestions":[{"id":"suggestion-consultant-title","title":"Fix spelling in consultant title","description":"Correct the misspelled word in the consultant title.","section":"consultantTitle","suggestedText":"Tech Lead / Senior Engineer","status":"pending"}]}}\n```';
+          } else if (lastMessage.includes('"section":"presentation"')) {
+            content = '```json\n{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"Fix presentation spelling","suggestions":[{"id":"suggestion-presentation","title":"Fix spelling in presentation","description":"Correct the misspelled word in the presentation.","section":"presentation","suggestedText":"Ulf är en teknisk ledare med lång erfarenhet av systemutveckling och avancerade tekniska roller med felstavningen teknisk.","status":"pending"}]}}\n```';
+          } else if (lastMessage.includes('"section":"summary"')) {
+            content = '```json\n{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"Fix summary spelling","suggestions":[{"id":"suggestion-summary","title":"Fix spelling in summary","description":"Correct the misspelled word in the summary.","section":"summary","suggestedText":"Senior engineer with korrekt summary text.","status":"pending"}]}}\n```';
+          } else if (lastMessage.includes('"toolName":"inspect_assignment"')) {
+            const matchedAssignmentId = assignmentIds.find((assignmentId) => lastMessage.includes(assignmentId)) ?? assignmentIds[0];
+            const matchedAction = actions.find(
+              (action): action is (typeof actions)[number] & { assignmentId: string } =>
+                "assignmentId" in action && action.assignmentId === matchedAssignmentId,
+            );
+            content = `\`\`\`json
+{"type":"tool_call","toolName":"set_assignment_suggestions","input":{"workItemId":"${matchedAction?.id ?? "action-assignment-1"}","summary":"Fix assignment spelling","suggestions":[{"id":"suggestion-assignment-${matchedAssignmentId}","title":"Fix spelling in assignment","description":"Correct the misspelled phrase in the assignment description.","section":"assignment","assignmentId":"${matchedAssignmentId}","suggestedText":"Detta uppdrag innehåller felstavningen faktureringsrelaterade API:ers.","status":"pending"}]}}
+\`\`\``;
+          }
+
+          return {
+            id: `chatcmpl-test-${calls.length}`,
+            object: "chat.completion",
+            created: Date.now(),
+            model: typeof input.model === "string" ? input.model : "gpt-4o",
+            choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
+            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+          } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+        },
+      },
+    },
+  } as unknown as OpenAI;
+
+  return { client, calls };
+}
+
 export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (!ensureEnabled(res)) {
     return;
@@ -202,7 +449,10 @@ export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResp
     responses?: string[];
     scenario?: "single-assignment-revision";
     presentationScenario?: "single-presentation-revision";
+    sectionScenario?: SupportedSingleSection;
+    wholeCvScenario?: "whole-cv-spelling-revision";
     assignmentId?: string;
+    assignmentIds?: string[];
   }>(req);
 
   if (body.scenario === "single-assignment-revision") {
@@ -225,6 +475,26 @@ export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResp
     return;
   }
 
+  if (body.sectionScenario) {
+    if (body.sectionScenario === "assignment" && !body.assignmentId) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "assignmentId is required for assignment section scenario" }));
+      return;
+    }
+
+    setOpenAIClientForTests(buildSingleSectionRevisionScenario(body.sectionScenario, body.assignmentId).client);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, scenario: body.sectionScenario }));
+    return;
+  }
+
+  if (body.wholeCvScenario === "whole-cv-spelling-revision") {
+    setOpenAIClientForTests(buildWholeCvRevisionScenario(body.assignmentIds ?? []).client);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, scenario: body.wholeCvScenario }));
+    return;
+  }
+
   const responses = body.responses ?? [];
   if (responses.length === 0) {
     resetOpenAIClientForTests();
@@ -234,6 +504,48 @@ export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResp
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ ok: true, responseCount: responses.length }));
+}
+
+export async function e2eResetHandler(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!ensureEnabled(res)) {
+    return;
+  }
+
+  const db = getDb();
+
+  const fixtureEmployees = await db
+    .selectFrom("employees")
+    .select(["id"])
+    .where("email", "like", "playwright-%@example.com")
+    .execute();
+
+  const fixtureEmployeeIds = fixtureEmployees.map((employee) => employee.id);
+
+  if (fixtureEmployeeIds.length > 0) {
+    await db
+      .deleteFrom("employees")
+      .where("id", "in", fixtureEmployeeIds)
+      .execute();
+  }
+
+  await db
+    .deleteFrom("user_sessions")
+    .where("user_id", "=", DEFAULT_TEST_USER_ID)
+    .execute();
+
+  await db
+    .deleteFrom("users")
+    .where("id", "=", DEFAULT_TEST_USER_ID)
+    .execute();
+
+  resetOpenAIClientForTests();
+
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({
+    ok: true,
+    deletedEmployees: fixtureEmployeeIds.length,
+    deletedTestUser: true,
+  }));
 }
 
 export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -248,9 +560,15 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     language?: string;
     presentationParagraphs?: string[];
     consultantTitle?: string | null;
+    summary?: string | null;
     assignmentClientName?: string;
     assignmentRole?: string;
     assignmentDescription?: string;
+    assignments?: Array<{
+      clientName?: string;
+      role?: string;
+      description?: string;
+    }>;
     skipAssignment?: boolean;
   }>(req);
 
@@ -284,7 +602,7 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     employeeId,
     title: body.resumeTitle ?? "Playwright Revision Resume",
     language: body.language ?? "sv",
-    summary: null,
+    summary: body.summary ?? null,
   });
 
   await db
@@ -292,18 +610,33 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     .set({
       consultant_title: body.consultantTitle ?? "Tech Lead / Senior Engineer",
       presentation: sql`${JSON.stringify(body.presentationParagraphs ?? [])}::jsonb` as unknown as string[],
+      summary: body.summary ?? null,
     })
     .where("id", "=", resume.id)
     .execute();
 
   let assignmentId: string | null = null;
+  const assignmentIds: string[] = [];
 
-  if (!body.skipAssignment) {
-    assignmentId = randomUUID();
+  const assignmentsToCreate = body.skipAssignment
+    ? []
+    : body.assignments && body.assignments.length > 0
+      ? body.assignments
+      : [{
+          clientName: body.assignmentClientName ?? "Payer",
+          role: body.assignmentRole ?? "Fullstack developer",
+          description: body.assignmentDescription ?? "Detta uppdrag innehåller felstavningen fakutrerings relaterade APIers.",
+        }];
+
+  for (const [index, assignmentInput] of assignmentsToCreate.entries()) {
+    const createdAssignmentId = randomUUID();
+    assignmentIds.push(createdAssignmentId);
+    assignmentId ??= createdAssignmentId;
+
     await db
       .insertInto("assignments")
       .values({
-        id: assignmentId,
+        id: createdAssignmentId,
         employee_id: employeeId,
       })
       .execute();
@@ -312,18 +645,18 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
       .insertInto("branch_assignments")
       .values({
         branch_id: resume.mainBranchId!,
-        assignment_id: assignmentId,
-        client_name: body.assignmentClientName ?? "Payer",
-        role: body.assignmentRole ?? "Fullstack developer",
-        description: body.assignmentDescription ?? "Detta uppdrag innehåller felstavningen fakutrerings relaterade APIers.",
-        start_date: new Date("2025-01-01T00:00:00.000Z"),
+        assignment_id: createdAssignmentId,
+        client_name: assignmentInput.clientName ?? `Assignment ${index + 1}`,
+        role: assignmentInput.role ?? "Consultant",
+        description: assignmentInput.description ?? `Assignment ${index + 1} description.`,
+        start_date: new Date(`2025-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`),
         end_date: null,
         technologies: ["TypeScript"],
-        is_current: true,
+        is_current: index === 0,
         keywords: null,
         type: null,
         highlight: true,
-        sort_order: 0,
+        sort_order: index,
       })
       .execute();
   }
@@ -331,6 +664,9 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
   const savedCommit = await saveResumeVersion(db, user, {
     branchId: resume.mainBranchId!,
     message: "bootstrap revision fixture",
+    consultantTitle: body.consultantTitle ?? "Tech Lead / Senior Engineer",
+    presentation: body.presentationParagraphs ?? [],
+    summary: body.summary ?? null,
   });
 
   res.writeHead(200, { "Content-Type": "application/json" });
@@ -340,6 +676,7 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     mainBranchId: resume.mainBranchId,
     headCommitId: savedCommit.id,
     assignmentId,
+    assignmentIds,
   }));
 }
 
@@ -387,6 +724,10 @@ export async function e2eRevisionStateHandler(req: IncomingMessage, res: ServerR
     commits,
     mainBranchId: mainBranch?.id ?? null,
     mainHeadCommitId: mainBranch?.head_commit_id ?? null,
+    mainConsultantTitle: mainCommit?.content.consultantTitle ?? null,
+    mainPresentation: mainCommit?.content.presentation ?? [],
+    mainSummary: mainCommit?.content.summary ?? null,
+    mainSkills: mainCommit?.content.skills ?? [],
     mainAssignments: mainCommit?.content.assignments ?? [],
   }));
 }

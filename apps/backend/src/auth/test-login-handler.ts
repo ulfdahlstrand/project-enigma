@@ -82,6 +82,11 @@ export async function testLoginHandler(req: IncomingMessage, res: ServerResponse
   const expiresAt = refreshTokenExpiresAt();
 
   const sessionRepo = createSessionRepository(db);
+  await db
+    .deleteFrom("user_sessions")
+    .where("user_id", "=", user.id)
+    .execute();
+
   await sessionRepo.createSession({
     userId: user.id,
     expiresAt,

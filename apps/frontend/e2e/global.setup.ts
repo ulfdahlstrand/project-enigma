@@ -1,16 +1,16 @@
 import { expect, request, type FullConfig } from "@playwright/test";
 import { E2E_AUTH_FILE, ensureE2EAuthDir } from "./support/auth";
+import { backendBaseUrl, resetE2EData } from "./support/backend";
 
 export default async function globalSetup(config: FullConfig) {
-  const backendBaseUrl = process.env["PLAYWRIGHT_API_URL"]
-    ?? `http://127.0.0.1:${process.env["PLAYWRIGHT_BACKEND_PORT"] ?? 3101}`;
-
   const requestContext = await request.newContext({
     baseURL: backendBaseUrl,
     extraHTTPHeaders: {
       "Content-Type": "application/json",
     },
   });
+
+  await resetE2EData(requestContext);
 
   const response = await requestContext.post("/auth/test-login", {
     data: {

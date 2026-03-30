@@ -66,6 +66,24 @@ export async function saveResumeVersion(
     throw new ORPCError("FORBIDDEN");
   }
 
+  const headCommit = branch.head_commit_id
+    ? await db
+        .selectFrom("resume_commits")
+        .select(["content"])
+        .where("id", "=", branch.head_commit_id)
+        .executeTakeFirst()
+    : null;
+
+  const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
+    title: branch.title,
+    consultantTitle: branch.consultant_title,
+    presentation: branch.presentation ?? [],
+    summary: branch.summary,
+    language: branch.language,
+    skills: [],
+    assignments: [],
+  };
+
   // Fetch skills for this resume
   const skillRows = await db
     .selectFrom("resume_skills")
@@ -99,11 +117,11 @@ export async function saveResumeVersion(
     .execute();
 
   const content: ResumeCommitContent = {
-    title: branch.title,
-    consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : branch.consultant_title,
-    presentation: input.presentation ?? branch.presentation ?? [],
-    summary: "summary" in input ? input.summary ?? null : branch.summary,
-    language: branch.language,
+    title: baseContent.title,
+    consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
+    presentation: input.presentation ?? baseContent.presentation ?? [],
+    summary: "summary" in input ? input.summary ?? null : baseContent.summary,
+    language: baseContent.language,
     skills: skillRows.map((s) => ({
       name: s.name,
       level: s.level,

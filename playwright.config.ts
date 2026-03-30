@@ -8,9 +8,11 @@ const backendBaseUrl = `http://127.0.0.1:${backendPort}`;
 export default defineConfig({
   testDir: "./apps/frontend/e2e",
   fullyParallel: false,
+  workers: 1,
   retries: process.env["CI"] ? 2 : 0,
   reporter: process.env["CI"] ? [["html"], ["list"]] : "list",
   globalSetup: "./apps/frontend/e2e/global.setup.ts",
+  globalTeardown: "./apps/frontend/e2e/global.teardown.ts",
   use: {
     baseURL: frontendBaseUrl,
     trace: "retain-on-failure",

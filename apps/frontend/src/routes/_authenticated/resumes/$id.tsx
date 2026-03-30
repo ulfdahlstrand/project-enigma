@@ -160,23 +160,47 @@ function buildInlineRevisionWorkItemAutomationMessage(workItems: RevisionWorkIte
 }
 
 function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): RevisionWorkItems | null {
-  const assignmentActions = plan.actions.filter((action) => action.assignmentId);
-
-  if (assignmentActions.length === 0) {
+  if (plan.actions.length === 0) {
     return null;
   }
 
   return {
     summary: plan.summary,
-    items: assignmentActions.map((action, index) => ({
+    items: plan.actions.map((action, index) => ({
       id: action.id || `work-item-${index + 1}`,
       title: action.title,
       description: action.description,
-      section: "assignment",
+      section: inferRevisionWorkItemSection(action),
       assignmentId: action.assignmentId,
       status: "pending" as const,
     })),
   };
+}
+
+function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
+  if (action.assignmentId) {
+    return "assignment";
+  }
+
+  const haystack = `${action.title} ${action.description}`.toLowerCase();
+
+  if (haystack.includes("presentation") || haystack.includes("profil") || haystack.includes("intro")) {
+    return "presentation";
+  }
+
+  if (haystack.includes("summary") || haystack.includes("sammanfatt")) {
+    return "summary";
+  }
+
+  if (haystack.includes("consultant title") || haystack.includes("konsulttitel") || haystack.includes("title")) {
+    return "consultantTitle";
+  }
+
+  if (haystack.includes("skill")) {
+    return "skills";
+  }
+
+  return "presentation";
 }
 
 function appendUniqueRevisionSuggestions(
@@ -202,6 +226,52 @@ function appendUniqueRevisionSuggestions(
   return {
     summary: incoming.summary || existing.summary,
     suggestions: nextSuggestions,
+  };
+}
+
+function markWorkItemsCompletedFromSuggestions(
+  workItems: RevisionWorkItems | null,
+  suggestions: RevisionSuggestions,
+): RevisionWorkItems | null {
+  if (!workItems) {
+    return workItems;
+  }
+
+  const completedIds = new Set<string>();
+
+  for (const suggestion of suggestions.suggestions) {
+    const prefixedWorkItemId = suggestion.id.split(":")[0] ?? suggestion.id;
+    if (workItems.items.some((item) => item.id === prefixedWorkItemId)) {
+      completedIds.add(prefixedWorkItemId);
+      continue;
+    }
+
+    const matchingItem = workItems.items.find((item) => {
+      if (item.status === "completed" || item.status === "no_changes_needed") {
+        return false;
+      }
+
+      if (suggestion.assignmentId && item.assignmentId) {
+        return item.assignmentId === suggestion.assignmentId;
+      }
+
+      return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
+    });
+
+    if (matchingItem) {
+      completedIds.add(matchingItem.id);
+    }
+  }
+
+  if (completedIds.size === 0) {
+    return workItems;
+  }
+
+  return {
+    ...workItems,
+    items: workItems.items.map((item) =>
+      completedIds.has(item.id) ? { ...item, status: "completed" } : item
+    ),
   };
 }
 
@@ -1329,6 +1399,9 @@ function ResumeDetailPage() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
+  const draftTitleRef = useRef("");
+  const draftPresentationRef = useRef("");
+  const draftSummaryRef = useRef("");
   const [inlineRevisionStage, setInlineRevisionStage] = useState<InlineRevisionStage>("planning");
   const [inlineRevisionPlan, setInlineRevisionPlan] = useState<RevisionPlan | null>(null);
   const [inlineRevisionWorkItems, setInlineRevisionWorkItems] = useState<RevisionWorkItems | null>(null);
@@ -1401,12 +1474,24 @@ function ResumeDetailPage() {
 
   useEffect(() => {
     if (isEditing) {
-      setDraftTitle(consultantTitle ?? "");
-      setDraftPresentation(presentation.join("\n\n"));
-      setDraftSummary(summary ?? "");
+      const nextTitle = consultantTitle ?? "";
+      const nextPresentation = presentation.join("\n\n");
+      const nextSummary = summary ?? "";
+      draftTitleRef.current = nextTitle;
+      draftPresentationRef.current = nextPresentation;
+      draftSummaryRef.current = nextSummary;
+      setDraftTitle(nextTitle);
+      setDraftPresentation(nextPresentation);
+      setDraftSummary(nextSummary);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
+
+  useEffect(() => {
+    draftTitleRef.current = draftTitle;
+    draftPresentationRef.current = draftPresentation;
+    draftSummaryRef.current = draftSummary;
+  }, [draftPresentation, draftSummary, draftTitle]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -1522,41 +1607,26 @@ function ResumeDetailPage() {
       });
     },
     appendRevisionSuggestions: (incoming) => {
-      setInlineRevisionWorkItems((prev) => {
-        if (!prev) return prev;
-        const terminalIds = new Set(
-          prev.items
-            .filter((item) => item.status === "completed" || item.status === "no_changes_needed")
-            .map((item) => item.id),
-        );
-        const handledIds = new Set(
-          incoming.suggestions
-            .map((suggestion) => suggestion.id.split(":")[0] ?? suggestion.id)
-            .filter((value): value is string => Boolean(value) && !terminalIds.has(value)),
-        );
-
-        if (handledIds.size === 0) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          items: prev.items.map((item) =>
-            handledIds.has(item.id) ? { ...item, status: "completed" } : item
-          ),
-        };
-      });
+      setInlineRevisionWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
       setInlineRevisionSuggestions((prev) => {
-        const allowedIds = new Set(
-          (inlineRevisionWorkItems?.items ?? [])
-            .filter((item) => item.status !== "completed" && item.status !== "no_changes_needed")
-            .map((item) => item.id),
-        );
+        const activeItems = (inlineRevisionWorkItems?.items ?? [])
+          .filter((item) => item.status !== "completed" && item.status !== "no_changes_needed");
+        const allowedIds = new Set(activeItems.map((item) => item.id));
         const filteredIncoming = {
           ...incoming,
           suggestions: incoming.suggestions.filter((suggestion) => {
             const workItemId = suggestion.id.split(":")[0] ?? suggestion.id;
-            return allowedIds.size === 0 || allowedIds.has(workItemId);
+            if (allowedIds.size === 0 || allowedIds.has(workItemId)) {
+              return true;
+            }
+
+            return activeItems.some((item) => {
+              if (suggestion.assignmentId && item.assignmentId) {
+                return item.assignmentId === suggestion.assignmentId;
+              }
+
+              return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
+            });
           }),
         };
 
@@ -1567,7 +1637,10 @@ function ResumeDetailPage() {
         return appendUniqueRevisionSuggestions(prev, filteredIncoming);
       });
     },
-    setRevisionSuggestions: setInlineRevisionSuggestions,
+    setRevisionSuggestions: (incoming) => {
+      setInlineRevisionWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
+      setInlineRevisionSuggestions((prev) => appendUniqueRevisionSuggestions(prev, incoming));
+    },
   });
   const inlineRevisionPlanningToolContext: AIToolContext = {
     route: "/_authenticated/resumes/$id/planning",
@@ -1596,9 +1669,9 @@ function ResumeDetailPage() {
             "Use the approved plan that was already provided in the kickoff context.",
             "The approved work items already define the allowed scope for this action step.",
             "Do not create extra work items or inspect assignments outside the approved plan.",
-            "After inspect_assignment, your next response must be a terminal tool call for that same work item.",
-            "Use set_assignment_suggestions if changes are needed or mark_revision_work_item_no_changes_needed if none are needed.",
-            "Do not respond with plain text between inspect_assignment and that terminal tool call.",
+            "After inspecting the source text for a work item, your next response must be a terminal tool call for that same work item.",
+            "Use set_assignment_suggestions or set_revision_suggestions if changes are needed, or mark_revision_work_item_no_changes_needed if none are needed.",
+            "Do not respond with plain text between inspect_assignment or inspect_resume_section and that terminal tool call.",
             "Use inspect_assignment or inspect_resume_section to read exact source text for each work item.",
             "For each work item, either create concrete suggestions or mark it as no changes needed.",
             "Do not claim that changes are applied or complete until every work item has been handled.",
@@ -1774,9 +1847,9 @@ function ResumeDetailPage() {
   const applySuggestionTextToDraft = (suggestion: RevisionSuggestions["suggestions"][number]) => {
     const section = suggestion.section.trim().toLowerCase();
     const suggestedText = suggestion.suggestedText.trim();
-    let nextTitle = draftTitle;
-    let nextPresentation = draftPresentation;
-    let nextSummary = draftSummary;
+    let nextTitle = draftTitleRef.current;
+    let nextPresentation = draftPresentationRef.current;
+    let nextSummary = draftSummaryRef.current;
 
     if (
       section.includes("title") ||
@@ -1799,6 +1872,9 @@ function ResumeDetailPage() {
       return null;
     }
 
+    draftTitleRef.current = nextTitle;
+    draftPresentationRef.current = nextPresentation;
+    draftSummaryRef.current = nextSummary;
     setDraftTitle(nextTitle);
     setDraftPresentation(nextPresentation);
     setDraftSummary(nextSummary);

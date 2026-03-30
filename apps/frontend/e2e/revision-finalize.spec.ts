@@ -1,10 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_AUTH_FILE } from "./support/auth";
+import { backendBaseUrl, resetE2EData } from "./support/backend";
 
 test.use({ storageState: E2E_AUTH_FILE });
-
-const backendBaseUrl = process.env["PLAYWRIGHT_API_URL"]
-  ?? `http://127.0.0.1:${process.env["PLAYWRIGHT_BACKEND_PORT"] ?? 3101}`;
 
 type RevisionFixture = {
   resumeId: string;
@@ -20,6 +18,8 @@ type RevisionState = {
 };
 
 async function bootstrapSingleAssignmentScenario(page: Page): Promise<RevisionFixture> {
+  await resetE2EData(page.request);
+
   const bootstrapResponse = await page.request.post(`${backendBaseUrl}/test/e2e/bootstrap-revision`, {
     data: {
       resumeTitle: "Playwright Finalize Resume",
