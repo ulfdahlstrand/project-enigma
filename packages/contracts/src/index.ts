@@ -64,6 +64,8 @@ import {
   listResumeCommitsOutputSchema,
   forkResumeBranchInputSchema,
   forkResumeBranchOutputSchema,
+  finaliseResumeBranchInputSchema,
+  finaliseResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
   getResumeBranchHistoryGraphInputSchema,
@@ -249,6 +251,8 @@ export {
   listResumeCommitsOutputSchema,
   forkResumeBranchInputSchema,
   forkResumeBranchOutputSchema,
+  finaliseResumeBranchInputSchema,
+  finaliseResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
   getResumeBranchHistoryGraphInputSchema,
@@ -443,6 +447,9 @@ export const contract = oc.router({
   forkResumeBranch: oc
     .input(forkResumeBranchInputSchema)
     .output(forkResumeBranchOutputSchema),
+  finaliseResumeBranch: oc
+    .input(finaliseResumeBranchInputSchema)
+    .output(finaliseResumeBranchOutputSchema),
   listResumeBranches: oc
     .input(listResumeBranchesInputSchema)
     .output(listResumeBranchesOutputSchema),

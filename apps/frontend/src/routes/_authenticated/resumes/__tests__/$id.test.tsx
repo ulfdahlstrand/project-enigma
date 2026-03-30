@@ -11,9 +11,9 @@
  *   - Back link is present and points to /resumes
  */
 
-import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen } from "@testing-library/react";
+import React from "react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import enCommon from "../../../../locales/en/common.json";
 import {
@@ -61,6 +61,7 @@ const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
 // ---------------------------------------------------------------------------
 
 const TEST_RESUME_ID = "resume-test-id-99";
+const mockNavigate = vi.fn();
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -69,7 +70,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...actual,
     useParams: () => ({ id: TEST_RESUME_ID }),
     useSearch: () => ({}),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -286,6 +287,20 @@ describe("Navigation", () => {
       name: enCommon.resume.history.pageTitle,
     });
     expect(historyButton).toBeInTheDocument();
+  });
+
+  it("opens the inline AI revision layout from the edit menu", async () => {
+    renderPage();
+    await screen.findAllByText(TEST_RESUME.title);
+
+    fireEvent.click(screen.getByRole("button", { name: enCommon.resume.detail.editMenuLabel }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: enCommon.revision.reviseButton }));
+
+    expect(await screen.findByText(enCommon.revision.inline.checklistTitle)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.checklistWaitingTitle)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.chatTitle)).toBeInTheDocument();
+    expect(screen.getByText(enCommon.revision.inline.chatDescription)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import type { AIToolContext, AIToolRegistry } from "./ai-tools/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +22,10 @@ export interface OpenAssistantOptions {
   kickoffMessage?: string;
   /** The original content being edited — shown as "before" in the diff dialog. */
   originalContent?: string;
+  /** Optional tool registry available to the active AI chat session. */
+  toolRegistry?: AIToolRegistry;
+  /** Explicit execution context for any registered tools. */
+  toolContext?: AIToolContext;
   /** Called with the suggested text when the user clicks Apply in the diff dialog. */
   onAccept: (suggested: string) => void;
 }
@@ -33,6 +38,8 @@ interface AIAssistantState {
   conversationTitle: string | null;
   kickoffMessage: string | null;
   originalContent: string | null;
+  toolRegistry: AIToolRegistry | null;
+  toolContext: AIToolContext | null;
   activeConversationId: string | null;
   pendingSuggestion: PendingSuggestion | null;
   onAccept: ((suggested: string) => void) | null;
@@ -66,6 +73,8 @@ const INITIAL_STATE: AIAssistantState = {
   conversationTitle: null,
   kickoffMessage: null,
   originalContent: null,
+  toolRegistry: null,
+  toolContext: null,
   activeConversationId: null,
   pendingSuggestion: null,
   onAccept: null,
@@ -87,6 +96,8 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       conversationTitle: options.title ?? null,
       kickoffMessage: options.kickoffMessage ?? null,
       originalContent: options.originalContent ?? null,
+      toolRegistry: options.toolRegistry ?? null,
+      toolContext: options.toolContext ?? null,
       activeConversationId: null,
       pendingSuggestion: null,
       onAccept: options.onAccept,

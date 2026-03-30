@@ -161,7 +161,7 @@ export async function forkResumeBranch(
         resume_id: commit.resume_id,
         branch_id: branch.id,
         content: JSON.stringify(freshContent),
-        message: "",
+        message: `Create revision branch: ${input.name}`,
         created_by: user.id,
       })
       .returningAll()

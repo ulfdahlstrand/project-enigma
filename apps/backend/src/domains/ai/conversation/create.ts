@@ -6,6 +6,7 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
+import { logger } from "../../../infra/logger.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 512;
@@ -29,6 +30,12 @@ export async function createAIConversation(
     .executeTakeFirst();
 
   if (existing) {
+    logger.info("AI conversation resumed", {
+      conversationId: existing.id,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      userId,
+    });
     return {
       id: existing.id,
       createdBy: existing.created_by,
@@ -53,6 +60,14 @@ export async function createAIConversation(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+
+  logger.info("AI conversation created", {
+    conversationId: row.id,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    hasKickoffMessage: Boolean(input.kickoffMessage),
+    userId,
+  });
 
   // Send the kickoff message to the AI (not stored) and save only the greeting.
   if (input.kickoffMessage) {
@@ -80,6 +95,11 @@ export async function createAIConversation(
         content: greeting,
       })
       .execute();
+
+    logger.info("AI kickoff greeting stored", {
+      conversationId: row.id,
+      greetingLength: greeting.length,
+    });
   }
 
   return {
