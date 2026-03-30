@@ -24,6 +24,10 @@ interface Props {
   onApply: () => void;
   onKeepEditing: () => void;
   onDiscard: () => void;
+  title?: string;
+  applyLabel?: string;
+  keepEditingLabel?: string;
+  discardLabel?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +148,18 @@ function UnifiedView({ original, suggested }: { original: string; suggested: str
 // Dialog component
 // ---------------------------------------------------------------------------
 
-export function DiffReviewDialog({ open, original, suggested, onApply, onKeepEditing, onDiscard }: Props) {
+export function DiffReviewDialog({
+  open,
+  original,
+  suggested,
+  onApply,
+  onKeepEditing,
+  onDiscard,
+  title,
+  applyLabel,
+  keepEditingLabel,
+  discardLabel,
+}: Props) {
   const { t } = useTranslation("common");
   const [viewMode, setViewMode] = useState<ViewMode>("side-by-side");
 
@@ -163,7 +178,7 @@ export function DiffReviewDialog({ open, original, suggested, onApply, onKeepEdi
           pb: 1,
         }}
       >
-        {t("aiAssistant.diff.title")}
+        {title ?? t("aiAssistant.diff.title")}
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -186,13 +201,13 @@ export function DiffReviewDialog({ open, original, suggested, onApply, onKeepEdi
 
       <DialogActions>
         <Button onClick={onDiscard} color="error" variant="outlined">
-          {t("aiAssistant.diff.discard")}
+          {discardLabel ?? t("aiAssistant.diff.discard")}
         </Button>
         <Button onClick={onKeepEditing} color="inherit">
-          {t("aiAssistant.diff.keepEditing")}
+          {keepEditingLabel ?? t("aiAssistant.diff.keepEditing")}
         </Button>
         <Button onClick={onApply} variant="contained" color="primary">
-          {t("aiAssistant.diff.apply")}
+          {applyLabel ?? t("aiAssistant.diff.apply")}
         </Button>
       </DialogActions>
     </Dialog>

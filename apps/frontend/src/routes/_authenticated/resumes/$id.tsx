@@ -50,6 +50,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
+import { useCloseAIConversation } from "../../../hooks/ai-assistant";
 import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../../hooks/versioning";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -58,8 +59,24 @@ import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
+import { AIAssistantChat } from "../../../components/ai-assistant/AIAssistantChat";
+import { DiffReviewDialog } from "../../../components/ai-assistant/DiffReviewDialog";
+import {
+  buildResumeRevisionActionKickoff,
+  buildResumeRevisionActionPrompt,
+  buildResumeRevisionKickoff,
+  buildResumeRevisionPrompt,
+} from "../../../components/ai-assistant/lib/build-resume-revision-prompt";
 import { SkillsEditor } from "../../../components/SkillsEditor";
 import { AssignmentEditor } from "../../../components/AssignmentEditor";
+import {
+  createResumeActionToolRegistry,
+  createResumePlanningToolRegistry,
+  type RevisionPlan,
+  type RevisionSuggestions,
+} from "../../../lib/ai-tools/registries/resume-tools";
+import { useAIAssistantContext } from "../../../lib/ai-assistant-context";
+import type { AIToolContext, AIToolRegistry } from "../../../lib/ai-tools/types";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -73,6 +90,8 @@ const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
 const INLINE_REVISION_CHECKLIST_WIDTH = 220;
 const INLINE_REVISION_CHAT_WIDTH = 360;
+
+type InlineRevisionStage = "planning" | "actions" | "finalize";
 
 // How many assignments to show as bullets on the cover page
 const COVER_HIGHLIGHT_COUNT = 5;
@@ -632,15 +651,56 @@ function EditSplitButton({
 }
 
 function InlineRevisionChecklist({
+  stage,
   branchName,
   onOpenHistory,
   onOpenCompare,
+  plan,
+  suggestions,
+  selectedSuggestionId,
+  onSelectSuggestion,
+  onReviewSuggestion,
+  onDismissSuggestion,
+  onMoveToActions,
+  onMoveToFinalize,
+  onBackToActions,
+  onApplyAcceptedSuggestions,
 }: {
+  stage: InlineRevisionStage;
   branchName: string;
   onOpenHistory: () => void;
   onOpenCompare: () => void;
+  plan: RevisionPlan | null;
+  suggestions: RevisionSuggestions["suggestions"];
+  selectedSuggestionId: string | null;
+  onSelectSuggestion: (suggestionId: string) => void;
+  onReviewSuggestion: (suggestionId: string) => void;
+  onDismissSuggestion: (suggestionId: string) => void;
+  onMoveToActions: () => void;
+  onMoveToFinalize: () => void;
+  onBackToActions: () => void;
+  onApplyAcceptedSuggestions: () => void;
 }) {
   const { t } = useTranslation("common");
+  const reviewedSuggestions = suggestions.filter((suggestion) => suggestion.status !== "pending");
+  const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted");
+  const getPlanStatusKey = (status: RevisionPlan["actions"][number]["status"]) => {
+    if (status === "pending" && stage !== "planning") {
+      return "planned";
+    }
+
+    return status;
+  };
+  const getPlanStatusColor = (status: RevisionPlan["actions"][number]["status"]) => {
+    if (status === "done") {
+      return "success" as const;
+    }
+    if (status === "pending" && stage !== "planning") {
+      return "primary" as const;
+    }
+
+    return "default" as const;
+  };
 
   return (
     <Paper
@@ -667,34 +727,211 @@ function InlineRevisionChecklist({
           label={t("revision.inline.branchName", { branchName })}
           sx={{ mt: 1.5 }}
         />
+        <Chip
+          size="small"
+          color="primary"
+          variant={stage === "planning" ? "filled" : "outlined"}
+          label={t(`revision.inline.stage.${stage}`)}
+          sx={{ mt: 1.5, ml: 1 }}
+        />
       </Box>
       <Divider />
-      <List disablePadding>
-        <ListItem>
-          <ListItemText
-            primary={t("revision.inline.checklistWaitingTitle")}
-            secondary={t("revision.inline.checklistWaitingDescription")}
-          />
-        </ListItem>
-        <ListItem>
-          <ListItemText
-            primary={t("revision.inline.intentStatusTitle")}
-            secondary={t("revision.inline.intentStatusDescription")}
-          />
-        </ListItem>
-        <ListItem>
-          <ListItemText
-            primary={t("revision.inline.branchStatusTitle")}
-            secondary={t("revision.inline.branchStatusDescription")}
-          />
-        </ListItem>
-        <ListItem>
-          <ListItemText
-            primary={t("revision.inline.diffStatusTitle")}
-            secondary={t("revision.inline.diffStatusDescription")}
-          />
-        </ListItem>
-      </List>
+      {stage === "finalize" ? (
+        <>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2">{t("revision.inline.finalizeTitle")}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {t("revision.inline.finalizeDescription", {
+                accepted: acceptedSuggestions.length,
+                reviewed: reviewedSuggestions.length,
+                total: suggestions.length,
+              })}
+            </Typography>
+          </Box>
+          {plan ? (
+            <>
+              <Divider />
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle2">{t("revision.inline.planSummaryTitle")}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                  {plan.summary}
+                </Typography>
+              </Box>
+            </>
+          ) : null}
+          <Divider />
+          <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={acceptedSuggestions.length === 0}
+              onClick={onApplyAcceptedSuggestions}
+            >
+              {t("revision.inline.applyAcceptedSuggestionsButton")}
+            </Button>
+            <Button variant="contained" size="small" onClick={onBackToActions}>
+              {t("revision.inline.backToActionsButton")}
+            </Button>
+          </Box>
+        </>
+      ) : plan ? (
+        <>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2">{t("revision.inline.planSummaryTitle")}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {plan.summary}
+            </Typography>
+          </Box>
+          <Divider />
+          <List disablePadding>
+            {plan.actions.map((action) => (
+              <ListItem
+                key={action.id}
+                sx={{ alignItems: "flex-start", gap: 1 }}
+              >
+                <Chip
+                  size="small"
+                  color={getPlanStatusColor(action.status)}
+                  label={t(`revision.inline.planStatus.${getPlanStatusKey(action.status)}`)}
+                  sx={{ mt: 0.25 }}
+                />
+                <ListItemText
+                  primary={action.title}
+                  secondary={action.description}
+                />
+              </ListItem>
+            ))}
+          </List>
+          {stage === "planning" && (
+            <>
+              <Divider />
+              <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button variant="contained" size="small" onClick={onMoveToActions}>
+                  {t("revision.inline.toActionsButton")}
+                </Button>
+              </Box>
+            </>
+          )}
+          {stage === "actions" && (
+            <>
+              <Divider />
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle2">
+                  {t("revision.inline.suggestionsTitle")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                  {t("revision.inline.suggestionsDescription")}
+                </Typography>
+              </Box>
+              {suggestions.length > 0 ? (
+                <List disablePadding>
+                  {suggestions.map((suggestion) => (
+                    <ListItem
+                      key={suggestion.id}
+                      sx={{
+                        display: "block",
+                        px: 1.5,
+                        py: 1,
+                        bgcolor: selectedSuggestionId === suggestion.id ? "action.selected" : "transparent",
+                      }}
+                    >
+                      <Button
+                        fullWidth
+                        variant="text"
+                        onClick={() => onSelectSuggestion(suggestion.id)}
+                        sx={{
+                          justifyContent: "flex-start",
+                          alignItems: "flex-start",
+                          textAlign: "left",
+                          px: 1,
+                          py: 0.5,
+                          textTransform: "none",
+                        }}
+                      >
+                        <Box sx={{ width: "100%" }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {suggestion.title}
+                            </Typography>
+                            <Chip size="small" label={suggestion.section} />
+                            <Chip size="small" variant="outlined" label={t(`revision.inline.suggestionStatus.${suggestion.status}`)} />
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75, whiteSpace: "normal" }}>
+                            {suggestion.description}
+                          </Typography>
+                        </Box>
+                      </Button>
+                      <Box sx={{ mt: 1, px: 1 }}>
+                        <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => onReviewSuggestion(suggestion.id)}
+                          >
+                            {t("revision.inline.reviewSuggestion")}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={suggestion.status === "dismissed"}
+                            onClick={() => onDismissSuggestion(suggestion.id)}
+                          >
+                            {t("revision.inline.dismissSuggestion")}
+                          </Button>
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Box sx={{ px: 2, pb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t("revision.inline.suggestionsWaitingDescription")}
+                  </Typography>
+                </Box>
+              )}
+              <Divider />
+              <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={suggestions.length === 0}
+                  onClick={onMoveToFinalize}
+                >
+                  {t("revision.inline.toFinalizeButton")}
+                </Button>
+              </Box>
+            </>
+          )}
+        </>
+      ) : (
+        <List disablePadding>
+          <ListItem>
+            <ListItemText
+              primary={t("revision.inline.checklistWaitingTitle")}
+              secondary={t("revision.inline.checklistWaitingDescription")}
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemText
+              primary={t("revision.inline.intentStatusTitle")}
+              secondary={t("revision.inline.intentStatusDescription")}
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemText
+              primary={t("revision.inline.branchStatusTitle")}
+              secondary={t("revision.inline.branchStatusDescription")}
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemText
+              primary={t("revision.inline.diffStatusTitle")}
+              secondary={t("revision.inline.diffStatusDescription")}
+            />
+          </ListItem>
+        </List>
+      )}
       <Divider />
       <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
         <Button variant="outlined" size="small" startIcon={<HistoryIcon />} onClick={onOpenHistory}>
@@ -711,9 +948,20 @@ function InlineRevisionChecklist({
 function InlineRevisionChatPanel({
   branchName,
   onClose,
+  toolCount,
+  toolRegistry,
+  toolContext,
+  guardrail,
 }: {
   branchName: string;
   onClose: () => void;
+  toolCount: number;
+  toolRegistry: AIToolRegistry;
+  toolContext: AIToolContext;
+  guardrail: {
+    isSatisfied: boolean;
+    reminderMessage: string;
+  };
 }) {
   const { t } = useTranslation("common");
 
@@ -735,6 +983,9 @@ function InlineRevisionChatPanel({
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
             {t("revision.inline.chatContext", { branchName })}
           </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+            {t("revision.inline.toolsReady", { count: toolCount })}
+          </Typography>
         </Box>
         <IconButton size="small" onClick={onClose} aria-label={t("revision.inline.closeButton")}>
           <CloseIcon fontSize="small" />
@@ -742,41 +993,7 @@ function InlineRevisionChatPanel({
       </Box>
       <Divider />
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", p: 3 }}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              bgcolor: "background.default",
-              maxWidth: 320,
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              {t("revision.inline.initialPrompt")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("revision.inline.chatHint")}
-            </Typography>
-          </Paper>
-
-          <Box sx={{ mt: 2, maxWidth: 320 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75 }}>
-              {t("revision.inline.examplesTitle")}
-            </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2.5, color: "text.secondary" }}>
-              <Typography component="li" variant="body2" sx={{ mb: 0.75 }}>
-                {t("revision.inline.exampleSpelling")}
-              </Typography>
-              <Typography component="li" variant="body2" sx={{ mb: 0.75 }}>
-                {t("revision.inline.exampleTone")}
-              </Typography>
-              <Typography component="li" variant="body2">
-                {t("revision.inline.exampleFocus")}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+        <AIAssistantChat toolRegistry={toolRegistry} toolContext={toolContext} guardrail={guardrail} />
       </Box>
     </Box>
   );
@@ -787,13 +1004,22 @@ function InlineRevisionChatPanel({
 // ---------------------------------------------------------------------------
 
 function ResumeDetailPage() {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const { id: idParam } = useParams({ strict: false });
   const id = idParam!;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { branchId: selectedBranchId } = useSearch({ strict: false }) as any as { branchId?: string };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const {
+    openAssistant,
+    hideDrawer,
+    closeAssistant,
+    activeConversationId: assistantConversationId,
+    entityType: assistantEntityType,
+    entityId: assistantEntityId,
+    toolContext: assistantToolContext,
+  } = useAIAssistantContext();
 
   const { data: resume, isLoading, isError, error } = useQuery({
     queryKey: getResumeQueryKey(id),
@@ -845,6 +1071,12 @@ function ResumeDetailPage() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
+  const [inlineRevisionStage, setInlineRevisionStage] = useState<InlineRevisionStage>("planning");
+  const [inlineRevisionPlan, setInlineRevisionPlan] = useState<RevisionPlan | null>(null);
+  const [inlineRevisionSuggestions, setInlineRevisionSuggestions] = useState<RevisionSuggestions | null>(null);
+  const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
+  const [reviewSuggestionId, setReviewSuggestionId] = useState<string | null>(null);
+  const [isSuggestionReviewOpen, setIsSuggestionReviewOpen] = useState(false);
 
   const updateResume = useMutation({
     mutationFn: (patch: { presentation?: string[]; consultantTitle?: string | null; summary?: string | null }) =>
@@ -864,6 +1096,7 @@ function ResumeDetailPage() {
       setIsEditing(false);
     },
   });
+  const closeInlineConversation = useCloseAIConversation("resume", id);
   const forkResumeBranch = useForkResumeBranch();
 
   const historyBranchId = activeBranchId ?? mainBranchId ?? "";
@@ -872,7 +1105,9 @@ function ResumeDetailPage() {
   const [showFullAssignments, setShowFullAssignments] = useState(true);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const coverSectionRef = useRef<HTMLDivElement>(null);
   const presentationRef = useRef<HTMLDivElement>(null);
+  const skillsSectionRef = useRef<HTMLDivElement>(null);
   const assignmentsSectionRef = useRef<HTMLDivElement>(null);
   const [fabTop, setFabTop] = useState(0);
   const [assignmentsFabTop, setAssignmentsFabTop] = useState(0);
@@ -939,10 +1174,84 @@ function ResumeDetailPage() {
   const hasSkills = skills.length > 0;
   const showSkillsPage = hasSkills || (isEditing && !isSnapshotMode);
   const hasAssignments = assignments.length > 0;
+  const resumeInspectionSnapshot = {
+    resumeId: id,
+    employeeName: employee?.name ?? "",
+    title: resumeTitle,
+    consultantTitle,
+    language,
+    presentation,
+    summary,
+    skills: skills.map((skill) => ({
+      name: skill.name,
+      category: skill.category ?? null,
+    })),
+    assignments: sortedAssignments.map((assignment) => ({
+      id: assignment.id,
+      clientName: assignment.clientName,
+      role: assignment.role,
+      description: "description" in assignment && typeof assignment.description === "string"
+        ? assignment.description
+        : "",
+      technologies: "technologies" in assignment && Array.isArray(assignment.technologies)
+        ? assignment.technologies
+        : [],
+      isCurrent: assignment.isCurrent,
+      startDate: typeof assignment.startDate === "string"
+        ? assignment.startDate
+        : assignment.startDate instanceof Date
+          ? assignment.startDate.toISOString()
+          : null,
+      endDate: typeof assignment.endDate === "string"
+        ? assignment.endDate
+        : assignment.endDate instanceof Date
+          ? assignment.endDate.toISOString()
+          : null,
+    })),
+  };
+  const inlineRevisionPlanningToolRegistry = createResumePlanningToolRegistry({
+    getResumeSnapshot: () => resumeInspectionSnapshot,
+    setRevisionPlan: setInlineRevisionPlan,
+  });
+  const inlineRevisionActionToolRegistry = createResumeActionToolRegistry({
+    getResumeSnapshot: () => resumeInspectionSnapshot,
+    getRevisionPlan: () => inlineRevisionPlan,
+    setRevisionSuggestions: setInlineRevisionSuggestions,
+  });
+  const inlineRevisionPlanningToolContext: AIToolContext = {
+    route: "/_authenticated/resumes/$id/planning",
+    entityType: "resume",
+    entityId: id,
+  };
+  const inlineRevisionActionToolContext: AIToolContext = {
+    route: "/_authenticated/resumes/$id/actions",
+    entityType: "resume",
+    entityId: id,
+  };
   const baseCommitId = activeBranch?.headCommitId ?? null;
   const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);
   const skillsPage = showSkillsPage ? 2 : null;
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
+  const inlineRevisionGuardrail =
+    inlineRevisionStage === "actions"
+      ? {
+          isSatisfied: (inlineRevisionSuggestions?.suggestions.length ?? 0) > 0,
+          reminderMessage: [
+            "You must use the available tools for this stage.",
+            "First inspect the agreed revision plan if needed, then create concrete suggestions with set_revision_suggestions.",
+            "Do not claim that changes are applied or complete until suggestions have been created.",
+            "Return a tool call now.",
+          ].join(" "),
+        }
+      : {
+          isSatisfied: inlineRevisionPlan !== null,
+          reminderMessage: [
+            "You must use the available tools for this stage.",
+            "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
+            "Do not continue with free-text execution updates until the plan has been created.",
+            "Return a tool call now.",
+          ].join(" "),
+        };
 
   const buildDraftPatch = () => {
     const patch = {
@@ -951,6 +1260,156 @@ function ResumeDetailPage() {
       summary: draftSummary.trim() || null,
     };
     return patch;
+  };
+
+  const getSuggestionOriginalText = (suggestion: RevisionSuggestions["suggestions"][number]) => {
+    const section = suggestion.section.trim().toLowerCase();
+
+    if (
+      section.includes("title") ||
+      section.includes("titel") ||
+      section.includes("consultant")
+    ) {
+      return consultantTitle ?? "";
+    }
+
+    if (
+      section.includes("presentation") ||
+      section.includes("profil") ||
+      section.includes("intro")
+    ) {
+      return presentation.join("\n\n");
+    }
+
+    if (
+      section.includes("summary") ||
+      section.includes("sammanfatt")
+    ) {
+      return summary ?? "";
+    }
+
+    if (
+      section.includes("assignment") ||
+      section.includes("uppdrag") ||
+      section.includes("experience")
+    ) {
+      const matchingAssignment = sortedAssignments.find((assignment) => {
+        const client = assignment.clientName.toLowerCase();
+        const role = assignment.role.toLowerCase();
+        return section.includes(client) || section.includes(role);
+      });
+
+      if (matchingAssignment && "description" in matchingAssignment && typeof matchingAssignment.description === "string") {
+        return matchingAssignment.description;
+      }
+    }
+
+    return "";
+  };
+
+  const applySuggestionTextToDraft = (suggestion: RevisionSuggestions["suggestions"][number]) => {
+    const section = suggestion.section.trim().toLowerCase();
+    const suggestedText = suggestion.suggestedText.trim();
+
+    if (
+      section.includes("title") ||
+      section.includes("titel") ||
+      section.includes("consultant")
+    ) {
+      setDraftTitle(suggestedText);
+      return true;
+    }
+
+    if (
+      section.includes("presentation") ||
+      section.includes("profil") ||
+      section.includes("intro")
+    ) {
+      setDraftPresentation(suggestedText);
+      return true;
+    }
+
+    if (
+      section.includes("summary") ||
+      section.includes("sammanfatt")
+    ) {
+      setDraftSummary(suggestedText);
+      return true;
+    }
+
+    return false;
+  };
+
+  const approveInlineSuggestion = (suggestionId: string) => {
+    setSelectedSuggestionId(suggestionId);
+    setInlineRevisionSuggestions((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        suggestions: prev.suggestions.map((item) =>
+          item.id === suggestionId ? { ...item, status: "accepted" } : item
+        ),
+      };
+    });
+  };
+
+  const openSuggestionReview = (suggestionId: string) => {
+    setSelectedSuggestionId(suggestionId);
+    setReviewSuggestionId(suggestionId);
+    setIsSuggestionReviewOpen(true);
+  };
+
+  const applyAcceptedSuggestionsToDraft = () => {
+    const acceptedSuggestions = inlineRevisionSuggestions?.suggestions.filter((item) => item.status === "accepted") ?? [];
+
+    for (const suggestion of acceptedSuggestions) {
+      applySuggestionTextToDraft(suggestion);
+    }
+  };
+
+  const dismissInlineSuggestion = (suggestionId: string) => {
+    setSelectedSuggestionId(suggestionId);
+    setInlineRevisionSuggestions((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        suggestions: prev.suggestions.map((item) =>
+          item.id === suggestionId ? { ...item, status: "dismissed" } : item
+        ),
+      };
+    });
+  };
+
+  const scrollSuggestionIntoView = (suggestionId: string) => {
+    const suggestion = inlineRevisionSuggestions?.suggestions.find((item) => item.id === suggestionId);
+    if (!suggestion) return;
+
+    const section = suggestion.section.trim().toLowerCase();
+    let target: HTMLElement | null = null;
+
+    if (section.includes("skills") || section.includes("kompetens")) {
+      target = skillsSectionRef.current;
+    } else if (
+      section.includes("assignment") ||
+      section.includes("uppdrag") ||
+      section.includes("experience")
+    ) {
+      target = assignmentsSectionRef.current;
+    } else if (
+      section.includes("presentation") ||
+      section.includes("profil") ||
+      section.includes("summary") ||
+      section.includes("sammanfatt") ||
+      section.includes("title") ||
+      section.includes("titel")
+    ) {
+      target = presentationRef.current ?? coverSectionRef.current;
+    } else {
+      target = coverSectionRef.current;
+    }
+
+    setSelectedSuggestionId(suggestionId);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const handleSave = () => {
@@ -989,18 +1448,91 @@ function ResumeDetailPage() {
     });
   };
 
+  const openInlineRevisionPlanning = () => {
+    setInlineRevisionStage("planning");
+    if (
+      assistantEntityType !== "resume" ||
+      assistantEntityId !== id ||
+      assistantToolContext?.route !== inlineRevisionPlanningToolContext.route
+    ) {
+      openAssistant({
+        entityType: "resume",
+        entityId: id,
+        title: t("revision.inline.conversationTitle"),
+        systemPrompt: buildResumeRevisionPrompt(i18n.resolvedLanguage ?? i18n.language),
+        kickoffMessage: buildResumeRevisionKickoff(),
+        originalContent: [
+          resumeTitle,
+          consultantTitle ?? "",
+          presentation.join("\n\n"),
+          summary ?? "",
+        ].filter(Boolean).join("\n\n"),
+        toolRegistry: inlineRevisionPlanningToolRegistry,
+        toolContext: inlineRevisionPlanningToolContext,
+        onAccept: () => {},
+      });
+    }
+    hideDrawer();
+  };
+
+  const openInlineRevisionActions = async () => {
+    if (!inlineRevisionPlan) {
+      return;
+    }
+
+    if (assistantConversationId) {
+      await closeInlineConversation.mutateAsync({ conversationId: assistantConversationId });
+    }
+
+    const planActionLines = inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`);
+    setInlineRevisionStage("actions");
+    if (
+      assistantEntityType !== "resume" ||
+      assistantEntityId !== id ||
+      assistantToolContext?.route !== inlineRevisionActionToolContext.route
+    ) {
+      openAssistant({
+        entityType: "resume",
+        entityId: id,
+        title: t("revision.inline.actionsConversationTitle"),
+        systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
+        kickoffMessage: buildResumeRevisionActionKickoff(inlineRevisionPlan.summary, planActionLines),
+        originalContent: [
+          resumeTitle,
+          consultantTitle ?? "",
+          presentation.join("\n\n"),
+          summary ?? "",
+        ].filter(Boolean).join("\n\n"),
+        toolRegistry: inlineRevisionActionToolRegistry,
+        toolContext: inlineRevisionActionToolContext,
+        onAccept: () => {},
+      });
+    }
+    hideDrawer();
+  };
+
   const handleOpenInlineRevision = () => {
     setIsEditing(true);
     setIsInlineRevisionOpen(true);
+    setInlineRevisionPlan(null);
+    setInlineRevisionSuggestions(null);
+    setSelectedSuggestionId(null);
+    openInlineRevisionPlanning();
   };
 
   const handleCloseInlineRevision = () => {
     setIsInlineRevisionOpen(false);
+    hideDrawer();
   };
 
   const handleExitEditing = () => {
     setIsInlineRevisionOpen(false);
     setIsEditing(false);
+    setInlineRevisionStage("planning");
+    setInlineRevisionPlan(null);
+    setInlineRevisionSuggestions(null);
+    setSelectedSuggestionId(null);
+    closeAssistant();
   };
 
   const handleOpenHistoryPage = () => {
@@ -1143,9 +1675,20 @@ function ResumeDetailPage() {
               }}
             >
               <InlineRevisionChecklist
+                stage={inlineRevisionStage}
                 branchName={activeBranchName}
                 onOpenHistory={handleOpenHistoryPage}
                 onOpenCompare={handleOpenComparePage}
+                plan={inlineRevisionPlan}
+                suggestions={inlineRevisionSuggestions?.suggestions ?? []}
+                selectedSuggestionId={selectedSuggestionId}
+                onSelectSuggestion={scrollSuggestionIntoView}
+                onReviewSuggestion={openSuggestionReview}
+                onDismissSuggestion={dismissInlineSuggestion}
+                onMoveToActions={openInlineRevisionActions}
+                onMoveToFinalize={() => setInlineRevisionStage("finalize")}
+                onBackToActions={() => setInlineRevisionStage("actions")}
+                onApplyAcceptedSuggestions={applyAcceptedSuggestionsToDraft}
               />
             </Box>
           )}
@@ -1174,11 +1717,11 @@ function ResumeDetailPage() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                   <Chip size="small" color="primary" label={t("revision.inline.documentBadge")} />
                   <Typography variant="subtitle2">
-                    {t("revision.inline.documentTitle")}
+                    {t(`revision.inline.documentTitle.${inlineRevisionStage}`)}
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                  {t("revision.inline.documentDescription")}
+                  {t(`revision.inline.documentDescription.${inlineRevisionStage}`)}
                 </Typography>
               </Paper>
             )}
@@ -1195,6 +1738,7 @@ function ResumeDetailPage() {
               }}
             >
             {/* Page 1 — Cover */}
+            <Box ref={coverSectionRef} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
             <DocumentPage
               title={resumeTitle}
               language={language}
@@ -1218,9 +1762,11 @@ function ResumeDetailPage() {
                 onDraftSummaryChange={setDraftSummary}
               />
             </DocumentPage>
+            </Box>
 
             {/* Page 2 — Skills */}
             {showSkillsPage && skillsPage !== null && (
+              <Box ref={skillsSectionRef} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
               <DocumentPage
                 title={resumeTitle}
                 language={language}
@@ -1243,6 +1789,7 @@ function ResumeDetailPage() {
                   />
                 )}
               </DocumentPage>
+              </Box>
             )}
 
             {/* AI improvement FAB — sits to the right of the document at presentation height, only while editing */}
@@ -1502,6 +2049,22 @@ function ResumeDetailPage() {
               <InlineRevisionChatPanel
                 branchName={activeBranchName}
                 onClose={handleCloseInlineRevision}
+                toolCount={
+                  inlineRevisionStage === "actions"
+                    ? inlineRevisionActionToolRegistry.tools.length
+                    : inlineRevisionPlanningToolRegistry.tools.length
+                }
+                toolRegistry={
+                  inlineRevisionStage === "actions"
+                    ? inlineRevisionActionToolRegistry
+                    : inlineRevisionPlanningToolRegistry
+                }
+                toolContext={
+                  inlineRevisionStage === "actions"
+                    ? inlineRevisionActionToolContext
+                    : inlineRevisionPlanningToolContext
+                }
+                guardrail={inlineRevisionGuardrail}
               />
             </Box>
           )}
@@ -1563,6 +2126,37 @@ function ResumeDetailPage() {
           )}
         </List>
       </Drawer>
+      {reviewSuggestionId && (
+        <DiffReviewDialog
+          open={isSuggestionReviewOpen}
+          original={
+            getSuggestionOriginalText(
+              inlineRevisionSuggestions?.suggestions.find((item) => item.id === reviewSuggestionId)!,
+            )
+          }
+          suggested={
+            inlineRevisionSuggestions?.suggestions.find((item) => item.id === reviewSuggestionId)?.suggestedText ?? ""
+          }
+          onApply={() => {
+            approveInlineSuggestion(reviewSuggestionId);
+            setIsSuggestionReviewOpen(false);
+            setReviewSuggestionId(null);
+          }}
+          onKeepEditing={() => {
+            setIsSuggestionReviewOpen(false);
+            setReviewSuggestionId(null);
+          }}
+          onDiscard={() => {
+            dismissInlineSuggestion(reviewSuggestionId);
+            setIsSuggestionReviewOpen(false);
+            setReviewSuggestionId(null);
+          }}
+          title={t("revision.inline.reviewDialogTitle")}
+          applyLabel={t("revision.inline.approveSuggestion")}
+          keepEditingLabel={t("revision.inline.reviewLater")}
+          discardLabel={t("revision.inline.dismissSuggestion")}
+        />
+      )}
     </Box>
   )
 }

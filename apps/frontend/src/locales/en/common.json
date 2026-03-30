@@ -395,6 +395,15 @@
     "statusClosed": "Closed",
     "conversationStarted": "Started {{date}}",
     "suggestion": "Suggested text",
+    "analysisInProgress": "AI is analysing the current content...",
+    "toolsContext": "{{count}} tools available for {{entityType}} in this chat session.",
+    "toolStatus": {
+      "inspect_resume": "Inspecting resume",
+      "inspect_revision_plan": "Reading revision plan",
+      "inspect_resume_section": "Reading exact section text",
+      "set_revision_plan": "Resume inspected, plan ready for review",
+      "set_revision_suggestions": "Corrections proposed, ready for review"
+    },
     "diff": {
       "title": "Review suggested changes",
       "apply": "Apply",
@@ -440,9 +449,18 @@
       "branchStatusDescription": "This mode is already scoped to the current resume branch so planned work stays isolated.",
       "diffStatusTitle": "Diff and history available",
       "diffStatusDescription": "Use the links below to inspect earlier saved versions while planning the revision.",
+      "planSummaryTitle": "Planned work",
+      "suggestionsTitle": "Suggested revisions",
+      "suggestionCount": "{{count}} suggestions",
+      "reviewSuggestion": "Review",
+      "approveSuggestion": "Approve suggestion",
+      "reviewLater": "Review later",
+      "reviewDialogTitle": "Review suggested change",
+      "dismissSuggestion": "Dismiss",
       "chatTitle": "AI revision chat",
       "chatDescription": "Discuss the full resume here while staying inside the editor.",
       "chatContext": "Working in branch: {{branchName}}",
+      "toolsReady": "{{count}} tools ready for this chat.",
       "conversationTitle": "Resume revision",
       "initialPrompt": "What would you like to change in this resume?",
       "chatHint": "Start with the outcome you want. AI will later use that direction to build a checklist and guide the work.",
@@ -458,11 +476,44 @@
       "branchName": "Branch: {{branchName}}",
       "modeChip": "AI revision",
       "documentBadge": "Resume canvas",
-      "documentTitle": "Review the current resume while planning the revision",
-      "documentDescription": "The document stays visible and editable here, but the checklist is still waiting for the AI discovery step to define the actual work.",
+      "stage": {
+        "planning": "Planning",
+        "actions": "Actions",
+        "finalize": "Finalize"
+      },
+      "documentTitle": {
+        "planning": "Review the current resume while planning the revision",
+        "actions": "Review the resume while AI proposes actions",
+        "finalize": "Review the resume before finalizing the action step"
+      },
+      "documentDescription": {
+        "planning": "The document stays visible and editable here, but the checklist is still waiting for the AI discovery step to define the actual work.",
+        "actions": "Use the document as reference while reviewing the concrete actions that AI proposes from the agreed plan.",
+        "finalize": "This step summarizes which actions should move forward once the execution phase is implemented."
+      },
+      "toActionsButton": "Go to actions",
+      "toFinalizeButton": "Finish action step",
+      "backToActionsButton": "Back to actions",
+      "applyAcceptedSuggestionsButton": "Apply accepted changes to draft",
+      "finalizeTitle": "Action step summarized",
+      "finalizeDescription": "{{accepted}} accepted out of {{reviewed}} reviewed suggestions. There are {{total}} suggestions in the action step.",
+      "suggestionsDescription": "Review the concrete suggestions that AI generates from the agreed plan here.",
+      "suggestionsWaitingDescription": "Waiting for AI to generate concrete action suggestions from the plan.",
       "diffHint": "You will be able to open the diff from this panel.",
       "assistantLabel": "AI",
-      "userLabel": "You"
+      "userLabel": "You",
+      "actionsConversationTitle": "Resume actions",
+      "planStatus": {
+        "pending": "Pending",
+        "planned": "Planned",
+        "done": "Done",
+        "skipped": "Skipped"
+      },
+      "suggestionStatus": {
+        "pending": "Pending review",
+        "accepted": "Accepted",
+        "dismissed": "Dismissed"
+      }
     },
     "topBar": {
       "step": "Step {{current}} of {{total}}"

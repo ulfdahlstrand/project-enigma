@@ -20,6 +20,9 @@ export function useAIConversation(conversationId: string | null) {
     queryKey: aiConversationKey(conversationId ?? ""),
     queryFn: () => orpc.getAIConversation({ conversationId: conversationId! }),
     enabled: Boolean(conversationId),
+    refetchInterval: conversationId ? 1500 : false,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 }
 

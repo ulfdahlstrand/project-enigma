@@ -395,6 +395,15 @@
     "statusClosed": "Stängd",
     "conversationStarted": "Startad {{date}}",
     "suggestion": "Föreslagen text",
+    "analysisInProgress": "AI analyserar det aktuella innehållet...",
+    "toolsContext": "{{count}} tools tillgängliga för {{entityType}} i den här chattsessionen.",
+    "toolStatus": {
+      "inspect_resume": "Inspekterar CV:t",
+      "inspect_revision_plan": "Läser revisionsplanen",
+      "inspect_resume_section": "Läser exakt sektionstext",
+      "set_revision_plan": "CV inspekterat, plan redo för granskning",
+      "set_revision_suggestions": "Korrigeringar föreslagna, redo för granskning"
+    },
     "diff": {
       "title": "Granska föreslagna ändringar",
       "apply": "Tillämpa",
@@ -440,9 +449,18 @@
       "branchStatusDescription": "Det här läget arbetar redan mot den aktuella CV-grenen så planerade ändringar hålls isolerade.",
       "diffStatusTitle": "Diff och historik finns tillgängliga",
       "diffStatusDescription": "Använd länkarna nedan för att granska tidigare sparade versioner medan du planerar revisionen.",
+      "planSummaryTitle": "Planerat arbete",
+      "suggestionsTitle": "Föreslagna revideringar",
+      "suggestionCount": "{{count}} förslag",
+      "reviewSuggestion": "Granska",
+      "approveSuggestion": "Godkänn förslag",
+      "reviewLater": "Granska senare",
+      "reviewDialogTitle": "Granska ändringsförslag",
+      "dismissSuggestion": "Avfärda",
       "chatTitle": "AI-revisionschatt",
       "chatDescription": "Diskutera hela CV:t här utan att lämna editorn.",
       "chatContext": "Arbetar i gren: {{branchName}}",
+      "toolsReady": "{{count}} tools redo för den här chatten.",
       "conversationTitle": "CV-revision",
       "initialPrompt": "Vad vill du ändra i det här CV:t?",
       "chatHint": "Börja med resultatet du vill uppnå. AI kommer senare använda riktningen för att bygga en checklista och styra arbetet.",
@@ -458,11 +476,44 @@
       "branchName": "Gren: {{branchName}}",
       "modeChip": "AI-revision",
       "documentBadge": "CV-yta",
-      "documentTitle": "Granska nuvarande CV medan revisionen planeras",
-      "documentDescription": "Dokumentet är fortfarande synligt och redigerbart här, men checklistan väntar ännu på att AI:s discovery-steg ska definiera det faktiska arbetet.",
+      "stage": {
+        "planning": "Planering",
+        "actions": "Åtgärder",
+        "finalize": "Slutför"
+      },
+      "documentTitle": {
+        "planning": "Granska nuvarande CV medan revisionen planeras",
+        "actions": "Granska CV:t medan AI föreslår åtgärder",
+        "finalize": "Granska CV:t inför slutförandet"
+      },
+      "documentDescription": {
+        "planning": "Dokumentet är fortfarande synligt och redigerbart här, men checklistan väntar ännu på att AI:s discovery-steg ska definiera det faktiska arbetet.",
+        "actions": "Utgå från det här innehållet när du granskar AI:ns föreslagna åtgärder och markerar vad som ska gå vidare.",
+        "finalize": "Det här steget sammanfattar vilka åtgärder som ska tas vidare när själva genomförandet byggs ut."
+      },
+      "toActionsButton": "Gå till åtgärder",
+      "toFinalizeButton": "Slutför åtgärdssteg",
+      "backToActionsButton": "Tillbaka till åtgärder",
+      "applyAcceptedSuggestionsButton": "För över accepterade ändringar",
+      "finalizeTitle": "Åtgärdssteget är sammanfattat",
+      "finalizeDescription": "{{accepted}} accepterade av {{reviewed}} granskade förslag. Totalt finns {{total}} förslag i åtgärdssteget.",
+      "suggestionsDescription": "Här granskar du de konkreta förslag som AI tar fram utifrån den godkända planen.",
+      "suggestionsWaitingDescription": "Väntar på att AI ska skapa konkreta åtgärdsförslag från planen.",
       "diffHint": "Du kommer kunna öppna diffen från den här panelen.",
       "assistantLabel": "AI",
-      "userLabel": "Du"
+      "userLabel": "Du",
+      "actionsConversationTitle": "CV-åtgärder",
+      "planStatus": {
+        "pending": "Väntar",
+        "planned": "Planerad",
+        "done": "Klar",
+        "skipped": "Hoppad över"
+      },
+      "suggestionStatus": {
+        "pending": "Väntar på granskning",
+        "accepted": "Accepterad",
+        "dismissed": "Avfärdad"
+      }
     },
     "topBar": {
       "step": "Steg {{current}} av {{total}}"
