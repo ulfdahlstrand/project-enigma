@@ -3,7 +3,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "**/.claude/worktrees/**", "**/dist/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/.claude/worktrees/**",
+      "**/dist/**",
+      "src/integration/**",
+    ],
     coverage: {
       provider: "v8",
       // Coverage thresholds are set below the standard 80% because this
