@@ -53,6 +53,7 @@ import { orpc } from "../../../orpc-client";
 import { useCloseAIConversation } from "../../../hooks/ai-assistant";
 import {
   resumeBranchesKey,
+  resumeBranchHistoryGraphKey,
   useFinaliseResumeBranch,
   useForkResumeBranch,
   useResumeCommits,
@@ -1756,7 +1757,19 @@ function ResumeDetailPage() {
         action: "keep",
       },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) }),
+            queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
+            queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
+            queryClient.invalidateQueries({
+              queryKey: ["listBranchAssignmentsFull", inlineRevisionSourceBranchId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["listBranchAssignmentsFull", data.resultBranchId],
+            }),
+          ]);
+
           resetInlineRevisionState();
           void navigate({
             to: "/resumes/$id",
@@ -1781,7 +1794,19 @@ function ResumeDetailPage() {
         action: "merge",
       },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) }),
+            queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
+            queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
+            queryClient.invalidateQueries({
+              queryKey: ["listBranchAssignmentsFull", inlineRevisionSourceBranchId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["listBranchAssignmentsFull", data.resultBranchId],
+            }),
+          ]);
+
           resetInlineRevisionState();
           void navigate({
             to: "/resumes/$id",
