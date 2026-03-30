@@ -19,9 +19,12 @@ import TextField from "@mui/material/TextField";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
+import AdjustIcon from "@mui/icons-material/Adjust";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import Box from "@mui/material/Box";
@@ -95,7 +98,7 @@ const PAGE_MX = "80px";
 const PAGE_MY = "56px";
 const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
-const INLINE_REVISION_CHECKLIST_WIDTH = 220;
+const INLINE_REVISION_CHECKLIST_WIDTH = 300;
 const INLINE_REVISION_CHAT_WIDTH = 360;
 const INLINE_REVISION_BRANCH_PREFIX = "AI revision";
 const INLINE_REVISION_BRANCH_NAME_MAX_LENGTH = 72;
@@ -690,8 +693,6 @@ function InlineRevisionChecklist({
   stage,
   sourceBranchName,
   branchName,
-  onOpenHistory,
-  onOpenCompare,
   plan,
   suggestions,
   selectedSuggestionId,
@@ -708,8 +709,6 @@ function InlineRevisionChecklist({
   stage: InlineRevisionStage;
   sourceBranchName: string;
   branchName: string;
-  onOpenHistory: () => void;
-  onOpenCompare: () => void;
   plan: RevisionPlan | null;
   suggestions: RevisionSuggestions["suggestions"];
   selectedSuggestionId: string | null;
@@ -726,6 +725,14 @@ function InlineRevisionChecklist({
   const { t } = useTranslation("common");
   const reviewedSuggestions = suggestions.filter((suggestion) => suggestion.status !== "pending");
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted");
+  const planDoneCount = plan?.actions.filter((action) => action.status === "done").length ?? 0;
+  const suggestionHandledCount = suggestions.filter((suggestion) => suggestion.status !== "pending").length;
+  const progressCount = stage === "actions" ? suggestionHandledCount : planDoneCount;
+  const progressTotal =
+    stage === "actions"
+      ? suggestions.length
+      : plan?.actions.length ?? 0;
+  const progressWidth = progressTotal > 0 ? (progressCount / progressTotal) * 100 : 0;
   const getPlanStatusKey = (status: RevisionPlan["actions"][number]["status"]) => {
     if (status === "pending" && stage !== "planning") {
       return "planned";
@@ -743,10 +750,21 @@ function InlineRevisionChecklist({
 
     return "default" as const;
   };
+  const renderStatusIcon = (status: "pending" | "done" | "accepted" | "dismissed", isSelected = false) => {
+    if (status === "done" || status === "accepted") {
+      return <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />;
+    }
+    if (status === "dismissed") {
+      return <RadioButtonUncheckedIcon fontSize="small" sx={{ color: "text.disabled" }} />;
+    }
+    if (isSelected) {
+      return <AdjustIcon fontSize="small" sx={{ color: "primary.main" }} />;
+    }
+    return <RadioButtonUncheckedIcon fontSize="small" sx={{ color: "text.disabled" }} />;
+  };
 
   return (
     <Paper
-      variant="outlined"
       sx={{
         width: "100%",
         flexShrink: 0,
@@ -754,41 +772,43 @@ function InlineRevisionChecklist({
         boxShadow: 0,
       }}
     >
-      <Box sx={{ p: 2 }}>
-        <Typography variant="overline" color="text.secondary">
-          {t("revision.inline.branchBadge")}
+      <Box sx={{ p: 1.5 }}>
+        <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mb: 0.5 }}>
+          {stage === "actions"
+            ? `${reviewedSuggestions.length}/${suggestions.length} ${t("revision.inline.suggestionsTitle").toLowerCase()}`
+            : `${planDoneCount}/${plan?.actions.length ?? 0} ${t("revision.inline.checklistTitle").toLowerCase()}`
+          }
         </Typography>
-        <Typography variant="h6" sx={{ mt: 0.5 }}>
-          {t("revision.inline.checklistTitle")}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {t("revision.inline.checklistDescription")}
-        </Typography>
-        <Chip
-          size="small"
-          label={t("revision.inline.branchName", { branchName })}
-          sx={{ mt: 1.5 }}
-        />
-        <Chip
-          size="small"
-          color="primary"
-          variant={stage === "planning" ? "filled" : "outlined"}
-          label={t(`revision.inline.stage.${stage}`)}
-          sx={{ mt: 1.5, ml: 1 }}
-        />
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+        <Box sx={{ height: 4, bgcolor: "divider", borderRadius: 2, overflow: "hidden" }}>
+          <Box
+            sx={{
+              height: "100%",
+              width: `${progressWidth}%`,
+              bgcolor: stage === "actions" ? "primary.main" : "success.main",
+              borderRadius: 2,
+              transition: "width 0.2s ease",
+            }}
+          />
+        </Box>
+        <Box sx={{ mt: 1.25, display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+          <Typography variant="subtitle2">{t("revision.inline.checklistTitle")}</Typography>
+          <Chip
+            size="small"
+            color="primary"
+            variant={stage === "planning" ? "filled" : "outlined"}
+            label={t(`revision.inline.stage.${stage}`)}
+          />
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
           {stage === "planning"
-            ? t("revision.inline.branchPlanningContext", { sourceBranchName })
-            : t("revision.inline.branchActionContext", {
-                sourceBranchName,
-                branchName,
-              })}
+            ? sourceBranchName
+            : `${sourceBranchName} -> ${branchName}`}
         </Typography>
       </Box>
       <Divider />
       {stage === "finalize" ? (
         <>
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 1.5 }}>
             <Typography variant="subtitle2">{t("revision.inline.finalizeTitle")}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
               {t("revision.inline.finalizeDescription", {
@@ -801,9 +821,11 @@ function InlineRevisionChecklist({
           {plan ? (
             <>
               <Divider />
-              <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2">{t("revision.inline.planSummaryTitle")}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              <Box sx={{ p: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("revision.inline.planSummaryTitle")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   {plan.summary}
                 </Typography>
               </Box>
@@ -818,32 +840,53 @@ function InlineRevisionChecklist({
         </>
       ) : plan ? (
         <>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2">{t("revision.inline.planSummaryTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+          <Box sx={{ p: 1.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              {t("revision.inline.planSummaryTitle")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {plan.summary}
             </Typography>
           </Box>
           <Divider />
-          <List disablePadding>
-            {plan.actions.map((action) => (
-              <ListItem
+          <Box sx={{ display: "flex", flexDirection: "column", p: 0.5 }}>
+            {plan.actions.map((action, index) => (
+              <Box
                 key={action.id}
-                sx={{ alignItems: "flex-start", gap: 1 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 1,
+                  px: 1,
+                  py: 0.85,
+                  borderBottom: index < plan.actions.length - 1 ? "1px solid" : "none",
+                  borderColor: "divider",
+                }}
               >
-                <Chip
-                  size="small"
-                  color={getPlanStatusColor(action.status)}
-                  label={t(`revision.inline.planStatus.${getPlanStatusKey(action.status)}`)}
-                  sx={{ mt: 0.25 }}
-                />
-                <ListItemText
-                  primary={action.title}
-                  secondary={action.description}
-                />
-              </ListItem>
+                <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
+                  {renderStatusIcon(action.status === "done" ? "done" : "pending")}
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                    {action.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                    {action.description}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      mt: 0.4,
+                      color: getPlanStatusKey(action.status) === "done" ? "success.main" : "text.disabled",
+                    }}
+                  >
+                    {t(`revision.inline.planStatus.${getPlanStatusKey(action.status)}`)}
+                  </Typography>
+                </Box>
+              </Box>
             ))}
-          </List>
+          </Box>
           {stage === "planning" && (
             <>
               <Divider />
@@ -859,74 +902,105 @@ function InlineRevisionChecklist({
           {stage === "actions" && (
             <>
               <Divider />
-              <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2">
+              <Box sx={{ px: 1.5, pt: 1.25, pb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
                   {t("revision.inline.suggestionsTitle")}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                  {t("revision.inline.suggestionsDescription")}
                 </Typography>
               </Box>
               {suggestions.length > 0 ? (
-                <List disablePadding>
-                  {suggestions.map((suggestion) => (
-                    <ListItem
+                <Box sx={{ display: "flex", flexDirection: "column", p: 0.5 }}>
+                  {suggestions.map((suggestion, index) => (
+                    <Box
                       key={suggestion.id}
                       sx={{
                         display: "block",
-                        px: 1.5,
-                        py: 1,
-                        bgcolor: selectedSuggestionId === suggestion.id ? "action.selected" : "transparent",
+                        px: 1,
+                        py: 0.85,
+                        borderLeft: "2px solid",
+                        borderBottom: index < suggestions.length - 1 ? "1px solid" : "none",
+                        borderBottomColor: "divider",
+                        borderLeftColor:
+                          selectedSuggestionId === suggestion.id
+                            ? "primary.main"
+                            : suggestion.status === "accepted"
+                              ? "success.main"
+                              : "transparent",
+                        bgcolor:
+                          selectedSuggestionId === suggestion.id
+                            ? "action.selected"
+                            : "transparent",
+                        transition: "all 0.15s ease",
                       }}
                     >
-                      <Button
-                        fullWidth
-                        variant="text"
-                        onClick={() => onSelectSuggestion(suggestion.id)}
-                        sx={{
-                          justifyContent: "flex-start",
-                          alignItems: "flex-start",
-                          textAlign: "left",
-                          px: 1,
-                          py: 0.5,
-                          textTransform: "none",
-                        }}
-                      >
-                        <Box sx={{ width: "100%" }}>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                        <Button
+                          fullWidth
+                          variant="text"
+                          onClick={() => onSelectSuggestion(suggestion.id)}
+                          sx={{
+                            justifyContent: "flex-start",
+                            alignItems: "center",
+                            textAlign: "left",
+                            minWidth: 0,
+                            px: 0,
+                            py: 0.35,
+                            textTransform: "none",
+                          }}
+                        >
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, width: "100%" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                              {renderStatusIcon(
+                                suggestion.status === "accepted"
+                                  ? "accepted"
+                                  : suggestion.status === "dismissed"
+                                    ? "dismissed"
+                                    : "pending",
+                                selectedSuggestionId === suggestion.id,
+                              )}
+                            </Box>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                minWidth: 0,
+                                fontWeight: selectedSuggestionId === suggestion.id ? 700 : 600,
+                                color: selectedSuggestionId === suggestion.id ? "primary.main" : "text.primary",
+                                lineHeight: 1.35,
+                              }}
+                            >
                               {suggestion.title}
                             </Typography>
-                            <Chip size="small" label={suggestion.section} />
-                            <Chip size="small" variant="outlined" label={t(`revision.inline.suggestionStatus.${suggestion.status}`)} />
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75, whiteSpace: "normal" }}>
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={selectedSuggestionId === suggestion.id ? "contained" : "text"}
+                          onClick={() => onReviewSuggestion(suggestion.id)}
+                          sx={{ flexShrink: 0, minWidth: 0 }}
+                        >
+                          {t("revision.inline.reviewSuggestion")}
+                        </Button>
+                      </Box>
+                      {selectedSuggestionId === suggestion.id ? (
+                        <Box sx={{ mt: 0.75, pl: 4 }}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", whiteSpace: "normal" }}
+                          >
+                            {suggestion.section}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mt: 0.5, whiteSpace: "normal" }}
+                          >
                             {suggestion.description}
                           </Typography>
                         </Box>
-                      </Button>
-                      <Box sx={{ mt: 1, px: 1 }}>
-                        <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() => onReviewSuggestion(suggestion.id)}
-                          >
-                            {t("revision.inline.reviewSuggestion")}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            disabled={suggestion.status === "dismissed"}
-                            onClick={() => onDismissSuggestion(suggestion.id)}
-                          >
-                            {t("revision.inline.dismissSuggestion")}
-                          </Button>
-                        </Box>
-                      </Box>
-                    </ListItem>
+                      ) : null}
+                    </Box>
                   ))}
-                </List>
+                </Box>
               ) : (
                 <Box sx={{ px: 2, pb: 2 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -978,15 +1052,6 @@ function InlineRevisionChecklist({
           </ListItem>
         </List>
       )}
-      <Divider />
-      <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
-        <Button variant="outlined" size="small" startIcon={<HistoryIcon />} onClick={onOpenHistory}>
-          {t("revision.inline.historyButton")}
-        </Button>
-        <Button variant="outlined" size="small" onClick={onOpenCompare}>
-          {t("revision.inline.compareButton")}
-        </Button>
-      </Box>
     </Paper>
   );
 }
@@ -1954,7 +2019,6 @@ function ResumeDetailPage() {
                 borderBottom: { xs: "1px solid", lg: "none" },
                 borderColor: "divider",
                 bgcolor: "background.paper",
-                p: 1.5,
                 maxHeight: { xs: 320, lg: "none" },
               }}
             >
@@ -1962,8 +2026,6 @@ function ResumeDetailPage() {
                 stage={inlineRevisionStage}
                 sourceBranchName={inlineRevisionSourceBranchName ?? activeBranchName}
                 branchName={activeBranchName}
-                onOpenHistory={handleOpenHistoryPage}
-                onOpenCompare={handleOpenComparePage}
                 plan={inlineRevisionPlan}
                 suggestions={inlineRevisionSuggestions?.suggestions ?? []}
                 selectedSuggestionId={selectedSuggestionId}
