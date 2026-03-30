@@ -679,7 +679,6 @@ export function AIAssistantChat({
       !latestUserMessage ||
       hasPendingToolCall ||
       activeToolExecutionCount > 0 ||
-      isToolResultMessage(latestUserMessage.content) ||
       isInternalGuardrailMessage(latestUserMessage.content) ||
       sendMessage.isPending
     ) {

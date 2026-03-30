@@ -39,6 +39,7 @@ const revisionSuggestionSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   section: z.string().min(1),
+  assignmentId: z.string().optional(),
   suggestedText: z.string().min(1),
   status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
 });
@@ -52,6 +53,7 @@ export type RevisionSuggestions = z.infer<typeof revisionSuggestionsSchema>;
 
 const legacyRevisionSuggestionSchema = z.object({
   location: z.string().min(1),
+  assignmentId: z.string().optional(),
   text: z.string().min(1).optional(),
   suggestion: z.string().min(1),
   title: z.string().min(1).optional(),
@@ -83,6 +85,7 @@ const revisionSuggestionsInputSchema = z
             ? `Replace "${sourceText}" with the proposed correction.`
             : "Review and apply the proposed correction."),
         section: suggestion.location,
+        assignmentId: suggestion.assignmentId,
         suggestedText: proposedText,
         status: "pending" as const,
       };

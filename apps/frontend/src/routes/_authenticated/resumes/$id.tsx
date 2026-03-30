@@ -1361,6 +1361,14 @@ function ResumeDetailPage() {
       }
     },
   });
+  const updateBranchAssignment = useMutation({
+    mutationFn: (input: Parameters<typeof orpc.updateBranchAssignment>[0]) => orpc.updateBranchAssignment(input),
+    onSuccess: async () => {
+      if (activeBranchId) {
+        await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
+      }
+    },
+  });
   const closeInlineConversation = useCloseAIConversation("resume", id);
   const forkResumeBranch = useForkResumeBranch();
   const finaliseInlineRevision = useFinaliseResumeBranch();
@@ -1375,6 +1383,7 @@ function ResumeDetailPage() {
   const presentationRef = useRef<HTMLDivElement>(null);
   const skillsSectionRef = useRef<HTMLDivElement>(null);
   const assignmentsSectionRef = useRef<HTMLDivElement>(null);
+  const assignmentItemRefs = useRef<Record<string, HTMLElement | null>>({});
   const [fabTop, setFabTop] = useState(0);
   const [assignmentsFabTop, setAssignmentsFabTop] = useState(0);
 
@@ -1587,6 +1596,9 @@ function ResumeDetailPage() {
             "Use the approved plan that was already provided in the kickoff context.",
             "The approved work items already define the allowed scope for this action step.",
             "Do not create extra work items or inspect assignments outside the approved plan.",
+            "After inspect_assignment, your next response must be a terminal tool call for that same work item.",
+            "Use set_assignment_suggestions if changes are needed or mark_revision_work_item_no_changes_needed if none are needed.",
+            "Do not respond with plain text between inspect_assignment and that terminal tool call.",
             "Use inspect_assignment or inspect_resume_section to read exact source text for each work item.",
             "For each work item, either create concrete suggestions or mark it as no changes needed.",
             "Do not claim that changes are applied or complete until every work item has been handled.",
@@ -1699,6 +1711,24 @@ function ResumeDetailPage() {
   const getSuggestionOriginalText = (suggestion: RevisionSuggestions["suggestions"][number]) => {
     const section = suggestion.section.trim().toLowerCase();
 
+    if (suggestion.assignmentId) {
+      const matchingAssignment = sortedAssignments.find((assignment) => {
+        const assignmentIdentityId =
+          "assignmentId" in assignment && typeof assignment.assignmentId === "string"
+            ? assignment.assignmentId
+            : assignment.id;
+        return assignmentIdentityId === suggestion.assignmentId;
+      });
+
+      if (
+        matchingAssignment &&
+        "description" in matchingAssignment &&
+        typeof matchingAssignment.description === "string"
+      ) {
+        return matchingAssignment.description;
+      }
+    }
+
     if (
       section.includes("title") ||
       section.includes("titel") ||
@@ -1775,6 +1805,52 @@ function ResumeDetailPage() {
     return buildDraftPatchFromValues(nextTitle, nextPresentation, nextSummary);
   };
 
+  const applySuggestionToAssignment = async (suggestion: RevisionSuggestions["suggestions"][number]) => {
+    if (!suggestion.assignmentId || !activeBranchId) {
+      return false;
+    }
+
+    const targetAssignment = sortedAssignments.find((assignment) => {
+      const assignmentIdentityId =
+        "assignmentId" in assignment && typeof assignment.assignmentId === "string"
+          ? assignment.assignmentId
+          : assignment.id;
+      return assignmentIdentityId === suggestion.assignmentId;
+    });
+
+    if (!targetAssignment) {
+      return false;
+    }
+
+    const branchAssignmentId = targetAssignment.id;
+    const nextDescription = suggestion.suggestedText.trim();
+    const assignmentsQueryKey = ["listBranchAssignmentsFull", activeBranchId] as const;
+    const previousAssignments = queryClient.getQueryData<typeof liveAssignments>(assignmentsQueryKey);
+
+    queryClient.setQueryData<typeof liveAssignments>(assignmentsQueryKey, (prev) =>
+      (prev ?? []).map((assignment) =>
+        assignment.id === branchAssignmentId
+          ? { ...assignment, description: nextDescription }
+          : assignment
+      ),
+    );
+
+    try {
+      await updateBranchAssignment.mutateAsync({
+        id: branchAssignmentId,
+        description: nextDescription,
+      });
+      await saveVersion.mutateAsync({
+        branchId: activeBranchId,
+        message: buildInlineRevisionSuggestionCommitMessage(suggestion),
+      });
+      return true;
+    } catch (error) {
+      queryClient.setQueryData(assignmentsQueryKey, previousAssignments);
+      throw error;
+    }
+  };
+
   const approveInlineSuggestion = async (suggestionId: string) => {
     const suggestion = inlineRevisionSuggestions?.suggestions.find((item) => item.id === suggestionId);
     if (suggestion) {
@@ -1787,6 +1863,13 @@ function ResumeDetailPage() {
             message: buildInlineRevisionSuggestionCommitMessage(suggestion),
             ...nextPatch,
           });
+        } finally {
+          setApplyingSuggestionId(null);
+        }
+      } else if (suggestion.assignmentId && activeBranchId) {
+        setApplyingSuggestionId(suggestionId);
+        try {
+          await applySuggestionToAssignment(suggestion);
         } finally {
           setApplyingSuggestionId(null);
         }
@@ -1830,6 +1913,15 @@ function ResumeDetailPage() {
 
     const section = suggestion.section.trim().toLowerCase();
     let target: HTMLElement | null = null;
+
+    if (suggestion.assignmentId) {
+      const assignmentTarget = assignmentItemRefs.current[suggestion.assignmentId];
+      if (assignmentTarget) {
+        setSelectedSuggestionId(suggestionId);
+        assignmentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
 
     if (section.includes("skills") || section.includes("kompetens")) {
       target = skillsSectionRef.current;
@@ -2435,6 +2527,13 @@ function ResumeDetailPage() {
                         return (
                           <Box
                             key={a.id}
+                            ref={(el) => {
+                              const assignmentIdentityId =
+                                "assignmentId" in a && typeof a.assignmentId === "string"
+                                  ? a.assignmentId
+                                  : a.id;
+                              assignmentItemRefs.current[assignmentIdentityId] = el as HTMLElement | null;
+                            }}
                           >
                             {/* Role heading */}
                             <Typography
@@ -2515,6 +2614,13 @@ function ResumeDetailPage() {
                       {sortedAssignments.map((a) => (
                         <TableRow
                           key={a.id}
+                          ref={(el) => {
+                            const assignmentIdentityId =
+                              "assignmentId" in a && typeof a.assignmentId === "string"
+                                ? a.assignmentId
+                                : a.id;
+                            assignmentItemRefs.current[assignmentIdentityId] = el as HTMLElement | null;
+                          }}
                           hover
                         >
                           <TableCell>{a.clientName}</TableCell>
