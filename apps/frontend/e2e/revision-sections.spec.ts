@@ -165,6 +165,7 @@ test("can fix spelling across the whole CV and merge the result", async ({ page 
   await page.getByRole("button", { name: "Finish action step" }).click();
   await expect(page.getByText("Action step summarized")).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Merge into base branch" }).click();
+  await expect(page).not.toHaveURL(/branchId=/u);
 
   const state = await getRevisionState(page, fixture.resumeId);
   expect(state.mainConsultantTitle).toBe("Tech Lead / Senior Engineer");
