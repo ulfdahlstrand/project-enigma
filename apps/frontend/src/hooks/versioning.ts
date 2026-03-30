@@ -114,3 +114,24 @@ export function useForkResumeBranch() {
     },
   });
 }
+
+export function useFinaliseResumeBranch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceBranchId,
+      revisionBranchId,
+      action,
+    }: {
+      sourceBranchId: string;
+      revisionBranchId: string;
+      action: "merge" | "keep";
+    }) => orpc.finaliseResumeBranch({ sourceBranchId, revisionBranchId, action }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.sourceBranchId) }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.revisionBranchId) }),
+      ]);
+    },
+  });
+}

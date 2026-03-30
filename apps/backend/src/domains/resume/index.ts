@@ -7,6 +7,7 @@ export { createResumeSkillHandler } from "./skill/create.js";
 export { updateResumeSkillHandler } from "./skill/update.js";
 export { deleteResumeSkillHandler } from "./skill/delete.js";
 export { forkResumeBranchHandler } from "./branch/fork.js";
+export { finaliseResumeBranchHandler } from "./branch/finalise.js";
 export { listResumeBranchesHandler } from "./branch/list.js";
 export { getResumeBranchHistoryGraphHandler } from "./branch/history-graph.js";
 export { saveResumeVersionHandler } from "./commit/save.js";

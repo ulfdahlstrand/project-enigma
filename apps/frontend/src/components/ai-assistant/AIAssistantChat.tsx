@@ -55,6 +55,7 @@ const MAX_TOOL_STRING_LENGTH = 500;
 const MAX_TOOL_ARRAY_ITEMS = 12;
 const MAX_TOOL_OBJECT_KEYS = 20;
 const INTERNAL_GUARDRAIL_PREFIX = "[[internal_guardrail]]";
+const INTERNAL_AUTOSTART_PREFIX = "[[internal_autostart]]";
 
 function extractJsonBlocks(text: string): unknown[] {
   const matches = [...text.matchAll(/```json\s*([\s\S]*?)\s*```/g)];
@@ -108,6 +109,10 @@ function isToolResultMessage(text: string): boolean {
 
 function isInternalGuardrailMessage(text: string): boolean {
   return text.startsWith(INTERNAL_GUARDRAIL_PREFIX);
+}
+
+function isInternalAutoStartMessage(text: string): boolean {
+  return text.startsWith(INTERNAL_AUTOSTART_PREFIX);
 }
 
 function stripToolBlocks(text: string): string {
@@ -391,6 +396,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
 interface AIAssistantChatProps {
   toolRegistry?: AIToolRegistry | null;
   toolContext?: AIToolContext | null;
+  autoStartMessage?: string | null | undefined;
   guardrail?: {
     isSatisfied: boolean;
     reminderMessage: string;
@@ -440,6 +446,7 @@ function ToolingNotice({
 export function AIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
+  autoStartMessage = null,
   guardrail = null,
 }: AIAssistantChatProps = {}) {
   const { t } = useTranslation("common");
@@ -468,6 +475,7 @@ export function AIAssistantChat({
   const createInitiated = useRef(false);
   const processedToolCallsRef = useRef<Set<string>>(new Set());
   const processedGuardrailMessagesRef = useRef<Set<string>>(new Set());
+  const processedAutoStartConversationsRef = useRef<Set<string>>(new Set());
 
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
@@ -476,7 +484,10 @@ export function AIAssistantChat({
 
   const messages = conversation?.messages ?? [];
   const visibleMessages = messages.filter(
-    (message) => !isToolResultMessage(message.content) && !isInternalGuardrailMessage(message.content),
+    (message) =>
+      !isToolResultMessage(message.content) &&
+      !isInternalGuardrailMessage(message.content) &&
+      !isInternalAutoStartMessage(message.content),
   );
   const latestRawAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
@@ -577,6 +588,34 @@ export function AIAssistantChat({
     sendMessage,
     toolContext,
     toolRegistry,
+  ]);
+
+  useEffect(() => {
+    if (
+      !autoStartMessage ||
+      !activeConversationId ||
+      sendMessage.isPending ||
+      processedAutoStartConversationsRef.current.has(activeConversationId)
+    ) {
+      return;
+    }
+
+    const hasUserMessages = messages.some((message) => message.role === "user");
+    if (hasUserMessages) {
+      return;
+    }
+
+    processedAutoStartConversationsRef.current.add(activeConversationId);
+
+    void sendMessage.mutateAsync({
+      conversationId: activeConversationId,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${autoStartMessage}`,
+    });
+  }, [
+    activeConversationId,
+    autoStartMessage,
+    messages,
+    sendMessage,
   ]);
 
   useEffect(() => {

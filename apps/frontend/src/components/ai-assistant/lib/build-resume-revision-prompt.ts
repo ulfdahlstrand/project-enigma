@@ -65,12 +65,9 @@ export function buildResumeRevisionActionPrompt(locale: string | undefined): str
     "Do not ask for permission to take the next obvious step.",
     "If the next action is obvious, do it immediately with a tool call.",
     "When you send a conversational status update, keep it to one short sentence.",
-    "First inspect the agreed plan with a tool call.",
-    "Then inspect the exact source text for the section you want to revise before proposing textual changes.",
-    "When you need the agreed plan, emit a JSON tool call exactly like this:",
-    "```json",
-    '{"type":"tool_call","toolName":"inspect_revision_plan","input":{}}',
-    "```",
+    "The approved revision plan is already included in the kickoff context for this step.",
+    "Do not ask the user which section to start with if the approved plan already makes the next section obvious.",
+    "Go directly from the approved plan to inspecting the exact source text for the section you want to revise.",
     "When you need a compact overview of the current resume content, emit a JSON tool call exactly like this:",
     "```json",
     '{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}',
@@ -105,5 +102,18 @@ export function buildResumeRevisionActionKickoff(planSummary: string, actions: s
     ...actions.map((action, index) => `${index + 1}. ${action}`),
     "Use this approved plan as the basis for the next step.",
     "Now produce concrete proposed changes for the user to review before anything is finalized.",
+  ].join("\n");
+}
+
+export function buildResumeRevisionActionAutoStart(planSummary: string, actions: string[]): string {
+  return [
+    "The approved revision plan is already known.",
+    `Plan summary: ${planSummary}`,
+    "Approved actions:",
+    ...actions.map((action, index) => `${index + 1}. ${action}`),
+    "Start the action step now without asking the user any follow-up question.",
+    "Use a tool call immediately.",
+    "If the next section is obvious from the approved plan, inspect its exact source text with inspect_resume_section.",
+    "Then create concrete review suggestions with set_revision_suggestions.",
   ].join("\n");
 }

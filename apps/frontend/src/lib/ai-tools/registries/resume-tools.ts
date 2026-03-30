@@ -180,7 +180,6 @@ export function createResumePlanningToolRegistry({
 
 interface CreateResumeActionToolRegistryOptions {
   getResumeSnapshot: () => ResumeInspectionSnapshot;
-  getRevisionPlan: () => RevisionPlan | null;
   setRevisionSuggestions: (suggestions: RevisionSuggestions) => void;
 }
 
@@ -191,23 +190,9 @@ const inspectResumeSectionInputSchema = z.object({
 
 export function createResumeActionToolRegistry({
   getResumeSnapshot,
-  getRevisionPlan,
   setRevisionSuggestions,
 }: CreateResumeActionToolRegistryOptions): AIToolRegistry {
   return createAIToolRegistry([
-    {
-      name: "inspect_revision_plan",
-      description: "Return the current agreed revision plan for the active resume.",
-      inputSchema: z.object({}),
-      execute: () => {
-        const plan = getRevisionPlan();
-        if (!plan) {
-          throw new Error("No revision plan is available yet.");
-        }
-
-        return plan;
-      },
-    },
     {
       name: "inspect_resume",
       description: "Return structured resume content for the active resume view.",
@@ -297,10 +282,6 @@ export function createResumeActionToolRegistry({
       description: "Replace the current inline revision suggestions for the active resume.",
       inputSchema: revisionSuggestionsInputSchema,
       execute: (input) => {
-        if (!getRevisionPlan()) {
-          throw new Error("A revision plan must be set before revision suggestions can be added.");
-        }
-
         setRevisionSuggestions(input);
         return input;
       },

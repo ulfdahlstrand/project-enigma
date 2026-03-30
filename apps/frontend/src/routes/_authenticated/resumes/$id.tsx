@@ -51,7 +51,12 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { useCloseAIConversation } from "../../../hooks/ai-assistant";
-import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../../hooks/versioning";
+import {
+  resumeBranchesKey,
+  useFinaliseResumeBranch,
+  useForkResumeBranch,
+  useResumeCommits,
+} from "../../../hooks/versioning";
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
@@ -61,8 +66,9 @@ import { VariantSwitcher } from "../../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
 import { AIAssistantChat } from "../../../components/ai-assistant/AIAssistantChat";
 import { DiffReviewDialog } from "../../../components/ai-assistant/DiffReviewDialog";
+import { FinalReview } from "../../../components/revision/FinalReview";
 import {
-  buildResumeRevisionActionKickoff,
+  buildResumeRevisionActionAutoStart,
   buildResumeRevisionActionPrompt,
   buildResumeRevisionKickoff,
   buildResumeRevisionPrompt,
@@ -90,8 +96,37 @@ const HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
 const INLINE_REVISION_CHECKLIST_WIDTH = 220;
 const INLINE_REVISION_CHAT_WIDTH = 360;
+const INLINE_REVISION_BRANCH_PREFIX = "AI revision";
+const INLINE_REVISION_BRANCH_NAME_MAX_LENGTH = 72;
 
 type InlineRevisionStage = "planning" | "actions" | "finalize";
+
+function normalizeInlineRevisionBranchLabel(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/[.:;,[\]{}()]+/g, "")
+    .trim();
+}
+
+function buildInlineRevisionBranchName(plan: RevisionPlan) {
+  const planLead =
+    normalizeInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
+    normalizeInlineRevisionBranchLabel(plan.summary);
+
+  if (!planLead) {
+    const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+    return `${INLINE_REVISION_BRANCH_PREFIX} ${timestamp}`;
+  }
+
+  const branchName = `${INLINE_REVISION_BRANCH_PREFIX}: ${planLead}`;
+  return branchName.length > INLINE_REVISION_BRANCH_NAME_MAX_LENGTH
+    ? `${branchName.slice(0, INLINE_REVISION_BRANCH_NAME_MAX_LENGTH - 1).trimEnd()}…`
+    : branchName;
+}
+
+function buildInlineRevisionSuggestionCommitMessage(suggestion: RevisionSuggestions["suggestions"][number]) {
+  return `Apply AI suggestion: ${suggestion.title}`;
+}
 
 // How many assignments to show as bullets on the cover page
 const COVER_HIGHLIGHT_COUNT = 5;
@@ -652,6 +687,7 @@ function EditSplitButton({
 
 function InlineRevisionChecklist({
   stage,
+  sourceBranchName,
   branchName,
   onOpenHistory,
   onOpenCompare,
@@ -662,11 +698,14 @@ function InlineRevisionChecklist({
   onReviewSuggestion,
   onDismissSuggestion,
   onMoveToActions,
+  isMovingToActions,
   onMoveToFinalize,
+  isReadyToFinalize,
+  isPreparingFinalize,
   onBackToActions,
-  onApplyAcceptedSuggestions,
 }: {
   stage: InlineRevisionStage;
+  sourceBranchName: string;
   branchName: string;
   onOpenHistory: () => void;
   onOpenCompare: () => void;
@@ -677,9 +716,11 @@ function InlineRevisionChecklist({
   onReviewSuggestion: (suggestionId: string) => void;
   onDismissSuggestion: (suggestionId: string) => void;
   onMoveToActions: () => void;
+  isMovingToActions: boolean;
   onMoveToFinalize: () => void;
+  isReadyToFinalize: boolean;
+  isPreparingFinalize: boolean;
   onBackToActions: () => void;
-  onApplyAcceptedSuggestions: () => void;
 }) {
   const { t } = useTranslation("common");
   const reviewedSuggestions = suggestions.filter((suggestion) => suggestion.status !== "pending");
@@ -734,6 +775,14 @@ function InlineRevisionChecklist({
           label={t(`revision.inline.stage.${stage}`)}
           sx={{ mt: 1.5, ml: 1 }}
         />
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+          {stage === "planning"
+            ? t("revision.inline.branchPlanningContext", { sourceBranchName })
+            : t("revision.inline.branchActionContext", {
+                sourceBranchName,
+                branchName,
+              })}
+        </Typography>
       </Box>
       <Divider />
       {stage === "finalize" ? (
@@ -761,14 +810,6 @@ function InlineRevisionChecklist({
           ) : null}
           <Divider />
           <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
-            <Button
-              variant="contained"
-              size="small"
-              disabled={acceptedSuggestions.length === 0}
-              onClick={onApplyAcceptedSuggestions}
-            >
-              {t("revision.inline.applyAcceptedSuggestionsButton")}
-            </Button>
             <Button variant="contained" size="small" onClick={onBackToActions}>
               {t("revision.inline.backToActionsButton")}
             </Button>
@@ -806,8 +847,10 @@ function InlineRevisionChecklist({
             <>
               <Divider />
               <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
-                <Button variant="contained" size="small" onClick={onMoveToActions}>
-                  {t("revision.inline.toActionsButton")}
+                <Button variant="contained" size="small" disabled={isMovingToActions} onClick={onMoveToActions}>
+                  {isMovingToActions
+                    ? t("revision.inline.preparingActionsButton")
+                    : t("revision.inline.toActionsButton")}
                 </Button>
               </Box>
             </>
@@ -895,10 +938,12 @@ function InlineRevisionChecklist({
                 <Button
                   variant="contained"
                   size="small"
-                  disabled={suggestions.length === 0}
+                  disabled={!isReadyToFinalize || isPreparingFinalize}
                   onClick={onMoveToFinalize}
                 >
-                  {t("revision.inline.toFinalizeButton")}
+                  {isPreparingFinalize
+                    ? t("revision.inline.preparingFinalizeButton")
+                    : t("revision.inline.toFinalizeButton")}
                 </Button>
               </Box>
             </>
@@ -946,18 +991,24 @@ function InlineRevisionChecklist({
 }
 
 function InlineRevisionChatPanel({
+  stage,
+  sourceBranchName,
   branchName,
   onClose,
   toolCount,
   toolRegistry,
   toolContext,
+  autoStartMessage,
   guardrail,
 }: {
+  stage: InlineRevisionStage;
+  sourceBranchName: string;
   branchName: string;
   onClose: () => void;
   toolCount: number;
   toolRegistry: AIToolRegistry;
   toolContext: AIToolContext;
+  autoStartMessage?: string | null;
   guardrail: {
     isSatisfied: boolean;
     reminderMessage: string;
@@ -981,7 +1032,12 @@ function InlineRevisionChatPanel({
             {t("revision.inline.chatDescription")}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            {t("revision.inline.chatContext", { branchName })}
+            {stage === "planning"
+              ? t("revision.inline.chatPlanningContext", { sourceBranchName })
+              : t("revision.inline.chatActionContext", {
+                  sourceBranchName,
+                  branchName,
+                })}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
             {t("revision.inline.toolsReady", { count: toolCount })}
@@ -993,7 +1049,12 @@ function InlineRevisionChatPanel({
       </Box>
       <Divider />
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <AIAssistantChat toolRegistry={toolRegistry} toolContext={toolContext} guardrail={guardrail} />
+        <AIAssistantChat
+          toolRegistry={toolRegistry}
+          toolContext={toolContext}
+          autoStartMessage={autoStartMessage}
+          guardrail={guardrail}
+        />
       </Box>
     </Box>
   );
@@ -1077,6 +1138,13 @@ function ResumeDetailPage() {
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
   const [reviewSuggestionId, setReviewSuggestionId] = useState<string | null>(null);
   const [isSuggestionReviewOpen, setIsSuggestionReviewOpen] = useState(false);
+  const [pendingInlineRevisionActionBranchId, setPendingInlineRevisionActionBranchId] = useState<string | null>(null);
+  const [inlineRevisionSourceBranchName, setInlineRevisionSourceBranchName] = useState<string | null>(null);
+  const [inlineRevisionSourceBranchId, setInlineRevisionSourceBranchId] = useState<string | null>(null);
+  const [inlineRevisionPlanningSessionId, setInlineRevisionPlanningSessionId] = useState<string | null>(null);
+  const [applyingSuggestionId, setApplyingSuggestionId] = useState<string | null>(null);
+  const [isPreparingInlineRevisionFinalize, setIsPreparingInlineRevisionFinalize] = useState(false);
+  const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
 
   const updateResume = useMutation({
     mutationFn: (patch: { presentation?: string[]; consultantTitle?: string | null; summary?: string | null }) =>
@@ -1093,11 +1161,11 @@ function ResumeDetailPage() {
       if (activeBranch?.headCommitId) {
         await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
       }
-      setIsEditing(false);
     },
   });
   const closeInlineConversation = useCloseAIConversation("resume", id);
   const forkResumeBranch = useForkResumeBranch();
+  const finaliseInlineRevision = useFinaliseResumeBranch();
 
   const historyBranchId = activeBranchId ?? mainBranchId ?? "";
   const { data: recentCommits = [] } = useResumeCommits(historyBranchId);
@@ -1139,24 +1207,34 @@ function ResumeDetailPage() {
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    if (!isInlineRevisionOpen) {
+      lastInlineRevisionBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    if (inlineRevisionStage === "planning") {
+      lastInlineRevisionBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    if (
+      lastInlineRevisionBranchIdRef.current !== null &&
+      activeBranchId !== lastInlineRevisionBranchIdRef.current
+    ) {
+      closeAssistant();
+    }
+
+    lastInlineRevisionBranchIdRef.current = activeBranchId;
+  }, [
+    activeBranchId,
+    closeAssistant,
+    inlineRevisionStage,
+    isInlineRevisionOpen,
+  ]);
+
   // Assignments always come from the live branch_assignments join — same source for all branches
   const assignments = liveAssignments;
-
-  if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
-
-  if (isError) {
-    const isNotFound =
-      error != null &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as { code: unknown }).code === "NOT_FOUND";
-
-    return <ErrorState message={isNotFound ? t("resume.detail.notFound") : t("resume.detail.error")} />;
-  }
-
-  if (isSnapshotMode && isBranchCommitError) {
-    return <ErrorState message={t("resume.detail.error")} />;
-  }
 
   // Use snapshot fields when a non-main branch is active, otherwise live resume fields
   const snapshotContent = isSnapshotMode ? branchCommit?.content : null;
@@ -1215,7 +1293,6 @@ function ResumeDetailPage() {
   });
   const inlineRevisionActionToolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
-    getRevisionPlan: () => inlineRevisionPlan,
     setRevisionSuggestions: setInlineRevisionSuggestions,
   });
   const inlineRevisionPlanningToolContext: AIToolContext = {
@@ -1238,7 +1315,8 @@ function ResumeDetailPage() {
           isSatisfied: (inlineRevisionSuggestions?.suggestions.length ?? 0) > 0,
           reminderMessage: [
             "You must use the available tools for this stage.",
-            "First inspect the agreed revision plan if needed, then create concrete suggestions with set_revision_suggestions.",
+            "Use the approved plan that was already provided in the kickoff context.",
+            "Inspect the exact source text you need with inspect_resume_section, then create concrete suggestions with set_revision_suggestions.",
             "Do not claim that changes are applied or complete until suggestions have been created.",
             "Return a tool call now.",
           ].join(" "),
@@ -1250,17 +1328,94 @@ function ResumeDetailPage() {
             "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
             "Do not continue with free-text execution updates until the plan has been created.",
             "Return a tool call now.",
-          ].join(" "),
+        ].join(" "),
         };
 
+  useEffect(() => {
+    if (!pendingInlineRevisionActionBranchId || !inlineRevisionPlan) {
+      return;
+    }
+
+    if (activeBranchId !== pendingInlineRevisionActionBranchId) {
+      return;
+    }
+
+    const planActionLines = inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`);
+    setInlineRevisionStage("actions");
+    setPendingInlineRevisionActionBranchId(null);
+
+    if (
+      assistantEntityType !== "resume-revision-actions" ||
+      assistantEntityId !== activeBranchId ||
+      assistantToolContext?.route !== inlineRevisionActionToolContext.route
+    ) {
+      openAssistant({
+        entityType: "resume-revision-actions",
+        entityId: activeBranchId,
+        title: t("revision.inline.actionsConversationTitle"),
+        systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
+        originalContent: [
+          resumeTitle,
+          consultantTitle ?? "",
+          presentation.join("\n\n"),
+          summary ?? "",
+        ].filter(Boolean).join("\n\n"),
+        toolRegistry: inlineRevisionActionToolRegistry,
+        toolContext: inlineRevisionActionToolContext,
+        onAccept: () => {},
+      });
+    }
+    hideDrawer();
+  }, [
+    activeBranchId,
+    assistantEntityId,
+    assistantEntityType,
+    assistantToolContext?.route,
+    consultantTitle,
+    hideDrawer,
+    i18n.language,
+    i18n.resolvedLanguage,
+    id,
+    inlineRevisionActionToolContext,
+    inlineRevisionActionToolRegistry,
+    inlineRevisionPlan,
+    openAssistant,
+    pendingInlineRevisionActionBranchId,
+    presentation,
+    resumeTitle,
+    summary,
+    t,
+  ]);
+
+  if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
+
+  if (isError) {
+    const isNotFound =
+      error != null &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code: unknown }).code === "NOT_FOUND";
+
+    return <ErrorState message={isNotFound ? t("resume.detail.notFound") : t("resume.detail.error")} />;
+  }
+
+  if (isSnapshotMode && isBranchCommitError) {
+    return <ErrorState message={t("resume.detail.error")} />;
+  }
+
   const buildDraftPatch = () => {
-    const patch = {
+    return {
       consultantTitle: draftTitle.trim() || null,
       presentation: draftPresentation.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
       summary: draftSummary.trim() || null,
     };
-    return patch;
   };
+
+  const buildDraftPatchFromValues = (title: string, presentationValue: string, summaryValue: string) => ({
+    consultantTitle: title.trim() || null,
+    presentation: presentationValue.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
+    summary: summaryValue.trim() || null,
+  });
 
   const getSuggestionOriginalText = (suggestion: RevisionSuggestions["suggestions"][number]) => {
     const section = suggestion.section.trim().toLowerCase();
@@ -1310,37 +1465,55 @@ function ResumeDetailPage() {
   const applySuggestionTextToDraft = (suggestion: RevisionSuggestions["suggestions"][number]) => {
     const section = suggestion.section.trim().toLowerCase();
     const suggestedText = suggestion.suggestedText.trim();
+    let nextTitle = draftTitle;
+    let nextPresentation = draftPresentation;
+    let nextSummary = draftSummary;
 
     if (
       section.includes("title") ||
       section.includes("titel") ||
       section.includes("consultant")
     ) {
-      setDraftTitle(suggestedText);
-      return true;
-    }
-
-    if (
+      nextTitle = suggestedText;
+    } else if (
       section.includes("presentation") ||
       section.includes("profil") ||
       section.includes("intro")
     ) {
-      setDraftPresentation(suggestedText);
-      return true;
-    }
-
-    if (
+      nextPresentation = suggestedText;
+    } else if (
       section.includes("summary") ||
       section.includes("sammanfatt")
     ) {
-      setDraftSummary(suggestedText);
-      return true;
+      nextSummary = suggestedText;
+    } else {
+      return null;
     }
 
-    return false;
+    setDraftTitle(nextTitle);
+    setDraftPresentation(nextPresentation);
+    setDraftSummary(nextSummary);
+    return buildDraftPatchFromValues(nextTitle, nextPresentation, nextSummary);
   };
 
-  const approveInlineSuggestion = (suggestionId: string) => {
+  const approveInlineSuggestion = async (suggestionId: string) => {
+    const suggestion = inlineRevisionSuggestions?.suggestions.find((item) => item.id === suggestionId);
+    if (suggestion) {
+      const nextPatch = applySuggestionTextToDraft(suggestion);
+      if (nextPatch && activeBranchId) {
+        setApplyingSuggestionId(suggestionId);
+        try {
+          await saveVersion.mutateAsync({
+            branchId: activeBranchId,
+            message: buildInlineRevisionSuggestionCommitMessage(suggestion),
+            ...nextPatch,
+          });
+        } finally {
+          setApplyingSuggestionId(null);
+        }
+      }
+    }
+
     setSelectedSuggestionId(suggestionId);
     setInlineRevisionSuggestions((prev) => {
       if (!prev) return prev;
@@ -1357,14 +1530,6 @@ function ResumeDetailPage() {
     setSelectedSuggestionId(suggestionId);
     setReviewSuggestionId(suggestionId);
     setIsSuggestionReviewOpen(true);
-  };
-
-  const applyAcceptedSuggestionsToDraft = () => {
-    const acceptedSuggestions = inlineRevisionSuggestions?.suggestions.filter((item) => item.status === "accepted") ?? [];
-
-    for (const suggestion of acceptedSuggestions) {
-      applySuggestionTextToDraft(suggestion);
-    }
   };
 
   const dismissInlineSuggestion = (suggestionId: string) => {
@@ -1417,7 +1582,10 @@ function ResumeDetailPage() {
 
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
-      saveVersion.mutate({ branchId: activeBranchId, ...patch });
+      saveVersion.mutate(
+        { branchId: activeBranchId, ...patch },
+        { onSuccess: () => setIsEditing(false) }
+      );
     } else {
       updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
     }
@@ -1449,15 +1617,20 @@ function ResumeDetailPage() {
   };
 
   const openInlineRevisionPlanning = () => {
+    const planningSessionId = inlineRevisionPlanningSessionId ?? crypto.randomUUID();
+    if (!inlineRevisionPlanningSessionId) {
+      setInlineRevisionPlanningSessionId(planningSessionId);
+    }
+
     setInlineRevisionStage("planning");
     if (
-      assistantEntityType !== "resume" ||
-      assistantEntityId !== id ||
+      assistantEntityType !== "resume-revision-planning" ||
+      assistantEntityId !== planningSessionId ||
       assistantToolContext?.route !== inlineRevisionPlanningToolContext.route
     ) {
       openAssistant({
-        entityType: "resume",
-        entityId: id,
+        entityType: "resume-revision-planning",
+        entityId: planningSessionId,
         title: t("revision.inline.conversationTitle"),
         systemPrompt: buildResumeRevisionPrompt(i18n.resolvedLanguage ?? i18n.language),
         kickoffMessage: buildResumeRevisionKickoff(),
@@ -1484,40 +1657,52 @@ function ResumeDetailPage() {
       await closeInlineConversation.mutateAsync({ conversationId: assistantConversationId });
     }
 
-    const planActionLines = inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`);
-    setInlineRevisionStage("actions");
-    if (
-      assistantEntityType !== "resume" ||
-      assistantEntityId !== id ||
-      assistantToolContext?.route !== inlineRevisionActionToolContext.route
-    ) {
-      openAssistant({
-        entityType: "resume",
-        entityId: id,
-        title: t("revision.inline.actionsConversationTitle"),
-        systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
-        kickoffMessage: buildResumeRevisionActionKickoff(inlineRevisionPlan.summary, planActionLines),
-        originalContent: [
-          resumeTitle,
-          consultantTitle ?? "",
-          presentation.join("\n\n"),
-          summary ?? "",
-        ].filter(Boolean).join("\n\n"),
-        toolRegistry: inlineRevisionActionToolRegistry,
-        toolContext: inlineRevisionActionToolContext,
-        onAccept: () => {},
-      });
+    if (!baseCommitId) {
+      return;
     }
-    hideDrawer();
+
+    const newBranch = await forkResumeBranch.mutateAsync({
+      fromCommitId: baseCommitId,
+      name: buildInlineRevisionBranchName(inlineRevisionPlan),
+      resumeId: id,
+    });
+
+    setPendingInlineRevisionActionBranchId(newBranch.id);
+    await navigate({
+      to: "/resumes/$id",
+      params: { id },
+      search: { branchId: newBranch.id },
+      replace: true,
+    });
   };
 
   const handleOpenInlineRevision = () => {
     setIsEditing(true);
     setIsInlineRevisionOpen(true);
+    setInlineRevisionSourceBranchName(activeBranchName);
+    setInlineRevisionSourceBranchId(activeBranchId);
+    setInlineRevisionPlanningSessionId(crypto.randomUUID());
     setInlineRevisionPlan(null);
     setInlineRevisionSuggestions(null);
     setSelectedSuggestionId(null);
+    setPendingInlineRevisionActionBranchId(null);
     openInlineRevisionPlanning();
+  };
+
+  const resetInlineRevisionState = () => {
+    setIsInlineRevisionOpen(false);
+    setIsEditing(false);
+    setInlineRevisionStage("planning");
+    setInlineRevisionPlan(null);
+    setInlineRevisionSuggestions(null);
+    setSelectedSuggestionId(null);
+    setReviewSuggestionId(null);
+    setIsSuggestionReviewOpen(false);
+    setInlineRevisionSourceBranchName(null);
+    setInlineRevisionSourceBranchId(null);
+    setInlineRevisionPlanningSessionId(null);
+    setPendingInlineRevisionActionBranchId(null);
+    closeAssistant();
   };
 
   const handleCloseInlineRevision = () => {
@@ -1526,13 +1711,87 @@ function ResumeDetailPage() {
   };
 
   const handleExitEditing = () => {
-    setIsInlineRevisionOpen(false);
-    setIsEditing(false);
-    setInlineRevisionStage("planning");
-    setInlineRevisionPlan(null);
-    setInlineRevisionSuggestions(null);
-    setSelectedSuggestionId(null);
-    closeAssistant();
+    resetInlineRevisionState();
+  };
+
+  const hasInlineRevisionUnsavedChanges =
+    draftTitle !== (consultantTitle ?? "") ||
+    draftPresentation !== presentation.join("\n\n") ||
+    draftSummary !== (summary ?? "");
+
+  const isReadyToFinalize =
+    (inlineRevisionSuggestions?.suggestions.length ?? 0) > 0 &&
+    (inlineRevisionSuggestions?.suggestions.every((suggestion) => suggestion.status !== "pending") ?? false);
+
+  const handlePrepareInlineRevisionFinalize = async () => {
+    if (!activeBranchId) {
+      return;
+    }
+
+    setIsPreparingInlineRevisionFinalize(true);
+    try {
+      if (hasInlineRevisionUnsavedChanges) {
+        await saveVersion.mutateAsync({
+          branchId: activeBranchId,
+          message: t("revision.inline.finalizeCommitMessage"),
+          ...buildDraftPatch(),
+        });
+      }
+      setInlineRevisionStage("finalize");
+      hideDrawer();
+    } finally {
+      setIsPreparingInlineRevisionFinalize(false);
+    }
+  };
+
+  const handleKeepInlineRevisionBranch = () => {
+    if (!activeBranchId || !inlineRevisionSourceBranchId) {
+      return;
+    }
+
+    finaliseInlineRevision.mutate(
+      {
+        sourceBranchId: inlineRevisionSourceBranchId,
+        revisionBranchId: activeBranchId,
+        action: "keep",
+      },
+      {
+        onSuccess: (data) => {
+          resetInlineRevisionState();
+          void navigate({
+            to: "/resumes/$id",
+            params: { id },
+            search: { branchId: data.resultBranchId },
+            replace: true,
+          });
+        },
+      }
+    );
+  };
+
+  const handleMergeInlineRevisionBranch = () => {
+    if (!activeBranchId || !inlineRevisionSourceBranchId) {
+      return;
+    }
+
+    finaliseInlineRevision.mutate(
+      {
+        sourceBranchId: inlineRevisionSourceBranchId,
+        revisionBranchId: activeBranchId,
+        action: "merge",
+      },
+      {
+        onSuccess: (data) => {
+          resetInlineRevisionState();
+          void navigate({
+            to: "/resumes/$id",
+            params: { id },
+            search: data.resultBranchId === mainBranchId ? {} : { branchId: data.resultBranchId },
+            replace: true,
+          });
+        },
+      }
+    );
   };
 
   const handleOpenHistoryPage = () => {
@@ -1676,6 +1935,7 @@ function ResumeDetailPage() {
             >
               <InlineRevisionChecklist
                 stage={inlineRevisionStage}
+                sourceBranchName={inlineRevisionSourceBranchName ?? activeBranchName}
                 branchName={activeBranchName}
                 onOpenHistory={handleOpenHistoryPage}
                 onOpenCompare={handleOpenComparePage}
@@ -1686,9 +1946,15 @@ function ResumeDetailPage() {
                 onReviewSuggestion={openSuggestionReview}
                 onDismissSuggestion={dismissInlineSuggestion}
                 onMoveToActions={openInlineRevisionActions}
-                onMoveToFinalize={() => setInlineRevisionStage("finalize")}
+                isMovingToActions={
+                  pendingInlineRevisionActionBranchId !== null ||
+                  forkResumeBranch.isPending ||
+                  closeInlineConversation.isPending
+                }
+                onMoveToFinalize={() => void handlePrepareInlineRevisionFinalize()}
+                isReadyToFinalize={isReadyToFinalize}
+                isPreparingFinalize={isPreparingInlineRevisionFinalize}
                 onBackToActions={() => setInlineRevisionStage("actions")}
-                onApplyAcceptedSuggestions={applyAcceptedSuggestionsToDraft}
               />
             </Box>
           )}
@@ -1703,7 +1969,7 @@ function ResumeDetailPage() {
               p: isInlineRevisionOpen ? 2 : 0,
             }}
           >
-            {isInlineRevisionOpen && (
+            {isInlineRevisionOpen && inlineRevisionStage !== "finalize" && (
               <Paper
                 variant="outlined"
                 sx={{
@@ -1727,6 +1993,15 @@ function ResumeDetailPage() {
             )}
 
             {/* Gray canvas */}
+            {inlineRevisionStage === "finalize" ? (
+              <FinalReview
+                workflowId={activeBranchId ?? "inline-revision"}
+                onMerge={handleMergeInlineRevisionBranch}
+                onKeep={handleKeepInlineRevisionBranch}
+                isMerging={finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "merge"}
+                isKeeping={finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "keep"}
+              />
+            ) : (
             <Box
               ref={canvasRef}
               sx={{
@@ -2027,9 +2302,10 @@ function ResumeDetailPage() {
               </Tooltip>
             )}
             </Box>
+            )}
           </Box>
 
-          {isInlineRevisionOpen && (
+          {isInlineRevisionOpen && inlineRevisionStage !== "finalize" && (
             <Box
               sx={{
                 width: { xs: "100%", lg: INLINE_REVISION_CHAT_WIDTH },
@@ -2047,8 +2323,10 @@ function ResumeDetailPage() {
               }}
             >
               <InlineRevisionChatPanel
-                branchName={activeBranchName}
-                onClose={handleCloseInlineRevision}
+                  branchName={activeBranchName}
+                  sourceBranchName={inlineRevisionSourceBranchName ?? activeBranchName}
+                  stage={inlineRevisionStage}
+                  onClose={handleCloseInlineRevision}
                 toolCount={
                   inlineRevisionStage === "actions"
                     ? inlineRevisionActionToolRegistry.tools.length
@@ -2063,6 +2341,14 @@ function ResumeDetailPage() {
                   inlineRevisionStage === "actions"
                     ? inlineRevisionActionToolContext
                     : inlineRevisionPlanningToolContext
+                }
+                autoStartMessage={
+                  inlineRevisionStage === "actions" && inlineRevisionPlan
+                    ? buildResumeRevisionActionAutoStart(
+                        inlineRevisionPlan.summary,
+                        inlineRevisionPlan.actions.map((action) => `${action.title}: ${action.description}`),
+                      )
+                    : null
                 }
                 guardrail={inlineRevisionGuardrail}
               />
@@ -2137,8 +2423,8 @@ function ResumeDetailPage() {
           suggested={
             inlineRevisionSuggestions?.suggestions.find((item) => item.id === reviewSuggestionId)?.suggestedText ?? ""
           }
-          onApply={() => {
-            approveInlineSuggestion(reviewSuggestionId);
+          onApply={async () => {
+            await approveInlineSuggestion(reviewSuggestionId);
             setIsSuggestionReviewOpen(false);
             setReviewSuggestionId(null);
           }}

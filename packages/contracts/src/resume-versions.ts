@@ -157,6 +157,20 @@ export const forkResumeBranchInputSchema = z.object({
 export const forkResumeBranchOutputSchema = resumeBranchSchema;
 
 // ---------------------------------------------------------------------------
+// finaliseResumeBranch schemas
+// ---------------------------------------------------------------------------
+
+export const finaliseResumeBranchInputSchema = z.object({
+  sourceBranchId: z.string().uuid(),
+  revisionBranchId: z.string().uuid(),
+  action: z.enum(["merge", "keep"]),
+});
+
+export const finaliseResumeBranchOutputSchema = z.object({
+  resultBranchId: z.string().uuid(),
+});
+
+// ---------------------------------------------------------------------------
 // listResumeBranches schemas
 // ---------------------------------------------------------------------------
 
