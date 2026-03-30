@@ -11,12 +11,17 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
+    "e2e:install": "playwright install chromium",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file .env up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
     "docker:build": "docker compose -f docker/docker-compose.yml --env-file .env build",
     "migrate": "npm run migrate --workspace=apps/backend"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "turbo": "^2.0.0"
   },
   "packageManager": "npm@11.6.0",

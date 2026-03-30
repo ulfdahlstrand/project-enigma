@@ -34,3 +34,17 @@ export function getOpenAIClient(): OpenAI {
   }
   return _client;
 }
+
+/**
+ * Test-only override for integration tests that run the backend in-process.
+ */
+export function setOpenAIClientForTests(client: OpenAI) {
+  _client = client;
+}
+
+/**
+ * Resets the singleton so the next getOpenAIClient() call recreates it from env.
+ */
+export function resetOpenAIClientForTests() {
+  _client = undefined;
+}
