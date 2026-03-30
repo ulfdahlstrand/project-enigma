@@ -7,6 +7,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "../../resume-revision/lib/sync-branch-assignments.js";
+import { syncLiveResumeFromContent } from "../lib/sync-live-resume-from-content.js";
 import type { finaliseResumeBranchInputSchema, finaliseResumeBranchOutputSchema } from "@cv-tool/contracts";
 
 type FinaliseResumeBranchInput = z.infer<typeof finaliseResumeBranchInputSchema>;
@@ -113,6 +114,16 @@ export async function finaliseResumeBranch(
       .execute();
 
     await syncBranchAssignmentsFromContent(trx, sourceBranch.id, normalisedContent);
+
+    const sourceBranchMeta = await trx
+      .selectFrom("resume_branches")
+      .select(["is_main"])
+      .where("id", "=", sourceBranch.id)
+      .executeTakeFirst();
+
+    if (sourceBranchMeta?.is_main) {
+      await syncLiveResumeFromContent(trx, sourceBranch.resume_id, normalisedContent);
+    }
   });
 
   return { resultBranchId: sourceBranch.id };

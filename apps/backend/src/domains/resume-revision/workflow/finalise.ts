@@ -9,6 +9,7 @@ import {
   syncBranchAssignmentsFromContent,
   normaliseAssignmentIds,
 } from "../lib/sync-branch-assignments.js";
+import { syncLiveResumeFromContent } from "../../resume/lib/sync-live-resume-from-content.js";
 
 // ---------------------------------------------------------------------------
 // finaliseResumeRevision — query logic
@@ -166,6 +167,16 @@ export async function finaliseResumeRevision(
       workflowRow.base_branch_id,
       normalisedContent
     );
+
+    const baseBranchMeta = await trx
+      .selectFrom("resume_branches")
+      .select(["is_main"])
+      .where("id", "=", workflowRow.base_branch_id)
+      .executeTakeFirst();
+
+    if (baseBranchMeta?.is_main) {
+      await syncLiveResumeFromContent(trx, workflowRow.resume_id, normalisedContent);
+    }
   });
 
   const workflow = await fetchWorkflowWithSteps(db, user, input.workflowId);
