@@ -78,6 +78,7 @@ const INSERTED_COMMIT = {
 
 function buildDbMock(opts: {
   branchRow?: unknown;
+  headCommitRow?: unknown;
   skillRows?: unknown[];
   assignmentRows?: unknown[];
   insertedCommit?: unknown;
@@ -85,6 +86,7 @@ function buildDbMock(opts: {
 } = {}) {
   const {
     branchRow = BRANCH_ROW,
+    headCommitRow = { content: INSERTED_COMMIT.content },
     skillRows = [SKILL_ROW],
     assignmentRows = [ASSIGNMENT_ROW],
     insertedCommit = INSERTED_COMMIT,
@@ -101,6 +103,11 @@ function buildDbMock(opts: {
   const branchWhere = vi.fn().mockReturnValue({ executeTakeFirst: branchExecuteTakeFirst });
   const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
   const branchInnerJoin = vi.fn().mockReturnValue({ select: branchSelect });
+
+  // Head commit lookup
+  const headCommitExecuteTakeFirst = vi.fn().mockResolvedValue(headCommitRow);
+  const headCommitWhere = vi.fn().mockReturnValue({ executeTakeFirst: headCommitExecuteTakeFirst });
+  const headCommitSelect = vi.fn().mockReturnValue({ where: headCommitWhere });
 
   // Skills query
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
@@ -147,6 +154,7 @@ function buildDbMock(opts: {
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
+    if (table === "resume_commits") return { select: headCommitSelect };
     if (table === "resume_skills") return { select: skillsSelect };
     if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
     // resume_branches join

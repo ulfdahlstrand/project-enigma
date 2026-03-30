@@ -15,6 +15,14 @@ import type { Database } from "./types.js";
 // import `db` from this module as the production default.
 // ---------------------------------------------------------------------------
 
+export function createDbFromConnectionString(connectionString: string): Kysely<Database> {
+  return new Kysely<Database>({
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString }),
+    }),
+  });
+}
+
 function createDb(): Kysely<Database> {
   const connectionString = process.env["DATABASE_URL"];
   if (!connectionString) {
@@ -23,11 +31,7 @@ function createDb(): Kysely<Database> {
         "Cannot connect to PostgreSQL."
     );
   }
-  return new Kysely<Database>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString }),
-    }),
-  });
+  return createDbFromConnectionString(connectionString);
 }
 
 let _db: Kysely<Database> | undefined;
@@ -41,4 +45,21 @@ export function getDb(): Kysely<Database> {
     _db = createDb();
   }
   return _db;
+}
+
+/**
+ * Test-only override for integration tests that run the backend in-process.
+ */
+export function setDbForTests(db: Kysely<Database>) {
+  _db = db;
+}
+
+/**
+ * Resets the singleton so the next getDb() call recreates it from DATABASE_URL.
+ */
+export async function resetDbForTests() {
+  if (_db) {
+    await _db.destroy();
+  }
+  _db = undefined;
 }
