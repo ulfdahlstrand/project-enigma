@@ -14,6 +14,11 @@ import { resolveUser } from "./auth/resolve-user.js";
 import type { User } from "./db/types.js";
 import { getDb } from "./db/client.js";
 import { logger } from "./infra/logger.js";
+import {
+  e2eBootstrapRevisionHandler,
+  e2eRevisionStateHandler,
+  e2eScriptedAIHandler,
+} from "./test-helpers/e2e-handlers.js";
 
 export type AppContext = { user: User | null };
 
@@ -57,6 +62,18 @@ export async function createAppServer() {
     }
     if (req.method === "POST" && req.url === "/auth/test-login") {
       await testLoginHandler(req, res);
+      return;
+    }
+    if (req.method === "POST" && req.url === "/test/e2e/scripted-ai") {
+      await e2eScriptedAIHandler(req, res);
+      return;
+    }
+    if (req.method === "POST" && req.url === "/test/e2e/bootstrap-revision") {
+      await e2eBootstrapRevisionHandler(req, res);
+      return;
+    }
+    if (req.method === "GET" && req.url?.startsWith("/test/e2e/revision-state")) {
+      await e2eRevisionStateHandler(req, res);
       return;
     }
     if (req.method === "POST" && req.url === "/auth/refresh") {
