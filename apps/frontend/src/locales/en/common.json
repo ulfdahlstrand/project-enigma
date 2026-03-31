@@ -520,6 +520,16 @@
       "assistantLabel": "AI",
       "userLabel": "You",
       "actionsConversationTitle": "Resume actions",
+      "goalTitle": "Goal",
+      "sectionLabel": {
+        "presentation": "Presentation",
+        "skills": "Skills",
+        "assignment": "Assignments",
+        "summary": "Summary",
+        "consultanttitle": "Consultant title",
+        "other": "Other"
+      },
+      "groupProgress": "{{completed}} / {{total}}",
       "planStatus": {
         "pending": "Pending",
         "planned": "Planned",
