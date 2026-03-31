@@ -24,11 +24,7 @@ import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
 // ---------------------------------------------------------------------------
 // Suggestion parsing
 //
-// The AI can embed a JSON suggestion block anywhere in its reply:
-//   ```json
-//   {"type":"suggestion","content":"...improved text..."}
-//   ```
-// If found, the "Apply changes" button becomes active.
+// The AI can embed a JSON suggestion block anywhere in its reply.
 // ---------------------------------------------------------------------------
 
 interface SuggestionPayload {
@@ -218,25 +214,6 @@ function buildToolResultMessage(result: Awaited<ReturnType<typeof executeAIToolC
   ].join("\n");
 }
 
-function extractSuggestion(text: string): string | null {
-  const match = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-  if (!match || !match[1]) return null;
-  try {
-    const parsed = JSON.parse(match[1]) as unknown;
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      (parsed as SuggestionPayload).type === "suggestion" &&
-      typeof (parsed as SuggestionPayload).content === "string"
-    ) {
-      return (parsed as SuggestionPayload).content;
-    }
-  } catch {
-    // not valid JSON
-  }
-  return null;
-}
-
 // ---------------------------------------------------------------------------
 // Message bubble
 // ---------------------------------------------------------------------------
@@ -403,6 +380,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
 interface AIAssistantChatProps {
   toolRegistry?: AIToolRegistry | null;
   toolContext?: AIToolContext | null;
+  showApplyChanges?: boolean;
   autoStartMessage?: string | null | undefined;
   automation?: {
     key: string;
@@ -457,6 +435,7 @@ function ToolingNotice({
 export function AIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
+  showApplyChanges = true,
   autoStartMessage = null,
   automation = null,
   guardrail = null,
@@ -514,8 +493,6 @@ export function AIAssistantChat({
     sendMessage.isPending ||
     activeToolExecutionCount > 0 ||
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
-
-  // Find the latest suggestion from assistant messages
   const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
   const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
 
@@ -835,24 +812,22 @@ export function AIAssistantChat({
             <SendIcon />
           </IconButton>
         </Box>
-
-        {/* Apply changes button — active when AI has a suggestion */}
-        <Button
-          fullWidth
-          variant="contained"
-          color="success"
-          sx={{ mt: 1.5 }}
-          disabled={!latestSuggestion || isInitialising}
-          onClick={handleApplyClick}
-        >
-          {t("aiAssistant.applyChanges")}
-        </Button>
+        {showApplyChanges && (
+          <Button
+            fullWidth
+            variant="contained"
+            color="success"
+            sx={{ mt: 1.5 }}
+            disabled={!latestSuggestion || isInitialising}
+            onClick={handleApplyClick}
+          >
+            {t("aiAssistant.applyChanges")}
+          </Button>
+        )}
       </Box>
 
       <ToolingNotice toolRegistry={toolRegistry} toolContext={toolContext} isAnalysing={isAnalysing} />
-
-      {/* Diff review dialog */}
-      {pendingSuggestion && (
+      {showApplyChanges && pendingSuggestion && (
         <DiffReviewDialog<TextDiffReviewValue, string>
           open={diffOpen}
           value={pendingSuggestion}
@@ -865,4 +840,23 @@ export function AIAssistantChat({
       )}
     </Box>
   );
+}
+
+function extractSuggestion(text: string): string | null {
+  const match = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+  if (!match || !match[1]) return null;
+  try {
+    const parsed = JSON.parse(match[1]) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      (parsed as SuggestionPayload).type === "suggestion" &&
+      typeof (parsed as SuggestionPayload).content === "string"
+    ) {
+      return (parsed as SuggestionPayload).content;
+    }
+  } catch {
+    // not valid JSON
+  }
+  return null;
 }

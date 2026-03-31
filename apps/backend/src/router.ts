@@ -6,6 +6,7 @@ import {
   getEmployeeHandler,
   createEmployeeHandler,
   updateEmployeeHandler,
+  deleteEmployeeHandler,
 } from "./domains/employee/index.js";
 import {
   listResumesHandler,
@@ -70,6 +71,7 @@ export const router = implement(contract).router({
   getEmployee: getEmployeeHandler,
   createEmployee: createEmployeeHandler,
   updateEmployee: updateEmployeeHandler,
+  deleteEmployee: deleteEmployeeHandler,
   listResumes: listResumesHandler,
   getResume: getResumeHandler,
   createResume: createResumeHandler,

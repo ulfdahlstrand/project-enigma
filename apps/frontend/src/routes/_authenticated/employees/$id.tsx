@@ -8,7 +8,7 @@
  * i18n: all visible text via useTranslation("common") — no plain string literals
  *       as direct JSX children.
  */
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
@@ -18,13 +18,20 @@ import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
 import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
@@ -54,6 +61,7 @@ function EmployeeDetailPage() {
   const { t } = useTranslation("common");
   const { id: idParam } = useParams({ strict: false });
   const id = idParam!;
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const queryKey = getEmployeeQueryKey(id);
@@ -61,6 +69,8 @@ function EmployeeDetailPage() {
 
   const [addingToSection, setAddingToSection] = useState<EducationType | null>(null);
   const [newEntryValue, setNewEntryValue] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
 
   const {
     data: employee,
@@ -114,6 +124,15 @@ function EmployeeDetailPage() {
     },
   });
 
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: () => orpc.deleteEmployee({ id }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+      await queryClient.invalidateQueries({ queryKey: LIST_EMPLOYEES_QUERY_KEY });
+      void navigate({ to: "/employees" });
+    },
+  });
+
   const commitAdd = (type: EducationType) => {
     if (!newEntryValue.trim()) return;
     createEducationMutation.mutate({ type, value: newEntryValue.trim() });
@@ -160,6 +179,12 @@ function EmployeeDetailPage() {
             >
               {t("employee.detail.saveButton")}
             </Button>
+            <IconButton
+              aria-label={t("employee.detail.moreActionsLabel")}
+              onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+            >
+              <MoreVertIcon />
+            </IconButton>
           </>
         }
       />
@@ -315,6 +340,46 @@ function EmployeeDetailPage() {
         </Box>
         </Box>
       </PageContent>
+      <Menu
+        anchorEl={moreActionsAnchorEl}
+        open={Boolean(moreActionsAnchorEl)}
+        onClose={() => setMoreActionsAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            setDeleteDialogOpen(true);
+          }}
+        >
+          {t("employee.detail.deleteButton")}
+        </MenuItem>
+      </Menu>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t("employee.detail.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: deleteEmployeeMutation.isError ? 2 : 0 }}>
+            {t("employee.detail.deleteDialog.message", { name: employee?.name ?? "" })}
+          </Typography>
+          {deleteEmployeeMutation.isError && (
+            <Alert severity="error">{t("employee.detail.deleteDialog.error")}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteEmployeeMutation.isPending}>
+            {t("employee.detail.deleteDialog.cancel")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => deleteEmployeeMutation.mutate()}
+            disabled={deleteEmployeeMutation.isPending}
+          >
+            {deleteEmployeeMutation.isPending
+              ? t("employee.detail.deleteDialog.deleting")
+              : t("employee.detail.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

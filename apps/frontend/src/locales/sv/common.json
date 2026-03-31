@@ -54,6 +54,16 @@
       "nameLabel": "Namn",
       "emailLabel": "E-post",
       "saveButton": "Spara",
+      "moreActionsLabel": "Fler åtgärder",
+      "deleteButton": "Ta bort",
+      "deleteDialog": {
+        "title": "Ta bort anställd",
+        "message": "Är du säker på att du vill ta bort {{name}}? Detta går inte att ångra.",
+        "cancel": "Avbryt",
+        "confirm": "Ta bort",
+        "deleting": "Tar bort…",
+        "error": "Det gick inte att ta bort den anställde. Försök igen."
+      },
       "saveSuccess": "Anställd sparad.",
       "saveError": "Det gick inte att spara den anställde. Försök igen.",
       "notFound": "Anställd hittades inte.",
@@ -164,6 +174,16 @@
       "assignmentToggleSummary": "Visa kompakt uppdragslista",
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
+      "moreActionsLabel": "Fler åtgärder",
+      "deleteButton": "Ta bort",
+      "deleteDialog": {
+        "title": "Ta bort meritförteckning",
+        "message": "Är du säker på att du vill ta bort \"{{title}}\"? Detta går inte att ångra.",
+        "cancel": "Avbryt",
+        "confirm": "Ta bort",
+        "deleting": "Tar bort…",
+        "error": "Det gick inte att ta bort meritförteckningen. Försök igen."
+      },
       "historyDrawer": {
         "title": "Senaste ändringar",
         "viewAll": "Visa fullständig historik",

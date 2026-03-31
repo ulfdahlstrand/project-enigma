@@ -51,6 +51,7 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     getEmployee: vi.fn(),
     updateEmployee: vi.fn(),
+    deleteEmployee: vi.fn(),
     listEducation: vi.fn(),
     createEducation: vi.fn(),
     deleteEducation: vi.fn(),
@@ -61,7 +62,9 @@ import { orpc } from "../../../../orpc-client";
 
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockUpdateEmployee = orpc.updateEmployee as ReturnType<typeof vi.fn>;
+const mockDeleteEmployee = orpc.deleteEmployee as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
+const mockNavigate = vi.fn();
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -91,6 +94,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useParams: () => ({ id: TEST_EMPLOYEE.id }),
+    useNavigate: () => mockNavigate,
     Link: React.forwardRef(function MockLink(
       { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown },
       ref: React.Ref<HTMLAnchorElement>
@@ -347,6 +351,29 @@ describe("AC7 — Error on save: Alert shown, inputs retain values", () => {
 
     // Email field should still show what the user typed
     expect(screen.getByDisplayValue("updated@example.com")).toBeInTheDocument();
+  });
+});
+
+describe("Delete action", () => {
+  beforeEach(() => {
+    mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
+    mockDeleteEmployee.mockResolvedValue({ deleted: true });
+    mockListEducation.mockResolvedValue([]);
+  });
+
+  it("opens a delete dialog from the more actions menu and deletes the employee", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByDisplayValue(TEST_EMPLOYEE.name);
+    await user.click(screen.getByRole("button", { name: enCommon.employee.detail.moreActionsLabel }));
+    await user.click(screen.getByRole("menuitem", { name: enCommon.employee.detail.deleteButton }));
+
+    expect(screen.getByText(enCommon.employee.detail.deleteDialog.title)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: enCommon.employee.detail.deleteDialog.confirm }));
+
+    expect(mockDeleteEmployee).toHaveBeenCalledWith({ id: TEST_EMPLOYEE.id });
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" });
   });
 });
 

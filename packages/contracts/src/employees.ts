@@ -78,3 +78,15 @@ export const updateEmployeeOutputSchema = z.object({
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
+
+// ---------------------------------------------------------------------------
+// deleteEmployee schemas
+// ---------------------------------------------------------------------------
+
+export const deleteEmployeeInputSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const deleteEmployeeOutputSchema = z.object({
+  deleted: z.literal(true),
+});

@@ -21,14 +21,21 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
 import Grow from "@mui/material/Grow";
 import Fab from "@mui/material/Fab";
@@ -37,6 +44,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -54,7 +62,6 @@ import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
-import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
@@ -64,6 +71,7 @@ import { InlineRevisionChatPanel } from "../../../components/revision/InlineRevi
 import { InlineRevisionChecklist } from "../../../components/revision/InlineRevisionChecklist";
 import { SkillsEditor } from "../../../components/SkillsEditor";
 import { AssignmentEditor } from "../../../components/AssignmentEditor";
+import { LIST_RESUMES_QUERY_KEY } from "./index";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -718,6 +726,8 @@ function ResumeDetailPage() {
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
   const [draftHighlightedItems, setDraftHighlightedItems] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
   const draftTitleRef = useRef("");
   const draftPresentationRef = useRef("");
   const draftSummaryRef = useRef("");
@@ -733,6 +743,18 @@ function ResumeDetailPage() {
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+    },
+  });
+
+  const deleteResume = useMutation({
+    mutationFn: () => orpc.deleteResume({ id }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      void navigate({
+        to: "/resumes",
+        search: resume?.employeeId ? { employeeId: resume.employeeId } : {},
+      });
     },
   });
 
@@ -1017,14 +1039,12 @@ function ResumeDetailPage() {
     language ? <Chip label={language.toUpperCase()} size="small" /> : undefined
   );
 
+  const headerCenterContent = (
+    <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
+  );
+
   const toolbarActions = inlineRevision.isOpen ? (
     <>
-      <Button variant="outlined" startIcon={<HistoryIcon />} onClick={handleOpenHistoryPage}>
-        {t("revision.inline.historyButton")}
-      </Button>
-      <Button variant="outlined" onClick={handleOpenComparePage}>
-        {t("revision.inline.compareButton")}
-      </Button>
       <ResumeSaveSplitButton
         onSaveCurrent={handleSave}
         onSaveAsNewVersion={handleSaveAsNewVersion}
@@ -1034,10 +1054,15 @@ function ResumeDetailPage() {
       <Button variant="outlined" onClick={inlineRevision.close}>
         {t("revision.inline.closeButton")}
       </Button>
+      <IconButton
+        aria-label={t("resume.detail.moreActionsLabel")}
+        onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+      >
+        <MoreVertIcon />
+      </IconButton>
     </>
   ) : (
     <>
-      <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       {isEditing ? (
         <>
           <ResumeSaveSplitButton
@@ -1056,24 +1081,31 @@ function ResumeDetailPage() {
         </>
       ) : (
         <>
+          <ExportSplitButton resumeId={id} />
           <EditSplitButton
             onEdit={() => setIsEditing(true)}
             onReviseWithAi={inlineRevision.open}
           />
-          <Tooltip title={t("resume.history.pageTitle")}>
-            <IconButton onClick={() => setHistoryOpen(true)} size="small" aria-label={t("resume.history.pageTitle")}>
-              <HistoryIcon />
-            </IconButton>
-          </Tooltip>
         </>
       )}
-      {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
-      {!isEditing && <ExportSplitButton resumeId={id} />}
+      <IconButton
+        aria-label={t("resume.detail.moreActionsLabel")}
+        onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+      >
+        <MoreVertIcon />
+      </IconButton>
     </>
   );
 
   return (
-    <Box>
+    <Box
+      sx={{
+        height: inlineRevision.isOpen ? "100vh" : undefined,
+        display: inlineRevision.isOpen ? "flex" : "block",
+        flexDirection: inlineRevision.isOpen ? "column" : undefined,
+        overflow: inlineRevision.isOpen ? "hidden" : undefined,
+      }}
+    >
       <PageHeader
         title={resumeTitle}
         breadcrumbs={[
@@ -1086,17 +1118,20 @@ function ResumeDetailPage() {
             : []),
         ]}
         chip={headerChip}
+        centerContent={headerCenterContent}
         actions={toolbarActions}
       />
       <Box
         sx={{
           bgcolor: "background.default",
-          minHeight: "calc(100vh - 56px)",
-          height: inlineRevision.isOpen ? "calc(100vh - 56px)" : undefined,
+          minHeight: inlineRevision.isOpen ? 0 : "calc(100vh - 56px)",
+          height: inlineRevision.isOpen ? "auto" : undefined,
+          flex: inlineRevision.isOpen ? 1 : undefined,
           py: inlineRevision.isOpen ? 0 : 4,
           px: inlineRevision.isOpen ? 0 : { xs: 2, md: 3 },
           display: "flex",
           flexDirection: "column",
+          overflow: inlineRevision.isOpen ? "hidden" : undefined,
         }}
       >
         <Box
@@ -1156,29 +1191,6 @@ function ResumeDetailPage() {
               p: inlineRevision.isOpen ? 2 : 0,
             }}
           >
-            {inlineRevision.isOpen && inlineRevision.stage !== "finalize" && (
-              <Paper
-                variant="outlined"
-                sx={{
-                  mb: 2,
-                  px: 2,
-                  py: 1.5,
-                  borderRadius: 0,
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                  <Chip size="small" color="primary" label={t("revision.inline.documentBadge")} />
-                  <Typography variant="subtitle2">
-                    {t(`revision.inline.documentTitle.${inlineRevision.stage}`)}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                  {t(`revision.inline.documentDescription.${inlineRevision.stage}`)}
-                </Typography>
-              </Paper>
-            )}
-
             {/* Gray canvas */}
             {inlineRevision.stage === "finalize" ? (
               <FinalReview
@@ -1526,15 +1538,7 @@ function ResumeDetailPage() {
               }}
             >
               <InlineRevisionChatPanel
-                  branchName={activeBranchName}
-                  sourceBranchName={inlineRevision.sourceBranchName}
-                  stage={inlineRevision.stage}
-                  onClose={inlineRevision.close}
-                toolCount={
-                  inlineRevision.stage === "actions"
-                    ? inlineRevision.actionToolRegistry.tools.length
-                    : inlineRevision.planningToolRegistry.tools.length
-                }
+                stage={inlineRevision.stage}
                 toolRegistry={
                   inlineRevision.stage === "actions"
                     ? inlineRevision.actionToolRegistry
@@ -1609,6 +1613,67 @@ function ResumeDetailPage() {
           )}
         </List>
       </Drawer>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t("resume.detail.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: deleteResume.isError ? 2 : 0 }}>
+            {t("resume.detail.deleteDialog.message", { title: resumeTitle })}
+          </Typography>
+          {deleteResume.isError && (
+            <Alert severity="error">{t("resume.detail.deleteDialog.error")}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteResume.isPending}>
+            {t("resume.detail.deleteDialog.cancel")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => deleteResume.mutate()}
+            disabled={deleteResume.isPending}
+          >
+            {deleteResume.isPending
+              ? t("resume.detail.deleteDialog.deleting")
+              : t("resume.detail.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Menu
+        anchorEl={moreActionsAnchorEl}
+        open={Boolean(moreActionsAnchorEl)}
+        onClose={() => setMoreActionsAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            setHistoryOpen(true);
+          }}
+        >
+          <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("resume.history.pageTitle")}
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            handleOpenComparePage();
+          }}
+        >
+          <ViewAgendaIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("revision.inline.compareButton")}
+        </MenuItem>
+        {!isSnapshotMode && (
+          <MenuItem
+            onClick={() => {
+              setMoreActionsAnchorEl(null);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+            {t("resume.detail.deleteButton")}
+          </MenuItem>
+        )}
+      </Menu>
       {/* Both branches render identically — the kind discriminant exists to satisfy
           TypeScript's generic constraint that value/renderReview/formatResult share TValue. */}
       {inlineRevision.reviewDialog && (
