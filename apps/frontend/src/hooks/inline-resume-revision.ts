@@ -1,9 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { useCloseAIConversation } from "./ai-assistant";
+import {
+  useAIConversation,
+  useAIConversations,
+  useCloseAIConversation,
+} from "./ai-assistant";
 import {
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
@@ -17,9 +21,9 @@ import {
   buildResumeRevisionPrompt,
 } from "../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
+  appendUniqueRevisionSuggestions,
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
-  appendUniqueRevisionSuggestions,
   buildInlineRevisionBranchName,
   buildInlineRevisionSuggestionCommitMessage,
   buildInlineRevisionWorkItemAutomationMessage,
@@ -30,6 +34,7 @@ import {
 import {
   createResumeActionToolRegistry,
   createResumePlanningToolRegistry,
+  normalizeRevisionSuggestionsInput,
   type RevisionPlan,
   type RevisionSuggestions,
   type RevisionWorkItems,
@@ -92,6 +97,22 @@ type ResumeInspectionSnapshot = {
   }>;
 };
 
+type PersistedInlineRevisionSession = {
+  version: 1;
+  sourceBranchId: string | null;
+  sourceBranchName: string | null;
+  stage: Extract<InlineRevisionStage, "actions" | "finalize">;
+  plan: RevisionPlan | null;
+  workItems: RevisionWorkItems | null;
+  suggestions: RevisionSuggestions | null;
+};
+
+type PersistedToolCall = {
+  type: "tool_call";
+  toolName: string;
+  input?: unknown;
+};
+
 type UseInlineResumeRevisionParams = {
   resumeId: string;
   isEditing: boolean;
@@ -112,6 +133,123 @@ type UseInlineResumeRevisionParams = {
   buildDraftPatch: () => DraftPatch;
   buildDraftPatchFromValues: (title: string, presentation: string, summary: string) => DraftPatch;
 };
+
+function getInlineRevisionStorageKey(branchId: string) {
+  return `inline-resume-revision:${branchId}`;
+}
+
+function readPersistedInlineRevisionSession(branchId: string): PersistedInlineRevisionSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(getInlineRevisionStorageKey(branchId));
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedInlineRevisionSession;
+    if (parsed.version !== 1) {
+      return null;
+    }
+
+    if (parsed.stage !== "actions" && parsed.stage !== "finalize") {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedInlineRevisionSession(
+  branchId: string,
+  session: PersistedInlineRevisionSession,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(getInlineRevisionStorageKey(branchId), JSON.stringify(session));
+}
+
+function clearPersistedInlineRevisionSession(branchId: string | null) {
+  if (typeof window === "undefined" || !branchId) {
+    return;
+  }
+
+  window.localStorage.removeItem(getInlineRevisionStorageKey(branchId));
+}
+
+function extractPersistedToolCalls(text: string): PersistedToolCall[] {
+  return [...text.matchAll(/```json\s*([\s\S]*?)\s*```/g)].flatMap((match) => {
+    const block = match[1];
+    if (!block) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(block.trim()) as PersistedToolCall;
+      if (parsed.type === "tool_call" && typeof parsed.toolName === "string") {
+        return [parsed];
+      }
+    } catch {
+      return [];
+    }
+
+    return [];
+  });
+}
+
+function deriveSuggestionsFromConversation(
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): RevisionSuggestions | null {
+  let nextSuggestions: RevisionSuggestions | null = null;
+
+  for (const message of messages) {
+    if (message.role !== "assistant") {
+      continue;
+    }
+
+    for (const toolCall of extractPersistedToolCalls(message.content)) {
+      if (toolCall.toolName === "set_revision_suggestions") {
+        try {
+          nextSuggestions = normalizeRevisionSuggestionsInput(toolCall.input as never);
+        } catch {
+          continue;
+        }
+      }
+
+      if (toolCall.toolName === "set_assignment_suggestions") {
+        try {
+          const input = toolCall.input as {
+            workItemId: string;
+            summary?: string;
+            suggestions: unknown[];
+          };
+          const normalizedSuggestions = normalizeRevisionSuggestionsInput({
+            summary: input.summary,
+            suggestions: input.suggestions,
+          });
+
+          nextSuggestions = appendUniqueRevisionSuggestions(nextSuggestions, {
+            summary: normalizedSuggestions.summary,
+            suggestions: normalizedSuggestions.suggestions.map((suggestion) => ({
+              ...suggestion,
+              id: `${input.workItemId}:${suggestion.id}`,
+            })),
+          });
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  return nextSuggestions;
+}
 
 export function useInlineResumeRevision({
   resumeId,
@@ -162,6 +300,7 @@ export function useInlineResumeRevision({
   const [isPreparingFinalize, setIsPreparingFinalize] = useState(false);
   const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
   const workItemsRef = useRef<RevisionWorkItems | null>(null);
+  const restoredBranchIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     workItemsRef.current = workItems;
@@ -189,12 +328,28 @@ export function useInlineResumeRevision({
   const closeInlineConversation = useCloseAIConversation("resume", resumeId);
   const forkResumeBranch = useForkResumeBranch();
   const finaliseInlineRevision = useFinaliseResumeBranch();
+  const { data: existingActionConversations } = useAIConversations(
+    activeBranchId && activeBranchId !== mainBranchId ? "resume-revision-actions" : null,
+    activeBranchId && activeBranchId !== mainBranchId ? activeBranchId : null,
+  );
+  const existingActionConversationId =
+    existingActionConversations?.conversations.at(-1)?.id ?? null;
+  const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
 
   useEffect(() => {
-    if (!isEditing) {
+    if (isEditing) {
+      return;
+    }
+
+    const hasPersistedSession =
+      activeBranchId !== null &&
+      activeBranchId !== mainBranchId &&
+      readPersistedInlineRevisionSession(activeBranchId) !== null;
+
+    if (!hasPersistedSession) {
       setIsOpen(false);
     }
-  }, [isEditing]);
+  }, [activeBranchId, isEditing, mainBranchId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -294,6 +449,47 @@ export function useInlineResumeRevision({
     entityId: resumeId,
   };
 
+  const openActionAssistant = useCallback((branchId: string) => {
+    if (
+      assistantEntityType === "resume-revision-actions" &&
+      assistantEntityId === branchId &&
+      assistantToolContext?.route === actionToolContext.route
+    ) {
+      hideDrawer();
+      return;
+    }
+
+    openAssistant({
+      entityType: "resume-revision-actions",
+      entityId: branchId,
+      title: t("revision.inline.actionsConversationTitle"),
+      systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
+      originalContent: [resumeTitle, consultantTitle ?? "", presentation.join("\n\n"), summary ?? ""]
+        .filter(Boolean)
+        .join("\n\n"),
+      toolRegistry: actionToolRegistry,
+      toolContext: actionToolContext,
+      onAccept: () => {},
+    });
+
+    hideDrawer();
+  }, [
+    actionToolContext,
+    actionToolRegistry,
+    assistantEntityId,
+    assistantEntityType,
+    assistantToolContext?.route,
+    consultantTitle,
+    hideDrawer,
+    i18n.language,
+    i18n.resolvedLanguage,
+    openAssistant,
+    presentation,
+    resumeTitle,
+    summary,
+    t,
+  ]);
+
   const guardrail =
     stage === "actions"
       ? {
@@ -342,45 +538,12 @@ export function useInlineResumeRevision({
     setPendingActionBranchId(null);
     setWorkItems(buildInlineRevisionWorkItemsFromPlan(plan));
     setSuggestions(null);
-
-    if (
-      assistantEntityType !== "resume-revision-actions" ||
-      assistantEntityId !== activeBranchId ||
-      assistantToolContext?.route !== actionToolContext.route
-    ) {
-      openAssistant({
-        entityType: "resume-revision-actions",
-        entityId: activeBranchId,
-        title: t("revision.inline.actionsConversationTitle"),
-        systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
-        originalContent: [resumeTitle, consultantTitle ?? "", presentation.join("\n\n"), summary ?? ""]
-          .filter(Boolean)
-          .join("\n\n"),
-        toolRegistry: actionToolRegistry,
-        toolContext: actionToolContext,
-        onAccept: () => {},
-      });
-    }
-
-    hideDrawer();
+    openActionAssistant(activeBranchId);
   }, [
-    actionToolContext,
-    actionToolRegistry,
     activeBranchId,
-    assistantEntityId,
-    assistantEntityType,
-    assistantToolContext?.route,
-    consultantTitle,
-    hideDrawer,
-    i18n.language,
-    i18n.resolvedLanguage,
-    openAssistant,
+    openActionAssistant,
     pendingActionBranchId,
     plan,
-    presentation,
-    resumeTitle,
-    summary,
-    t,
   ]);
 
   const openPlanning = () => {
@@ -426,6 +589,16 @@ export function useInlineResumeRevision({
       fromCommitId: baseCommitId,
       name: buildInlineRevisionBranchName(plan),
       resumeId,
+    });
+
+    writePersistedInlineRevisionSession(newBranch.id, {
+      version: 1,
+      sourceBranchId: activeBranchId,
+      sourceBranchName: activeBranchName,
+      stage: "actions",
+      plan,
+      workItems: buildInlineRevisionWorkItemsFromPlan(plan),
+      suggestions: null,
     });
 
     setPendingActionBranchId(newBranch.id);
@@ -476,6 +649,95 @@ export function useInlineResumeRevision({
     setIsOpen(false);
     hideDrawer();
   };
+
+  useEffect(() => {
+    if (!activeBranchId || activeBranchId === mainBranchId) {
+      restoredBranchIdRef.current = null;
+      return;
+    }
+
+    if (isOpen) {
+      restoredBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    if (restoredBranchIdRef.current === activeBranchId) {
+      return;
+    }
+
+    const persistedSession = readPersistedInlineRevisionSession(activeBranchId);
+    if (!persistedSession) {
+      restoredBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    restoredBranchIdRef.current = activeBranchId;
+    setIsEditing(true);
+    setIsOpen(true);
+    setStage(persistedSession.stage);
+    setPlan(persistedSession.plan);
+    setWorkItems(persistedSession.workItems);
+    setSuggestions(persistedSession.suggestions);
+    setSelectedSuggestionId(null);
+    setReviewSuggestionId(null);
+    setIsSuggestionReviewOpen(false);
+    setSourceBranchId(persistedSession.sourceBranchId);
+    setSourceBranchName(persistedSession.sourceBranchName);
+    setPlanningSessionId(null);
+    setPendingActionBranchId(null);
+    setApplyingSuggestionId(null);
+    setIsPreparingFinalize(false);
+    if (persistedSession.stage === "actions") {
+      openActionAssistant(activeBranchId);
+    } else {
+      hideDrawer();
+    }
+  }, [activeBranchId, hideDrawer, isOpen, mainBranchId, openActionAssistant, setIsEditing]);
+
+  useLayoutEffect(() => {
+    if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {
+      return;
+    }
+
+    if (stage !== "actions" && stage !== "finalize") {
+      return;
+    }
+
+    if (stage === "actions" && !workItems && !suggestions) {
+      return;
+    }
+
+    writePersistedInlineRevisionSession(activeBranchId, {
+      version: 1,
+      sourceBranchId,
+      sourceBranchName,
+      stage,
+      plan,
+      workItems,
+      suggestions,
+    });
+  }, [
+    activeBranchId,
+    isOpen,
+    mainBranchId,
+    plan,
+    sourceBranchId,
+    sourceBranchName,
+    stage,
+    suggestions,
+    workItems,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen || stage !== "actions" || suggestions || !existingActionConversation) {
+      return;
+    }
+
+    const restoredSuggestions = deriveSuggestionsFromConversation(existingActionConversation.messages);
+    if (restoredSuggestions) {
+      setSuggestions(restoredSuggestions);
+    }
+  }, [existingActionConversation, isOpen, stage, suggestions]);
 
   const getSuggestionOriginalText = (suggestion: RevisionSuggestions["suggestions"][number]) => {
     const section = suggestion.section.trim().toLowerCase();
@@ -738,6 +1000,7 @@ export function useInlineResumeRevision({
       },
       {
         onSuccess: async (data) => {
+          clearPersistedInlineRevisionSession(activeBranchId);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
             queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
@@ -806,7 +1069,10 @@ export function useInlineResumeRevision({
       : null,
     open,
     close,
-    reset,
+    reset: () => {
+      clearPersistedInlineRevisionSession(activeBranchId);
+      reset();
+    },
     openActions,
     prepareFinalize,
     backToActions: () => setStage("actions"),

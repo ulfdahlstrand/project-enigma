@@ -23,6 +23,9 @@ async function bootstrapSingleAssignmentScenario(page: Page): Promise<RevisionFi
   const bootstrapResponse = await page.request.post(`${backendBaseUrl}/test/e2e/bootstrap-revision`, {
     data: {
       resumeTitle: "Playwright Finalize Resume",
+      consultantTitle: "Tech Lead / Senior Engineer",
+      presentationParagraphs: ["Playwright presentation paragraph with original wording."],
+      summary: "Original summary for branch resume.",
       assignmentClientName: "Payer",
       assignmentRole: "Fullstack developer",
       assignmentDescription: "Detta uppdrag innehåller felstavningen fakutrerings relaterade APIers.",
@@ -98,4 +101,59 @@ test("merges the revision branch back into main after approving and finalizing a
   const state = await getRevisionState(page, fixture.resumeId);
   expect(state.commits.some((commit) => commit.message === "Merge inline AI revision")).toBe(true);
   expect(state.mainAssignments[0]?.description).toContain("faktureringsrelaterade API:ers.");
+});
+
+test("can leave a revision branch session, reload it, and keep editable branch content", async ({ page }) => {
+  const fixture = await bootstrapSingleAssignmentScenario(page);
+
+  await page.goto(`/resumes/${fixture.resumeId}`);
+  await page.getByRole("button", { name: "Open edit options" }).click();
+  await page.getByRole("menuitem", { name: "Revise with AI" }).click();
+
+  await page.getByPlaceholder("Ask the AI for help…").fill("Fix spelling in my assignment");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("Review Payer assignment")).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Go to actions" }).click();
+
+  await expect(page.getByText("Fix spelling in Payer assignment")).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(/branchId=/u);
+
+  const currentUrl = new URL(page.url());
+  const branchId = currentUrl.searchParams.get("branchId");
+  expect(branchId).toBeTruthy();
+
+  const consultantTitleInput = page.locator("main input:visible").first();
+  const coverTextareas = page.locator("main textarea:visible");
+
+  await consultantTitleInput.fill("Principal Engineer");
+  await coverTextareas
+    .nth(0)
+    .fill("Updated presentation paragraph for branch resume.");
+  await coverTextareas
+    .nth(1)
+    .fill("Updated summary for branch resume.");
+
+  await page.getByRole("button", { name: "Edit" }).click();
+  await page
+    .getByLabel("Description")
+    .fill("Updated assignment description that should remain on the branch.");
+  await page.getByRole("button", { name: "Save" }).nth(2).click();
+  await page.getByRole("group").getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(page.getByText("Updated assignment description that should remain on the branch.")).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/employees");
+  await page.goto(`/resumes/${fixture.resumeId}?branchId=${branchId}`);
+
+  await expect(page.getByRole("heading", { name: "Revision checklist" })).toBeVisible();
+  await expect(page.locator("main input:visible").first()).toHaveValue("Principal Engineer");
+  await expect(page.locator("main textarea:visible").nth(0)).toHaveValue("Updated presentation paragraph for branch resume.");
+  await expect(page.locator("main textarea:visible").nth(1)).toHaveValue("Updated summary for branch resume.");
+  await expect(page.getByText("Updated assignment description that should remain on the branch.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByLabel("Description")).toBeVisible();
 });

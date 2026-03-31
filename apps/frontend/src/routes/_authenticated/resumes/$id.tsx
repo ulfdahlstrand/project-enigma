@@ -745,21 +745,6 @@ function ResumeDetailPage() {
   }, [employee, resume, branchCommit, isEditing, liveAssignments]);
 
   useEffect(() => {
-    if (isEditing) {
-      const nextTitle = consultantTitle ?? "";
-      const nextPresentation = presentation.join("\n\n");
-      const nextSummary = summary ?? "";
-      draftTitleRef.current = nextTitle;
-      draftPresentationRef.current = nextPresentation;
-      draftSummaryRef.current = nextSummary;
-      setDraftTitle(nextTitle);
-      setDraftPresentation(nextPresentation);
-      setDraftSummary(nextSummary);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing]);
-
-  useEffect(() => {
     draftTitleRef.current = draftTitle;
     draftPresentationRef.current = draftPresentation;
     draftSummaryRef.current = draftSummary;
@@ -776,6 +761,22 @@ function ResumeDetailPage() {
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
+
+  useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const nextTitle = consultantTitle ?? "";
+    const nextPresentation = presentation.join("\n\n");
+    const nextSummary = summary ?? "";
+    draftTitleRef.current = nextTitle;
+    draftPresentationRef.current = nextPresentation;
+    draftSummaryRef.current = nextSummary;
+    setDraftTitle(nextTitle);
+    setDraftPresentation(nextPresentation);
+    setDraftSummary(nextSummary);
+  }, [activeBranchId, consultantTitle, isEditing, presentation, summary]);
 
   const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
   const skills = snapshotContent?.skills
@@ -1230,7 +1231,7 @@ function ResumeDetailPage() {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
 
-                  {isEditing && !isSnapshotMode ? (
+                  {isEditing ? (
                     <AssignmentEditor
                       assignments={sortedAssignments}
                       queryKey={["listBranchAssignmentsFull", activeBranchId]}

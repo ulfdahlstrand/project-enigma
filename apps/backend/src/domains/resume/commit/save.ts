@@ -75,13 +75,13 @@ export async function saveResumeVersion(
     : null;
 
   const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
-    title: branch.title,
-    consultantTitle: branch.consultant_title,
-    presentation: branch.presentation ?? [],
-    summary: branch.summary,
-    language: branch.language,
-    skills: [],
-    assignments: [],
+      title: branch.title,
+      consultantTitle: branch.consultant_title,
+      presentation: branch.presentation ?? [],
+      summary: branch.summary,
+      language: branch.language,
+      skills: [],
+      assignments: [],
   };
 
   // Fetch skills for this resume

@@ -60,14 +60,19 @@ const legacyRevisionSuggestionSchema = z.object({
   description: z.string().min(1).optional(),
 });
 
-const revisionSuggestionsInputSchema = z
-  .object({
-    summary: z.string().min(1).optional(),
-    suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
-  })
-  .transform((input): RevisionSuggestions => ({
-    summary: input.summary ?? "Suggested revision actions",
-    suggestions: input.suggestions.map((suggestion, index) => {
+const revisionSuggestionsInputShapeSchema = z.object({
+  summary: z.string().min(1).optional(),
+  suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
+});
+
+export function normalizeRevisionSuggestionsInput(
+  input: unknown,
+): RevisionSuggestions {
+  const parsed = revisionSuggestionsInputShapeSchema.parse(input);
+
+  return {
+    summary: parsed.summary ?? "Suggested revision actions",
+    suggestions: parsed.suggestions.map((suggestion, index) => {
       if ("suggestedText" in suggestion) {
         return suggestion;
       }
@@ -90,7 +95,12 @@ const revisionSuggestionsInputSchema = z
         status: "pending" as const,
       };
     }),
-  }));
+  };
+}
+
+const revisionSuggestionsInputSchema = revisionSuggestionsInputShapeSchema.transform((input) =>
+  normalizeRevisionSuggestionsInput(input),
+);
 
 export interface ResumeSkillSnapshot {
   name: string;
