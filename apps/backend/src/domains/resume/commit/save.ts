@@ -79,6 +79,7 @@ export async function saveResumeVersion(
       consultantTitle: branch.consultant_title,
       presentation: branch.presentation ?? [],
       summary: branch.summary,
+      highlightedItems: [],
       language: branch.language,
       skills: [],
       assignments: [],
@@ -121,6 +122,7 @@ export async function saveResumeVersion(
     consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
     presentation: input.presentation ?? baseContent.presentation ?? [],
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
+    highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
     skills: skillRows.map((s) => ({
       name: s.name,

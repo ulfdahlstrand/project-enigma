@@ -71,16 +71,55 @@ export async function updateResume(
   if (input.language !== undefined) set.language = input.language;
   if (input.isMain !== undefined) set.is_main = input.isMain;
 
-  const row = await db
-    .updateTable("resumes")
-    .set(set)
-    .where("id", "=", input.id)
-    .returningAll()
-    .executeTakeFirst();
+  const row = await db.transaction().execute(async (trx) => {
+    const updatedResume = await trx
+      .updateTable("resumes")
+      .set(set)
+      .where("id", "=", input.id)
+      .returningAll()
+      .executeTakeFirst();
+
+    if (updatedResume === undefined) {
+      throw new ORPCError("NOT_FOUND");
+    }
+
+    if (input.highlightedItems !== undefined) {
+      await trx
+        .deleteFrom("resume_highlighted_items")
+        .where("resume_id", "=", input.id)
+        .execute();
+
+      const nextHighlightedItems = input.highlightedItems
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      if (nextHighlightedItems.length > 0) {
+        await trx
+          .insertInto("resume_highlighted_items")
+          .values(
+            nextHighlightedItems.map((text, index) => ({
+              resume_id: input.id,
+              text,
+              sort_order: index,
+            })),
+          )
+          .execute();
+      }
+    }
+
+    return updatedResume;
+  });
 
   if (row === undefined) {
     throw new ORPCError("NOT_FOUND");
   }
+
+  const highlightedItemRows = await db
+    .selectFrom("resume_highlighted_items")
+    .select(["text"])
+    .where("resume_id", "=", input.id)
+    .orderBy("sort_order", "asc")
+    .execute();
 
   return {
     id: row.id,
@@ -89,6 +128,7 @@ export async function updateResume(
     consultantTitle: row.consultant_title,
     presentation: row.presentation ?? [],
     summary: row.summary,
+    highlightedItems: highlightedItemRows.map((item) => item.text),
     language: row.language,
     isMain: row.is_main,
     createdAt: row.created_at,

@@ -183,6 +183,8 @@
       "presentationLabel": "Presentation",
       "presentationHelper": "Separate paragraphs with a blank line.",
       "summaryLabel": "Summary",
+      "highlightedExperienceLabel": "Highlighted experience",
+      "highlightedExperienceHelper": "Use one line per item.",
       "saveButton": "Save",
       "saveActionsLabel": "Open save actions",
       "saveCurrentOption": "Save current resume",

@@ -48,6 +48,12 @@ function diffScalars(
   if (base.summary !== head.summary) {
     scalars.summary = { before: base.summary, after: head.summary };
   }
+  if (diffArray(base.highlightedItems ?? [], head.highlightedItems ?? [])) {
+    scalars.highlightedItems = {
+      before: base.highlightedItems ?? [],
+      after: head.highlightedItems ?? [],
+    };
+  }
   if (base.language !== head.language) {
     scalars.language = { before: base.language, after: head.language };
   }

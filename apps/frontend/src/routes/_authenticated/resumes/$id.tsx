@@ -171,15 +171,17 @@ interface CoverPageContentProps {
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
-  highlightedAssignments: Array<{ role: string; clientName: string }>;
+  highlightedItems: string[];
   presentationRef?: RefObject<HTMLDivElement | null>;
   isEditing?: boolean;
   draftTitle?: string;
   draftPresentation?: string;
   draftSummary?: string;
+  draftHighlightedItems?: string;
   onDraftTitleChange?: (v: string) => void;
   onDraftPresentationChange?: (v: string) => void;
   onDraftSummaryChange?: (v: string) => void;
+  onDraftHighlightedItemsChange?: (v: string) => void;
 }
 
 function CoverPageContent({
@@ -187,15 +189,17 @@ function CoverPageContent({
   consultantTitle,
   presentation,
   summary,
-  highlightedAssignments,
+  highlightedItems,
   presentationRef,
   isEditing = false,
   draftTitle = "",
   draftPresentation = "",
   draftSummary = "",
+  draftHighlightedItems = "",
   onDraftTitleChange,
   onDraftPresentationChange,
   onDraftSummaryChange,
+  onDraftHighlightedItemsChange,
 }: CoverPageContentProps) {
   const { t } = useTranslation("common");
 
@@ -253,7 +257,7 @@ function CoverPageContent({
       ) : null}
 
       {/* Special skills + highlighted experience box */}
-      {(isEditing || summary || highlightedAssignments.length > 0) && (
+      {(isEditing || summary || highlightedItems.length > 0) && (
         <Box
           sx={{
             bgcolor: "action.hover",
@@ -264,7 +268,7 @@ function CoverPageContent({
           }}
         >
           {(isEditing || summary) && (
-            <Box sx={{ mb: highlightedAssignments.length > 0 ? 2.5 : 0 }}>
+            <Box sx={{ mb: highlightedItems.length > 0 || isEditing ? 2.5 : 0 }}>
               <Typography
                 variant="caption"
                 sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
@@ -289,7 +293,7 @@ function CoverPageContent({
             </Box>
           )}
 
-          {highlightedAssignments.length > 0 && (
+          {(isEditing || highlightedItems.length > 0) && (
             <Box>
               <Typography
                 variant="caption"
@@ -297,19 +301,33 @@ function CoverPageContent({
               >
                 {t("resume.detail.highlightedExperienceHeading").toUpperCase()}
               </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-                {highlightedAssignments.map((a, i) => (
-                  <Typography
-                    key={i}
-                    component="li"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 0.25 }}
-                  >
-                    {a.role} hos {a.clientName}
-                  </Typography>
-                ))}
-              </Box>
+              {isEditing ? (
+                <TextField
+                  label={t("resume.edit.highlightedExperienceLabel")}
+                  helperText={t("resume.edit.highlightedExperienceHelper")}
+                  value={draftHighlightedItems}
+                  onChange={(e) => onDraftHighlightedItemsChange?.(e.target.value)}
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                />
+              ) : (
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {highlightedItems.map((item, i) => (
+                    <Typography
+                      key={i}
+                      component="li"
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 0.25 }}
+                    >
+                      {item}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
             </Box>
           )}
         </Box>
@@ -695,12 +713,19 @@ function ResumeDetailPage() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
+  const [draftHighlightedItems, setDraftHighlightedItems] = useState("");
   const draftTitleRef = useRef("");
   const draftPresentationRef = useRef("");
   const draftSummaryRef = useRef("");
+  const draftHighlightedItemsRef = useRef("");
 
   const updateResume = useMutation({
-    mutationFn: (patch: { presentation?: string[]; consultantTitle?: string | null; summary?: string | null }) =>
+    mutationFn: (patch: {
+      presentation?: string[];
+      consultantTitle?: string | null;
+      summary?: string | null;
+      highlightedItems?: string[];
+    }) =>
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
@@ -748,7 +773,8 @@ function ResumeDetailPage() {
     draftTitleRef.current = draftTitle;
     draftPresentationRef.current = draftPresentation;
     draftSummaryRef.current = draftSummary;
-  }, [draftPresentation, draftSummary, draftTitle]);
+    draftHighlightedItemsRef.current = draftHighlightedItems;
+  }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
   // Assignments always come from the live branch_assignments join — same source for all branches
   const assignments = liveAssignments;
@@ -761,6 +787,14 @@ function ResumeDetailPage() {
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
+  const fallbackHighlightedItems = sortedAssignments
+    .slice(0, COVER_HIGHLIGHT_COUNT)
+    .map((assignment) => `${assignment.role} hos ${assignment.clientName}`);
+  const highlightedItems =
+    snapshotContent?.highlightedItems ??
+    (resume?.highlightedItems && resume.highlightedItems.length > 0
+      ? resume.highlightedItems
+      : fallbackHighlightedItems);
 
   useEffect(() => {
     if (!isEditing) {
@@ -770,15 +804,17 @@ function ResumeDetailPage() {
     const nextTitle = consultantTitle ?? "";
     const nextPresentation = presentation.join("\n\n");
     const nextSummary = summary ?? "";
+    const nextHighlightedItems = highlightedItems.join("\n");
     draftTitleRef.current = nextTitle;
     draftPresentationRef.current = nextPresentation;
     draftSummaryRef.current = nextSummary;
+    draftHighlightedItemsRef.current = nextHighlightedItems;
     setDraftTitle(nextTitle);
     setDraftPresentation(nextPresentation);
     setDraftSummary(nextSummary);
-  }, [activeBranchId, consultantTitle, isEditing, presentation, summary]);
+    setDraftHighlightedItems(nextHighlightedItems);
+  }, [activeBranchId, consultantTitle, highlightedItems, isEditing, presentation, summary]);
 
-  const highlighted = sortedAssignments.slice(0, COVER_HIGHLIGHT_COUNT);
   const skills = snapshotContent?.skills
     ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
     : (resume?.skills ?? []);
@@ -791,6 +827,7 @@ function ResumeDetailPage() {
       consultantTitle: draftTitleRef.current.trim() || null,
       presentation: draftPresentationRef.current.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
       summary: draftSummaryRef.current.trim() || null,
+      highlightedItems: draftHighlightedItemsRef.current.split(/\n+/).map((item) => item.trim()).filter(Boolean),
     };
   };
 
@@ -798,6 +835,7 @@ function ResumeDetailPage() {
     consultantTitle: title.trim() || null,
     presentation: presentationValue.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
     summary: summaryValue.trim() || null,
+    highlightedItems: draftHighlightedItemsRef.current.split(/\n+/).map((item) => item.trim()).filter(Boolean),
   });
 
   const resumeInspectionSnapshot = {
@@ -1158,15 +1196,17 @@ function ResumeDetailPage() {
                 consultantTitle={consultantTitle}
                 presentation={presentation}
                 summary={summary}
-                highlightedAssignments={highlighted}
+                highlightedItems={highlightedItems}
                 presentationRef={presentationRef}
                 isEditing={isEditing}
                 draftTitle={draftTitle}
                 draftPresentation={draftPresentation}
                 draftSummary={draftSummary}
+                draftHighlightedItems={draftHighlightedItems}
                 onDraftTitleChange={setDraftTitle}
                 onDraftPresentationChange={setDraftPresentation}
                 onDraftSummaryChange={setDraftSummary}
+                onDraftHighlightedItemsChange={setDraftHighlightedItems}
               />
             </DocumentPage>
             </Box>

@@ -42,6 +42,7 @@ function buildHtml(data: {
   email: string | null | undefined;
   presentation: string[];
   summary: string | null | undefined;
+  highlightedItems: string[];
   skills: Array<{ name: string; category: string | null; level: string | null }>;
   assignments: Array<{
     role: string;
@@ -174,7 +175,9 @@ ${PDF_FONT_LINKS}
         if (a.is_current !== b.is_current) return a.is_current ? -1 : 1;
         return (b.start_date ?? "").toString().localeCompare((a.start_date ?? "").toString());
       });
-      const highlighted = sorted.slice(0, 5);
+      const highlighted = data.highlightedItems.length > 0
+        ? data.highlightedItems
+        : sorted.slice(0, 5).map((a) => `${a.role} ${t.atClient} ${a.client_name}`);
       const showBox = data.summary || highlighted.length > 0;
       if (!showBox) return "";
       return `<div class="info-box">
@@ -185,7 +188,7 @@ ${PDF_FONT_LINKS}
       ${highlighted.length > 0 ? `
         <p class="info-box-label exp-summary-heading">${t.experienceSummaryHeading}</p>
         <ul class="exp-summary-list">
-          ${highlighted.map((a) => `<li class="exp-summary-item">${escapeHtml(a.role)} ${t.atClient} ${escapeHtml(a.client_name)}</li>`).join("")}
+          ${highlighted.map((item) => `<li class="exp-summary-item">${escapeHtml(item)}</li>`).join("")}
         </ul>
       ` : ""}
     </div>`;
@@ -219,6 +222,7 @@ export async function exportResumePdf(
     email: data.email,
     presentation: data.presentation,
     summary: data.summary,
+    highlightedItems: data.highlightedItems,
     skills: data.skills,
     assignments: data.assignments,
     education: data.education,

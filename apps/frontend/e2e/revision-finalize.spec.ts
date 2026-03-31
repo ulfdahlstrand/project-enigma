@@ -133,6 +133,9 @@ test("can leave a revision branch session, reload it, and keep editable branch c
   await coverTextareas
     .nth(1)
     .fill("Updated summary for branch resume.");
+  await page
+    .getByLabel("Highlighted experience")
+    .fill("First highlighted branch item\nSecond highlighted branch item");
 
   await page.getByRole("button", { name: "Edit" }).click();
   await page
@@ -152,7 +155,12 @@ test("can leave a revision branch session, reload it, and keep editable branch c
   await expect(page.locator("main input:visible").first()).toHaveValue("Principal Engineer");
   await expect(page.locator("main textarea:visible").nth(0)).toHaveValue("Updated presentation paragraph for branch resume.");
   await expect(page.locator("main textarea:visible").nth(1)).toHaveValue("Updated summary for branch resume.");
+  await expect(page.getByLabel("Highlighted experience")).toHaveValue(
+    "First highlighted branch item\nSecond highlighted branch item",
+  );
   await expect(page.getByText("Updated assignment description that should remain on the branch.")).toBeVisible();
+  await expect(page.getByText("First highlighted branch item")).toBeVisible();
+  await expect(page.getByText("Second highlighted branch item")).toBeVisible();
 
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.getByLabel("Description")).toBeVisible();

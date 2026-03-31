@@ -73,6 +73,13 @@ export async function getResume(
     .orderBy("sort_order", "asc")
     .execute();
 
+  const highlightedItemRows = await db
+    .selectFrom("resume_highlighted_items")
+    .select(["text"])
+    .where("resume_id", "=", id)
+    .orderBy("sort_order", "asc")
+    .execute();
+
   return {
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
@@ -80,6 +87,7 @@ export async function getResume(
     consultantTitle: resumeRow.consultant_title,
     presentation: resumeRow.presentation ?? [],
     summary: resumeRow.summary,
+    highlightedItems: highlightedItemRows.map((item) => item.text),
     language: resumeRow.language,
     isMain: resumeRow.is_main,
     mainBranchId: resumeRow.branch_id ?? null,

@@ -15,6 +15,7 @@ function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitConte
     consultantTitle: content.consultantTitle ?? null,
     presentation: Array.isArray(content.presentation) ? content.presentation : [],
     summary: content.summary ?? null,
+    highlightedItems: Array.isArray(content.highlightedItems) ? content.highlightedItems : [],
     skills: Array.isArray(content.skills) ? content.skills : [],
     assignments: Array.isArray(content.assignments)
       ? content.assignments.map((assignment) => ({

@@ -26,6 +26,7 @@ export const resumeSchema = z.object({
   consultantTitle: z.string().nullable(),
   presentation: z.array(z.string()),
   summary: z.string().nullable(),
+  highlightedItems: z.array(z.string()).default([]),
   language: z.string(),
   isMain: z.boolean(),
   /** ID of the main branch for this resume. Omitted when branch data is not fetched. */
@@ -82,6 +83,7 @@ export const updateResumeInputSchema = z
     consultantTitle: z.string().nullable().optional(),
     presentation: z.array(z.string()).optional(),
     summary: z.string().nullable().optional(),
+    highlightedItems: z.array(z.string()).optional(),
     language: z.string().optional(),
     isMain: z.boolean().optional(),
   })
@@ -91,6 +93,7 @@ export const updateResumeInputSchema = z
       d.consultantTitle !== undefined ||
       d.presentation !== undefined ||
       d.summary !== undefined ||
+      d.highlightedItems !== undefined ||
       d.language !== undefined ||
       d.isMain !== undefined,
     { message: "At least one field must be provided" }

@@ -22,6 +22,7 @@ export interface ExportData {
   language: string;
   presentation: string[];
   summary: string | null | undefined;
+  highlightedItems: string[];
   skills: Array<{ name: string; category: string | null; level: string | null }>;
   assignments: Array<{
     role: string;
@@ -54,7 +55,7 @@ async function buildFromLive(
     .where("id", "=", resumeId)
     .executeTakeFirstOrThrow();
 
-  const [employee, assignments, skills, education] = await Promise.all([
+  const [employee, assignments, skills, education, highlightedItems] = await Promise.all([
     db
       .selectFrom("employees")
       .select(["id", "name", "email"])
@@ -83,6 +84,12 @@ async function buildFromLive(
       .where("employee_id", "=", employeeId)
       .orderBy("sort_order", "asc")
       .execute(),
+    db
+      .selectFrom("resume_highlighted_items")
+      .select(["text"])
+      .where("resume_id", "=", resumeId)
+      .orderBy("sort_order", "asc")
+      .execute(),
   ]);
 
   return {
@@ -92,6 +99,7 @@ async function buildFromLive(
     language: resume.language ?? "en",
     presentation: (resume.presentation as string[] | null) ?? [],
     summary: resume.summary,
+    highlightedItems: highlightedItems.map((item) => item.text),
     skills: skills.map((s) => ({
       name: s.name,
       category: s.category,
@@ -167,6 +175,7 @@ async function buildFromSnapshot(
     language: content.language,
     presentation: content.presentation,
     summary: content.summary,
+    highlightedItems: content.highlightedItems ?? [],
     skills: content.skills.map((s) => ({
       name: s.name,
       category: s.category,
