@@ -14,7 +14,9 @@ import {
   useAIConversation,
   useCreateAIConversation,
   useSendAIMessage,
+  useCloseAIConversation,
 } from "../../hooks/ai-assistant";
+import { DiffReviewDialog, renderTextDiffReview, type TextDiffReviewValue } from "./DiffReviewDialog";
 import type { AIMessage } from "@cv-tool/contracts";
 import { executeAIToolCall } from "../../lib/ai-tools/runtime";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
@@ -378,6 +380,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
 interface AIAssistantChatProps {
   toolRegistry?: AIToolRegistry | null;
   toolContext?: AIToolContext | null;
+  showApplyChanges?: boolean;
   autoStartMessage?: string | null | undefined;
   automation?: {
     key: string;
@@ -432,6 +435,7 @@ function ToolingNotice({
 export function AIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
+  showApplyChanges = true,
   autoStartMessage = null,
   automation = null,
   guardrail = null,
@@ -442,16 +446,22 @@ export function AIAssistantChat({
     entityId,
     systemPrompt,
     kickoffMessage,
+    originalContent,
     toolRegistry: toolRegistryFromContext,
     toolContext: toolContextFromContext,
     activeConversationId,
+    pendingSuggestion,
     setActiveConversationId,
+    setPendingSuggestion,
+    applyAndClose,
+    closeAssistant,
   } = useAIAssistantContext();
 
   const toolRegistry = toolRegistryProp ?? toolRegistryFromContext;
   const toolContext = toolContextProp ?? toolContextFromContext;
 
   const [inputValue, setInputValue] = useState("");
+  const [diffOpen, setDiffOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const createInitiated = useRef(false);
   const processedToolCallsRef = useRef<Set<string>>(new Set());
@@ -463,6 +473,7 @@ export function AIAssistantChat({
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
   const sendMessage = useSendAIMessage(activeConversationId);
+  const closeConversation = useCloseAIConversation(entityType, entityId);
 
   const messages = conversation?.messages ?? [];
   const visibleMessages = messages.filter(
@@ -482,6 +493,8 @@ export function AIAssistantChat({
     sendMessage.isPending ||
     activeToolExecutionCount > 0 ||
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
+  const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
+  const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
 
   // Auto-create a conversation when there is no active one.
   // Runs on mount AND whenever activeConversationId becomes null (e.g. "New conversation").
@@ -689,6 +702,36 @@ export function AIAssistantChat({
     }
   };
 
+  const handleApplyClick = () => {
+    if (latestSuggestion) {
+      setPendingSuggestion({ original: originalContent ?? "", suggested: latestSuggestion });
+      setDiffOpen(true);
+    }
+  };
+
+  const handleDiffApply = (suggested: string) => {
+    if (pendingSuggestion) {
+      if (activeConversationId) {
+        closeConversation.mutate({ conversationId: activeConversationId });
+      }
+      applyAndClose(suggested);
+    }
+    setDiffOpen(false);
+  };
+
+  const handleDiffKeepEditing = () => {
+    setDiffOpen(false);
+  };
+
+  const handleDiffDiscard = () => {
+    setDiffOpen(false);
+    setPendingSuggestion(null);
+    if (activeConversationId) {
+      closeConversation.mutate({ conversationId: activeConversationId });
+    }
+    closeAssistant();
+  };
+
   if (createConversation.isError) {
     return (
       <Alert severity="error" sx={{ m: 2 }}>
@@ -769,9 +812,51 @@ export function AIAssistantChat({
             <SendIcon />
           </IconButton>
         </Box>
+        {showApplyChanges && (
+          <Button
+            fullWidth
+            variant="contained"
+            color="success"
+            sx={{ mt: 1.5 }}
+            disabled={!latestSuggestion || isInitialising}
+            onClick={handleApplyClick}
+          >
+            {t("aiAssistant.applyChanges")}
+          </Button>
+        )}
       </Box>
 
       <ToolingNotice toolRegistry={toolRegistry} toolContext={toolContext} isAnalysing={isAnalysing} />
+      {showApplyChanges && pendingSuggestion && (
+        <DiffReviewDialog<TextDiffReviewValue, string>
+          open={diffOpen}
+          value={pendingSuggestion}
+          renderReview={renderTextDiffReview}
+          formatResult={(value) => value.suggested}
+          onApply={handleDiffApply}
+          onKeepEditing={handleDiffKeepEditing}
+          onDiscard={handleDiffDiscard}
+        />
+      )}
     </Box>
   );
+}
+
+function extractSuggestion(text: string): string | null {
+  const match = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+  if (!match || !match[1]) return null;
+  try {
+    const parsed = JSON.parse(match[1]) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      (parsed as SuggestionPayload).type === "suggestion" &&
+      typeof (parsed as SuggestionPayload).content === "string"
+    ) {
+      return (parsed as SuggestionPayload).content;
+    }
+  } catch {
+    // not valid JSON
+  }
+  return null;
 }

@@ -53,6 +53,7 @@ export function InlineRevisionChatPanel({
         <AIAssistantChat
           toolRegistry={toolRegistry}
           toolContext={toolContext}
+          showApplyChanges={false}
           autoStartMessage={autoStartMessage}
           automation={automation}
           guardrail={guardrail}
