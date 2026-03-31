@@ -112,6 +112,7 @@ export const saveResumeVersionInputSchema = z.object({
   presentation: z.array(z.string()).optional(),
   summary: z.string().nullable().optional(),
   highlightedItems: z.array(z.string()).optional(),
+  skills: z.array(resumeCommitSkillSchema).optional(),
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;

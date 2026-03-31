@@ -88,7 +88,7 @@ type ResumeInspectionSnapshot = {
   language: string | null | undefined;
   presentation: string[];
   summary: string | null;
-  skills: Array<{ name: string; category: string | null; sortOrder: number }>;
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
   assignments: Array<{
     id: string;
     clientName: string;
@@ -131,6 +131,7 @@ type UseInlineResumeRevisionParams = {
   presentation: string[];
   summary: string | null;
   highlightedItems: string[];
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
   sortedAssignments: ResumeAssignmentLike[];
   resumeInspectionSnapshot: ResumeInspectionSnapshot;
   sectionRefs: RevisionSectionRefs;
@@ -256,6 +257,65 @@ function deriveSuggestionsFromConversation(
   return nextSuggestions;
 }
 
+function formatSkillsSnapshot(
+  skills: Array<{ name: string; category: string | null; sortOrder: number }>,
+) {
+  const orderedSkills = [...skills].sort((a, b) => a.sortOrder - b.sortOrder);
+  const groups = orderedSkills.reduce<Array<{ category: string; skills: string[] }>>((acc, skill) => {
+    const category = skill.category?.trim() || "Other";
+    const existing = acc.find((group) => group.category === category);
+
+    if (existing) {
+      existing.skills.push(skill.name);
+      return acc;
+    }
+
+    return [...acc, { category, skills: [skill.name] }];
+  }, []);
+
+  return groups.map((group) => `${group.category}: ${group.skills.join(", ")}`).join("\n");
+}
+
+function normalizeSkillCategory(category: string | null | undefined) {
+  return category?.trim() || "Other";
+}
+
+function groupSkillsByCategory(
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  const orderedSkills = [...skills].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return orderedSkills.reduce<Array<{
+    category: string;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  }>>((acc, skill) => {
+    const category = normalizeSkillCategory(skill.category);
+    const existing = acc.find((group) => group.category === category);
+
+    if (existing) {
+      existing.skills.push(skill);
+      return acc;
+    }
+
+    return [...acc, { category, skills: [skill] }];
+  }, []);
+}
+
+function resequenceSkillGroups(
+  groups: Array<{
+    category: string;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  }>,
+) {
+  return groups.flatMap((group, groupIndex) =>
+    group.skills.map((skill, skillIndex) => ({
+      ...skill,
+      category: group.category,
+      sortOrder: groupIndex * 1000 + skillIndex,
+    })),
+  );
+}
+
 export function useInlineResumeRevision({
   resumeId,
   isEditing,
@@ -270,6 +330,7 @@ export function useInlineResumeRevision({
   presentation,
   summary,
   highlightedItems,
+  skills,
   sortedAssignments,
   resumeInspectionSnapshot,
   sectionRefs,
@@ -771,6 +832,10 @@ export function useInlineResumeRevision({
       return summary ?? "";
     }
 
+    if (section.includes("skill") || section.includes("kompetens")) {
+      return formatSkillsSnapshot(skills);
+    }
+
     if (section.includes("assignment") || section.includes("uppdrag") || section.includes("experience")) {
       const matchingAssignment = sortedAssignments.find((assignment) => {
         const client = assignment.clientName.toLowerCase();
@@ -853,6 +918,82 @@ export function useInlineResumeRevision({
     }
   };
 
+  const applySuggestionToSkills = async (suggestion: RevisionSuggestions["suggestions"][number]) => {
+    if (!activeBranchId || !suggestion.skills || suggestion.skills.length === 0) {
+      return false;
+    }
+
+    const currentSkillGroups = groupSkillsByCategory(skills);
+    const currentSkillsByName = new Map(
+      skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
+    );
+    let nextSkills = suggestion.skills.map((skill) => {
+      const currentSkill = currentSkillsByName.get(skill.name.trim().toLowerCase());
+
+      return {
+        name: skill.name,
+        level: skill.level ?? currentSkill?.level ?? null,
+        category: skill.category,
+        sortOrder: skill.sortOrder,
+      };
+    });
+
+    if (suggestion.skillScope?.type === "group_order") {
+      const desiredCategoryOrder = suggestion.skills.reduce<string[]>((acc, skill) => {
+        const category = normalizeSkillCategory(skill.category);
+        if (!acc.includes(category)) {
+          acc.push(category);
+        }
+        return acc;
+      }, []);
+      const currentGroupsByCategory = new Map(
+        currentSkillGroups.map((group) => [group.category, group]),
+      );
+      const reorderedGroups = desiredCategoryOrder
+        .map((category) => currentGroupsByCategory.get(category))
+        .filter((group): group is NonNullable<typeof group> => Boolean(group));
+      const remainingGroups = currentSkillGroups.filter((group) => !desiredCategoryOrder.includes(group.category));
+
+      nextSkills = resequenceSkillGroups([...reorderedGroups, ...remainingGroups]);
+    } else if (
+      suggestion.skillScope?.type === "group_contents"
+      && suggestion.skillScope.category
+    ) {
+      const targetCategory = normalizeSkillCategory(suggestion.skillScope.category);
+      const desiredNames = suggestion.skills
+        .filter((skill) => normalizeSkillCategory(skill.category) === targetCategory)
+        .map((skill) => skill.name.trim().toLowerCase());
+      const desiredNameSet = new Set(desiredNames);
+
+      nextSkills = resequenceSkillGroups(currentSkillGroups.map((group) => {
+        if (group.category !== targetCategory) {
+          return group;
+        }
+
+        const skillsByName = new Map(
+          group.skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
+        );
+        const reorderedSkills = desiredNames
+          .map((name) => skillsByName.get(name))
+          .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill));
+        const remainingSkills = group.skills.filter((skill) => !desiredNameSet.has(skill.name.trim().toLowerCase()));
+
+        return {
+          ...group,
+          skills: [...reorderedSkills, ...remainingSkills],
+        };
+      }));
+    }
+
+    await saveVersion.mutateAsync({
+      branchId: activeBranchId,
+      message: buildInlineRevisionSuggestionCommitMessage(suggestion),
+      skills: nextSkills,
+    });
+
+    return true;
+  };
+
   const approveSuggestion = async (suggestionId: string) => {
     const suggestion = suggestions?.suggestions.find((item) => item.id === suggestionId);
     if (suggestion) {
@@ -872,6 +1013,13 @@ export function useInlineResumeRevision({
         setApplyingSuggestionId(suggestionId);
         try {
           await applySuggestionToAssignment(suggestion);
+        } finally {
+          setApplyingSuggestionId(null);
+        }
+      } else if (suggestion.section.trim().toLowerCase().includes("skill") && activeBranchId) {
+        setApplyingSuggestionId(suggestionId);
+        try {
+          await applySuggestionToSkills(suggestion);
         } finally {
           setApplyingSuggestionId(null);
         }

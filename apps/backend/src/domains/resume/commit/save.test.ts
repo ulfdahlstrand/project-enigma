@@ -63,6 +63,7 @@ const INSERTED_COMMIT = {
     consultantTitle: null,
     presentation: ["Experienced engineer"],
     summary: "Strong backend focus",
+    highlightedItems: [],
     language: "en",
     skills: [{ name: "TypeScript", level: "expert", category: "languages", sortOrder: 0 }],
     assignments: [],
@@ -266,6 +267,24 @@ describe("saveResumeVersion", () => {
     // Non-overridden fields still come from live resume
     expect(content.title).toBe("Senior Engineer");
     expect(content.language).toBe("en");
+  });
+
+  it("uses skills overrides when provided", async () => {
+    const { db, insertValues } = buildDbMock();
+
+    await saveResumeVersion(db, MOCK_ADMIN, {
+      branchId: BRANCH_ID,
+      skills: [
+        { name: "Team leadership", level: null, category: "Management", sortOrder: 0 },
+        { name: "Stakeholder management", level: null, category: "Management", sortOrder: 1 },
+      ],
+    });
+
+    const content = JSON.parse(insertValues.mock.calls[0][0].content);
+    expect(content.skills).toEqual([
+      { name: "Team leadership", level: null, category: "Management", sortOrder: 0 },
+      { name: "Stakeholder management", level: null, category: "Management", sortOrder: 1 },
+    ]);
   });
 
   it("allows setting consultantTitle to null via override", async () => {

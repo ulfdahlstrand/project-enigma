@@ -854,6 +854,7 @@ function ResumeDetailPage() {
     summary,
     skills: skills.map((skill) => ({
       name: skill.name,
+      level: skill.level ?? null,
       category: skill.category ?? null,
       sortOrder: skill.sortOrder ?? 0,
     })),
@@ -899,6 +900,12 @@ function ResumeDetailPage() {
     presentation,
     summary,
     highlightedItems,
+    skills: skills.map((skill) => ({
+      name: skill.name,
+      level: skill.level ?? null,
+      category: skill.category ?? null,
+      sortOrder: skill.sortOrder ?? 0,
+    })),
     sortedAssignments,
     resumeInspectionSnapshot,
     sectionRefs: {

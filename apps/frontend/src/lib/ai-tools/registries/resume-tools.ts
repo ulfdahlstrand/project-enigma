@@ -34,6 +34,18 @@ export const revisionWorkItemsSchema = z.object({
 
 export type RevisionWorkItems = z.infer<typeof revisionWorkItemsSchema>;
 
+const revisionSuggestionSkillSchema = z.object({
+  name: z.string().min(1),
+  level: z.string().nullable().optional(),
+  category: z.string().nullable(),
+  sortOrder: z.number(),
+});
+
+const revisionSuggestionSkillScopeSchema = z.object({
+  type: z.enum(["group_order", "group_contents"]),
+  category: z.string().min(1).optional(),
+});
+
 const revisionSuggestionSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -41,6 +53,8 @@ const revisionSuggestionSchema = z.object({
   section: z.string().min(1),
   assignmentId: z.string().optional(),
   suggestedText: z.string().min(1),
+  skills: z.array(revisionSuggestionSkillSchema).optional(),
+  skillScope: revisionSuggestionSkillScopeSchema.optional(),
   status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
 });
 
@@ -104,6 +118,7 @@ const revisionSuggestionsInputSchema = revisionSuggestionsInputShapeSchema.trans
 
 export interface ResumeSkillSnapshot {
   name: string;
+  level: string | null;
   category: string | null;
   sortOrder: number;
 }

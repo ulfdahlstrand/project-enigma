@@ -37,6 +37,24 @@ export function buildInlineRevisionSuggestionCommitMessage(
   return `Apply AI suggestion: ${suggestion.title}`;
 }
 
+function isBroadSkillsWorkItem(item: RevisionWorkItems["items"][number]) {
+  if (item.section !== "skills") {
+    return false;
+  }
+
+  const haystack = `${item.title} ${item.description}`.toLowerCase();
+  return (
+    haystack.includes("reorder")
+    || haystack.includes("repriorit")
+    || haystack.includes("reorgan")
+    || haystack.includes("restruct")
+    || haystack.includes("sortera")
+    || haystack.includes("prioriter")
+    || haystack.includes("omorgan")
+    || haystack.includes("omstruktur")
+  );
+}
+
 export function buildInlineRevisionWorkItemAutomationMessage(workItems: RevisionWorkItems | null) {
   if (!workItems || workItems.items.length === 0) {
     return null;
@@ -53,9 +71,20 @@ export function buildInlineRevisionWorkItemAutomationMessage(workItems: Revision
       `Process only this work item now: ${nextPendingItem.id}.`,
       `Title: ${nextPendingItem.title}.`,
       `Description: ${nextPendingItem.description}.`,
-      nextPendingItem.assignmentId
+      isBroadSkillsWorkItem(nextPendingItem)
+        ? [
+            "This is a broad skills-ordering task.",
+            "First inspect the current skills structure with inspect_resume_skills.",
+            "Then replace the current action-stage worklist with explicit skills work items using set_revision_work_items.",
+            "Create one work item for overall group order, then one work item per affected group for internal skill ordering.",
+            "Do not create work items for inventing new categories or moving skills between categories unless the user explicitly asked for regrouping.",
+            "Do not propose concrete suggestions yet in this first response after inspection.",
+          ].join(" ")
+        : nextPendingItem.assignmentId
         ? `Inspect assignment ${nextPendingItem.assignmentId} and decide the outcome for this work item only.`
-        : `Inspect the exact source text for section ${nextPendingItem.section} and decide the outcome for this work item only.`,
+        : nextPendingItem.section === "skills"
+          ? "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only."
+          : `Inspect the exact source text for section ${nextPendingItem.section} and decide the outcome for this work item only.`,
       "If changes are needed, create suggestions for this work item.",
       "If no changes are needed, mark this work item as no changes needed.",
       "Do not revisit completed work items.",
@@ -101,7 +130,11 @@ function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): 
     return "consultantTitle";
   }
 
-  if (haystack.includes("skill")) {
+  if (
+    haystack.includes("skill")
+    || haystack.includes("kompetens")
+    || haystack.includes("färdighet")
+  ) {
     return "skills";
   }
 

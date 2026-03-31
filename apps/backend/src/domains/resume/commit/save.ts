@@ -124,7 +124,7 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skills: skillRows.map((s) => ({
+    skills: input.skills ?? skillRows.map((s) => ({
       name: s.name,
       level: s.level,
       category: s.category,
