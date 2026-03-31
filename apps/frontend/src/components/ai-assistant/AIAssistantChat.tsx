@@ -14,9 +14,7 @@ import {
   useAIConversation,
   useCreateAIConversation,
   useSendAIMessage,
-  useCloseAIConversation,
 } from "../../hooks/ai-assistant";
-import { DiffReviewDialog, renderTextDiffReview, type TextDiffReviewValue } from "./DiffReviewDialog";
 import type { AIMessage } from "@cv-tool/contracts";
 import { executeAIToolCall } from "../../lib/ai-tools/runtime";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
@@ -24,11 +22,7 @@ import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
 // ---------------------------------------------------------------------------
 // Suggestion parsing
 //
-// The AI can embed a JSON suggestion block anywhere in its reply:
-//   ```json
-//   {"type":"suggestion","content":"...improved text..."}
-//   ```
-// If found, the "Apply changes" button becomes active.
+// The AI can embed a JSON suggestion block anywhere in its reply.
 // ---------------------------------------------------------------------------
 
 interface SuggestionPayload {
@@ -216,25 +210,6 @@ function buildToolResultMessage(result: Awaited<ReturnType<typeof executeAIToolC
     "```",
     "Continue the conversation using this result. Do not ask the user to execute the tool manually.",
   ].join("\n");
-}
-
-function extractSuggestion(text: string): string | null {
-  const match = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-  if (!match || !match[1]) return null;
-  try {
-    const parsed = JSON.parse(match[1]) as unknown;
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      (parsed as SuggestionPayload).type === "suggestion" &&
-      typeof (parsed as SuggestionPayload).content === "string"
-    ) {
-      return (parsed as SuggestionPayload).content;
-    }
-  } catch {
-    // not valid JSON
-  }
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -467,22 +442,16 @@ export function AIAssistantChat({
     entityId,
     systemPrompt,
     kickoffMessage,
-    originalContent,
     toolRegistry: toolRegistryFromContext,
     toolContext: toolContextFromContext,
     activeConversationId,
-    pendingSuggestion,
     setActiveConversationId,
-    setPendingSuggestion,
-    applyAndClose,
-    closeAssistant,
   } = useAIAssistantContext();
 
   const toolRegistry = toolRegistryProp ?? toolRegistryFromContext;
   const toolContext = toolContextProp ?? toolContextFromContext;
 
   const [inputValue, setInputValue] = useState("");
-  const [diffOpen, setDiffOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const createInitiated = useRef(false);
   const processedToolCallsRef = useRef<Set<string>>(new Set());
@@ -494,7 +463,6 @@ export function AIAssistantChat({
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
   const sendMessage = useSendAIMessage(activeConversationId);
-  const closeConversation = useCloseAIConversation(entityType, entityId);
 
   const messages = conversation?.messages ?? [];
   const visibleMessages = messages.filter(
@@ -514,10 +482,6 @@ export function AIAssistantChat({
     sendMessage.isPending ||
     activeToolExecutionCount > 0 ||
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
-
-  // Find the latest suggestion from assistant messages
-  const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
-  const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
 
   // Auto-create a conversation when there is no active one.
   // Runs on mount AND whenever activeConversationId becomes null (e.g. "New conversation").
@@ -725,36 +689,6 @@ export function AIAssistantChat({
     }
   };
 
-  const handleApplyClick = () => {
-    if (latestSuggestion) {
-      setPendingSuggestion({ original: originalContent ?? "", suggested: latestSuggestion });
-      setDiffOpen(true);
-    }
-  };
-
-  const handleDiffApply = (suggested: string) => {
-    if (pendingSuggestion) {
-      if (activeConversationId) {
-        closeConversation.mutate({ conversationId: activeConversationId });
-      }
-      applyAndClose(suggested);
-    }
-    setDiffOpen(false);
-  };
-
-  const handleDiffKeepEditing = () => {
-    setDiffOpen(false);
-  };
-
-  const handleDiffDiscard = () => {
-    setDiffOpen(false);
-    setPendingSuggestion(null);
-    if (activeConversationId) {
-      closeConversation.mutate({ conversationId: activeConversationId });
-    }
-    closeAssistant();
-  };
-
   if (createConversation.isError) {
     return (
       <Alert severity="error" sx={{ m: 2 }}>
@@ -835,34 +769,9 @@ export function AIAssistantChat({
             <SendIcon />
           </IconButton>
         </Box>
-
-        {/* Apply changes button — active when AI has a suggestion */}
-        <Button
-          fullWidth
-          variant="contained"
-          color="success"
-          sx={{ mt: 1.5 }}
-          disabled={!latestSuggestion || isInitialising}
-          onClick={handleApplyClick}
-        >
-          {t("aiAssistant.applyChanges")}
-        </Button>
       </Box>
 
       <ToolingNotice toolRegistry={toolRegistry} toolContext={toolContext} isAnalysing={isAnalysing} />
-
-      {/* Diff review dialog */}
-      {pendingSuggestion && (
-        <DiffReviewDialog<TextDiffReviewValue, string>
-          open={diffOpen}
-          value={pendingSuggestion}
-          renderReview={renderTextDiffReview}
-          formatResult={(value) => value.suggested}
-          onApply={handleDiffApply}
-          onKeepEditing={handleDiffKeepEditing}
-          onDiscard={handleDiffDiscard}
-        />
-      )}
     </Box>
   );
 }

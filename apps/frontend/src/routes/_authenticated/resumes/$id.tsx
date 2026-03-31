@@ -1098,7 +1098,14 @@ function ResumeDetailPage() {
   );
 
   return (
-    <Box>
+    <Box
+      sx={{
+        height: inlineRevision.isOpen ? "100vh" : undefined,
+        display: inlineRevision.isOpen ? "flex" : "block",
+        flexDirection: inlineRevision.isOpen ? "column" : undefined,
+        overflow: inlineRevision.isOpen ? "hidden" : undefined,
+      }}
+    >
       <PageHeader
         title={resumeTitle}
         breadcrumbs={[
@@ -1117,12 +1124,14 @@ function ResumeDetailPage() {
       <Box
         sx={{
           bgcolor: "background.default",
-          minHeight: "calc(100vh - 56px)",
-          height: inlineRevision.isOpen ? "calc(100vh - 56px)" : undefined,
+          minHeight: inlineRevision.isOpen ? 0 : "calc(100vh - 56px)",
+          height: inlineRevision.isOpen ? "auto" : undefined,
+          flex: inlineRevision.isOpen ? 1 : undefined,
           py: inlineRevision.isOpen ? 0 : 4,
           px: inlineRevision.isOpen ? 0 : { xs: 2, md: 3 },
           display: "flex",
           flexDirection: "column",
+          overflow: inlineRevision.isOpen ? "hidden" : undefined,
         }}
       >
         <Box
@@ -1182,29 +1191,6 @@ function ResumeDetailPage() {
               p: inlineRevision.isOpen ? 2 : 0,
             }}
           >
-            {inlineRevision.isOpen && inlineRevision.stage !== "finalize" && (
-              <Paper
-                variant="outlined"
-                sx={{
-                  mb: 2,
-                  px: 2,
-                  py: 1.5,
-                  borderRadius: 0,
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                  <Chip size="small" color="primary" label={t("revision.inline.documentBadge")} />
-                  <Typography variant="subtitle2">
-                    {t(`revision.inline.documentTitle.${inlineRevision.stage}`)}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                  {t(`revision.inline.documentDescription.${inlineRevision.stage}`)}
-                </Typography>
-              </Paper>
-            )}
-
             {/* Gray canvas */}
             {inlineRevision.stage === "finalize" ? (
               <FinalReview
@@ -1552,15 +1538,7 @@ function ResumeDetailPage() {
               }}
             >
               <InlineRevisionChatPanel
-                  branchName={activeBranchName}
-                  sourceBranchName={inlineRevision.sourceBranchName}
-                  stage={inlineRevision.stage}
-                  onClose={inlineRevision.close}
-                toolCount={
-                  inlineRevision.stage === "actions"
-                    ? inlineRevision.actionToolRegistry.tools.length
-                    : inlineRevision.planningToolRegistry.tools.length
-                }
+                stage={inlineRevision.stage}
                 toolRegistry={
                   inlineRevision.stage === "actions"
                     ? inlineRevision.actionToolRegistry
