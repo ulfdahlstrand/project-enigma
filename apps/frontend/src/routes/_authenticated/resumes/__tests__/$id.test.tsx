@@ -285,13 +285,15 @@ describe("Navigation", () => {
     expect(resumesLink).toBeInTheDocument();
   });
 
-  it("renders a History button that opens the history drawer", async () => {
+  it("opens the history drawer from the more actions menu", async () => {
+    const user = userEvent.setup();
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
-    const historyButton = screen.getByRole("button", {
-      name: enCommon.resume.history.pageTitle,
-    });
-    expect(historyButton).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.moreActionsLabel }));
+    await user.click(screen.getByRole("menuitem", { name: enCommon.resume.history.pageTitle }));
+
+    expect(screen.getByText(enCommon.resume.detail.historyDrawer.title)).toBeInTheDocument();
   });
 
   it("opens a delete dialog and deletes the resume", async () => {
