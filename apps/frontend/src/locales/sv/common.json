@@ -520,6 +520,16 @@
       "assistantLabel": "AI",
       "userLabel": "Du",
       "actionsConversationTitle": "CV-åtgärder",
+      "goalTitle": "Mål",
+      "sectionLabel": {
+        "presentation": "Presentation",
+        "skills": "Kompetenser",
+        "assignment": "Uppdrag",
+        "summary": "Sammanfattning",
+        "consultanttitle": "Konsulttitel",
+        "other": "Övrigt"
+      },
+      "groupProgress": "{{completed}} / {{total}}",
       "planStatus": {
         "pending": "Väntar",
         "planned": "Planerad",

@@ -13,6 +13,9 @@ import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tools";
 import type { InlineRevisionStage } from "./inline-revision";
+import { CollapsibleWorkItemGroup } from "./CollapsibleWorkItemGroup";
+import { CollapsibleSection } from "./CollapsibleSection";
+import { groupWorkItems, groupPlanActions } from "./group-work-items";
 
 function renderStatusIcon(
   status: "pending" | "done" | "accepted" | "dismissed",
@@ -163,53 +166,76 @@ export function InlineRevisionChecklist({
         </>
       ) : plan ? (
         <>
-          <Box sx={{ p: 1.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t("revision.inline.planSummaryTitle")}
+          {/* Goal summary — always visible, minimal height */}
+          <Box sx={{ px: 1.5, pt: 1.25, pb: 1 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {t("revision.inline.goalTitle")}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4, lineHeight: 1.4 }}>
               {plan.summary}
             </Typography>
           </Box>
-          <Divider />
-          <Box sx={{ display: "flex", flexDirection: "column", p: 0.5 }}>
-            {plan.actions.map((action, index) => (
-              <Box
-                key={action.id}
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 1,
-                  px: 1,
-                  py: 0.85,
-                  borderBottom: index < plan.actions.length - 1 ? "1px solid" : "none",
-                  borderColor: "divider",
-                }}
+
+          {/* Planerat arbete — top-level collapsible */}
+          {(() => {
+            const planGroups = groupPlanActions(plan.actions);
+            const planCompleted = planGroups.reduce((sum, g) => sum + g.completedCount, 0);
+            const planTotal = planGroups.reduce((sum, g) => sum + g.totalCount, 0);
+            const planAllDone = planGroups.every((g) => g.isAllDone);
+            return (
+              <CollapsibleSection
+                title={t("revision.inline.planSummaryTitle")}
+                completedCount={planCompleted}
+                totalCount={planTotal}
+                isAllDone={planAllDone}
               >
-                <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
-                  {renderStatusIcon(action.status === "done" ? "done" : "pending")}
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
-                    {action.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
-                    {action.description}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      display: "block",
-                      mt: 0.4,
-                      color: getPlanStatusKey(action.status) === "done" ? "success.main" : "text.disabled",
-                    }}
-                  >
-                    {t(`revision.inline.planStatus.${getPlanStatusKey(action.status)}`)}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
+                {planGroups.map((group) => (
+                  <CollapsibleWorkItemGroup key={group.section} group={group}>
+                    <Box sx={{ display: "flex", flexDirection: "column" }}>
+                      {group.items.map((action, index) => (
+                        <Box
+                          key={action.id}
+                          sx={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 1,
+                            pl: 5,
+                            pr: 1,
+                            py: 0.85,
+                            borderBottom: index < group.items.length - 1 ? "1px solid" : "none",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
+                            {renderStatusIcon(action.status === "done" ? "done" : "pending")}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                              {action.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                              {action.description}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                display: "block",
+                                mt: 0.4,
+                                color: getPlanStatusKey(action.status) === "done" ? "success.main" : "text.disabled",
+                              }}
+                            >
+                              {t(`revision.inline.planStatus.${getPlanStatusKey(action.status)}`)}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </CollapsibleWorkItemGroup>
+                ))}
+              </CollapsibleSection>
+            );
+          })()}
+
           {stage === "planning" ? (
             <>
               <Divider />
@@ -225,53 +251,66 @@ export function InlineRevisionChecklist({
           {stage === "actions" ? (
             <>
               {workItems?.items.length ? (
-                <>
-                  <Divider />
-                  <Box sx={{ px: 1.5, pt: 1.25, pb: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("revision.inline.workItemsTitle")}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", flexDirection: "column", p: 0.5 }}>
-                    {workItems.items.map((item, index) => (
-                      <Box
-                        key={item.id}
-                        sx={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 1,
-                          px: 1,
-                          py: 0.85,
-                          borderBottom: index < workItems.items.length - 1 ? "1px solid" : "none",
-                          borderColor: "divider",
-                        }}
-                      >
-                        <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
-                          {renderStatusIcon(
-                            item.status === "completed"
-                              ? "accepted"
-                              : item.status === "no_changes_needed"
-                                ? "done"
-                                : "pending",
-                          )}
-                        </Box>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
-                            {item.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
-                            {item.description}
-                          </Typography>
-                          {item.note ? (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
-                              {item.note}
-                            </Typography>
-                          ) : null}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </>
+                (() => {
+                  const workGroups = groupWorkItems(workItems.items);
+                  const workCompleted = workGroups.reduce((sum, g) => sum + g.completedCount, 0);
+                  const workTotal = workGroups.reduce((sum, g) => sum + g.totalCount, 0);
+                  const workAllDone = workGroups.every((g) => g.isAllDone);
+                  return (
+                    <CollapsibleSection
+                      title={t("revision.inline.workItemsTitle")}
+                      completedCount={workCompleted}
+                      totalCount={workTotal}
+                      isAllDone={workAllDone}
+                      defaultExpanded
+                    >
+                      {workGroups.map((group) => (
+                        <CollapsibleWorkItemGroup key={group.section} group={group}>
+                          <Box sx={{ display: "flex", flexDirection: "column" }}>
+                            {group.items.map((item, index) => (
+                              <Box
+                                key={item.id}
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  gap: 1,
+                                  pl: 5,
+                                  pr: 1,
+                                  py: 0.85,
+                                  borderBottom: index < group.items.length - 1 ? "1px solid" : "none",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Box sx={{ mt: 0.1, display: "flex", alignItems: "center" }}>
+                                  {renderStatusIcon(
+                                    item.status === "completed"
+                                      ? "accepted"
+                                      : item.status === "no_changes_needed"
+                                        ? "done"
+                                        : "pending",
+                                  )}
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                                    {item.title}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                                    {item.description}
+                                  </Typography>
+                                  {item.note ? (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                                      {item.note}
+                                    </Typography>
+                                  ) : null}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </CollapsibleWorkItemGroup>
+                      ))}
+                    </CollapsibleSection>
+                  );
+                })()
               ) : null}
               <Divider />
               <Box sx={{ px: 1.5, pt: 1.25, pb: 0.5 }}>

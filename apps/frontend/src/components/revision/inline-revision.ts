@@ -179,7 +179,7 @@ export function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): Revisi
   };
 }
 
-function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
+export function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
   if (action.assignmentId) {
     return "assignment";
   }
