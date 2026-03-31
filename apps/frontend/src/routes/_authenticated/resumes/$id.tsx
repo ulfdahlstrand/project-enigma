@@ -1609,19 +1609,38 @@ function ResumeDetailPage() {
           )}
         </List>
       </Drawer>
+      {/* Both branches render identically — the kind discriminant exists to satisfy
+          TypeScript's generic constraint that value/renderReview/formatResult share TValue. */}
       {inlineRevision.reviewDialog && (
-        <DiffReviewDialog
-          open={inlineRevision.reviewDialog.isOpen}
-          original={inlineRevision.reviewDialog.original}
-          suggested={inlineRevision.reviewDialog.suggested}
-          onApply={inlineRevision.reviewDialog.onApply}
-          onKeepEditing={inlineRevision.reviewDialog.onKeepEditing}
-          onDiscard={inlineRevision.reviewDialog.onDiscard}
-          title={t("revision.inline.reviewDialogTitle")}
-          applyLabel={t("revision.inline.approveSuggestion")}
-          keepEditingLabel={t("revision.inline.reviewLater")}
-          discardLabel={t("revision.inline.dismissSuggestion")}
-        />
+        inlineRevision.reviewDialog.kind === "skills" ? (
+          <DiffReviewDialog
+            open={inlineRevision.reviewDialog.isOpen}
+            value={inlineRevision.reviewDialog.value}
+            renderReview={inlineRevision.reviewDialog.renderReview}
+            formatResult={inlineRevision.reviewDialog.formatResult}
+            onApply={inlineRevision.reviewDialog.onApply}
+            onKeepEditing={inlineRevision.reviewDialog.onKeepEditing}
+            onDiscard={inlineRevision.reviewDialog.onDiscard}
+            title={t("revision.inline.reviewDialogTitle")}
+            applyLabel={t("revision.inline.approveSuggestion")}
+            keepEditingLabel={t("revision.inline.reviewLater")}
+            discardLabel={t("revision.inline.dismissSuggestion")}
+          />
+        ) : (
+          <DiffReviewDialog
+            open={inlineRevision.reviewDialog.isOpen}
+            value={inlineRevision.reviewDialog.value}
+            renderReview={inlineRevision.reviewDialog.renderReview}
+            formatResult={inlineRevision.reviewDialog.formatResult}
+            onApply={inlineRevision.reviewDialog.onApply}
+            onKeepEditing={inlineRevision.reviewDialog.onKeepEditing}
+            onDiscard={inlineRevision.reviewDialog.onDiscard}
+            title={t("revision.inline.reviewDialogTitle")}
+            applyLabel={t("revision.inline.approveSuggestion")}
+            keepEditingLabel={t("revision.inline.reviewLater")}
+            discardLabel={t("revision.inline.dismissSuggestion")}
+          />
+        )
       )}
     </Box>
   )

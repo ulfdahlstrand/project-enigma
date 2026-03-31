@@ -43,15 +43,47 @@ function isBroadSkillsWorkItem(item: RevisionWorkItems["items"][number]) {
   }
 
   const haystack = `${item.title} ${item.description}`.toLowerCase();
+  const mentionsSpecificGroup =
+    haystack.includes("'")
+    || haystack.includes("\"")
+    || haystack.includes(" inside ")
+    || haystack.includes(" within ")
+    || haystack.includes(" i grupp")
+    || haystack.includes(" inom grupp")
+    || haystack.includes("inne i grupp")
+    || haystack.includes("utan att flytta")
+    || haystack.includes("without moving")
+    || haystack.includes("specific group")
+    || haystack.includes("named group");
+
+  const mentionsGroupContainers =
+    haystack.includes("group order")
+    || haystack.includes("groups")
+    || haystack.includes("groupes")
+    || haystack.includes("grupper")
+    || haystack.includes("categories")
+    || haystack.includes("kategorier")
+    || haystack.includes("kunskapskategorier")
+    || haystack.includes("färdighetsgrupper");
+
+  if (mentionsSpecificGroup) {
+    return false;
+  }
+
   return (
-    haystack.includes("reorder")
-    || haystack.includes("repriorit")
-    || haystack.includes("reorgan")
-    || haystack.includes("restruct")
-    || haystack.includes("sortera")
-    || haystack.includes("prioriter")
-    || haystack.includes("omorgan")
-    || haystack.includes("omstruktur")
+    mentionsGroupContainers
+    && (
+      haystack.includes("reorder")
+      || haystack.includes("repriorit")
+      || haystack.includes("reorgan")
+      || haystack.includes("restruct")
+      || haystack.includes("sortera")
+      || haystack.includes("prioriter")
+      || haystack.includes("omorgan")
+      || haystack.includes("omstruktur")
+      || haystack.includes("ordning")
+      || haystack.includes("ordna")
+    )
   );
 }
 
@@ -76,6 +108,7 @@ export function buildInlineRevisionWorkItemAutomationMessage(workItems: Revision
             "This is a broad skills-ordering task.",
             "First inspect the current skills structure with inspect_resume_skills.",
             "Then replace the current action-stage worklist with explicit skills work items using set_revision_work_items.",
+            "Your next tool call after inspection must be set_revision_work_items, not set_revision_suggestions.",
             "Create one work item for overall group order, then one work item per affected group for internal skill ordering.",
             "Do not create work items for inventing new categories or moving skills between categories unless the user explicitly asked for regrouping.",
             "Do not propose concrete suggestions yet in this first response after inspection.",
@@ -83,13 +116,48 @@ export function buildInlineRevisionWorkItemAutomationMessage(workItems: Revision
         : nextPendingItem.assignmentId
         ? `Inspect assignment ${nextPendingItem.assignmentId} and decide the outcome for this work item only.`
         : nextPendingItem.section === "skills"
-          ? "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only."
+          ? [
+              "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only.",
+              "If this work item names a specific skills group, reorder only the skills inside that group.",
+              'Treat phrases like "<group> group ordering" as internal ordering within that named group, not as reordering the groups themselves.',
+              "Do not reorder the overall group order unless this work item explicitly asks for that.",
+              "Do not move skills between groups.",
+            ].join(" ")
           : `Inspect the exact source text for section ${nextPendingItem.section} and decide the outcome for this work item only.`,
       "If changes are needed, create suggestions for this work item.",
       "If no changes are needed, mark this work item as no changes needed.",
       "Do not revisit completed work items.",
       "Return a tool call now.",
     ].join(" "),
+  };
+}
+
+export function resolveRevisionWorkItems(
+  existing: RevisionWorkItems | null,
+  incoming: RevisionWorkItems,
+): RevisionWorkItems {
+  if (!existing) {
+    return incoming;
+  }
+
+  const existingSkillItems = existing.items.filter((item) => item.section === "skills");
+  const incomingSkillItems = incoming.items.filter((item) => item.section === "skills");
+  const existingHasExpandedSkills = existingSkillItems.some((item) => !isBroadSkillsWorkItem(item));
+  const incomingHasExpandedSkills = incomingSkillItems.some((item) => !isBroadSkillsWorkItem(item));
+
+  const incomingCollapsesExpandedSkills =
+    existingHasExpandedSkills
+    && incomingSkillItems.length > 0
+    && !incomingHasExpandedSkills
+    && incomingSkillItems.length < existingSkillItems.length;
+
+  if (!incomingCollapsesExpandedSkills) {
+    return incoming;
+  }
+
+  return {
+    ...existing,
+    summary: incoming.summary || existing.summary,
   };
 }
 

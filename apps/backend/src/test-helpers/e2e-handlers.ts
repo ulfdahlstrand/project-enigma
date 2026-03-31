@@ -28,6 +28,32 @@ function getMessageText(
     .join("\n");
 }
 
+function parseJsonCodeFence(text: string): unknown | null {
+  const match = text.match(/```json\s*([\s\S]*?)\s*```/u);
+  if (!match) {
+    return null;
+  }
+
+  const json = match[1];
+  if (!json) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSkillCategory(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
 async function parseJsonBody<T>(req: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -647,6 +673,309 @@ function buildSkillsPrioritizationRevisionScenario() {
   return { client, calls };
 }
 
+function buildUlfProjectManagementSkillsScenario() {
+  const calls: Array<Parameters<OpenAI["chat"]["completions"]["create"]>[0]> = [];
+
+  const client = {
+    chat: {
+      completions: {
+        create: async (input: Parameters<OpenAI["chat"]["completions"]["create"]>[0]) => {
+          calls.push(input);
+          const lastMessage = getMessageText(input.messages.at(-1)?.content);
+          const transcript = input.messages.map((message) => getMessageText(message.content)).join("\n\n");
+          const systemMessage = getMessageText(input.messages[0]?.content);
+
+          if (systemMessage.includes("You summarise conversations in 2–4 words")) {
+            return {
+              id: `chatcmpl-test-${calls.length}`,
+              object: "chat.completion",
+              created: Date.now(),
+              model: typeof input.model === "string" ? input.model : "gpt-4o",
+              choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Projektledningsprofil" } }],
+              usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+          }
+
+          const parsed = parseJsonCodeFence(lastMessage) as
+            | {
+                type?: string;
+                toolName?: string;
+                output?: {
+                  groups?: Array<{
+                    category: string;
+                    skills: string[];
+                  }>;
+                };
+              }
+            | null;
+
+          const groups = parsed?.type === "tool_result" && parsed.toolName === "inspect_resume_skills"
+            ? parsed.output?.groups ?? []
+            : [];
+
+          const categoryNames = groups.map((group) => group.category);
+          const normalizedCategoryMap = new Map(
+            groups.map((group) => [normalizeSkillCategory(group.category), group]),
+          );
+          const arbetsomradenGroup = normalizedCategoryMap.get("arbetsomraden");
+          const specialkunskaperGroup = normalizedCategoryMap.get("specialkunskaper");
+
+          let content = "Projektledningsprofil";
+
+          if (
+            lastMessage.includes("Help me plan a revision flow.")
+            || lastMessage.includes("Greet the user briefly")
+            || lastMessage.includes("what outcome they want from the revision")
+          ) {
+            content = "Hej! Jag kan hjälpa dig att prioritera om kompetenserna mot projektledning.";
+          } else if (
+            lastMessage.includes("use the available tools for this stage")
+            || lastMessage.toLowerCase().includes("jag vill rikta mitt cv mot projektledning")
+          ) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":false}}\n```';
+          } else if (lastMessage.includes('"toolName":"inspect_resume"')) {
+            content = [
+              "```json",
+              JSON.stringify({
+                type: "tool_call",
+                toolName: "set_revision_plan",
+                input: {
+                  summary: "Rikta om kompetensdelen mot projektledning",
+                  actions: [
+                    {
+                      id: "action-skill-groups",
+                      title: "Review skill group order",
+                      description: "Reorder the existing skill groups to foreground leadership-related groups first.",
+                      status: "pending",
+                    },
+                    {
+                      id: "action-skills-specialkunskaper",
+                      title: "Review specialkunskaper group ordering",
+                      description: "Reorder the skills inside the specialkunskaper group without moving skills to a different group.",
+                      status: "pending",
+                    },
+                    {
+                      id: "action-skills-arbetsomraden",
+                      title: "Review arbetsomraden group ordering",
+                      description: "Reorder the skills inside the arbetsomraden group to prioritize project leadership.",
+                      status: "pending",
+                    },
+                  ],
+                },
+              }),
+              "```",
+            ].join("\n");
+          } else if (lastMessage.includes('"toolName":"set_revision_plan"')) {
+            content = "Planen ar klar for granskning.";
+          } else if (
+            lastMessage.includes("[[internal_autostart]]")
+            || lastMessage.includes("Process only this work item now: action-skill-groups")
+            || lastMessage.includes("Process only this work item now: action-skills-specialkunskaper")
+            || lastMessage.includes("Process only this work item now: action-skills-arbetsomraden")
+          ) {
+            content = '```json\n{"type":"tool_call","toolName":"inspect_resume_skills","input":{}}\n```';
+          } else if (
+            parsed?.type === "tool_result"
+            && parsed.toolName === "inspect_resume_skills"
+            && transcript.includes("Process only this work item now: action-skill-groups")
+          ) {
+            const preferredOrder = ["arbetsomraden", "specialkunskaper"];
+            const orderedGroups = [
+              ...preferredOrder
+                .map((category) => normalizedCategoryMap.get(category))
+                .filter((group): group is NonNullable<typeof group> => Boolean(group)),
+              ...groups.filter((group) => !preferredOrder.includes(normalizeSkillCategory(group.category))),
+            ];
+
+            const reorderedSkills = orderedGroups.flatMap((group, groupIndex) =>
+              group.skills.map((skill, skillIndex) => ({
+                name: skill,
+                level: null,
+                category: group.category,
+                sortOrder: groupIndex * 1000 + skillIndex,
+              })),
+            );
+            const arbetsomradenSkills = arbetsomradenGroup?.skills ?? [];
+            const reorderedArbetsomraden = [
+              ...["Teknisk projektledning", "Systemarkitektur", "Testledning"].filter((skill) =>
+                arbetsomradenSkills.includes(skill),
+              ),
+              ...arbetsomradenSkills.filter(
+                (skill) => !["Teknisk projektledning", "Systemarkitektur", "Testledning"].includes(skill),
+              ),
+            ];
+            const arbSuggestionSkills = groups.flatMap((group, groupIndex) => {
+              const groupSkills = normalizeSkillCategory(group.category) === "arbetsomraden"
+                ? reorderedArbetsomraden
+                : group.skills;
+              return groupSkills.map((skill, skillIndex) => ({
+                name: skill,
+                level: null,
+                category: group.category,
+                sortOrder: groupIndex * 1000 + skillIndex,
+              }));
+            });
+
+            content = [
+              "```json",
+              JSON.stringify({
+                type: "tool_call",
+                toolName: "set_revision_suggestions",
+                input: {
+                  summary: "Omordna grupperna for att lyfta projektledning",
+                  suggestions: [
+                    {
+                      id: "action-skill-groups",
+                      title: "Reorder Skill Groups",
+                      description: "Adjust the overall order of skill groups to prioritize project leadership-related groups.",
+                      section: "skills",
+                      suggestedText: orderedGroups.map((group) => group.category).join("\n"),
+                      skills: reorderedSkills,
+                      skillScope: { type: "group_order" },
+                      status: "pending",
+                    },
+                    {
+                      id: "action-skills-arbetsomraden",
+                      title: "Reorder Arbetsomraden Skills",
+                      description: "Reorder only the Arbetsomraden skills to foreground project leadership.",
+                      section: "skills",
+                      suggestedText: `Arbetsomraden: ${reorderedArbetsomraden.join(", ")}`,
+                      skills: arbSuggestionSkills,
+                      skillScope: {
+                        type: "group_contents",
+                        category: arbetsomradenGroup?.category ?? "arbetsomraden",
+                      },
+                      status: "pending",
+                    },
+                  ],
+                },
+              }),
+              "```",
+            ].join("\n");
+          } else if (
+            parsed?.type === "tool_result"
+            && parsed.toolName === "inspect_resume_skills"
+            && transcript.includes("Process only this work item now: action-skills-specialkunskaper")
+          ) {
+            content = [
+              "```json",
+              JSON.stringify({
+                type: "tool_call",
+                toolName: "mark_revision_work_item_no_changes_needed",
+                input: {
+                  workItemId: "action-skills-specialkunskaper",
+                  note: specialkunskaperGroup && specialkunskaperGroup.skills.length <= 1
+                    ? "Specialkunskaper innehaller bara en post och behover ingen intern omordning."
+                    : "Inga ytterligare justeringar behovdes for specialkunskaper.",
+                },
+              }),
+              "```",
+            ].join("\n");
+          } else if (
+            parsed?.type === "tool_result"
+            && parsed.toolName === "inspect_resume_skills"
+            && transcript.includes("Process only this work item now: action-skills-arbetsomraden")
+          ) {
+            const hasScopedInstruction =
+              transcript.includes("reorder only the skills inside that group")
+              && transcript.includes("Treat phrases like");
+
+            const arbetsomradenSkills = arbetsomradenGroup?.skills ?? [];
+            const promoted = [
+              "Teknisk projektledning",
+              "Systemarkitektur",
+              "Testledning",
+            ];
+            const reorderedArbetsomraden = [
+              ...promoted.filter((skill) => arbetsomradenSkills.includes(skill)),
+              ...arbetsomradenSkills.filter((skill) => !promoted.includes(skill)),
+            ];
+
+            if (!hasScopedInstruction) {
+              content = [
+                "```json",
+                JSON.stringify({
+                  type: "tool_call",
+                  toolName: "set_revision_suggestions",
+                  input: {
+                    summary: "Fallback bad suggestion",
+                    suggestions: [
+                      {
+                        id: "action-skills-arbetsomraden",
+                        title: "Reorder Arbetsomraden Skills",
+                        description: "Incorrectly reorders the overall groups instead of the contents.",
+                        section: "skills",
+                        suggestedText: categoryNames.join("\n"),
+                        status: "pending",
+                      },
+                    ],
+                  },
+                }),
+                "```",
+              ].join("\n");
+            } else {
+              const reorderedSkills = groups.flatMap((group, groupIndex) => {
+                const groupSkills = normalizeSkillCategory(group.category) === "arbetsomraden"
+                  ? reorderedArbetsomraden
+                  : group.skills;
+                return groupSkills.map((skill, skillIndex) => ({
+                  name: skill,
+                  level: null,
+                  category: group.category,
+                  sortOrder: groupIndex * 1000 + skillIndex,
+                }));
+              });
+
+              content = [
+                "```json",
+                JSON.stringify({
+                  type: "tool_call",
+                  toolName: "set_revision_suggestions",
+                  input: {
+                    summary: "Omordna arbetsomraden internt for att lyfta projektledning",
+                    suggestions: [
+                      {
+                        id: "action-skills-arbetsomraden",
+                        title: "Reorder Arbetsomraden Skills",
+                        description: "Reorder only the Arbetsomraden skills to foreground project leadership.",
+                        section: "skills",
+                        suggestedText: `Arbetsomraden: ${reorderedArbetsomraden.join(", ")}`,
+                        skills: reorderedSkills,
+                        skillScope: {
+                          type: "group_contents",
+                          category: arbetsomradenGroup?.category ?? "arbetsomraden",
+                        },
+                        status: "pending",
+                      },
+                    ],
+                  },
+                }),
+                "```",
+              ].join("\n");
+            }
+          } else if (
+            lastMessage.includes('"toolName":"set_revision_suggestions"')
+            || lastMessage.includes('"toolName":"mark_revision_work_item_no_changes_needed"')
+          ) {
+            content = "Korrigeringarna ar framtagna och redo for granskning.";
+          }
+
+          return {
+            id: `chatcmpl-test-${calls.length}`,
+            object: "chat.completion",
+            created: Date.now(),
+            model: typeof input.model === "string" ? input.model : "gpt-4o",
+            choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
+            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+          } as Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+        },
+      },
+    },
+  } as unknown as OpenAI;
+
+  return { client, calls };
+}
+
 export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (!ensureEnabled(res)) {
     return;
@@ -659,6 +988,7 @@ export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResp
     sectionScenario?: SupportedSingleSection;
     wholeCvScenario?: "whole-cv-spelling-revision";
     skillsScenario?: "skills-prioritization-revision";
+    ulfSkillsScenario?: "project-management-skills-only";
     assignmentId?: string;
     assignmentIds?: string[];
   }>(req);
@@ -707,6 +1037,13 @@ export async function e2eScriptedAIHandler(req: IncomingMessage, res: ServerResp
     setOpenAIClientForTests(buildSkillsPrioritizationRevisionScenario().client);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, scenario: body.skillsScenario }));
+    return;
+  }
+
+  if (body.ulfSkillsScenario === "project-management-skills-only") {
+    setOpenAIClientForTests(buildUlfProjectManagementSkillsScenario().client);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, scenario: body.ulfSkillsScenario }));
     return;
   }
 

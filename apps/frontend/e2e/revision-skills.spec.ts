@@ -73,6 +73,14 @@ async function reviewSuggestion(page: Page, title: string) {
     .click();
 }
 
+async function reviewColumnHeadings(page: Page, tone: "original" | "suggested") {
+  return page.getByTestId(`skills-review-${tone}-heading`).allTextContents();
+}
+
+async function reviewColumnItems(page: Page, tone: "original" | "suggested") {
+  return page.getByTestId(`skills-review-${tone}-item`).allTextContents();
+}
+
 test("can reprioritize skill groups and skill order to foreground management through AI revision", async ({ page }) => {
   const fixture = await bootstrapSkillsScenario(page);
 
@@ -92,7 +100,17 @@ test("can reprioritize skill groups and skill order to foreground management thr
   await reviewSuggestion(page, "Prioritize skill group order");
 
   await expect(page.getByRole("heading", { name: /Review suggested change/i })).toBeVisible();
-  await expect(page.getByText("Ledarskap och arkitektur först, följt av Webbutveckling och Test och kvalitet.")).toBeVisible();
+  await expect(page.getByText("Only the order of the groups changes in this suggestion.")).toBeVisible();
+  await expect(await reviewColumnHeadings(page, "original")).toEqual([
+    "Webbutveckling",
+    "Test och kvalitet",
+    "Ledarskap och arkitektur",
+  ]);
+  await expect(await reviewColumnHeadings(page, "suggested")).toEqual([
+    "Ledarskap och arkitektur",
+    "Webbutveckling",
+    "Test och kvalitet",
+  ]);
   await page.getByRole("button", { name: "Approve suggestion" }).click();
 
   await expect(page.getByText("LEDARSKAP OCH ARKITEKTUR").first()).toBeVisible({ timeout: 10_000 });
@@ -108,7 +126,19 @@ test("can reprioritize skill groups and skill order to foreground management thr
 
   await expect(page.getByText("Reorder leadership and architecture skills")).toBeVisible({ timeout: 10_000 });
   await reviewSuggestion(page, "Reorder leadership and architecture skills");
-  await expect(page.getByText("Ledarskap och arkitektur: Teknisk projektledning, Systemarkitektur, Testledning, Systemintegration")).toBeVisible();
+  await expect(page.getByText("Only Ledarskap och arkitektur changes in this suggestion.")).toBeVisible();
+  await expect(await reviewColumnItems(page, "original")).toEqual([
+    "Systemarkitektur",
+    "Systemintegration",
+    "Teknisk projektledning",
+    "Testledning",
+  ]);
+  await expect(await reviewColumnItems(page, "suggested")).toEqual([
+    "Teknisk projektledning",
+    "Systemarkitektur",
+    "Testledning",
+    "Systemintegration",
+  ]);
   await page.getByRole("button", { name: "Approve suggestion" }).click();
 
   await expect(page.locator("p").filter({
@@ -123,7 +153,19 @@ test("can reprioritize skill groups and skill order to foreground management thr
 
   await expect(page.getByText("Reorder web development skills")).toBeVisible({ timeout: 10_000 });
   await reviewSuggestion(page, "Reorder web development skills");
-  await expect(page.getByText("Webbutveckling: Typescript, NodeJS, React, Tanstack Query")).toBeVisible();
+  await expect(page.getByText("Only Webbutveckling changes in this suggestion.")).toBeVisible();
+  await expect(await reviewColumnItems(page, "original")).toEqual([
+    "Typescript",
+    "React",
+    "NodeJS",
+    "Tanstack Query",
+  ]);
+  await expect(await reviewColumnItems(page, "suggested")).toEqual([
+    "Typescript",
+    "NodeJS",
+    "React",
+    "Tanstack Query",
+  ]);
   await page.getByRole("button", { name: "Approve suggestion" }).click();
 
   await expect(page.locator("p").filter({
@@ -138,7 +180,17 @@ test("can reprioritize skill groups and skill order to foreground management thr
 
   await expect(page.getByText("Reorder test and quality skills")).toBeVisible({ timeout: 10_000 });
   await reviewSuggestion(page, "Reorder test and quality skills");
-  await expect(page.getByText("Test och kvalitet: Test-driven development, Enhetstest, Acceptanstest")).toBeVisible();
+  await expect(page.getByText("Only Test och kvalitet changes in this suggestion.")).toBeVisible();
+  await expect(await reviewColumnItems(page, "original")).toEqual([
+    "Enhetstest",
+    "Test-driven development",
+    "Acceptanstest",
+  ]);
+  await expect(await reviewColumnItems(page, "suggested")).toEqual([
+    "Test-driven development",
+    "Enhetstest",
+    "Acceptanstest",
+  ]);
   await page.getByRole("button", { name: "Approve suggestion" }).click();
 
   const managementHeading = page.getByText("LEDARSKAP OCH ARKITEKTUR").first();
