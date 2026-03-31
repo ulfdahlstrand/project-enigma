@@ -164,6 +164,15 @@
       "assignmentToggleSummary": "Visa kompakt uppdragslista",
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
+      "deleteButton": "Ta bort",
+      "deleteDialog": {
+        "title": "Ta bort meritförteckning",
+        "message": "Är du säker på att du vill ta bort \"{{title}}\"? Detta går inte att ångra.",
+        "cancel": "Avbryt",
+        "confirm": "Ta bort",
+        "deleting": "Tar bort…",
+        "error": "Det gick inte att ta bort meritförteckningen. Försök igen."
+      },
       "historyDrawer": {
         "title": "Senaste ändringar",
         "viewAll": "Visa fullständig historik",

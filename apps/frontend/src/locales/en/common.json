@@ -164,6 +164,15 @@
       "assignmentToggleSummary": "Show compact assignment list",
       "assignmentTechnologies": "Technologies",
       "editMenuLabel": "Open edit options",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete resume",
+        "message": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "deleting": "Deleting…",
+        "error": "Failed to delete resume. Please try again."
+      },
       "historyDrawer": {
         "title": "Recent changes",
         "viewAll": "View full history",

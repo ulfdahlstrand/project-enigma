@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { fireEvent, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../../locales/en/common.json";
 import {
@@ -39,6 +40,7 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     listResumes: vi.fn(),
     getResume: vi.fn(),
+    deleteResume: vi.fn(),
     updateResume: vi.fn(),
     listBranchAssignmentsFull: vi.fn(),
     listResumeBranches: vi.fn(),
@@ -51,6 +53,7 @@ vi.mock("../../../../orpc-client", () => ({
 import { orpc } from "../../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockDeleteResume = orpc.deleteResume as ReturnType<typeof vi.fn>;
 const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
@@ -161,6 +164,8 @@ beforeEach(() => {
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
+  mockDeleteResume.mockResolvedValue({ deleted: true });
+  mockNavigate.mockReset();
 });
 
 afterEach(() => {
@@ -287,6 +292,24 @@ describe("Navigation", () => {
       name: enCommon.resume.history.pageTitle,
     });
     expect(historyButton).toBeInTheDocument();
+  });
+
+  it("opens a delete dialog and deletes the resume", async () => {
+    const user = userEvent.setup();
+    mockGetResume.mockResolvedValue(TEST_RESUME);
+    renderPage();
+
+    await screen.findAllByText(TEST_RESUME.title);
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.deleteButton }));
+
+    expect(screen.getByText(enCommon.resume.detail.deleteDialog.title)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.deleteDialog.confirm }));
+
+    expect(mockDeleteResume).toHaveBeenCalledWith({ id: TEST_RESUME_ID });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes",
+      search: { employeeId: TEST_RESUME.employeeId },
+    });
   });
 
   it("opens the inline AI revision layout from the edit menu", async () => {

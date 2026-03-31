@@ -21,14 +21,20 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
 import Grow from "@mui/material/Grow";
 import Fab from "@mui/material/Fab";
@@ -64,6 +70,7 @@ import { InlineRevisionChatPanel } from "../../../components/revision/InlineRevi
 import { InlineRevisionChecklist } from "../../../components/revision/InlineRevisionChecklist";
 import { SkillsEditor } from "../../../components/SkillsEditor";
 import { AssignmentEditor } from "../../../components/AssignmentEditor";
+import { LIST_RESUMES_QUERY_KEY } from "./index";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
 
@@ -718,6 +725,7 @@ function ResumeDetailPage() {
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
   const [draftHighlightedItems, setDraftHighlightedItems] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const draftTitleRef = useRef("");
   const draftPresentationRef = useRef("");
   const draftSummaryRef = useRef("");
@@ -733,6 +741,18 @@ function ResumeDetailPage() {
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+    },
+  });
+
+  const deleteResume = useMutation({
+    mutationFn: () => orpc.deleteResume({ id }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      void navigate({
+        to: "/resumes",
+        search: resume?.employeeId ? { employeeId: resume.employeeId } : {},
+      });
     },
   });
 
@@ -1069,6 +1089,16 @@ function ResumeDetailPage() {
       )}
       {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
       {!isEditing && <ExportSplitButton resumeId={id} />}
+      {!isEditing && !isSnapshotMode && !inlineRevision.isOpen && (
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<DeleteOutlineIcon />}
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          {t("resume.detail.deleteButton")}
+        </Button>
+      )}
     </>
   );
 
@@ -1609,6 +1639,32 @@ function ResumeDetailPage() {
           )}
         </List>
       </Drawer>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t("resume.detail.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: deleteResume.isError ? 2 : 0 }}>
+            {t("resume.detail.deleteDialog.message", { title: resumeTitle })}
+          </Typography>
+          {deleteResume.isError && (
+            <Alert severity="error">{t("resume.detail.deleteDialog.error")}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteResume.isPending}>
+            {t("resume.detail.deleteDialog.cancel")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => deleteResume.mutate()}
+            disabled={deleteResume.isPending}
+          >
+            {deleteResume.isPending
+              ? t("resume.detail.deleteDialog.deleting")
+              : t("resume.detail.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Both branches render identically — the kind discriminant exists to satisfy
           TypeScript's generic constraint that value/renderReview/formatResult share TValue. */}
       {inlineRevision.reviewDialog && (
