@@ -54,6 +54,16 @@
       "nameLabel": "Name",
       "emailLabel": "Email",
       "saveButton": "Save",
+      "moreActionsLabel": "More actions",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete employee",
+        "message": "Are you sure you want to delete {{name}}? This cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "deleting": "Deleting…",
+        "error": "Failed to delete employee. Please try again."
+      },
       "saveSuccess": "Employee saved successfully.",
       "saveError": "Failed to save employee. Please try again.",
       "notFound": "Employee not found.",
@@ -164,6 +174,7 @@
       "assignmentToggleSummary": "Show compact assignment list",
       "assignmentTechnologies": "Technologies",
       "editMenuLabel": "Open edit options",
+      "moreActionsLabel": "More actions",
       "deleteButton": "Delete",
       "deleteDialog": {
         "title": "Delete resume",

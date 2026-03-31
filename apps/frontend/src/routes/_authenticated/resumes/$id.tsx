@@ -22,6 +22,7 @@ import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import Alert from "@mui/material/Alert";
@@ -43,6 +44,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -60,7 +62,6 @@ import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../
 import RouterButton from "../../../components/RouterButton";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
-import { SaveVersionButton } from "../../../components/SaveVersionButton";
 import { ResumeSaveSplitButton } from "../../../components/ResumeSaveSplitButton";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
 import { ImprovePresentationFab } from "../../../components/ai-assistant/ImprovePresentationFab";
@@ -726,6 +727,7 @@ function ResumeDetailPage() {
   const [draftSummary, setDraftSummary] = useState("");
   const [draftHighlightedItems, setDraftHighlightedItems] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
   const draftTitleRef = useRef("");
   const draftPresentationRef = useRef("");
   const draftSummaryRef = useRef("");
@@ -1037,14 +1039,12 @@ function ResumeDetailPage() {
     language ? <Chip label={language.toUpperCase()} size="small" /> : undefined
   );
 
+  const headerCenterContent = (
+    <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
+  );
+
   const toolbarActions = inlineRevision.isOpen ? (
     <>
-      <Button variant="outlined" startIcon={<HistoryIcon />} onClick={handleOpenHistoryPage}>
-        {t("revision.inline.historyButton")}
-      </Button>
-      <Button variant="outlined" onClick={handleOpenComparePage}>
-        {t("revision.inline.compareButton")}
-      </Button>
       <ResumeSaveSplitButton
         onSaveCurrent={handleSave}
         onSaveAsNewVersion={handleSaveAsNewVersion}
@@ -1054,10 +1054,15 @@ function ResumeDetailPage() {
       <Button variant="outlined" onClick={inlineRevision.close}>
         {t("revision.inline.closeButton")}
       </Button>
+      <IconButton
+        aria-label={t("resume.detail.moreActionsLabel")}
+        onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+      >
+        <MoreVertIcon />
+      </IconButton>
     </>
   ) : (
     <>
-      <VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />
       {isEditing ? (
         <>
           <ResumeSaveSplitButton
@@ -1076,29 +1081,19 @@ function ResumeDetailPage() {
         </>
       ) : (
         <>
+          <ExportSplitButton resumeId={id} />
           <EditSplitButton
             onEdit={() => setIsEditing(true)}
             onReviseWithAi={inlineRevision.open}
           />
-          <Tooltip title={t("resume.history.pageTitle")}>
-            <IconButton onClick={() => setHistoryOpen(true)} size="small" aria-label={t("resume.history.pageTitle")}>
-              <HistoryIcon />
-            </IconButton>
-          </Tooltip>
         </>
       )}
-      {!isEditing && mainBranchId && <SaveVersionButton branchId={activeBranchId ?? mainBranchId} />}
-      {!isEditing && <ExportSplitButton resumeId={id} />}
-      {!isEditing && !isSnapshotMode && !inlineRevision.isOpen && (
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<DeleteOutlineIcon />}
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          {t("resume.detail.deleteButton")}
-        </Button>
-      )}
+      <IconButton
+        aria-label={t("resume.detail.moreActionsLabel")}
+        onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+      >
+        <MoreVertIcon />
+      </IconButton>
     </>
   );
 
@@ -1116,6 +1111,7 @@ function ResumeDetailPage() {
             : []),
         ]}
         chip={headerChip}
+        centerContent={headerCenterContent}
         actions={toolbarActions}
       />
       <Box
@@ -1665,6 +1661,41 @@ function ResumeDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Menu
+        anchorEl={moreActionsAnchorEl}
+        open={Boolean(moreActionsAnchorEl)}
+        onClose={() => setMoreActionsAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            setHistoryOpen(true);
+          }}
+        >
+          <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("resume.history.pageTitle")}
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            handleOpenComparePage();
+          }}
+        >
+          <ViewAgendaIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("revision.inline.compareButton")}
+        </MenuItem>
+        {!isSnapshotMode && (
+          <MenuItem
+            onClick={() => {
+              setMoreActionsAnchorEl(null);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+            {t("resume.detail.deleteButton")}
+          </MenuItem>
+        )}
+      </Menu>
       {/* Both branches render identically — the kind discriminant exists to satisfy
           TypeScript's generic constraint that value/renderReview/formatResult share TValue. */}
       {inlineRevision.reviewDialog && (

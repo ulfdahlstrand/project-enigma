@@ -8,6 +8,8 @@ import {
   createEmployeeOutputSchema,
   updateEmployeeInputSchema,
   updateEmployeeOutputSchema,
+  deleteEmployeeInputSchema,
+  deleteEmployeeOutputSchema,
 } from "./employees.js";
 import {
   listResumesInputSchema,
@@ -150,6 +152,8 @@ export {
   createEmployeeOutputSchema,
   updateEmployeeInputSchema,
   updateEmployeeOutputSchema,
+  deleteEmployeeInputSchema,
+  deleteEmployeeOutputSchema,
 } from "./employees.js";
 export type { Employee } from "./employees.js";
 
@@ -352,6 +356,9 @@ export const contract = oc.router({
   updateEmployee: oc
     .input(updateEmployeeInputSchema)
     .output(updateEmployeeOutputSchema),
+  deleteEmployee: oc
+    .input(deleteEmployeeInputSchema)
+    .output(deleteEmployeeOutputSchema),
   listResumes: oc.input(listResumesInputSchema).output(listResumesOutputSchema),
   getResume: oc.input(getResumeInputSchema).output(getResumeOutputSchema),
   createResume: oc.input(createResumeInputSchema).output(createResumeOutputSchema),

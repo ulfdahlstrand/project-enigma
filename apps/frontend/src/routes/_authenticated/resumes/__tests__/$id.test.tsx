@@ -300,7 +300,8 @@ describe("Navigation", () => {
     renderPage();
 
     await screen.findAllByText(TEST_RESUME.title);
-    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.deleteButton }));
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.moreActionsLabel }));
+    await user.click(screen.getByRole("menuitem", { name: enCommon.resume.detail.deleteButton }));
 
     expect(screen.getByText(enCommon.resume.detail.deleteDialog.title)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: enCommon.resume.detail.deleteDialog.confirm }));
