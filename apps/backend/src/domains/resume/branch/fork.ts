@@ -135,9 +135,19 @@ export async function forkResumeBranch(
       .orderBy("ba.sort_order", "asc")
       .execute();
 
+    const highlightedItemRows = await trx
+      .selectFrom("resume_highlighted_items")
+      .select(["text"])
+      .where("resume_id", "=", commit.resume_id)
+      .orderBy("sort_order", "asc")
+      .execute();
+
     const sourceContent = commit.content as ResumeCommitContent;
     const freshContent: ResumeCommitContent = {
       ...sourceContent,
+      highlightedItems: highlightedItemRows.length > 0
+        ? highlightedItemRows.map((r) => r.text)
+        : sourceContent.highlightedItems,
       assignments: freshAssignmentRows.map((a) => ({
         assignmentId: a.assignment_id,
         clientName: a.client_name,

@@ -75,13 +75,14 @@ export async function saveResumeVersion(
     : null;
 
   const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
-    title: branch.title,
-    consultantTitle: branch.consultant_title,
-    presentation: branch.presentation ?? [],
-    summary: branch.summary,
-    language: branch.language,
-    skills: [],
-    assignments: [],
+      title: branch.title,
+      consultantTitle: branch.consultant_title,
+      presentation: branch.presentation ?? [],
+      summary: branch.summary,
+      highlightedItems: [],
+      language: branch.language,
+      skills: [],
+      assignments: [],
   };
 
   // Fetch skills for this resume
@@ -121,8 +122,9 @@ export async function saveResumeVersion(
     consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
     presentation: input.presentation ?? baseContent.presentation ?? [],
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
+    highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skills: skillRows.map((s) => ({
+    skills: input.skills ?? skillRows.map((s) => ({
       name: s.name,
       level: s.level,
       category: s.category,

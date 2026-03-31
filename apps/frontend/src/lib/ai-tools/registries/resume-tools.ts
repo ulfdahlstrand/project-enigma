@@ -34,6 +34,18 @@ export const revisionWorkItemsSchema = z.object({
 
 export type RevisionWorkItems = z.infer<typeof revisionWorkItemsSchema>;
 
+const revisionSuggestionSkillSchema = z.object({
+  name: z.string().min(1),
+  level: z.string().nullable().optional(),
+  category: z.string().nullable(),
+  sortOrder: z.number(),
+});
+
+const revisionSuggestionSkillScopeSchema = z.object({
+  type: z.enum(["group_order", "group_contents"]),
+  category: z.string().min(1).optional(),
+});
+
 const revisionSuggestionSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -41,6 +53,8 @@ const revisionSuggestionSchema = z.object({
   section: z.string().min(1),
   assignmentId: z.string().optional(),
   suggestedText: z.string().min(1),
+  skills: z.array(revisionSuggestionSkillSchema).optional(),
+  skillScope: revisionSuggestionSkillScopeSchema.optional(),
   status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
 });
 
@@ -60,14 +74,19 @@ const legacyRevisionSuggestionSchema = z.object({
   description: z.string().min(1).optional(),
 });
 
-const revisionSuggestionsInputSchema = z
-  .object({
-    summary: z.string().min(1).optional(),
-    suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
-  })
-  .transform((input): RevisionSuggestions => ({
-    summary: input.summary ?? "Suggested revision actions",
-    suggestions: input.suggestions.map((suggestion, index) => {
+const revisionSuggestionsInputShapeSchema = z.object({
+  summary: z.string().min(1).optional(),
+  suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
+});
+
+export function normalizeRevisionSuggestionsInput(
+  input: unknown,
+): RevisionSuggestions {
+  const parsed = revisionSuggestionsInputShapeSchema.parse(input);
+
+  return {
+    summary: parsed.summary ?? "Suggested revision actions",
+    suggestions: parsed.suggestions.map((suggestion, index) => {
       if ("suggestedText" in suggestion) {
         return suggestion;
       }
@@ -90,10 +109,16 @@ const revisionSuggestionsInputSchema = z
         status: "pending" as const,
       };
     }),
-  }));
+  };
+}
+
+const revisionSuggestionsInputSchema = revisionSuggestionsInputShapeSchema.transform((input) =>
+  normalizeRevisionSuggestionsInput(input),
+);
 
 export interface ResumeSkillSnapshot {
   name: string;
+  level: string | null;
   category: string | null;
   sortOrder: number;
 }

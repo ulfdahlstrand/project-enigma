@@ -16,7 +16,7 @@ import {
   useSendAIMessage,
   useCloseAIConversation,
 } from "../../hooks/ai-assistant";
-import { DiffReviewDialog } from "./DiffReviewDialog";
+import { DiffReviewDialog, renderTextDiffReview, type TextDiffReviewValue } from "./DiffReviewDialog";
 import type { AIMessage } from "@cv-tool/contracts";
 import { executeAIToolCall } from "../../lib/ai-tools/runtime";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
@@ -732,12 +732,12 @@ export function AIAssistantChat({
     }
   };
 
-  const handleDiffApply = () => {
+  const handleDiffApply = (suggested: string) => {
     if (pendingSuggestion) {
       if (activeConversationId) {
         closeConversation.mutate({ conversationId: activeConversationId });
       }
-      applyAndClose(pendingSuggestion.suggested);
+      applyAndClose(suggested);
     }
     setDiffOpen(false);
   };
@@ -853,10 +853,11 @@ export function AIAssistantChat({
 
       {/* Diff review dialog */}
       {pendingSuggestion && (
-        <DiffReviewDialog
+        <DiffReviewDialog<TextDiffReviewValue, string>
           open={diffOpen}
-          original={pendingSuggestion.original}
-          suggested={pendingSuggestion.suggested}
+          value={pendingSuggestion}
+          renderReview={renderTextDiffReview}
+          formatResult={(value) => value.suggested}
           onApply={handleDiffApply}
           onKeepEditing={handleDiffKeepEditing}
           onDiscard={handleDiffDiscard}

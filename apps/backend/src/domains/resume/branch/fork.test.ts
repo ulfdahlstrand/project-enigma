@@ -92,6 +92,7 @@ function buildDbMock(opts: {
   initialCommitRow?: unknown;
   sourceAssignments?: unknown[];
   freshAssignmentRows?: unknown[];
+  highlightedItemRows?: unknown[];
   employeeId?: string | null;
 } = {}) {
   const {
@@ -100,6 +101,7 @@ function buildDbMock(opts: {
     initialCommitRow = INITIAL_COMMIT_ROW,
     sourceAssignments = SOURCE_ASSIGNMENTS,
     freshAssignmentRows = FRESH_ASSIGNMENT_ROWS,
+    highlightedItemRows = [],
     employeeId = null,
   } = opts;
 
@@ -135,6 +137,12 @@ function buildDbMock(opts: {
   const freshAssignmentsWhere = vi.fn().mockReturnValue({ orderBy: freshAssignmentsOrderBy });
   const freshAssignmentsSelect = vi.fn().mockReturnValue({ where: freshAssignmentsWhere });
 
+  // Highlighted items query — resume_highlighted_items, select(["text"]).where().orderBy().execute()
+  const highlightedItemsExecute = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedItemsOrderBy = vi.fn().mockReturnValue({ execute: highlightedItemsExecute });
+  const highlightedItemsWhere = vi.fn().mockReturnValue({ orderBy: highlightedItemsOrderBy });
+  const highlightedItemsSelect = vi.fn().mockReturnValue({ where: highlightedItemsWhere });
+
   // Copy assignments insert (inside transaction)
   const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
   const copyInsertValues = vi.fn().mockReturnValue({ execute: copyInsertExecute });
@@ -168,6 +176,7 @@ function buildDbMock(opts: {
       innerJoin: assignmentsInnerJoin,
       select: freshAssignmentsSelect,
     };
+    if (table === "resume_highlighted_items") return { select: highlightedItemsSelect };
     return {};
   });
 

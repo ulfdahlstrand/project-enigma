@@ -53,6 +53,9 @@ const SKILL_ROW_2 = {
   sort_order: 1,
 };
 
+const HIGHLIGHTED_ITEM_ROW_1 = { text: "Principal Engineer hos Acme" };
+const HIGHLIGHTED_ITEM_ROW_2 = { text: "Tech Lead hos Beta" };
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -61,12 +64,17 @@ const SKILL_ROW_2 = {
  * Builds a mock Kysely instance that handles both the resume LEFT JOIN lookup
  * and the skills query that getResume performs.
  */
-function buildDbMock(resumeRow: unknown, skillRows: unknown[]) {
+function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRows: unknown[] = []) {
   // Skills query chain: selectAll → where → orderBy → execute
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
   const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
+
+  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
+  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
+  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
 
   // Resume query chain with LEFT JOIN: leftJoin → select → where → executeTakeFirst
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
@@ -76,6 +84,7 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[]) {
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return { leftJoin: resumeLeftJoin };
   });
 
@@ -84,11 +93,21 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[]) {
 }
 
 /** Builds a db mock that also handles the employee lookup (for consultant auth). */
-function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], employeeId: string) {
+function buildDbWithEmployeeLookup(
+  resumeRow: unknown,
+  skillRows: unknown[],
+  employeeId: string,
+  highlightedItemRows: unknown[] = [],
+) {
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
   const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
   const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
   const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
+
+  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
+  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
+  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
 
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
@@ -102,6 +121,7 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return { leftJoin: resumeLeftJoin };
   });
 
@@ -115,7 +135,7 @@ function buildDbWithEmployeeLookup(resumeRow: unknown, skillRows: unknown[], emp
 
 describe("getResume query function", () => {
   it("returns a resume with its skills array for an admin", async () => {
-    const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
+    const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2], [HIGHLIGHTED_ITEM_ROW_1]);
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
@@ -133,6 +153,18 @@ describe("getResume query function", () => {
       level: "expert",
       sortOrder: 0,
     });
+    expect(result.highlightedItems).toEqual(["Principal Engineer hos Acme"]);
+  });
+
+  it("returns highlighted items ordered by sort_order ascending", async () => {
+    const { db } = buildDbMock(RESUME_ROW, [], [HIGHLIGHTED_ITEM_ROW_1, HIGHLIGHTED_ITEM_ROW_2]);
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+
+    expect(result.highlightedItems).toEqual([
+      "Principal Engineer hos Acme",
+      "Tech Lead hos Beta",
+    ]);
   });
 
   it("includes mainBranchId and headCommitId from the LEFT JOIN", async () => {

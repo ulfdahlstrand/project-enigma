@@ -53,11 +53,16 @@ const EDUCATION_ROWS = [
   { type: "degree", value: "BSc Computer Science", sort_order: 1 },
 ];
 
+const HIGHLIGHTED_ITEM_ROWS = [
+  { text: "Engineer hos Acme Corp" },
+];
+
 const COMMIT_CONTENT = {
   title: "Senior Engineer",
   consultantTitle: "Tech Lead",
   presentation: ["Expert consultant"],
   summary: "Great at coding",
+  highlightedItems: ["Lead hos Beta Inc"],
   language: "sv",
   skills: [{ name: "Go", level: null, category: null, sortOrder: 1 }],
   assignments: [
@@ -94,6 +99,7 @@ function buildDbMock(opts: {
   skillRows?: unknown[];
   assignmentRows?: unknown[];
   educationRows?: unknown[];
+  highlightedItemRows?: unknown[];
   commitRow?: unknown;
   resolveEmployeeId?: string | null;
 } = {}) {
@@ -103,6 +109,7 @@ function buildDbMock(opts: {
     skillRows = SKILL_ROWS,
     assignmentRows = ASSIGNMENT_ROWS,
     educationRows = EDUCATION_ROWS,
+    highlightedItemRows = HIGHLIGHTED_ITEM_ROWS,
     commitRow = null,
     resolveEmployeeId = null,
   } = opts;
@@ -163,6 +170,12 @@ function buildDbMock(opts: {
   const eduWhere = vi.fn().mockReturnValue({ orderBy: eduOrderBy });
   const eduSelectAll = vi.fn().mockReturnValue({ where: eduWhere });
 
+  // Highlighted items chain
+  const highlightedExec = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExec });
+  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
+  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
+
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelectDispatch };
     if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
@@ -170,6 +183,7 @@ function buildDbMock(opts: {
     if (table === "resume_skills") return { selectAll: skillsSelect };
     if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
     if (table === "education") return { selectAll: eduSelectAll };
+    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     throw new Error(`Unexpected table: ${table}`);
   });
 
@@ -194,6 +208,7 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.skills).toHaveLength(1);
     expect(result.assignments).toHaveLength(1);
     expect(result.education).toHaveLength(1);
+    expect(result.highlightedItems).toEqual(["Engineer hos Acme Corp"]);
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
@@ -242,6 +257,7 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
     expect(result.skills[0].name).toBe("Go");
     expect(result.assignments).toHaveLength(1);
     expect(result.assignments[0].client_name).toBe("Beta Inc");
+    expect(result.highlightedItems).toEqual(["Lead hos Beta Inc"]);
   });
 
   it("education is still fetched live in snapshot path", async () => {

@@ -41,6 +41,7 @@ export const resumeCommitContentSchema = z.object({
   consultantTitle: z.string().nullable(),
   presentation: z.array(z.string()),
   summary: z.string().nullable(),
+  highlightedItems: z.array(z.string()).default([]),
   language: z.string(),
   skills: z.array(resumeCommitSkillSchema),
   assignments: z.array(resumeCommitAssignmentSchema),
@@ -110,6 +111,8 @@ export const saveResumeVersionInputSchema = z.object({
   consultantTitle: z.string().nullable().optional(),
   presentation: z.array(z.string()).optional(),
   summary: z.string().nullable().optional(),
+  highlightedItems: z.array(z.string()).optional(),
+  skills: z.array(resumeCommitSkillSchema).optional(),
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
@@ -225,6 +228,7 @@ export const resumeDiffScalarsSchema = z.object({
   consultantTitle: fieldChange(z.string().nullable()).optional(),
   presentation: fieldChange(z.array(z.string())).optional(),
   summary: fieldChange(z.string().nullable()).optional(),
+  highlightedItems: fieldChange(z.array(z.string())).optional(),
   language: fieldChange(z.string()).optional(),
 });
 

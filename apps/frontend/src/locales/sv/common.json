@@ -183,6 +183,8 @@
       "presentationLabel": "Presentation",
       "presentationHelper": "Separera stycken med en blank rad.",
       "summaryLabel": "Sammanfattning",
+      "highlightedExperienceLabel": "Exempel på erfarenhet",
+      "highlightedExperienceHelper": "Använd en rad per punkt.",
       "saveButton": "Spara",
       "saveActionsLabel": "Öppna sparalternativ",
       "saveCurrentOption": "Spara aktuell meritförteckning",

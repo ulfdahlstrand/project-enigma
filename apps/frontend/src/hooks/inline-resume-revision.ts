@@ -1,9 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { useCloseAIConversation } from "./ai-assistant";
+import {
+  useAIConversation,
+  useAIConversations,
+  useCloseAIConversation,
+} from "./ai-assistant";
 import {
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
@@ -17,19 +21,29 @@ import {
   buildResumeRevisionPrompt,
 } from "../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
+  renderTextDiffReview,
+  type TextDiffReviewValue,
+} from "../components/ai-assistant/DiffReviewDialog";
+import {
+  appendUniqueRevisionSuggestions,
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
-  appendUniqueRevisionSuggestions,
   buildInlineRevisionBranchName,
   buildInlineRevisionSuggestionCommitMessage,
   buildInlineRevisionWorkItemAutomationMessage,
   buildInlineRevisionWorkItemsFromPlan,
   markWorkItemsCompletedFromSuggestions,
+  resolveRevisionWorkItems,
   type InlineRevisionStage,
 } from "../components/revision/inline-revision";
 import {
+  renderSkillsReview,
+  type SkillsReviewValue,
+} from "../components/revision/SkillsReviewContent";
+import {
   createResumeActionToolRegistry,
   createResumePlanningToolRegistry,
+  normalizeRevisionSuggestionsInput,
   type RevisionPlan,
   type RevisionSuggestions,
   type RevisionWorkItems,
@@ -41,18 +55,22 @@ type DraftPatch = {
   consultantTitle?: string | null;
   presentation?: string[];
   summary?: string | null;
+  highlightedItems?: string[];
 };
 
 type DraftState = {
   title: string;
   presentation: string;
   summary: string;
+  highlightedItems: string;
   titleRef: MutableRefObject<string>;
   presentationRef: MutableRefObject<string>;
   summaryRef: MutableRefObject<string>;
+  highlightedItemsRef: MutableRefObject<string>;
   setTitle: (value: string) => void;
   setPresentation: (value: string) => void;
   setSummary: (value: string) => void;
+  setHighlightedItems: (value: string) => void;
 };
 
 type ResumeAssignmentLike = {
@@ -79,7 +97,7 @@ type ResumeInspectionSnapshot = {
   language: string | null | undefined;
   presentation: string[];
   summary: string | null;
-  skills: Array<{ name: string; category: string | null; sortOrder: number }>;
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
   assignments: Array<{
     id: string;
     clientName: string;
@@ -90,6 +108,22 @@ type ResumeInspectionSnapshot = {
     startDate: string | null;
     endDate: string | null;
   }>;
+};
+
+type PersistedInlineRevisionSession = {
+  version: 1;
+  sourceBranchId: string | null;
+  sourceBranchName: string | null;
+  stage: Extract<InlineRevisionStage, "actions" | "finalize">;
+  plan: RevisionPlan | null;
+  workItems: RevisionWorkItems | null;
+  suggestions: RevisionSuggestions | null;
+};
+
+type PersistedToolCall = {
+  type: "tool_call";
+  toolName: string;
+  input?: unknown;
 };
 
 type UseInlineResumeRevisionParams = {
@@ -105,6 +139,8 @@ type UseInlineResumeRevisionParams = {
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
+  highlightedItems: string[];
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
   sortedAssignments: ResumeAssignmentLike[];
   resumeInspectionSnapshot: ResumeInspectionSnapshot;
   sectionRefs: RevisionSectionRefs;
@@ -112,6 +148,436 @@ type UseInlineResumeRevisionParams = {
   buildDraftPatch: () => DraftPatch;
   buildDraftPatchFromValues: (title: string, presentation: string, summary: string) => DraftPatch;
 };
+
+function getInlineRevisionStorageKey(branchId: string) {
+  return `inline-resume-revision:${branchId}`;
+}
+
+function readPersistedInlineRevisionSession(branchId: string): PersistedInlineRevisionSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(getInlineRevisionStorageKey(branchId));
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedInlineRevisionSession;
+    if (parsed.version !== 1) {
+      return null;
+    }
+
+    if (parsed.stage !== "actions" && parsed.stage !== "finalize") {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedInlineRevisionSession(
+  branchId: string,
+  session: PersistedInlineRevisionSession,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(getInlineRevisionStorageKey(branchId), JSON.stringify(session));
+}
+
+function clearPersistedInlineRevisionSession(branchId: string | null) {
+  if (typeof window === "undefined" || !branchId) {
+    return;
+  }
+
+  window.localStorage.removeItem(getInlineRevisionStorageKey(branchId));
+}
+
+function extractPersistedToolCalls(text: string): PersistedToolCall[] {
+  return [...text.matchAll(/```json\s*([\s\S]*?)\s*```/g)].flatMap((match) => {
+    const block = match[1];
+    if (!block) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(block.trim()) as PersistedToolCall;
+      if (parsed.type === "tool_call" && typeof parsed.toolName === "string") {
+        return [parsed];
+      }
+    } catch {
+      return [];
+    }
+
+    return [];
+  });
+}
+
+function deriveSuggestionsFromConversation(
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): RevisionSuggestions | null {
+  let nextSuggestions: RevisionSuggestions | null = null;
+
+  for (const message of messages) {
+    if (message.role !== "assistant") {
+      continue;
+    }
+
+    for (const toolCall of extractPersistedToolCalls(message.content)) {
+      if (toolCall.toolName === "set_revision_suggestions") {
+        try {
+          nextSuggestions = normalizeRevisionSuggestionsInput(toolCall.input as never);
+        } catch {
+          continue;
+        }
+      }
+
+      if (toolCall.toolName === "set_assignment_suggestions") {
+        try {
+          const input = toolCall.input as {
+            workItemId: string;
+            summary?: string;
+            suggestions: unknown[];
+          };
+          const normalizedSuggestions = normalizeRevisionSuggestionsInput({
+            summary: input.summary,
+            suggestions: input.suggestions,
+          });
+
+          nextSuggestions = appendUniqueRevisionSuggestions(nextSuggestions, {
+            summary: normalizedSuggestions.summary,
+            suggestions: normalizedSuggestions.suggestions.map((suggestion) => ({
+              ...suggestion,
+              id: `${input.workItemId}:${suggestion.id}`,
+            })),
+          });
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  return nextSuggestions;
+}
+
+function formatSkillsSnapshot(
+  skills: Array<{ name: string; category: string | null; sortOrder: number }>,
+) {
+  const orderedSkills = [...skills].sort((a, b) => a.sortOrder - b.sortOrder);
+  const groups = orderedSkills.reduce<Array<{ category: string; skills: string[] }>>((acc, skill) => {
+    const category = skill.category?.trim() || "Other";
+    const existing = acc.find((group) => group.category === category);
+
+    if (existing) {
+      existing.skills.push(skill.name);
+      return acc;
+    }
+
+    return [...acc, { category, skills: [skill.name] }];
+  }, []);
+
+  return groups.map((group) => `${group.category}: ${group.skills.join(", ")}`).join("\n");
+}
+
+function normalizeSkillCategory(category: string | null | undefined) {
+  return category?.trim() || "Other";
+}
+
+function groupSkillsByCategory(
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  const orderedSkills = [...skills].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return orderedSkills.reduce<Array<{
+    category: string;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  }>>((acc, skill) => {
+    const category = normalizeSkillCategory(skill.category);
+    const existing = acc.find((group) => group.category === category);
+
+    if (existing) {
+      existing.skills.push(skill);
+      return acc;
+    }
+
+    return [...acc, { category, skills: [skill] }];
+  }, []);
+}
+
+function resequenceSkillGroups(
+  groups: Array<{
+    category: string;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  }>,
+) {
+  return groups.flatMap((group, groupIndex) =>
+    group.skills.map((skill, skillIndex) => ({
+      ...skill,
+      category: group.category,
+      sortOrder: groupIndex * 1000 + skillIndex,
+    })),
+  );
+}
+
+function isSkillsSection(section: string) {
+  const normalized = section.trim().toLowerCase();
+  return (
+    normalized.includes("skill")
+    || normalized.includes("kompetens")
+    || normalized.includes("färdighet")
+  );
+}
+
+function normalizeSkillsLabel(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^[\d\s.\-:]+/u, "")
+    .replace(/\s+/g, " ");
+}
+
+function parseSuggestedGroupOrder(
+  suggestedText: string,
+  currentSkills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  const currentGroups = groupSkillsByCategory(currentSkills);
+  const currentGroupsByLabel = new Map(
+    currentGroups.map((group) => [normalizeSkillsLabel(group.category), group]),
+  );
+  const desiredLabels = suggestedText
+    .split("\n")
+    .map((line) => normalizeSkillsLabel(line))
+    .filter(Boolean);
+
+  const desiredGroups = desiredLabels
+    .map((label) => currentGroupsByLabel.get(label))
+    .filter((group, index, groups): group is NonNullable<typeof group> =>
+      Boolean(group) && groups.findIndex((candidate) => candidate?.category === group?.category) === index,
+    );
+
+  if (desiredGroups.length < 2) {
+    return null;
+  }
+
+  const desiredCategorySet = new Set(desiredGroups.map((group) => group.category));
+  const remainingGroups = currentGroups.filter((group) => !desiredCategorySet.has(group.category));
+  const reorderedSkills = resequenceSkillGroups([...desiredGroups, ...remainingGroups]);
+
+  return {
+    skills: reorderedSkills,
+    skillScope: {
+      type: "group_order" as const,
+    },
+  };
+}
+
+function parseSuggestedGroupContents(
+  suggestedText: string,
+  currentSkills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  const [rawCategory, rawItems] = suggestedText.split(":");
+  if (!rawCategory || !rawItems) {
+    return null;
+  }
+
+  const targetCategory = normalizeSkillsLabel(rawCategory);
+  const currentGroups = groupSkillsByCategory(currentSkills);
+  const matchingGroup = currentGroups.find((group) => normalizeSkillsLabel(group.category) === targetCategory);
+
+  if (!matchingGroup) {
+    return null;
+  }
+
+  const desiredNames = rawItems
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (desiredNames.length < 2) {
+    return null;
+  }
+
+  const desiredNameSet = new Set(desiredNames.map((item) => item.toLowerCase()));
+  const skillsByName = new Map(
+    matchingGroup.skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
+  );
+  const reorderedSkills = desiredNames
+    .map((name) => skillsByName.get(name.toLowerCase()))
+    .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill));
+
+  if (reorderedSkills.length < 2) {
+    return null;
+  }
+
+  const remainingSkills = matchingGroup.skills.filter((skill) => !desiredNameSet.has(skill.name.trim().toLowerCase()));
+  const nextGroups = currentGroups.map((group) =>
+    group.category === matchingGroup.category
+      ? { ...group, skills: [...reorderedSkills, ...remainingSkills] }
+      : group,
+  );
+
+  return {
+    skills: resequenceSkillGroups(nextGroups),
+    skillScope: {
+      type: "group_contents" as const,
+      category: matchingGroup.category,
+    },
+  };
+}
+
+// Handles AI output like "Skill A, Skill B, Skill C" — a flat comma-separated list of skill names
+// with no category prefix. Detects which group the skills belong to and returns a group_contents result.
+function parseSuggestedFlatSkillsList(
+  suggestedText: string,
+  currentSkills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  const suggestedNames = suggestedText.split(",").map((s) => s.trim()).filter(Boolean);
+  if (suggestedNames.length < 2) {
+    return null;
+  }
+
+  const skillsByNormalized = new Map(
+    currentSkills.map((skill) => [normalizeSkillsLabel(skill.name), skill]),
+  );
+  const matchedSkills = suggestedNames
+    .map((name) => skillsByNormalized.get(normalizeSkillsLabel(name)))
+    .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill));
+
+  if (matchedSkills.length < 2) {
+    return null;
+  }
+
+  const categories = new Set(matchedSkills.map((skill) => skill.category));
+  if (categories.size !== 1) {
+    return null;
+  }
+
+  const targetCategory = [...categories][0]!;
+  const currentGroups = groupSkillsByCategory(currentSkills);
+  const matchingGroup = currentGroups.find((g) => g.category === targetCategory);
+  if (!matchingGroup) {
+    return null;
+  }
+
+  const desiredNameSet = new Set(suggestedNames.map((n) => normalizeSkillsLabel(n)));
+  const reorderedSkills = suggestedNames
+    .map((name) => matchingGroup.skills.find((s) => normalizeSkillsLabel(s.name) === normalizeSkillsLabel(name)))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+
+  if (reorderedSkills.length < 2) {
+    return null;
+  }
+
+  const remainingSkills = matchingGroup.skills.filter((s) => !desiredNameSet.has(normalizeSkillsLabel(s.name)));
+  const nextGroups = currentGroups.map((group) =>
+    group.category === matchingGroup.category
+      ? { ...group, skills: [...reorderedSkills, ...remainingSkills] }
+      : group,
+  );
+
+  return {
+    skills: resequenceSkillGroups(nextGroups),
+    skillScope: { type: "group_contents" as const, category: matchingGroup.category },
+  };
+}
+
+function hydrateSkillsSuggestion(
+  suggestion: RevisionSuggestions["suggestions"][number],
+  currentSkills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  if (!isSkillsSection(suggestion.section)) {
+    return suggestion;
+  }
+
+  if (suggestion.skills && suggestion.skills.length > 0) {
+    return suggestion;
+  }
+
+  const parsedGroupContents = parseSuggestedGroupContents(suggestion.suggestedText, currentSkills);
+  if (parsedGroupContents) {
+    return { ...suggestion, skills: parsedGroupContents.skills, skillScope: parsedGroupContents.skillScope };
+  }
+
+  const parsedGroupOrder = parseSuggestedGroupOrder(suggestion.suggestedText, currentSkills);
+  if (parsedGroupOrder) {
+    return { ...suggestion, skills: parsedGroupOrder.skills, skillScope: parsedGroupOrder.skillScope };
+  }
+
+  const parsedFlatList = parseSuggestedFlatSkillsList(suggestion.suggestedText, currentSkills);
+  if (parsedFlatList) {
+    return { ...suggestion, skills: parsedFlatList.skills, skillScope: parsedFlatList.skillScope };
+  }
+
+  return suggestion;
+}
+
+function buildSkillsReviewValue(
+  currentSkills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+  suggestion: RevisionSuggestions["suggestions"][number],
+): SkillsReviewValue | null {
+  if (!suggestion.skills || suggestion.skills.length === 0) {
+    return null;
+  }
+
+  const originalGroups = groupSkillsByCategory(currentSkills).map((group) => ({
+    heading: group.category,
+    items: group.skills.map((skill) => skill.name),
+  }));
+  const suggestedGroups = groupSkillsByCategory(suggestion.skills.map((skill) => ({
+    name: skill.name,
+    level: skill.level ?? null,
+    category: skill.category,
+    sortOrder: skill.sortOrder,
+  }))).map((group) => ({
+    heading: group.category,
+    items: group.skills.map((skill) => skill.name),
+  }));
+
+  if (suggestion.skillScope?.type === "group_order") {
+    return {
+      suggestionId: suggestion.id,
+      mode: "group_order",
+      originalSections: originalGroups.map((group) => ({ heading: group.heading, items: [] })),
+      suggestedSections: suggestedGroups.map((group) => ({ heading: group.heading, items: [] })),
+    };
+  }
+
+  if (suggestion.skillScope?.type === "group_contents" && suggestion.skillScope.category) {
+    const targetCategory = normalizeSkillsLabel(suggestion.skillScope.category);
+    const originalSection = originalGroups.find(
+      (group) => normalizeSkillsLabel(group.heading) === targetCategory,
+    );
+    const suggestedSection = suggestedGroups.find(
+      (group) => normalizeSkillsLabel(group.heading) === targetCategory,
+    );
+    const displayCategory =
+      originalSection?.heading ?? suggestedSection?.heading ?? suggestion.skillScope.category;
+
+    return {
+      suggestionId: suggestion.id,
+      mode: "group_contents",
+      targetCategory: displayCategory,
+      originalSections: originalSection ? [originalSection] : [],
+      suggestedSections: suggestedSection ? [suggestedSection] : [],
+    };
+  }
+
+  const suggestedGroupLabels = new Set(suggestedGroups.map((g) => normalizeSkillsLabel(g.heading)));
+  const scopedOriginalGroups = originalGroups.filter((g) => suggestedGroupLabels.has(normalizeSkillsLabel(g.heading)));
+
+  return {
+    suggestionId: suggestion.id,
+    mode: "group_contents",
+    originalSections: scopedOriginalGroups.length > 0 ? scopedOriginalGroups : originalGroups,
+    suggestedSections: suggestedGroups,
+  };
+}
 
 export function useInlineResumeRevision({
   resumeId,
@@ -126,6 +592,8 @@ export function useInlineResumeRevision({
   consultantTitle,
   presentation,
   summary,
+  highlightedItems,
+  skills,
   sortedAssignments,
   resumeInspectionSnapshot,
   sectionRefs,
@@ -162,6 +630,7 @@ export function useInlineResumeRevision({
   const [isPreparingFinalize, setIsPreparingFinalize] = useState(false);
   const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
   const workItemsRef = useRef<RevisionWorkItems | null>(null);
+  const restoredBranchIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     workItemsRef.current = workItems;
@@ -189,12 +658,28 @@ export function useInlineResumeRevision({
   const closeInlineConversation = useCloseAIConversation("resume", resumeId);
   const forkResumeBranch = useForkResumeBranch();
   const finaliseInlineRevision = useFinaliseResumeBranch();
+  const { data: existingActionConversations } = useAIConversations(
+    activeBranchId && activeBranchId !== mainBranchId ? "resume-revision-actions" : null,
+    activeBranchId && activeBranchId !== mainBranchId ? activeBranchId : null,
+  );
+  const existingActionConversationId =
+    existingActionConversations?.conversations.at(-1)?.id ?? null;
+  const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
 
   useEffect(() => {
-    if (!isEditing) {
+    if (isEditing) {
+      return;
+    }
+
+    const hasPersistedSession =
+      activeBranchId !== null &&
+      activeBranchId !== mainBranchId &&
+      readPersistedInlineRevisionSession(activeBranchId) !== null;
+
+    if (!hasPersistedSession) {
       setIsOpen(false);
     }
-  }, [isEditing]);
+  }, [activeBranchId, isEditing, mainBranchId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -224,7 +709,9 @@ export function useInlineResumeRevision({
 
   const actionToolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
-    setRevisionWorkItems: setWorkItems,
+    setRevisionWorkItems: (incoming) => {
+      setWorkItems((prev) => resolveRevisionWorkItems(prev, incoming));
+    },
     markRevisionWorkItemNoChangesNeeded: ({ workItemId, note }) => {
       setWorkItems((prev) => {
         if (!prev) {
@@ -294,6 +781,47 @@ export function useInlineResumeRevision({
     entityId: resumeId,
   };
 
+  const openActionAssistant = useCallback((branchId: string) => {
+    if (
+      assistantEntityType === "resume-revision-actions" &&
+      assistantEntityId === branchId &&
+      assistantToolContext?.route === actionToolContext.route
+    ) {
+      hideDrawer();
+      return;
+    }
+
+    openAssistant({
+      entityType: "resume-revision-actions",
+      entityId: branchId,
+      title: t("revision.inline.actionsConversationTitle"),
+      systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
+      originalContent: [resumeTitle, consultantTitle ?? "", presentation.join("\n\n"), summary ?? ""]
+        .filter(Boolean)
+        .join("\n\n"),
+      toolRegistry: actionToolRegistry,
+      toolContext: actionToolContext,
+      onAccept: () => {},
+    });
+
+    hideDrawer();
+  }, [
+    actionToolContext,
+    actionToolRegistry,
+    assistantEntityId,
+    assistantEntityType,
+    assistantToolContext?.route,
+    consultantTitle,
+    hideDrawer,
+    i18n.language,
+    i18n.resolvedLanguage,
+    openAssistant,
+    presentation,
+    resumeTitle,
+    summary,
+    t,
+  ]);
+
   const guardrail =
     stage === "actions"
       ? {
@@ -342,45 +870,12 @@ export function useInlineResumeRevision({
     setPendingActionBranchId(null);
     setWorkItems(buildInlineRevisionWorkItemsFromPlan(plan));
     setSuggestions(null);
-
-    if (
-      assistantEntityType !== "resume-revision-actions" ||
-      assistantEntityId !== activeBranchId ||
-      assistantToolContext?.route !== actionToolContext.route
-    ) {
-      openAssistant({
-        entityType: "resume-revision-actions",
-        entityId: activeBranchId,
-        title: t("revision.inline.actionsConversationTitle"),
-        systemPrompt: buildResumeRevisionActionPrompt(i18n.resolvedLanguage ?? i18n.language),
-        originalContent: [resumeTitle, consultantTitle ?? "", presentation.join("\n\n"), summary ?? ""]
-          .filter(Boolean)
-          .join("\n\n"),
-        toolRegistry: actionToolRegistry,
-        toolContext: actionToolContext,
-        onAccept: () => {},
-      });
-    }
-
-    hideDrawer();
+    openActionAssistant(activeBranchId);
   }, [
-    actionToolContext,
-    actionToolRegistry,
     activeBranchId,
-    assistantEntityId,
-    assistantEntityType,
-    assistantToolContext?.route,
-    consultantTitle,
-    hideDrawer,
-    i18n.language,
-    i18n.resolvedLanguage,
-    openAssistant,
+    openActionAssistant,
     pendingActionBranchId,
     plan,
-    presentation,
-    resumeTitle,
-    summary,
-    t,
   ]);
 
   const openPlanning = () => {
@@ -426,6 +921,16 @@ export function useInlineResumeRevision({
       fromCommitId: baseCommitId,
       name: buildInlineRevisionBranchName(plan),
       resumeId,
+    });
+
+    writePersistedInlineRevisionSession(newBranch.id, {
+      version: 1,
+      sourceBranchId: activeBranchId,
+      sourceBranchName: activeBranchName,
+      stage: "actions",
+      plan,
+      workItems: buildInlineRevisionWorkItemsFromPlan(plan),
+      suggestions: null,
     });
 
     setPendingActionBranchId(newBranch.id);
@@ -477,8 +982,98 @@ export function useInlineResumeRevision({
     hideDrawer();
   };
 
+  useEffect(() => {
+    if (!activeBranchId || activeBranchId === mainBranchId) {
+      restoredBranchIdRef.current = null;
+      return;
+    }
+
+    if (isOpen) {
+      restoredBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    if (restoredBranchIdRef.current === activeBranchId) {
+      return;
+    }
+
+    const persistedSession = readPersistedInlineRevisionSession(activeBranchId);
+    if (!persistedSession) {
+      restoredBranchIdRef.current = activeBranchId;
+      return;
+    }
+
+    restoredBranchIdRef.current = activeBranchId;
+    setIsEditing(true);
+    setIsOpen(true);
+    setStage(persistedSession.stage);
+    setPlan(persistedSession.plan);
+    setWorkItems(persistedSession.workItems);
+    setSuggestions(persistedSession.suggestions);
+    setSelectedSuggestionId(null);
+    setReviewSuggestionId(null);
+    setIsSuggestionReviewOpen(false);
+    setSourceBranchId(persistedSession.sourceBranchId);
+    setSourceBranchName(persistedSession.sourceBranchName);
+    setPlanningSessionId(null);
+    setPendingActionBranchId(null);
+    setApplyingSuggestionId(null);
+    setIsPreparingFinalize(false);
+    if (persistedSession.stage === "actions") {
+      openActionAssistant(activeBranchId);
+    } else {
+      hideDrawer();
+    }
+  }, [activeBranchId, hideDrawer, isOpen, mainBranchId, openActionAssistant, setIsEditing]);
+
+  useLayoutEffect(() => {
+    if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {
+      return;
+    }
+
+    if (stage !== "actions" && stage !== "finalize") {
+      return;
+    }
+
+    if (stage === "actions" && !workItems && !suggestions) {
+      return;
+    }
+
+    writePersistedInlineRevisionSession(activeBranchId, {
+      version: 1,
+      sourceBranchId,
+      sourceBranchName,
+      stage,
+      plan,
+      workItems,
+      suggestions,
+    });
+  }, [
+    activeBranchId,
+    isOpen,
+    mainBranchId,
+    plan,
+    sourceBranchId,
+    sourceBranchName,
+    stage,
+    suggestions,
+    workItems,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen || stage !== "actions" || suggestions || !existingActionConversation) {
+      return;
+    }
+
+    const restoredSuggestions = deriveSuggestionsFromConversation(existingActionConversation.messages);
+    if (restoredSuggestions) {
+      setSuggestions(restoredSuggestions);
+    }
+  }, [existingActionConversation, isOpen, stage, suggestions]);
+
   const getSuggestionOriginalText = (suggestion: RevisionSuggestions["suggestions"][number]) => {
-    const section = suggestion.section.trim().toLowerCase();
+    const hydratedSuggestion = hydrateSkillsSuggestion(suggestion, skills);
+    const section = hydratedSuggestion.section.trim().toLowerCase();
 
     if (suggestion.assignmentId) {
       const matchingAssignment = sortedAssignments.find((assignment) => {
@@ -501,6 +1096,18 @@ export function useInlineResumeRevision({
 
     if (section.includes("summary") || section.includes("sammanfatt")) {
       return summary ?? "";
+    }
+
+    if (isSkillsSection(section)) {
+      if (hydratedSuggestion.skillScope?.type === "group_contents" && hydratedSuggestion.skillScope.category) {
+        const targetCategory = normalizeSkillCategory(hydratedSuggestion.skillScope.category);
+        const targetGroup = groupSkillsByCategory(skills).find((group) => group.category === targetCategory);
+        if (targetGroup) {
+          return `${targetGroup.category}: ${targetGroup.skills.map((skill) => skill.name).join(", ")}`;
+        }
+      }
+
+      return formatSkillsSnapshot(skills);
     }
 
     if (section.includes("assignment") || section.includes("uppdrag") || section.includes("experience")) {
@@ -585,6 +1192,83 @@ export function useInlineResumeRevision({
     }
   };
 
+  const applySuggestionToSkills = async (suggestion: RevisionSuggestions["suggestions"][number]) => {
+    const hydratedSuggestion = hydrateSkillsSuggestion(suggestion, skills);
+    if (!activeBranchId || !hydratedSuggestion.skills || hydratedSuggestion.skills.length === 0) {
+      return false;
+    }
+
+    const currentSkillGroups = groupSkillsByCategory(skills);
+    const currentSkillsByName = new Map(
+      skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
+    );
+    let nextSkills = hydratedSuggestion.skills.map((skill) => {
+      const currentSkill = currentSkillsByName.get(skill.name.trim().toLowerCase());
+
+      return {
+        name: skill.name,
+        level: skill.level ?? currentSkill?.level ?? null,
+        category: skill.category,
+        sortOrder: skill.sortOrder,
+      };
+    });
+
+    if (hydratedSuggestion.skillScope?.type === "group_order") {
+      const desiredCategoryOrder = hydratedSuggestion.skills.reduce<string[]>((acc, skill) => {
+        const category = normalizeSkillCategory(skill.category);
+        if (!acc.includes(category)) {
+          acc.push(category);
+        }
+        return acc;
+      }, []);
+      const currentGroupsByCategory = new Map(
+        currentSkillGroups.map((group) => [group.category, group]),
+      );
+      const reorderedGroups = desiredCategoryOrder
+        .map((category) => currentGroupsByCategory.get(category))
+        .filter((group): group is NonNullable<typeof group> => Boolean(group));
+      const remainingGroups = currentSkillGroups.filter((group) => !desiredCategoryOrder.includes(group.category));
+
+      nextSkills = resequenceSkillGroups([...reorderedGroups, ...remainingGroups]);
+    } else if (
+      hydratedSuggestion.skillScope?.type === "group_contents"
+      && hydratedSuggestion.skillScope.category
+    ) {
+      const targetCategory = normalizeSkillCategory(hydratedSuggestion.skillScope.category);
+      const desiredNames = hydratedSuggestion.skills
+        .filter((skill) => normalizeSkillCategory(skill.category) === targetCategory)
+        .map((skill) => skill.name.trim().toLowerCase());
+      const desiredNameSet = new Set(desiredNames);
+
+      nextSkills = resequenceSkillGroups(currentSkillGroups.map((group) => {
+        if (group.category !== targetCategory) {
+          return group;
+        }
+
+        const skillsByName = new Map(
+          group.skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
+        );
+        const reorderedSkills = desiredNames
+          .map((name) => skillsByName.get(name))
+          .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill));
+        const remainingSkills = group.skills.filter((skill) => !desiredNameSet.has(skill.name.trim().toLowerCase()));
+
+        return {
+          ...group,
+          skills: [...reorderedSkills, ...remainingSkills],
+        };
+      }));
+    }
+
+    await saveVersion.mutateAsync({
+      branchId: activeBranchId,
+      message: buildInlineRevisionSuggestionCommitMessage(hydratedSuggestion),
+      skills: nextSkills,
+    });
+
+    return true;
+  };
+
   const approveSuggestion = async (suggestionId: string) => {
     const suggestion = suggestions?.suggestions.find((item) => item.id === suggestionId);
     if (suggestion) {
@@ -604,6 +1288,13 @@ export function useInlineResumeRevision({
         setApplyingSuggestionId(suggestionId);
         try {
           await applySuggestionToAssignment(suggestion);
+        } finally {
+          setApplyingSuggestionId(null);
+        }
+      } else if (isSkillsSection(suggestion.section) && activeBranchId) {
+        setApplyingSuggestionId(suggestionId);
+        try {
+          await applySuggestionToSkills(suggestion);
         } finally {
           setApplyingSuggestionId(null);
         }
@@ -694,7 +1385,8 @@ export function useInlineResumeRevision({
   const hasUnsavedChanges =
     draftState.titleRef.current !== (consultantTitle ?? "") ||
     draftState.presentationRef.current !== presentation.join("\n\n") ||
-    draftState.summaryRef.current !== (summary ?? "");
+    draftState.summaryRef.current !== (summary ?? "") ||
+    draftState.highlightedItemsRef.current !== highlightedItems.join("\n");
 
   const isReadyToFinalize =
     (workItems?.items.length ?? 0) > 0 &&
@@ -738,6 +1430,7 @@ export function useInlineResumeRevision({
       },
       {
         onSuccess: async (data) => {
+          clearPersistedInlineRevisionSession(activeBranchId);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
             queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
@@ -764,6 +1457,54 @@ export function useInlineResumeRevision({
   const reviewSuggestion = reviewSuggestionId
     ? suggestions?.suggestions.find((item) => item.id === reviewSuggestionId) ?? null
     : null;
+  const reviewDialog = reviewSuggestion
+    ? (() => {
+        const isSkillsSuggestion = isSkillsSection(reviewSuggestion.section);
+        if (isSkillsSuggestion) {
+          const value = buildSkillsReviewValue(skills, hydrateSkillsSuggestion(reviewSuggestion, skills));
+          if (value) {
+            return {
+              kind: "skills" as const,
+              isOpen: isSuggestionReviewOpen,
+              value,
+              renderReview: renderSkillsReview,
+              formatResult: (nextValue: SkillsReviewValue) => nextValue.suggestionId,
+              onApply: async (suggestionId: string) => {
+                await approveSuggestion(suggestionId);
+                closeSuggestionReview();
+              },
+              onKeepEditing: closeSuggestionReview,
+              onDiscard: () => {
+                dismissSuggestion(reviewSuggestion.id);
+                closeSuggestionReview();
+              },
+            };
+          }
+        }
+
+        const value: TextDiffReviewValue = {
+          original: getSuggestionOriginalText(reviewSuggestion),
+          suggested: reviewSuggestion.suggestedText ?? "",
+        };
+
+        return {
+          kind: "text" as const,
+          isOpen: isSuggestionReviewOpen,
+          value,
+          renderReview: renderTextDiffReview,
+          formatResult: (nextValue: TextDiffReviewValue) => nextValue.suggested,
+          onApply: async () => {
+            await approveSuggestion(reviewSuggestion.id);
+            closeSuggestionReview();
+          },
+          onKeepEditing: closeSuggestionReview,
+          onDiscard: () => {
+            dismissSuggestion(reviewSuggestion.id);
+            closeSuggestionReview();
+          },
+        };
+      })()
+    : null;
 
   return {
     isOpen,
@@ -788,25 +1529,13 @@ export function useInlineResumeRevision({
       pendingActionBranchId !== null || forkResumeBranch.isPending || closeInlineConversation.isPending,
     isMerging: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "merge",
     isKeeping: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "keep",
-    reviewDialog: reviewSuggestion
-      ? {
-          isOpen: isSuggestionReviewOpen,
-          original: getSuggestionOriginalText(reviewSuggestion),
-          suggested: reviewSuggestion.suggestedText ?? "",
-          onApply: async () => {
-            await approveSuggestion(reviewSuggestion.id);
-            closeSuggestionReview();
-          },
-          onKeepEditing: closeSuggestionReview,
-          onDiscard: () => {
-            dismissSuggestion(reviewSuggestion.id);
-            closeSuggestionReview();
-          },
-        }
-      : null,
+    reviewDialog,
     open,
     close,
-    reset,
+    reset: () => {
+      clearPersistedInlineRevisionSession(activeBranchId);
+      reset();
+    },
     openActions,
     prepareFinalize,
     backToActions: () => setStage("actions"),

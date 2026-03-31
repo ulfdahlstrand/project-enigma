@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -11,17 +11,20 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { diffWords } from "diff";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export type ReviewViewMode = "side-by-side" | "unified";
 
-type ViewMode = "side-by-side" | "unified";
+export type ReviewRenderArgs<TValue> = {
+  mode: ReviewViewMode;
+  value: TValue;
+  updateValue: (next: TValue) => void;
+};
 
-interface Props {
+interface DiffReviewDialogProps<TValue, TResult> {
   open: boolean;
-  original: string;
-  suggested: string;
-  onApply: () => void;
+  value: TValue;
+  renderReview: (args: ReviewRenderArgs<TValue>) => ReactNode;
+  formatResult: (value: TValue) => TResult;
+  onApply: (result: TResult) => void | Promise<void>;
   onKeepEditing: () => void;
   onDiscard: () => void;
   title?: string;
@@ -30,11 +33,12 @@ interface Props {
   discardLabel?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Side-by-side view
-// ---------------------------------------------------------------------------
+export type TextDiffReviewValue = {
+  original: string;
+  suggested: string;
+};
 
-function SideBySideView({ original, suggested }: { original: string; suggested: string }) {
+function SideBySideTextReview({ value }: { value: TextDiffReviewValue }) {
   const { t } = useTranslation("common");
   return (
     <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
@@ -55,7 +59,7 @@ function SideBySideView({ original, suggested }: { original: string; suggested: 
             opacity: 0.85,
           }}
         >
-          {original}
+          {value.original}
         </Box>
       </Box>
       <Box sx={{ flex: 1 }}>
@@ -74,19 +78,15 @@ function SideBySideView({ original, suggested }: { original: string; suggested: 
             minHeight: 100,
           }}
         >
-          {suggested}
+          {value.suggested}
         </Box>
       </Box>
     </Box>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Unified diff view
-// ---------------------------------------------------------------------------
-
-function UnifiedView({ original, suggested }: { original: string; suggested: string }) {
-  const parts = diffWords(original, suggested);
+function UnifiedTextReview({ value }: { value: TextDiffReviewValue }) {
+  const parts = diffWords(value.original, value.suggested);
 
   return (
     <Box
@@ -122,6 +122,7 @@ function UnifiedView({ original, suggested }: { original: string; suggested: str
             </Box>
           );
         }
+
         if (part.added) {
           return (
             <Box
@@ -138,20 +139,24 @@ function UnifiedView({ original, suggested }: { original: string; suggested: str
             </Box>
           );
         }
+
         return <span key={i}>{part.value}</span>;
       })}
     </Box>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Dialog component
-// ---------------------------------------------------------------------------
+export function renderTextDiffReview({ mode, value }: ReviewRenderArgs<TextDiffReviewValue>) {
+  return mode === "side-by-side"
+    ? <SideBySideTextReview value={value} />
+    : <UnifiedTextReview value={value} />;
+}
 
-export function DiffReviewDialog({
+export function DiffReviewDialog<TValue, TResult>({
   open,
-  original,
-  suggested,
+  value,
+  renderReview,
+  formatResult,
   onApply,
   onKeepEditing,
   onDiscard,
@@ -159,12 +164,25 @@ export function DiffReviewDialog({
   applyLabel,
   keepEditingLabel,
   discardLabel,
-}: Props) {
+}: DiffReviewDialogProps<TValue, TResult>) {
   const { t } = useTranslation("common");
-  const [viewMode, setViewMode] = useState<ViewMode>("side-by-side");
+  const [viewMode, setViewMode] = useState<ReviewViewMode>("side-by-side");
+  const [draftValue, setDraftValue] = useState(value);
 
-  const handleViewChange = (_: React.MouseEvent, next: ViewMode | null) => {
-    if (next !== null) setViewMode(next);
+  useEffect(() => {
+    if (open) {
+      setDraftValue(value);
+    }
+  }, [open, value]);
+
+  const handleViewChange = (_: React.MouseEvent, next: ReviewViewMode | null) => {
+    if (next !== null) {
+      setViewMode(next);
+    }
+  };
+
+  const handleApply = async () => {
+    await onApply(formatResult(draftValue));
   };
 
   return (
@@ -192,11 +210,11 @@ export function DiffReviewDialog({
       </DialogTitle>
 
       <DialogContent dividers>
-        {viewMode === "side-by-side" ? (
-          <SideBySideView original={original} suggested={suggested} />
-        ) : (
-          <UnifiedView original={original} suggested={suggested} />
-        )}
+        {renderReview({
+          mode: viewMode,
+          value: draftValue,
+          updateValue: setDraftValue,
+        })}
       </DialogContent>
 
       <DialogActions>
@@ -206,7 +224,7 @@ export function DiffReviewDialog({
         <Button onClick={onKeepEditing} color="inherit">
           {keepEditingLabel ?? t("aiAssistant.diff.keepEditing")}
         </Button>
-        <Button onClick={onApply} variant="contained" color="primary">
+        <Button onClick={handleApply} variant="contained" color="primary">
           {applyLabel ?? t("aiAssistant.diff.apply")}
         </Button>
       </DialogActions>

@@ -83,6 +83,7 @@ export async function listResumes(
     consultantTitle: row.consultant_title,
     presentation: row.presentation ?? [],
     summary: row.summary,
+    highlightedItems: [],
     language: row.language,
     isMain: row.is_main,
     mainBranchId: row.branch_id ?? null,

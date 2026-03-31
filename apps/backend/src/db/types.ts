@@ -114,6 +114,7 @@ export interface ResumeCommitContent {
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
+  highlightedItems: string[];
   language: string;
   skills: Array<{
     name: string;

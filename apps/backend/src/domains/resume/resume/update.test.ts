@@ -27,6 +27,11 @@ const UPDATED_RESUME_ROW = {
   updated_at: new Date("2025-04-01T00:00:00.000Z"),
 };
 
+const HIGHLIGHTED_ITEM_ROWS = [
+  { text: "Principal Engineer hos Acme" },
+  { text: "Tech Lead hos Beta" },
+];
+
 // ---------------------------------------------------------------------------
 // Mock builder helpers
 // ---------------------------------------------------------------------------
@@ -35,7 +40,11 @@ const UPDATED_RESUME_ROW = {
  * Builds a mock that handles: optional resume lookup for ownership check +
  * the UPDATE chain.
  */
-function buildUpdateMock(resumeLookupRow: unknown, updatedRow: unknown) {
+function buildUpdateMock(
+  resumeLookupRow: unknown,
+  updatedRow: unknown,
+  highlightedItemRows: unknown[] = [],
+) {
   // Resume lookup (selectFrom resumes for ownership check)
   const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
   const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
@@ -48,20 +57,50 @@ function buildUpdateMock(resumeLookupRow: unknown, updatedRow: unknown) {
   const set = vi.fn().mockReturnValue({ where: updateWhere });
   const updateTable = vi.fn().mockReturnValue({ set });
 
+  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
+  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
+  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
+
+  const deleteExecute = vi.fn().mockResolvedValue(undefined);
+  const deleteWhere = vi.fn().mockReturnValue({ execute: deleteExecute });
+  const deleteFrom = vi.fn().mockReturnValue({ where: deleteWhere });
+
+  const insertExecute = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
+  const insertInto = vi.fn().mockReturnValue({ values: insertValues });
+
+  const trx = { updateTable, deleteFrom, insertInto };
+  const transactionExecute = vi.fn().mockImplementation(async (callback: (trx: typeof trx) => Promise<unknown>) => callback(trx));
+  const transaction = vi.fn().mockReturnValue({ execute: transactionExecute });
+
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "resumes") return { select: resumeLookupSelect };
+    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
 
-  const db = { updateTable, selectFrom } as unknown as Kysely<Database>;
-  return { db, updateTable, set, updateWhere, returningAll, executeTakeFirst, resumeLookupExecuteTakeFirst };
+  const db = { updateTable, selectFrom, transaction } as unknown as Kysely<Database>;
+  return {
+    db,
+    updateTable,
+    set,
+    updateWhere,
+    returningAll,
+    executeTakeFirst,
+    resumeLookupExecuteTakeFirst,
+    deleteFrom,
+    insertInto,
+    insertValues,
+  };
 }
 
 /** Builds a db mock that also handles the employee lookup (for consultant auth). */
 function buildDbWithEmployeeLookup(
   resumeLookupRow: unknown,
   updatedRow: unknown,
-  employeeId: string
+  employeeId: string,
+  highlightedItemRows: unknown[] = [],
 ) {
   const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
   const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
@@ -73,6 +112,23 @@ function buildDbWithEmployeeLookup(
   const set = vi.fn().mockReturnValue({ where: updateWhere });
   const updateTable = vi.fn().mockReturnValue({ set });
 
+  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
+  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
+  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
+  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
+
+  const deleteExecute = vi.fn().mockResolvedValue(undefined);
+  const deleteWhere = vi.fn().mockReturnValue({ execute: deleteExecute });
+  const deleteFrom = vi.fn().mockReturnValue({ where: deleteWhere });
+
+  const insertExecute = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
+  const insertInto = vi.fn().mockReturnValue({ values: insertValues });
+
+  const trx = { updateTable, deleteFrom, insertInto };
+  const transactionExecute = vi.fn().mockImplementation(async (callback: (trx: typeof trx) => Promise<unknown>) => callback(trx));
+  const transaction = vi.fn().mockReturnValue({ execute: transactionExecute });
+
   const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
@@ -80,10 +136,11 @@ function buildDbWithEmployeeLookup(
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resumes") return { select: resumeLookupSelect };
+    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
 
-  const db = { updateTable, selectFrom } as unknown as Kysely<Database>;
+  const db = { updateTable, selectFrom, transaction } as unknown as Kysely<Database>;
   return { db };
 }
 
@@ -151,7 +208,8 @@ describe("updateResume query function", () => {
   it("maps DB snake_case fields to camelCase in output", async () => {
     const { db } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW
+      UPDATED_RESUME_ROW,
+      HIGHLIGHTED_ITEM_ROWS,
     );
     const result = await updateResume(db, MOCK_ADMIN, { id: RESUME_ID, title: "Updated" });
 
@@ -160,9 +218,31 @@ describe("updateResume query function", () => {
       isMain: true,
       createdAt: UPDATED_RESUME_ROW.created_at,
       updatedAt: UPDATED_RESUME_ROW.updated_at,
+      highlightedItems: ["Principal Engineer hos Acme", "Tech Lead hos Beta"],
     });
     expect(result).not.toHaveProperty("employee_id");
     expect(result).not.toHaveProperty("is_main");
+  });
+
+  it("persists highlighted items when provided", async () => {
+    const { db, deleteFrom, insertInto, insertValues } = buildUpdateMock(
+      { employee_id: EMPLOYEE_ID_1 },
+      UPDATED_RESUME_ROW,
+      HIGHLIGHTED_ITEM_ROWS,
+    );
+
+    const result = await updateResume(db, MOCK_ADMIN, {
+      id: RESUME_ID,
+      highlightedItems: [" Principal Engineer hos Acme ", "", "Tech Lead hos Beta"],
+    });
+
+    expect(deleteFrom).toHaveBeenCalledWith("resume_highlighted_items");
+    expect(insertInto).toHaveBeenCalledWith("resume_highlighted_items");
+    expect(insertValues).toHaveBeenCalledWith([
+      { resume_id: RESUME_ID, text: "Principal Engineer hos Acme", sort_order: 0 },
+      { resume_id: RESUME_ID, text: "Tech Lead hos Beta", sort_order: 1 },
+    ]);
+    expect(result.highlightedItems).toEqual(["Principal Engineer hos Acme", "Tech Lead hos Beta"]);
   });
 });
 

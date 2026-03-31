@@ -11,6 +11,12 @@ export default defineConfig({
     ],
     coverage: {
       provider: "v8",
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "src/test-helpers/**",
+        "src/integration/**",
+      ],
       // Coverage thresholds are set below the standard 80% because this
       // workspace currently contains only migration/type definition files
       // which are infrastructure code with limited unit-testable branches.
