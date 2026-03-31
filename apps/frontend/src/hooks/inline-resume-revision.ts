@@ -46,18 +46,22 @@ type DraftPatch = {
   consultantTitle?: string | null;
   presentation?: string[];
   summary?: string | null;
+  highlightedItems?: string[];
 };
 
 type DraftState = {
   title: string;
   presentation: string;
   summary: string;
+  highlightedItems: string;
   titleRef: MutableRefObject<string>;
   presentationRef: MutableRefObject<string>;
   summaryRef: MutableRefObject<string>;
+  highlightedItemsRef: MutableRefObject<string>;
   setTitle: (value: string) => void;
   setPresentation: (value: string) => void;
   setSummary: (value: string) => void;
+  setHighlightedItems: (value: string) => void;
 };
 
 type ResumeAssignmentLike = {
@@ -126,6 +130,7 @@ type UseInlineResumeRevisionParams = {
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
+  highlightedItems: string[];
   sortedAssignments: ResumeAssignmentLike[];
   resumeInspectionSnapshot: ResumeInspectionSnapshot;
   sectionRefs: RevisionSectionRefs;
@@ -264,6 +269,7 @@ export function useInlineResumeRevision({
   consultantTitle,
   presentation,
   summary,
+  highlightedItems,
   sortedAssignments,
   resumeInspectionSnapshot,
   sectionRefs,
@@ -956,7 +962,8 @@ export function useInlineResumeRevision({
   const hasUnsavedChanges =
     draftState.titleRef.current !== (consultantTitle ?? "") ||
     draftState.presentationRef.current !== presentation.join("\n\n") ||
-    draftState.summaryRef.current !== (summary ?? "");
+    draftState.summaryRef.current !== (summary ?? "") ||
+    draftState.highlightedItemsRef.current !== highlightedItems.join("\n");
 
   const isReadyToFinalize =
     (workItems?.items.length ?? 0) > 0 &&

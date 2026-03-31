@@ -164,4 +164,32 @@ test("can leave a revision branch session, reload it, and keep editable branch c
 
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.getByLabel("Description")).toBeVisible();
+  await page.getByLabel("Consultant title").fill("Staff Engineer");
+  await page.getByLabel("Presentation").fill("Reloaded presentation paragraph for branch resume.");
+  await page.getByLabel("Summary").fill("Reloaded summary for branch resume.");
+  await page
+    .getByLabel("Highlighted experience")
+    .fill("Reloaded highlighted branch item\nAnother reloaded branch item");
+  await page.getByLabel("Description").fill("Updated assignment description after the second manual edit.");
+  await page.getByRole("button", { name: "Save" }).nth(2).click();
+  await page.getByRole("group").getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(page.getByText("Updated assignment description after the second manual edit.")).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByText("Reloaded highlighted branch item")).toBeVisible();
+  await expect(page.getByText("Another reloaded branch item")).toBeVisible();
+
+  await page.reload();
+
+  await expect(page.getByRole("heading", { name: "Revision checklist" })).toBeVisible();
+  await expect(page.getByLabel("Consultant title")).toHaveValue("Staff Engineer");
+  await expect(page.getByLabel("Presentation")).toHaveValue("Reloaded presentation paragraph for branch resume.");
+  await expect(page.getByLabel("Summary")).toHaveValue("Reloaded summary for branch resume.");
+  await expect(page.getByLabel("Highlighted experience")).toHaveValue(
+    "Reloaded highlighted branch item\nAnother reloaded branch item",
+  );
+  await expect(page.getByText("Updated assignment description after the second manual edit.")).toBeVisible();
+  await expect(page.getByText("Reloaded highlighted branch item")).toBeVisible();
+  await expect(page.getByText("Another reloaded branch item")).toBeVisible();
 });

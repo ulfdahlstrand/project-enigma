@@ -217,6 +217,7 @@ function CoverPageContent({
         </Typography>
         {isEditing ? (
           <TextField
+            label={t("resume.edit.consultantTitleLabel")}
             value={draftTitle}
             onChange={(e) => onDraftTitleChange?.(e.target.value)}
             variant="standard"
@@ -237,6 +238,8 @@ function CoverPageContent({
       {/* Presentation paragraphs */}
       {isEditing ? (
         <TextField
+          label={t("resume.edit.presentationLabel")}
+          helperText={t("resume.edit.presentationHelper")}
           value={draftPresentation}
           onChange={(e) => onDraftPresentationChange?.(e.target.value)}
           multiline
@@ -277,6 +280,7 @@ function CoverPageContent({
               </Typography>
               {isEditing ? (
                 <TextField
+                  label={t("resume.edit.summaryLabel")}
                   value={draftSummary}
                   onChange={(e) => onDraftSummaryChange?.(e.target.value)}
                   multiline
@@ -786,6 +790,7 @@ function ResumeDetailPage() {
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
+  const presentationText = presentation.join("\n\n");
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
   const fallbackHighlightedItems = sortedAssignments
     .slice(0, COVER_HIGHLIGHT_COUNT)
@@ -795,6 +800,7 @@ function ResumeDetailPage() {
     (resume?.highlightedItems && resume.highlightedItems.length > 0
       ? resume.highlightedItems
       : fallbackHighlightedItems);
+  const highlightedItemsText = highlightedItems.join("\n");
 
   useEffect(() => {
     if (!isEditing) {
@@ -802,9 +808,9 @@ function ResumeDetailPage() {
     }
 
     const nextTitle = consultantTitle ?? "";
-    const nextPresentation = presentation.join("\n\n");
+    const nextPresentation = presentationText;
     const nextSummary = summary ?? "";
-    const nextHighlightedItems = highlightedItems.join("\n");
+    const nextHighlightedItems = highlightedItemsText;
     draftTitleRef.current = nextTitle;
     draftPresentationRef.current = nextPresentation;
     draftSummaryRef.current = nextSummary;
@@ -813,7 +819,7 @@ function ResumeDetailPage() {
     setDraftPresentation(nextPresentation);
     setDraftSummary(nextSummary);
     setDraftHighlightedItems(nextHighlightedItems);
-  }, [activeBranchId, consultantTitle, highlightedItems, isEditing, presentation, summary]);
+  }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
   const skills = snapshotContent?.skills
     ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
@@ -892,6 +898,7 @@ function ResumeDetailPage() {
     consultantTitle,
     presentation,
     summary,
+    highlightedItems,
     sortedAssignments,
     resumeInspectionSnapshot,
     sectionRefs: {
@@ -908,9 +915,12 @@ function ResumeDetailPage() {
       titleRef: draftTitleRef,
       presentationRef: draftPresentationRef,
       summaryRef: draftSummaryRef,
+      highlightedItems: draftHighlightedItems,
+      highlightedItemsRef: draftHighlightedItemsRef,
       setTitle: setDraftTitle,
       setPresentation: setDraftPresentation,
       setSummary: setDraftSummary,
+      setHighlightedItems: setDraftHighlightedItems,
     },
     buildDraftPatch,
     buildDraftPatchFromValues,
