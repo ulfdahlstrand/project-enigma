@@ -198,7 +198,9 @@
         "editButton": "Redigera",
         "cancelButton": "Avbryt",
         "saving": "Sparar…",
-        "saveError": "Det gick inte att spara uppdraget. Försök igen."
+        "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+        "deleteButton": "Ta bort",
+        "confirmDelete": "Ja, ta bort"
       },
       "pageTitle": "Redigera meritförteckning",
       "consultantTitleLabel": "Konsulttitel",

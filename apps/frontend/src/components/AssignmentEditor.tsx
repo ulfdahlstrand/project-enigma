@@ -95,6 +95,7 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
@@ -117,6 +118,16 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
     });
     setCardTops(tops);
   }, [canvasEl, assignments, editingId]);
+
+  // Delete uses the assignment identity id (cascades across branches)
+  const deleteMutation = useMutation({
+    mutationFn: (assignmentId: string) => orpc.deleteAssignment({ id: assignmentId }),
+    onSuccess: async () => {
+      setConfirmDeleteId(null);
+      cancelEdit();
+      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+    },
+  });
 
   // All content edits go through updateBranchAssignment (id = branch_assignment id)
   const updateMutation = useMutation({
@@ -301,25 +312,61 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
                     <Alert severity="error">{t("resume.edit.assignment.saveError")}</Alert>
                   )}
 
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      disabled={updateMutation.isPending}
-                      onClick={() => handleSave(a)}
-                    >
-                      {updateMutation.isPending
-                        ? t("resume.edit.assignment.saving")
-                        : t("assignment.detail.saveButton")}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      disabled={updateMutation.isPending}
-                      onClick={cancelEdit}
-                    >
-                      {t("resume.edit.assignment.cancelButton")}
-                    </Button>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={updateMutation.isPending || deleteMutation.isPending}
+                        onClick={() => handleSave(a)}
+                      >
+                        {updateMutation.isPending
+                          ? t("resume.edit.assignment.saving")
+                          : t("assignment.detail.saveButton")}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        disabled={updateMutation.isPending || deleteMutation.isPending}
+                        onClick={cancelEdit}
+                      >
+                        {t("resume.edit.assignment.cancelButton")}
+                      </Button>
+                    </Box>
+
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {confirmDeleteId === a.assignmentId ? (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => deleteMutation.mutate(a.assignmentId)}
+                          >
+                            {t("resume.edit.assignment.confirmDelete")}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            {t("resume.edit.assignment.cancelButton")}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          disabled={updateMutation.isPending || deleteMutation.isPending}
+                          onClick={() => setConfirmDeleteId(a.assignmentId)}
+                        >
+                          {t("resume.edit.assignment.deleteButton")}
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               ) : (

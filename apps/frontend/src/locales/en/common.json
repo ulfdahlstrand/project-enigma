@@ -198,7 +198,9 @@
         "editButton": "Edit",
         "cancelButton": "Cancel",
         "saving": "Saving…",
-        "saveError": "Failed to save assignment. Please try again."
+        "saveError": "Failed to save assignment. Please try again.",
+        "deleteButton": "Delete",
+        "confirmDelete": "Yes, delete"
       },
       "pageTitle": "Edit Resume",
       "consultantTitleLabel": "Consultant title",
