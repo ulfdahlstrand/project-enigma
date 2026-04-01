@@ -758,6 +758,24 @@ function ResumeDetailPage() {
     },
   });
 
+  const [newAssignmentId, setNewAssignmentId] = useState<string | null>(null);
+
+  const createAssignment = useMutation({
+    mutationFn: () =>
+      orpc.createAssignment({
+        employeeId: resume!.employeeId,
+        branchId: activeBranchId!,
+        clientName: t("resume.detail.newAssignmentClientPlaceholder"),
+        role: t("resume.detail.newAssignmentRolePlaceholder"),
+        startDate: new Date().toISOString().slice(0, 10),
+        isCurrent: true,
+      }),
+    onSuccess: async (result) => {
+      setNewAssignmentId(result.id);
+      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
+    },
+  });
+
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
     onSuccess: async () => {
@@ -1305,6 +1323,8 @@ function ResumeDetailPage() {
                       assignments={sortedAssignments}
                       queryKey={["listBranchAssignmentsFull", activeBranchId]}
                       canvasEl={canvasRef.current}
+                      autoEditId={newAssignmentId}
+                      onAutoEditConsumed={() => setNewAssignmentId(null)}
                     />
                   ) : showFullAssignments ? (
                     /* Full document-style view */
@@ -1491,14 +1511,8 @@ function ResumeDetailPage() {
                 <Fab
                   size="small"
                   aria-label={t("resume.detail.addAssignment")}
-                  onClick={() => void navigate({
-                    to: "/assignments/new",
-                    search: {
-                      resumeId: id,
-                      employeeId: resume?.employeeId,
-                      ...(activeBranchId ? { branchId: activeBranchId } : {}),
-                    },
-                  })}
+                  disabled={createAssignment.isPending || !activeBranchId || !resume?.employeeId}
+                  onClick={() => void createAssignment.mutate()}
                   sx={{
                     position: "absolute",
                     left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,

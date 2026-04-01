@@ -156,6 +156,8 @@
       "consultantProfileLabel": "Consultant Profile",
       "editButton": "Edit",
       "addAssignment": "Add Assignment",
+      "newAssignmentClientPlaceholder": "New client",
+      "newAssignmentRolePlaceholder": "New role",
       "assignmentsHeading": "Assignments",
       "noAssignments": "No assignments added yet.",
       "assignmentPresent": "Present",

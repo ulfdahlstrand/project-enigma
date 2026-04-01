@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { toQuarter } from "@cv-tool/utils";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,10 @@ interface AssignmentEditorProps {
   queryKey: readonly unknown[];
   /** Canvas element (position:relative) used to portal AI FABs outside the paper. */
   canvasEl?: HTMLElement | null;
+  /** When set, immediately opens this assignment id in edit mode. */
+  autoEditId?: string | null;
+  /** Called after autoEditId has been consumed so the parent can clear it. */
+  onAutoEditConsumed?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +68,7 @@ interface DraftState {
   isCurrent: boolean;
   description: string;
   technologies: string;
+  keywords: string;
 }
 
 function buildDraft(a: AssignmentRow): DraftState {
@@ -75,6 +80,7 @@ function buildDraft(a: AssignmentRow): DraftState {
     isCurrent: a.isCurrent,
     description: a.description,
     technologies: a.technologies.join(", "),
+    keywords: a.keywords ?? "",
   };
 }
 
@@ -82,7 +88,7 @@ function buildDraft(a: AssignmentRow): DraftState {
 // AssignmentEditor
 // ---------------------------------------------------------------------------
 
-export function AssignmentEditor({ assignments, queryKey, canvasEl }: AssignmentEditorProps) {
+export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, onAutoEditConsumed }: AssignmentEditorProps) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
 
@@ -92,6 +98,15 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
 
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    if (!autoEditId) return;
+    const target = assignments.find((a) => a.id === autoEditId);
+    if (!target) return;
+    startEdit(target);
+    onAutoEditConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEditId, assignments]);
 
   useLayoutEffect(() => {
     if (!canvasEl) return;
@@ -145,6 +160,9 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
     if (JSON.stringify(newTechs) !== JSON.stringify(original.technologies)) {
       patch.technologies = newTechs;
     }
+
+    const newKeywords = draft.keywords.trim() || null;
+    if (newKeywords !== original.keywords) patch.keywords = newKeywords;
 
     const origStart = toDateInput(original.startDate);
     if (draft.startDate !== origStart) patch.startDate = draft.startDate;
@@ -267,6 +285,14 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
                     label={t("assignment.detail.technologiesLabel")}
                     value={draft.technologies}
                     onChange={(e) => setDraftField("technologies", e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+
+                  <TextField
+                    label={t("assignment.new.keywordsLabel")}
+                    value={draft.keywords}
+                    onChange={(e) => setDraftField("keywords", e.target.value)}
                     size="small"
                     fullWidth
                   />

@@ -156,6 +156,8 @@
       "consultantProfileLabel": "Konsultprofil",
       "editButton": "Redigera",
       "addAssignment": "Lägg till uppdrag",
+      "newAssignmentClientPlaceholder": "Ny kund",
+      "newAssignmentRolePlaceholder": "Ny roll",
       "assignmentsHeading": "Urval av kvalifikationer",
       "noAssignments": "Inga uppdrag tillagda.",
       "assignmentPresent": "Nuvarande",
