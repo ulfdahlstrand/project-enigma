@@ -581,7 +581,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
           <ArrowDropDownIcon />
         </Button>
       </ButtonGroup>
-      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal>
+      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal sx={{ zIndex: 1300 }}>
         {({ TransitionProps }) => (
           <Grow {...TransitionProps}>
             <Paper>
