@@ -39,20 +39,22 @@ const LOGO_PNG = readFileSync(join(__dirname, "sthlmtech_logo.png"));
 // Calibri and Cambria ship with Microsoft Office on every platform.
 // ---------------------------------------------------------------------------
 
-const F_HEAD = "Josefin Sans";  // matches PDF .name-h1 / .role-heading etc.
-const F_BODY = "Constantia";    // matches PDF body font
-const F_SANS = "Open Sans";     // matches PDF .skill-list / .info-box-body
+const F_HEAD       = "Josefin Sans";       // headings, role titles, labels
+const F_HEAD_LIGHT = "Josefin Sans Light"; // consultant title, Konsultprofil
+const F_BODY       = "Constantia";         // presentation, assignment subtitles
+const F_SANS       = "Calibri";            // skill lists, description, tech box values
 
 const C_DARK = "111111";
 const C_GRAY = "555555";
 const C_SHADING = "F5F5F5";
 
 // Font sizes in half-points (1 pt = 2 units)
-const SZ_NAME = 56;  // 28 pt
+const SZ_NAME = 48;  // 24 pt  (reference: name on cover)
 const SZ_H2   = 44;  // 22 pt
 const SZ_ROLE = 28;  // 14 pt
 const SZ_SUB  = 24;  // 12 pt
 const SZ_BODY = 20;  // 10 pt
+const SZ_BODY2 = 22; // 11 pt  (reference: Calibri body/description)
 const SZ_SM   = 18;  //  9 pt
 const SZ_XS   = 16;  //  8 pt
 
@@ -75,10 +77,10 @@ function nameH1(text: string): Paragraph {
   });
 }
 
-/** .title-h3 — 22 pt Calibri regular (not bold) to match PDF's lighter visual weight */
+/** .title-h3 — 22 pt Josefin Sans Light */
 function titleH3(text: string): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text, font: F_HEAD, size: SZ_H2, color: C_DARK })],
+    children: [new TextRun({ text, font: F_HEAD_LIGHT, size: SZ_H2, color: C_DARK })],
     spacing: { after: SP(20) },
   });
 }
@@ -91,10 +93,10 @@ function contactLine(text: string): Paragraph {
   });
 }
 
-/** .presentation — 10 pt justified body */
+/** .presentation — Calibri 11 pt */
 function presentationPara(text: string): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text, font: F_BODY, size: SZ_BODY })],
+    children: [new TextRun({ text, font: F_SANS, size: SZ_BODY2 })],
     alignment: AlignmentType.BOTH,
     spacing: { after: SP(8) },
   });
@@ -124,7 +126,7 @@ function buildInfoBox(params: {
     );
     cellChildren.push(
       new Paragraph({
-        children: [new TextRun({ text: params.summary, font: F_SANS, size: SZ_BODY, color: C_GRAY })],
+        children: [new TextRun({ text: params.summary, font: F_SANS, size: SZ_BODY, color: C_DARK })],
         spacing: { after: SP(14) },
       })
     );
@@ -140,7 +142,7 @@ function buildInfoBox(params: {
     for (const item of params.highlights) {
       cellChildren.push(
         new Paragraph({
-          children: [new TextRun({ text: `\u2022  ${item}`, font: F_SANS, size: SZ_BODY, color: C_GRAY })],
+          children: [new TextRun({ text: `\u2022  ${item}`, font: F_SANS, size: SZ_BODY, color: C_DARK })],
           spacing: { after: SP(2) },
           indent: { left: SP(6) },
         })
@@ -185,15 +187,15 @@ function sectionNameH2(text: string): Paragraph {
   });
 }
 
-/** .profile-h3 — 22 pt regular subtitle "Consultant profile" */
+/** .profile-h3 — 22 pt Josefin Sans Light subtitle "Consultant profile" */
 function profileSubtitle(text: string): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text, font: F_HEAD, size: SZ_H2, color: C_DARK })],
+    children: [new TextRun({ text, font: F_HEAD_LIGHT, size: SZ_H2, color: C_DARK })],
     spacing: { after: SP(12) },
   });
 }
 
-/** .category-header — single-cell table with gray background, mirrors reference DOCX */
+/** .category-header — single-cell table with gray background */
 function categoryHeader(cat: string): Table {
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -233,7 +235,7 @@ function categoryHeader(cat: string): Table {
   });
 }
 
-/** .skill-list — 8 pt skill names joined by comma */
+/** .skill-list — 10 pt skill names joined by comma */
 function skillList(names: string[]): Paragraph {
   return new Paragraph({
     children: [new TextRun({ text: names.join(", "), font: F_SANS, size: SZ_BODY, color: "333333" })],
@@ -274,25 +276,28 @@ function assignmentsHeading(text: string): Paragraph {
 }
 
 /** .role-heading — 14 pt bold uppercase */
-function roleHeading(text: string): Paragraph {
+function roleHeading(text: string, keepNext = false): Paragraph {
   return new Paragraph({
+    keepNext,
     children: [new TextRun({ text: text.toUpperCase(), font: F_HEAD, size: SZ_ROLE, bold: true, color: C_DARK })],
     spacing: { before: SP(36), after: SP(4) },
   });
 }
 
-/** .subtitle — 12 pt "Client Q1 2024 – Q4 2024" */
-function assignmentSubtitle(text: string): Paragraph {
+/** .subtitle — Josefin Sans 12 pt "Client Q3 2025 – Pågående" */
+function assignmentSubtitle(text: string, keepNext = false): Paragraph {
   return new Paragraph({
+    keepNext,
     children: [new TextRun({ text, font: F_HEAD, size: SZ_SUB, color: C_DARK })],
     spacing: { after: SP(10) },
   });
 }
 
-/** .body2.justified — 10 pt justified description paragraph */
-function descParagraph(text: string): Paragraph {
+/** .body2.justified — Calibri 11 pt justified description paragraph (matches reference) */
+function descParagraph(text: string, keepNext = false): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text, font: F_BODY, size: SZ_BODY })],
+    keepNext,
+    children: [new TextRun({ text, font: F_SANS, size: SZ_BODY2 })],
     alignment: AlignmentType.BOTH,
     spacing: { after: SP(10) },
   });
@@ -304,8 +309,8 @@ function buildTechBox(rows: Array<{ label: string; value: string }>): Table {
     ({ label, value }) =>
       new Paragraph({
         children: [
-          new TextRun({ text: `${label}  `, font: F_HEAD, size: SZ_XS, bold: true, color: C_DARK }),
-          new TextRun({ text: value, font: F_BODY, size: SZ_BODY, color: C_DARK }),
+          new TextRun({ text: `${label} `, font: F_SANS, size: SZ_BODY, bold: true, color: C_DARK }),
+          new TextRun({ text: value, font: F_SANS, size: SZ_BODY, color: C_DARK }),
         ],
         spacing: { before: SP(4), after: SP(4) },
       })
@@ -323,6 +328,7 @@ function buildTechBox(rows: Array<{ label: string; value: string }>): Table {
     },
     rows: [
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             shading: { type: ShadingType.SOLID, fill: C_SHADING, color: C_SHADING },
@@ -374,9 +380,6 @@ export async function exportResumeDocx(
 
   const { name, consultantTitle, language, presentation, summary, highlightedItems, skills, assignments, education } = data;
   const t = getPdfTranslations(language);
-
-  // Section children: both Paragraph and Table are FileChild subtypes
-  const children: Array<Paragraph | Table> = [];
 
   // ---------------------------------------------------------------------------
   // ---------------------------------------------------------------------------
@@ -470,19 +473,22 @@ export async function exportResumeDocx(
       const endQ = a.is_current ? t.present : (a.end_date ? toQuarter(a.end_date) : null);
       const period = endQ && endQ !== startQ ? `${startQ} \u2013 ${endQ}` : startQ;
 
-      assignmentChildren.push(roleHeading(a.role));
-      assignmentChildren.push(assignmentSubtitle(`${a.client_name} ${period}`));
-
-      if (a.description) {
-        for (const p of a.description.split(/\n+/).filter(Boolean)) {
-          assignmentChildren.push(descParagraph(p));
-        }
-      }
-
+      const descParas = a.description ? a.description.split(/\n+/).filter(Boolean) : [];
       const techRows: Array<{ label: string; value: string }> = [];
       if (a.technologies.length > 0) techRows.push({ label: t.technologies, value: a.technologies.join(", ") });
       if (a.keywords) techRows.push({ label: t.keywords, value: a.keywords });
-      if (techRows.length > 0) assignmentChildren.push(buildTechBox(techRows));
+      const hasTechBox = techRows.length > 0;
+
+      // keepNext chains all items so the whole assignment stays on one page
+      assignmentChildren.push(roleHeading(a.role, true));
+      assignmentChildren.push(assignmentSubtitle(`${a.client_name} ${period}`, descParas.length > 0 || hasTechBox));
+
+      for (let i = 0; i < descParas.length; i++) {
+        const isLastItem = i === descParas.length - 1 && !hasTechBox;
+        assignmentChildren.push(descParagraph(descParas[i]!, !isLastItem));
+      }
+
+      if (hasTechBox) assignmentChildren.push(buildTechBox(techRows));
     }
   }
 
