@@ -1485,8 +1485,8 @@ function ResumeDetailPage() {
               </Tooltip>
             )}
 
-            {/* Add assignment FAB — visible only while editing, below the toggle FAB position */}
-            {hasAssignments && isEditing && !inlineRevision.isOpen && !isSnapshotMode && (
+            {/* Add assignment FAB — visible while editing, including during AI revision */}
+            {hasAssignments && isEditing && !isSnapshotMode && (
               <Tooltip title={t("resume.detail.addAssignment")} placement="left">
                 <Fab
                   size="small"
