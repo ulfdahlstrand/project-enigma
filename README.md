@@ -76,6 +76,27 @@ Follow these steps to get the full local development stack running with a single
 
    > **Note:** PostgreSQL data is persisted in a named Docker volume (`postgres_data`) and survives `docker compose down` / `docker compose up` cycles. To also remove the volume and start with a fresh database, run `docker compose down -v`.
 
+### Backend Integration Tests
+
+Backend integration tests require a dedicated test database.
+
+1. Copy the backend test env template:
+
+   ```bash
+   cp apps/backend/.env.test.example apps/backend/.env.test
+   ```
+
+2. Set `TEST_DATABASE_URL` in `apps/backend/.env.test` to a separate database.
+
+   Do not point it at the same database as `DATABASE_URL`. Integration tests truncate all public tables before each run.
+
+3. Run integration tests with the dedicated config:
+
+   ```bash
+   cd apps/backend
+   npx vitest run --config vitest.integration.config.ts
+   ```
+
 ---
 
 ## Project Structure
