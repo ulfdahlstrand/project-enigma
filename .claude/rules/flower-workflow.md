@@ -63,6 +63,7 @@ When a feature breaks down into **independent sub-tasks**, consider running them
 - Spawn multiple workers **in the same message** to parallelise (multiple `Agent` calls, or multiple `/codex:rescue` calls).
 - After any worker completes, review the diff, run `npm run typecheck && npm test -- --run`, and integrate before merging the results.
 - Never spawn a worker just to avoid doing the work — only when there is a genuine parallelism benefit or the sub-task is a better fit for a specialist.
+- **Permission problems — report immediately:** If an agent or worker encounters a permission denial for any tool or operation it needs to perform, it MUST stop and report back to the user right away — do NOT attempt workarounds, skip the step, or continue with a degraded approach. State clearly which operation was denied and what permission is required to proceed.
 
 **While waiting for background agents — do NOT go silent:**
 After spawning background agents, actively keep the session alive by polling their output files every ~30 seconds using Bash. Report status to the user without being asked:
