@@ -69,6 +69,8 @@ const INSERTED_COMMIT = {
     assignments: [],
   },
   message: "My version",
+  title: "My version",
+  description: "",
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
 };

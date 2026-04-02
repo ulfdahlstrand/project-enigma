@@ -73,6 +73,8 @@ export async function getResumeCommit(
       "rcp.parent_commit_id as parent_commit_id",
       "rc.content",
       "rc.message",
+      "rc.title",
+      "rc.description",
       "rc.created_by",
       "rc.created_at",
       "r.employee_id",
@@ -95,6 +97,8 @@ export async function getResumeCommit(
     parentCommitId: row.parent_commit_id,
     content: normaliseCommitContent(row.content as unknown as ResumeCommitContent),
     message: row.message,
+    title: row.title,
+    description: row.description,
     createdBy: row.created_by,
     createdAt: row.created_at,
   };

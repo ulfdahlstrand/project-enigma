@@ -124,7 +124,7 @@ export async function applySuggestionToAssignment(
     sortedAssignments: ResumeAssignmentLike[];
     queryClient: QueryClient;
     updateBranchAssignment: (input: { id: string; description: string }) => Promise<unknown>;
-    saveVersion: (input: { branchId: string; message: string }) => Promise<unknown>;
+    saveVersion: (input: { branchId: string; title: string }) => Promise<unknown>;
     buildCommitMessage: (suggestion: Suggestion) => string;
   },
 ) {
@@ -159,7 +159,7 @@ export async function applySuggestionToAssignment(
     });
     await deps.saveVersion({
       branchId: deps.activeBranchId,
-      message: deps.buildCommitMessage(suggestion),
+      title: deps.buildCommitMessage(suggestion),
     });
     return true;
   } catch (error) {
@@ -175,7 +175,7 @@ export async function applySuggestionToSkills(
     skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
     saveVersion: (input: {
       branchId: string;
-      message: string;
+      title: string;
       skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
     }) => Promise<unknown>;
     buildCommitMessage: (suggestion: Suggestion) => string;
@@ -250,7 +250,7 @@ export async function applySuggestionToSkills(
 
   await deps.saveVersion({
     branchId: deps.activeBranchId,
-    message: deps.buildCommitMessage(hydratedSuggestion),
+    title: deps.buildCommitMessage(hydratedSuggestion),
     skills: nextSkills,
   });
 

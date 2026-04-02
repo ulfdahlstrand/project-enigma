@@ -32,7 +32,7 @@ export function SaveVersionButton({ branchId }: SaveVersionButtonProps) {
     setError(null);
     try {
       const trimmed = message.trim();
-      await mutation.mutateAsync({ branchId, ...(trimmed ? { message: trimmed } : {}) });
+      await mutation.mutateAsync({ branchId, ...(trimmed ? { title: trimmed } : {}) });
       setSuccess(true);
       setOpen(false);
       setMessage("");

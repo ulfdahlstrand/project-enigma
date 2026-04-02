@@ -60,6 +60,8 @@ export const resumeCommitSchema = z.object({
   parentCommitId: z.string().uuid().nullable(),
   content: resumeCommitContentSchema,
   message: z.string(),
+  title: z.string(),
+  description: z.string(),
   createdBy: z.string().uuid().nullable(),
   createdAt: z.union([z.string(), z.date()]),
 });
@@ -104,6 +106,11 @@ export type BranchAssignment = z.infer<typeof branchAssignmentSchema>;
 
 export const saveResumeVersionInputSchema = z.object({
   branchId: z.string().uuid(),
+  /** Short human-readable commit title. Takes precedence over `message` when both are provided. */
+  title: z.string().optional(),
+  /** Optional extended description for this commit. */
+  description: z.string().optional(),
+  /** @deprecated Use `title` instead. Kept for backward compatibility. */
   message: z.string().optional(),
   /** Optional content overrides — when provided, these values are stored in the
    *  commit instead of reading from the live resume record. Use this when saving

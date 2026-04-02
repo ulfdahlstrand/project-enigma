@@ -66,6 +66,8 @@ export async function listResumeCommits(
       "resume_commits.branch_id",
       "rcp.parent_commit_id as parent_commit_id",
       "resume_commits.message",
+      "resume_commits.title",
+      "resume_commits.description",
       "resume_commits.created_by",
       "resume_commits.created_at",
     ])
@@ -79,6 +81,8 @@ export async function listResumeCommits(
     branchId: row.branch_id,
     parentCommitId: row.parent_commit_id,
     message: row.message,
+    title: row.title,
+    description: row.description,
     createdBy: row.created_by,
     createdAt: row.created_at,
   }));

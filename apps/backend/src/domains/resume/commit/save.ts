@@ -154,6 +154,8 @@ export async function saveResumeVersion(
         resume_id: branch.resume_id,
         branch_id: input.branchId,
         content: JSON.stringify(content),
+        title: input.title ?? input.message ?? "",
+        description: input.description ?? "",
         message: input.message ?? "",
         created_by: user.id,
       })
@@ -187,6 +189,8 @@ export async function saveResumeVersion(
     parentCommitId: branch.head_commit_id,
     content: commit.content as unknown as ResumeCommitContent,
     message: commit.message,
+    title: commit.title,
+    description: commit.description,
     createdBy: commit.created_by,
     createdAt: commit.created_at,
   };

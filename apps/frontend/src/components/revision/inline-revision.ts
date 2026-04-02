@@ -31,10 +31,10 @@ export function buildInlineRevisionBranchName(plan: RevisionPlan) {
     : branchName;
 }
 
-export function buildInlineRevisionSuggestionCommitMessage(
+export function buildInlineRevisionSuggestionCommitTitle(
   suggestion: RevisionSuggestions["suggestions"][number],
 ) {
-  return `Apply AI suggestion: ${suggestion.title}`;
+  return `ai(suggestion): ${suggestion.title}`;
 }
 
 function isBroadSkillsWorkItem(item: RevisionWorkItems["items"][number]) {

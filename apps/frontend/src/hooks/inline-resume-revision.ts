@@ -406,7 +406,7 @@ export function useInlineResumeRevision({
       if (hasUnsavedChanges) {
         await saveVersion.mutateAsync({
           branchId: activeBranchId,
-          message: t("revision.inline.finalizeCommitMessage"),
+          title: t("revision.inline.finalizeCommitMessage"),
           ...buildDraftPatch(),
         });
       }

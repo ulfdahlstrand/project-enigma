@@ -25,6 +25,7 @@ export async function finaliseResumeBranch(
     .innerJoin("resumes as r", "r.id", "rb.resume_id")
     .select([
       "rb.id",
+      "rb.name",
       "rb.resume_id",
       "rb.head_commit_id",
       "r.employee_id",
@@ -76,12 +77,20 @@ export async function finaliseResumeBranch(
   );
 
   await db.transaction().execute(async (trx) => {
+    const revisionSlug = revisionBranch.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+
     const mergeCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: sourceBranch.resume_id,
         branch_id: sourceBranch.id,
         content: JSON.stringify(normalisedContent),
+        title: `merge: revision/${revisionSlug}`,
+        description: "",
         message: "Merge inline AI revision",
         created_by: user.id,
       })

@@ -56,6 +56,8 @@ export async function getResumeBranchHistoryGraph(
       "resume_commits.branch_id",
       "rcp.parent_commit_id as parent_commit_id",
       "resume_commits.message",
+      "resume_commits.title",
+      "resume_commits.description",
       "resume_commits.created_by",
       "resume_commits.created_at",
     ])
@@ -94,6 +96,8 @@ export async function getResumeBranchHistoryGraph(
       branchId: commit.branch_id,
       parentCommitId: commit.parent_commit_id,
       message: commit.message,
+      title: commit.title,
+      description: commit.description,
       createdBy: commit.created_by,
       createdAt: commit.created_at,
     })),
