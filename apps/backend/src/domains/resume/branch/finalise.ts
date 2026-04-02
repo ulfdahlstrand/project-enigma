@@ -13,16 +13,6 @@ import type { finaliseResumeBranchInputSchema, finaliseResumeBranchOutputSchema 
 type FinaliseResumeBranchInput = z.infer<typeof finaliseResumeBranchInputSchema>;
 type FinaliseResumeBranchOutput = z.infer<typeof finaliseResumeBranchOutputSchema>;
 
-function slugifyRevisionBranchName(name: string): string {
-  return name
-    .trim()
-    .replace(/^AI revision:\s*/i, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-}
-
 export async function finaliseResumeBranch(
   db: Kysely<Database>,
   user: AuthUser,
@@ -87,18 +77,13 @@ export async function finaliseResumeBranch(
   );
 
   await db.transaction().execute(async (trx) => {
-    const revisionSlug = slugifyRevisionBranchName(revisionBranch.name);
-    const sourceSlug = sourceBranch.name.trim().toLowerCase() === "main"
-      ? "main"
-      : `revision/${slugifyRevisionBranchName(sourceBranch.name)}`;
-
     const mergeCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: sourceBranch.resume_id,
         branch_id: sourceBranch.id,
         content: JSON.stringify(normalisedContent),
-        title: `merged: revision/${revisionSlug} into ${sourceSlug}`,
+        title: `merged ${revisionBranch.name} into ${sourceBranch.name}`,
         description: "",
         message: "Merge inline AI revision",
         created_by: user.id,

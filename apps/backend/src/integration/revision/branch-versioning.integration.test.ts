@@ -193,7 +193,7 @@ describe("revision branch versioning integration", () => {
 
     const forkedBranch = await client.forkResumeBranch({
       fromCommitId: mainBranch.head_commit_id!,
-      name: "AI revision: Review presentation",
+      name: "revision/review-presentation",
     });
 
     await client.saveResumeVersion({
@@ -219,7 +219,7 @@ describe("revision branch versioning integration", () => {
       .where("id", "=", persistedMainBranch.head_commit_id!)
       .executeTakeFirstOrThrow();
 
-    expect(mergeCommit.title).toBe("merged: revision/review-presentation into main");
+    expect(mergeCommit.title).toBe("merged revision/review-presentation into main");
     expect(mergeCommit.message).toBe("Merge inline AI revision");
   });
 });
