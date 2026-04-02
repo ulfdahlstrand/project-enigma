@@ -15,7 +15,11 @@ const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const BRANCH_ID_1 = "550e8400-e29b-41d4-a716-446655440031";
 const BRANCH_ID_2 = "550e8400-e29b-41d4-a716-446655440032";
+const BRANCH_ID_3 = "550e8400-e29b-41d4-a716-446655440033";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
+const COMMIT_ID_2 = "550e8400-e29b-41d4-a716-446655440042";
+const COMMIT_ID_3 = "550e8400-e29b-41d4-a716-446655440043";
+const COMMIT_ID_4 = "550e8400-e29b-41d4-a716-446655440044";
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 const RESUME_ROW = { id: RESUME_ID, employee_id: EMPLOYEE_ID_1 };
@@ -38,10 +42,22 @@ const BRANCH_ROW_2 = {
   name: "Swedish Variant",
   language: "sv",
   is_main: false,
-  head_commit_id: COMMIT_ID,
+  head_commit_id: COMMIT_ID_2,
   forked_from_commit_id: COMMIT_ID,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-02T00:00:00.000Z"),
+};
+
+const BRANCH_ROW_3 = {
+  id: BRANCH_ID_3,
+  resume_id: RESUME_ID,
+  name: "Merged Variant",
+  language: "sv",
+  is_main: false,
+  head_commit_id: COMMIT_ID_3,
+  forked_from_commit_id: COMMIT_ID,
+  created_by: CREATOR_ID,
+  created_at: new Date("2026-01-03T00:00:00.000Z"),
 };
 
 // ---------------------------------------------------------------------------
@@ -52,11 +68,13 @@ function buildDbMock(opts: {
   resumeRow?: unknown;
   branchRows?: unknown[];
   employeeId?: string | null;
+  edgeRows?: unknown[];
 } = {}) {
   const {
     resumeRow = RESUME_ROW,
     branchRows = [BRANCH_ROW_1, BRANCH_ROW_2],
     employeeId = null,
+    edgeRows = [],
   } = opts;
 
   const resolvedResume = resumeRow === null ? undefined : resumeRow;
@@ -76,9 +94,15 @@ function buildDbMock(opts: {
   const branchWhere = vi.fn().mockReturnValue({ orderBy: branchOrderBy });
   const branchSelectAll = vi.fn().mockReturnValue({ where: branchWhere });
 
+  const edgeExecute = vi.fn().mockResolvedValue(edgeRows);
+  const edgeWhere = vi.fn().mockReturnValue({ execute: edgeExecute });
+  const edgeSelect = vi.fn().mockReturnValue({ where: edgeWhere });
+  const edgeInnerJoin = vi.fn().mockReturnValue({ select: edgeSelect });
+
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_branches") return { selectAll: branchSelectAll };
+    if (table === "resume_commit_parents as rcp") return { innerJoin: edgeInnerJoin };
     // resumes table
     return { select: resumeSelect };
   });
@@ -112,6 +136,25 @@ describe("listResumeBranches", () => {
       name: "Swedish Variant",
       isMain: false,
     });
+  });
+
+  it("filters out merged branches whose head commit is already reachable from main", async () => {
+    const { db } = buildDbMock({
+      branchRows: [
+        { ...BRANCH_ROW_1, head_commit_id: COMMIT_ID_4 },
+        BRANCH_ROW_2,
+        BRANCH_ROW_3,
+      ],
+      edgeRows: [
+        { commitId: COMMIT_ID_4, parentCommitId: COMMIT_ID },
+        { commitId: COMMIT_ID_4, parentCommitId: COMMIT_ID_3 },
+        { commitId: COMMIT_ID_3, parentCommitId: COMMIT_ID },
+      ],
+    });
+
+    const result = await listResumeBranches(db, MOCK_ADMIN, { resumeId: RESUME_ID });
+
+    expect(result.map((branch) => branch.id)).toEqual([BRANCH_ID_1, BRANCH_ID_2]);
   });
 
   it("returns empty array when resume has no branches", async () => {

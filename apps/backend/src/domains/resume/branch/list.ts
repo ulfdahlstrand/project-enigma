@@ -12,6 +12,41 @@ import type { listResumeBranchesInputSchema, listResumeBranchesOutputSchema } fr
 type ListResumeBranchesInput = z.infer<typeof listResumeBranchesInputSchema>;
 type ListResumeBranchesOutput = z.infer<typeof listResumeBranchesOutputSchema>;
 
+function collectReachableCommitIds(
+  startCommitId: string | null,
+  edges: Array<{ commitId: string; parentCommitId: string }>,
+) {
+  if (!startCommitId) {
+    return new Set<string>();
+  }
+
+  const parentIdsByCommitId = new Map<string, string[]>();
+  for (const edge of edges) {
+    const existing = parentIdsByCommitId.get(edge.commitId) ?? [];
+    parentIdsByCommitId.set(edge.commitId, [...existing, edge.parentCommitId]);
+  }
+
+  const visited = new Set<string>();
+  const stack = [startCommitId];
+
+  while (stack.length > 0) {
+    const commitId = stack.pop();
+    if (!commitId || visited.has(commitId)) {
+      continue;
+    }
+
+    visited.add(commitId);
+    const parentIds = parentIdsByCommitId.get(commitId) ?? [];
+    for (const parentId of parentIds) {
+      if (!visited.has(parentId)) {
+        stack.push(parentId);
+      }
+    }
+  }
+
+  return visited;
+}
+
 export async function listResumeBranches(
   db: Kysely<Database>,
   user: AuthUser,
@@ -41,7 +76,28 @@ export async function listResumeBranches(
     .orderBy("created_at", "asc")
     .execute();
 
-  return rows.map((row) => ({
+  const edgeRows = await db
+    .selectFrom("resume_commit_parents as rcp")
+    .innerJoin("resume_commits as rc", "rc.id", "rcp.commit_id")
+    .select(["rcp.commit_id as commitId", "rcp.parent_commit_id as parentCommitId"])
+    .where("rc.resume_id", "=", input.resumeId)
+    .execute();
+
+  const mainBranch = rows.find((row) => row.is_main);
+  const mainReachableCommitIds = collectReachableCommitIds(mainBranch?.head_commit_id ?? null, edgeRows);
+  const visibleRows = rows.filter((row) => {
+    if (row.is_main) {
+      return true;
+    }
+
+    if (!row.head_commit_id) {
+      return true;
+    }
+
+    return !mainReachableCommitIds.has(row.head_commit_id);
+  });
+
+  return visibleRows.map((row) => ({
     id: row.id,
     resumeId: row.resume_id,
     name: row.name,
