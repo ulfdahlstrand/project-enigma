@@ -18,6 +18,7 @@ interface ResumeSkillsPageProps {
   isSnapshotMode: boolean;
   resumeId: string;
   queryKey: readonly unknown[];
+  skillsFabTop: number;
   sectionRef?: RefObject<HTMLDivElement | null>;
 }
 
@@ -35,13 +36,19 @@ export function ResumeSkillsPage({
   isSnapshotMode,
   resumeId,
   queryKey,
+  skillsFabTop,
   sectionRef,
 }: ResumeSkillsPageProps) {
   return (
     <Box {...(sectionRef ? { ref: sectionRef } : {})} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
         {isEditing && !isSnapshotMode ? (
-          <SkillsEditor resumeId={resumeId} skills={skills} queryKey={queryKey} />
+          <SkillsEditor
+            resumeId={resumeId}
+            skills={skills}
+            queryKey={queryKey}
+            skillsFabTop={skillsFabTop}
+          />
         ) : (
           <ResumeSkillsPageContent
             employeeName={employeeName}

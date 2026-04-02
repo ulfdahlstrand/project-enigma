@@ -74,7 +74,7 @@ export function ResumeAssignmentsPage({
         </Typography>
         <Divider sx={{ mb: 2 }} />
 
-        {isEditing ? (
+        {isEditing && showFullAssignments ? (
           <AssignmentEditor
             assignments={assignments}
             queryKey={["listBranchAssignmentsFull", activeBranchId]}
@@ -253,7 +253,8 @@ export function ResumeAssignmentsPage({
             sx={{
               position: "absolute",
               left: `calc(50% + ${794 / 2}px + 16px)`,
-              top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
+              top: (theme) =>
+                `calc(${assignmentsFabTop}px + ${theme.spacing(showToggleFab ? 7 : 2)})`,
               zIndex: 10,
               bgcolor: "transparent",
               color: "action.active",
