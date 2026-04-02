@@ -11,11 +11,21 @@ import {
   MIN_USER_MESSAGES_FOR_TITLE,
 } from "../lib/generate-title.js";
 import { logger } from "../../../infra/logger.js";
+import {
+  extractToolCalls,
+  buildToolResultMessage,
+} from "./tool-parsing.js";
+import {
+  BACKEND_INSPECT_TOOLS,
+  executeBackendInspectTool,
+} from "./tool-execution.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
 // Limit history sent to OpenAI to avoid exceeding context window
 const MAX_HISTORY_MESSAGES = 20;
+// Maximum number of backend tool-call iterations per sendAIMessage invocation
+const MAX_BACKEND_TOOL_LOOPS = 8;
 
 export async function sendAIMessage(
   db: Kysely<Database>,
@@ -71,21 +81,38 @@ export async function sendAIMessage(
     { role: "user", content: input.userMessage },
   ];
 
-  const response = await openaiClient.chat.completions.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: openAIMessages,
-  });
+  // ---------------------------------------------------------------------------
+  // Tool-call loop
+  //
+  // For resume-revision-actions conversations, inspect tool calls are executed
+  // on the backend without a round-trip to the browser. The loop runs until:
+  //   - the assistant returns a message with no tool call, OR
+  //   - the tool call is not a backend inspect tool (handed off to frontend), OR
+  //   - MAX_BACKEND_TOOL_LOOPS iterations are reached.
+  // ---------------------------------------------------------------------------
 
-  const assistantContent = response.choices[0]?.message?.content;
-  if (!assistantContent) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR", {
-      message: "AI returned empty response",
+  // Shared helper to call OpenAI and throw on empty response
+  async function callOpenAI(
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  ): Promise<string> {
+    const response = await openaiClient.chat.completions.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages,
     });
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "AI returned empty response",
+      });
+    }
+    return content;
   }
 
-  // Persist and return the assistant message
-  const assistantRow = await db
+  let assistantContent = await callOpenAI(openAIMessages);
+
+  // Persist initial assistant message
+  let assistantRow = await db
     .insertInto("ai_messages")
     .values({
       conversation_id: input.conversationId,
@@ -94,6 +121,70 @@ export async function sendAIMessage(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+
+  // Backend tool-call loop (only for resume-revision-actions in Phase 1)
+  if (conversation.entity_type === "resume-revision-actions") {
+    for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
+      const toolCalls = extractToolCalls(assistantContent);
+      if (toolCalls.length === 0) break;
+
+      const toolCall = toolCalls[0]!;
+      if (!BACKEND_INSPECT_TOOLS.has(toolCall.toolName)) break;
+
+      logger.debug("Backend tool-call loop iteration", {
+        conversationId: input.conversationId,
+        iteration: i,
+        toolName: toolCall.toolName,
+      });
+
+      const toolResult = await executeBackendInspectTool(
+        db,
+        conversation.entity_type,
+        conversation.entity_id,
+        toolCall,
+      );
+
+      const toolResultContent = buildToolResultMessage(toolCall.toolName, toolResult);
+
+      // Persist the tool result as a user message (internal, not user-visible)
+      await db
+        .insertInto("ai_messages")
+        .values({
+          conversation_id: input.conversationId,
+          role: "user",
+          content: toolResultContent,
+        })
+        .execute();
+
+      // Reload full history for next OpenAI call
+      const updatedHistory = await db
+        .selectFrom("ai_messages")
+        .selectAll()
+        .where("conversation_id", "=", input.conversationId)
+        .orderBy("created_at", "asc")
+        .execute();
+
+      const nextMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: conversation.system_prompt },
+        ...updatedHistory.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+      ];
+
+      assistantContent = await callOpenAI(nextMessages);
+
+      assistantRow = await db
+        .insertInto("ai_messages")
+        .values({
+          conversation_id: input.conversationId,
+          role: "assistant",
+          content: assistantContent,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    }
+  }
 
   logger.info("AI message responded", {
     conversationId: input.conversationId,

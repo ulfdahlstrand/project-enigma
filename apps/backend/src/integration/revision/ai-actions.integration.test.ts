@@ -66,7 +66,11 @@ describe("revision action AI integration", () => {
     resetOpenAIClientForTests();
   });
 
-  it("persists a tool-call loop through conversation history", async () => {
+  it("executes backend inspect tool loop and returns final response in one sendAIMessage call", async () => {
+    // Backend orchestration: sendAIMessage handles the entire loop internally.
+    //   - scripted[0]: kickoff reply (createAIConversation)
+    //   - scripted[1]: tool call for inspect_resume (backend executes it, branch not found → error result)
+    //   - scripted[2]: final assistant response after seeing tool result
     const scripted = createScriptedOpenAI([
       "Nu kan vi arbeta vidare med revideringen.",
       '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```',
@@ -75,6 +79,8 @@ describe("revision action AI integration", () => {
     setOpenAIClientForTests(scripted.client);
 
     const client = createIntegrationOrpcClient(baseUrl, authHeader);
+    // The branch ID does not exist in the DB — the backend will execute the tool
+    // and receive an error result, which it persists and forwards to the model.
     const entityId = "30000000-0000-4000-8000-000000000002";
 
     const conversation = await client.createAIConversation({
@@ -84,62 +90,73 @@ describe("revision action AI integration", () => {
       kickoffMessage: "Help me execute this revision.",
     });
 
-    const toolCallReply = await client.sendAIMessage({
+    // Single sendAIMessage call — backend runs the full tool-call loop internally
+    const finalReply = await client.sendAIMessage({
       conversationId: conversation.id,
       userMessage: "[[internal_autostart]] Work on the first revision task.",
     });
 
-    expect(toolCallReply.role).toBe("assistant");
-    expect(toolCallReply.content).toContain('"toolName":"inspect_resume"');
+    expect(finalReply.role).toBe("assistant");
+    expect(finalReply.content).toContain("kan gå vidare med ett konkret förslag");
 
-    const afterToolResultReply = await client.sendAIMessage({
-      conversationId: conversation.id,
-      userMessage: [
-        "Tool execution result:",
-        "```json",
-        '{"type":"tool_result","toolName":"inspect_resume","ok":true,"output":{"resumeId":"resume-1","inspected":true}}',
-        "```",
-        "Continue the conversation using this result. Do not ask the user to execute the tool manually.",
-      ].join("\n"),
-    });
+    // Three OpenAI calls: kickoff + tool-call response + final response after tool result
+    expect(scripted.calls.length).toBe(3);
 
-    expect(afterToolResultReply.role).toBe("assistant");
-    expect(afterToolResultReply.content).toContain("kan gå vidare med ett konkret förslag");
-    expect(scripted.calls.length).toBeGreaterThanOrEqual(3);
+    // Verify the backend sent the tool result (error: branch not found) into the conversation
+    const toolResultCall = scripted.calls[2];
+    const toolResultMessage = toolResultCall?.messages.find(
+      (m) => m.role === "user" && m.content.includes('"type":"tool_result"'),
+    );
+    expect(toolResultMessage).toBeDefined();
+    expect(toolResultMessage?.content).toContain('"toolName":"inspect_resume"');
 
-    const expectedToolLoopMessages = [
-      { role: "system", content: "You are an action assistant." },
-      { role: "assistant", content: "Nu kan vi arbeta vidare med revideringen." },
-      { role: "user", content: "[[internal_autostart]] Work on the first revision task." },
-      { role: "assistant", content: '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```' },
-      {
-        role: "user",
-        content: [
-          "Tool execution result:",
-          "```json",
-          '{"type":"tool_result","toolName":"inspect_resume","ok":true,"output":{"resumeId":"resume-1","inspected":true}}',
-          "```",
-          "Continue the conversation using this result. Do not ask the user to execute the tool manually.",
-        ].join("\n"),
-      },
-    ];
-
-    expect(
-      scripted.calls.some((call) => JSON.stringify(call.messages) === JSON.stringify(expectedToolLoopMessages))
-    ).toBe(true);
-
+    // Verify persisted message history
     const persistedConversation = await client.getAIConversation({
       conversationId: conversation.id,
     });
 
-    expect(persistedConversation.messages.map((message) => message.role)).toEqual([
-      "assistant",
-      "user",
-      "assistant",
-      "user",
-      "assistant",
+    expect(persistedConversation.messages.map((m) => m.role)).toEqual([
+      "assistant", // kickoff
+      "user",      // autostart message
+      "assistant", // tool call
+      "user",      // tool result (auto-persisted by backend)
+      "assistant", // final response
     ]);
     expect(persistedConversation.messages[2]?.content).toContain('"toolName":"inspect_resume"');
+    expect(persistedConversation.messages[3]?.content).toContain('"type":"tool_result"');
     expect(persistedConversation.messages[4]?.content).toContain("konkret förslag");
+  });
+
+  it("returns tool call content unchanged for write tools that require frontend execution", async () => {
+    const writeToolContent =
+      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"items":[]}}\n```';
+
+    const scripted = createScriptedOpenAI([
+      "Ready to work.",
+      writeToolContent,
+    ]);
+    setOpenAIClientForTests(scripted.client);
+
+    const client = createIntegrationOrpcClient(baseUrl, authHeader);
+    const entityId = "30000000-0000-4000-8000-000000000003";
+
+    const conversation = await client.createAIConversation({
+      entityType: "resume-revision-actions",
+      entityId,
+      systemPrompt: "You are an action assistant.",
+      kickoffMessage: "Start.",
+    });
+
+    const reply = await client.sendAIMessage({
+      conversationId: conversation.id,
+      userMessage: "Execute the write tool.",
+    });
+
+    // Write tools are not executed by backend — response is returned as-is for frontend to handle
+    expect(reply.role).toBe("assistant");
+    expect(reply.content).toContain('"toolName":"set_revision_work_items"');
+
+    // Only 2 OpenAI calls: kickoff + write tool response (loop stops immediately)
+    expect(scripted.calls.length).toBe(2);
   });
 });
