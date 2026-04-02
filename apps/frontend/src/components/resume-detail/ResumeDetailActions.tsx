@@ -31,6 +31,7 @@ interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
+  isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
   isRevisionOpen: boolean;
@@ -40,6 +41,7 @@ interface ResumeDetailActionsProps {
   onSaveCurrent: () => void;
   onSaveAsNewVersion: (name: string) => Promise<void>;
   onEdit: () => void;
+  onOpenAiHelp: () => void;
   onReviseWithAi: () => void;
   onCloseRevision: () => void;
   onDeleteResume: () => void;
@@ -190,6 +192,7 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
+  isEditRoute,
   isSnapshotMode,
   isEditing,
   isRevisionOpen,
@@ -199,6 +202,7 @@ export function ResumeDetailActions({
   onSaveCurrent,
   onSaveAsNewVersion,
   onEdit,
+  onOpenAiHelp,
   onReviseWithAi,
   onCloseRevision,
   onDeleteResume,
@@ -288,6 +292,9 @@ export function ResumeDetailActions({
                 canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
                 isPending={isSaving}
               />
+              <Button variant="outlined" onClick={onOpenAiHelp}>
+                {t("revision.inline.aiHelpButton")}
+              </Button>
               <Button variant="outlined" onClick={onCloseRevision}>
                 {t("resume.edit.backButton")}
               </Button>

@@ -278,6 +278,20 @@ describe("Navigation", () => {
     expect(editBtn).toBeInTheDocument();
   });
 
+  it("navigates to the edit page when Edit is clicked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText(TEST_RESUME.title);
+
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.editButton }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/edit",
+      params: { id: TEST_RESUME_ID },
+      search: { branchId: MAIN_BRANCH.id },
+    });
+  });
+
   it("renders a breadcrumb link to /resumes", async () => {
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
@@ -315,18 +329,18 @@ describe("Navigation", () => {
     });
   });
 
-  it("opens the inline AI revision layout from the edit menu", async () => {
+  it("navigates to the edit page with AI open from the edit menu", async () => {
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
 
     fireEvent.click(screen.getByRole("button", { name: enCommon.resume.detail.editMenuLabel }));
     fireEvent.click(await screen.findByRole("menuitem", { name: enCommon.revision.reviseButton }));
 
-    expect(await screen.findByText(enCommon.revision.inline.checklistTitle)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.revision.inline.checklistWaitingTitle)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.revision.inline.chatTitle)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.revision.inline.chatDescription)).toBeInTheDocument();
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/edit",
+      params: { id: TEST_RESUME_ID },
+      search: { branchId: MAIN_BRANCH.id, ai: "open" },
+    });
   });
 });
 

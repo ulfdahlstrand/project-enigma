@@ -30,15 +30,21 @@ export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
     branchId: z.string().optional(),
   }),
-  component: ResumeDetailPage,
+  component: () => <ResumeDetailPage routeMode="detail" />,
 });
 
-function ResumeDetailPage() {
+export function ResumeDetailPage({
+  routeMode = "detail",
+}: {
+  routeMode?: "detail" | "edit";
+}) {
   const { t } = useTranslation("common");
   const { id: idParam } = useParams({ strict: false });
   const id = idParam!;
+  const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId } = useSearch({ strict: false }) as any as { branchId?: string };
+  const { branchId: selectedBranchId, ai: aiMode } =
+    useSearch({ strict: false }) as any as { branchId?: string; ai?: "open" };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -85,7 +91,7 @@ function ResumeDetailPage() {
     enabled: !!resume?.employeeId,
   });
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(isEditRoute);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
@@ -336,6 +342,12 @@ function ResumeDetailPage() {
     buildDraftPatchFromValues,
   });
 
+  useEffect(() => {
+    if (isEditRoute && aiMode === "open" && !inlineRevision.isOpen) {
+      inlineRevision.open();
+    }
+  }, [aiMode, inlineRevision, isEditRoute]);
+
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
   if (isError) {
@@ -358,17 +370,25 @@ function ResumeDetailPage() {
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
-      setIsEditing(false);
+      if (!isEditRoute) {
+        setIsEditing(false);
+      }
     } else {
       if (!mainBranchId) {
-        updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+        updateResume.mutate(patch, { onSuccess: () => {
+          if (!isEditRoute) {
+            setIsEditing(false);
+          }
+        } });
         return;
       }
 
       // Main save must update the live resume and create a visible branch commit.
       await updateResume.mutateAsync(patch);
       await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
-      setIsEditing(false);
+      if (!isEditRoute) {
+        setIsEditing(false);
+      }
     }
   };
 
@@ -391,13 +411,22 @@ function ResumeDetailPage() {
 
     setIsEditing(false);
     await navigate({
-      to: "/resumes/$id",
+      to: isEditRoute ? "/resumes/$id/edit" : "/resumes/$id",
       params: { id },
       search: { branchId: newBranch.id },
     });
   };
 
   const handleExitEditing = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id",
+        params: { id },
+        search: activeBranchId ? { branchId: activeBranchId } : {},
+      });
+      return;
+    }
+
     inlineRevision.reset();
   };
 
@@ -406,6 +435,7 @@ function ResumeDetailPage() {
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
       isRevisionOpen={inlineRevision.isOpen}
@@ -416,8 +446,34 @@ function ResumeDetailPage() {
         void handleSave();
       }}
       onSaveAsNewVersion={handleSaveAsNewVersion}
-      onEdit={() => setIsEditing(true)}
-      onReviseWithAi={inlineRevision.open}
+      onEdit={() => {
+        if (isEditRoute) {
+          setIsEditing(true);
+          return;
+        }
+
+        void navigate({
+          to: "/resumes/$id/edit",
+          params: { id },
+          search: activeBranchId ? { branchId: activeBranchId } : {},
+        });
+      }}
+      onOpenAiHelp={inlineRevision.open}
+      onReviseWithAi={() => {
+        if (isEditRoute) {
+          inlineRevision.open();
+          return;
+        }
+
+        void navigate({
+          to: "/resumes/$id/edit",
+          params: { id },
+          search: {
+            ...(activeBranchId ? { branchId: activeBranchId } : {}),
+            ai: "open",
+          },
+        });
+      }}
       onCloseRevision={inlineRevision.isOpen ? inlineRevision.close : handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
