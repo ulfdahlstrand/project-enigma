@@ -5,12 +5,9 @@ import {
   useSendAIMessage,
   useCloseAIConversation,
 } from "./ai-assistant";
-import { executeAIToolCall } from "../lib/ai-tools/runtime";
 import type { AIToolContext, AIToolRegistry } from "../lib/ai-tools/types";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import {
-  buildToolResultMessage,
-  extractToolCalls,
   extractSuggestion,
   isToolResultMessage,
   isInternalGuardrailMessage,
@@ -47,11 +44,9 @@ export function useAIAssistantChat({
 
   const [inputValue, setInputValue] = useState("");
   const [diffOpen, setDiffOpen] = useState(false);
-  const [activeToolExecutionCount, setActiveToolExecutionCount] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const createInitiated = useRef(false);
-  const processedToolCallsRef = useRef<Set<string>>(new Set());
 
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
@@ -65,22 +60,8 @@ export function useAIAssistantChat({
       !isInternalGuardrailMessage(message.content) &&
       !isInternalAutoStartMessage(message.content),
   );
-  const latestRawAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
-  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
-  const hasPendingToolCall = messages.some(
-    (message) =>
-      message.role === "assistant" &&
-      extractToolCalls(message.content).some(
-        (_, index) =>
-          !processedToolCallsRef.current.has(
-            `${message.id}:${index}:${extractToolCalls(message.content)[index]?.toolName}`,
-          ),
-      ),
-  );
   const isAnalysing =
-    sendMessage.isPending ||
-    activeToolExecutionCount > 0 ||
-    Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
+    sendMessage.isPending;
   const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
   const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
 
@@ -117,47 +98,6 @@ export function useAIAssistantChat({
       target.scrollIntoView({ behavior: "smooth" });
     }
   }, [visibleMessages.length]);
-
-  // Process tool calls
-  useEffect(() => {
-    if (!activeConversationId || !toolRegistry || !toolContext || sendMessage.isPending) {
-      return;
-    }
-
-    const nextToolCall = [...messages]
-      .reverse()
-      .flatMap((message) =>
-        message.role === "assistant"
-          ? extractToolCalls(message.content).map((toolCall, index) => ({
-              message,
-              toolCall,
-              key: `${message.id}:${index}:${toolCall.toolName}`,
-            }))
-          : [],
-      )
-      .find(({ key }) => !processedToolCallsRef.current.has(key));
-
-    if (!nextToolCall) return;
-
-    processedToolCallsRef.current.add(nextToolCall.key);
-
-    void (async () => {
-      setActiveToolExecutionCount((count) => count + 1);
-      try {
-        const result = await executeAIToolCall(
-          toolRegistry,
-          { toolName: nextToolCall.toolCall.toolName, input: nextToolCall.toolCall.input ?? {} },
-          toolContext,
-        );
-        await sendMessage.mutateAsync({
-          conversationId: activeConversationId,
-          userMessage: buildToolResultMessage(result),
-        });
-      } finally {
-        setActiveToolExecutionCount((count) => Math.max(0, count - 1));
-      }
-    })();
-  }, [activeConversationId, messages, sendMessage, toolContext, toolRegistry]);
 
   // Handlers
   const handleSend = (value: string) => {

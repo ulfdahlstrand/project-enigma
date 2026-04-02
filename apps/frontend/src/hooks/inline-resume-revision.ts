@@ -25,7 +25,11 @@ import {
 } from "../components/revision/inline-revision";
 import { type RevisionPlan, type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
-import { deriveSuggestionsFromConversation } from "./inline-revision/conversation";
+import {
+  derivePlanFromConversation,
+  deriveSuggestionsFromConversation,
+  deriveWorkItemsFromConversation,
+} from "./inline-revision/conversation";
 import { clearPersistedInlineRevisionSession, readPersistedInlineRevisionSession, writePersistedInlineRevisionSession } from "./inline-revision/storage";
 import type { UseInlineResumeRevisionParams } from "./inline-revision/types";
 import { useInlineRevisionAssistant } from "./inline-revision/use-inline-revision-assistant";
@@ -113,6 +117,7 @@ export function useInlineResumeRevision({
   const existingActionConversationId =
     existingActionConversations?.conversations.at(-1)?.id ?? null;
   const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
+  const { data: activeAssistantConversation } = useAIConversation(assistantConversationId);
 
   useEffect(() => {
     if (isEditRoute) {
@@ -408,6 +413,50 @@ export function useInlineResumeRevision({
       setSuggestions(restoredSuggestions);
     }
   }, [existingActionConversation, isOpen, stage, suggestions]);
+
+  useEffect(() => {
+    const currentConversation = activeAssistantConversation;
+    if (!isOpen || !currentConversation) {
+      return;
+    }
+
+    if (
+      stage === "planning"
+      && assistantEntityType === "resume-revision-planning"
+      && assistantEntityId === planningSessionId
+    ) {
+      const derivedPlan = derivePlanFromConversation(currentConversation.messages);
+      if (derivedPlan) {
+        setPlan(derivedPlan);
+      }
+      return;
+    }
+
+    if (
+      stage === "actions"
+      && activeBranchId
+      && assistantEntityType === "resume-revision-actions"
+      && assistantEntityId === activeBranchId
+    ) {
+      const derivedWorkItems = deriveWorkItemsFromConversation(currentConversation.messages);
+      if (derivedWorkItems) {
+        setWorkItems(derivedWorkItems);
+      }
+
+      const derivedSuggestions = deriveSuggestionsFromConversation(currentConversation.messages);
+      if (derivedSuggestions) {
+        setSuggestions(derivedSuggestions);
+      }
+    }
+  }, [
+    activeAssistantConversation,
+    activeBranchId,
+    assistantEntityId,
+    assistantEntityType,
+    isOpen,
+    planningSessionId,
+    stage,
+  ]);
   const isReadyToFinalize =
     (workItems?.items.length ?? 0) > 0 &&
     (workItems?.items.every(
