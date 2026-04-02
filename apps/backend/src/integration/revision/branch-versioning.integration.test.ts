@@ -173,4 +173,53 @@ describe("revision branch versioning integration", () => {
     expect(persistedCommit.message).toBe("Apply AI suggestion: Fix assignment spelling");
     expect(persistedCommit.content.assignments[0]?.description).toBe("Built things with typo.");
   });
+
+  it("creates a merge title that uses the revision slug and target branch", async () => {
+    const client = createIntegrationOrpcClient(baseUrl, authHeader);
+
+    const resume = await client.createResume({
+      employeeId: INTEGRATION_EMPLOYEE.id,
+      title: "Integration Resume",
+      language: "en",
+      summary: "Initial summary",
+    });
+
+    const mainBranch = await db
+      .selectFrom("resume_branches")
+      .select(["id", "head_commit_id"])
+      .where("resume_id", "=", resume.id)
+      .where("is_main", "=", true)
+      .executeTakeFirstOrThrow();
+
+    const forkedBranch = await client.forkResumeBranch({
+      fromCommitId: mainBranch.head_commit_id!,
+      name: "AI revision: Review presentation",
+    });
+
+    await client.saveResumeVersion({
+      branchId: forkedBranch.id,
+      message: "Apply AI suggestion: Improve presentation",
+    });
+
+    await client.finaliseResumeBranch({
+      sourceBranchId: mainBranch.id,
+      revisionBranchId: forkedBranch.id,
+      action: "merge",
+    });
+
+    const persistedMainBranch = await db
+      .selectFrom("resume_branches")
+      .select(["head_commit_id"])
+      .where("id", "=", mainBranch.id)
+      .executeTakeFirstOrThrow();
+
+    const mergeCommit = await db
+      .selectFrom("resume_commits")
+      .select(["title", "message"])
+      .where("id", "=", persistedMainBranch.head_commit_id!)
+      .executeTakeFirstOrThrow();
+
+    expect(mergeCommit.title).toBe("merged: revision/review-presentation into main");
+    expect(mergeCommit.message).toBe("Merge inline AI revision");
+  });
 });
