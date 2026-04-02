@@ -19,14 +19,10 @@ import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
   buildInlineRevisionBranchName,
-  buildInlineRevisionWorkItemAutomationMessage,
-  buildInlineRevisionWorkItemsFromPlan,
-  type InlineRevisionStage,
 } from "../components/revision/inline-revision";
-import { type RevisionPlan, type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
+import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import {
-  derivePlanFromConversation,
   deriveSuggestionsFromConversation,
   deriveWorkItemsFromConversation,
 } from "./inline-revision/conversation";
@@ -70,22 +66,14 @@ export function useInlineResumeRevision({
   } = useAIAssistantContext();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [stage, setStage] = useState<InlineRevisionStage>("planning");
-  const [plan, setPlan] = useState<RevisionPlan | null>(null);
+  const [isFinalized, setIsFinalized] = useState(false);
   const [workItems, setWorkItems] = useState<RevisionWorkItems | null>(null);
   const [suggestions, setSuggestions] = useState<RevisionSuggestions | null>(null);
-  const [pendingActionBranchId, setPendingActionBranchId] = useState<string | null>(null);
   const [sourceBranchName, setSourceBranchName] = useState<string | null>(null);
   const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
-  const [planningSessionId, setPlanningSessionId] = useState<string | null>(null);
   const [isPreparingFinalize, setIsPreparingFinalize] = useState(false);
   const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
-  const workItemsRef = useRef<RevisionWorkItems | null>(null);
   const restoredBranchIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    workItemsRef.current = workItems;
-  }, [workItems]);
 
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
@@ -140,7 +128,7 @@ export function useInlineResumeRevision({
       return;
     }
 
-    if (stage === "planning") {
+    if (isFinalized) {
       lastInlineRevisionBranchIdRef.current = activeBranchId;
       return;
     }
@@ -153,15 +141,12 @@ export function useInlineResumeRevision({
     }
 
     lastInlineRevisionBranchIdRef.current = activeBranchId;
-  }, [activeBranchId, closeAssistant, isOpen, stage]);
+  }, [activeBranchId, closeAssistant, isFinalized, isOpen]);
 
   const {
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
-    openActionAssistant,
-    openPlanning,
+    toolRegistry,
+    toolContext,
+    openRevisionAssistant,
   } = useInlineRevisionAssistant({
     resumeId,
     resumeInspectionSnapshot,
@@ -171,8 +156,6 @@ export function useInlineResumeRevision({
     summary,
     language: i18n.resolvedLanguage ?? i18n.language,
     t,
-    workItemsRef,
-    setPlan,
     setWorkItems,
     setSuggestions,
     openAssistant,
@@ -207,96 +190,48 @@ export function useInlineResumeRevision({
     buildDraftPatchFromValues,
   });
 
-  useEffect(() => {
-    if (!pendingActionBranchId || !plan) {
+  const open = async () => {
+    if (!baseCommitId) {
       return;
     }
 
-    if (activeBranchId !== pendingActionBranchId) {
-      return;
-    }
-
-    const initialWorkItems = buildInlineRevisionWorkItemsFromPlan(plan);
-    const initialAutomationMessage = buildInlineRevisionWorkItemAutomationMessage(initialWorkItems)?.message ?? null;
-
-    setStage("actions");
-    setPendingActionBranchId(null);
-    setWorkItems(initialWorkItems);
+    setIsOpen(true);
+    setIsFinalized(false);
+    setSourceBranchName(activeBranchName);
+    setSourceBranchId(activeBranchId);
+    setWorkItems(null);
     setSuggestions(null);
-    openActionAssistant(activeBranchId, initialAutomationMessage);
-  }, [
-    activeBranchId,
-    openActionAssistant,
-    pendingActionBranchId,
-    plan,
-  ]);
-
-  const startPlanning = () => {
-    const nextPlanningSessionId = planningSessionId ?? crypto.randomUUID();
-    if (!planningSessionId) {
-      setPlanningSessionId(nextPlanningSessionId);
-    }
-
-    setStage("planning");
-    openPlanning(nextPlanningSessionId);
-  };
-
-  const openActions = async () => {
-    if (!plan || !baseCommitId) {
-      return;
-    }
-
-    if (assistantConversationId) {
-      await closeInlineConversation.mutateAsync({ conversationId: assistantConversationId });
-    }
 
     const newBranch = await forkResumeBranch.mutateAsync({
       fromCommitId: baseCommitId,
-      name: buildInlineRevisionBranchName(plan),
+      name: buildInlineRevisionBranchName(),
       resumeId,
     });
 
     writePersistedInlineRevisionSession(newBranch.id, {
-      version: 1,
+      version: 2,
       sourceBranchId: activeBranchId,
       sourceBranchName: activeBranchName,
-      stage: "actions",
-      plan,
-      workItems: buildInlineRevisionWorkItemsFromPlan(plan),
       suggestions: null,
     });
 
-    setPendingActionBranchId(newBranch.id);
     await navigate({
       to: "/resumes/$id/edit",
       params: { id: resumeId },
       search: { branchId: newBranch.id, assistant: "true" },
       replace: true,
     });
-  };
 
-  const open = () => {
-    setIsOpen(true);
-    setSourceBranchName(activeBranchName);
-    setSourceBranchId(activeBranchId);
-    setPlanningSessionId(crypto.randomUUID());
-    setPlan(null);
-    setWorkItems(null);
-    setSuggestions(null);
-    setPendingActionBranchId(null);
-    startPlanning();
+    openRevisionAssistant(newBranch.id);
   };
 
   const reset = () => {
     setIsOpen(false);
-    setStage("planning");
-    setPlan(null);
+    setIsFinalized(false);
     setWorkItems(null);
     setSuggestions(null);
     setSourceBranchName(null);
     setSourceBranchId(null);
-    setPlanningSessionId(null);
-    setPendingActionBranchId(null);
     setIsPreparingFinalize(false);
     closeAssistant();
   };
@@ -339,24 +274,14 @@ export function useInlineResumeRevision({
     }
 
     setIsOpen(true);
-    setStage(persistedSession.stage);
-    setPlan(persistedSession.plan);
-    setWorkItems(persistedSession.workItems);
+    setIsFinalized(false);
     setSuggestions(persistedSession.suggestions);
     setSourceBranchId(persistedSession.sourceBranchId);
     setSourceBranchName(persistedSession.sourceBranchName);
-    setPlanningSessionId(null);
-    setPendingActionBranchId(null);
-    setIsPreparingFinalize(false);
-    if (persistedSession.stage === "actions") {
-      const restoredAutomationMessage =
-        existingActionConversationId === null
-          ? buildInlineRevisionWorkItemAutomationMessage(persistedSession.workItems)?.message ?? null
-          : null;
-      openActionAssistant(activeBranchId, restoredAutomationMessage);
-    } else {
-      hideDrawer();
-    }
+    setWorkItems(null);
+
+    const restoredKickoff = existingActionConversationId === null ? null : undefined;
+    openRevisionAssistant(activeBranchId, restoredKickoff);
   }, [
     activeBranchId,
     existingActionConversationId,
@@ -365,7 +290,7 @@ export function useInlineResumeRevision({
     isOpen,
     mainBranchId,
     navigate,
-    openActionAssistant,
+    openRevisionAssistant,
     resumeId,
   ]);
 
@@ -374,37 +299,23 @@ export function useInlineResumeRevision({
       return;
     }
 
-    if (stage !== "actions" && stage !== "finalize") {
-      return;
-    }
-
-    if (stage === "actions" && !workItems && !suggestions) {
-      return;
-    }
-
     writePersistedInlineRevisionSession(activeBranchId, {
-      version: 1,
+      version: 2,
       sourceBranchId,
       sourceBranchName,
-      stage,
-      plan,
-      workItems,
       suggestions,
     });
   }, [
     activeBranchId,
     isOpen,
     mainBranchId,
-    plan,
     sourceBranchId,
     sourceBranchName,
-    stage,
     suggestions,
-    workItems,
   ]);
 
   useEffect(() => {
-    if (!isOpen || stage !== "actions" || suggestions || !existingActionConversation) {
+    if (!isOpen || suggestions || !existingActionConversation) {
       return;
     }
 
@@ -412,7 +323,7 @@ export function useInlineResumeRevision({
     if (restoredSuggestions) {
       setSuggestions(restoredSuggestions);
     }
-  }, [existingActionConversation, isOpen, stage, suggestions]);
+  }, [existingActionConversation, isOpen, suggestions]);
 
   useEffect(() => {
     const currentConversation = activeAssistantConversation;
@@ -421,22 +332,9 @@ export function useInlineResumeRevision({
     }
 
     if (
-      stage === "planning"
-      && assistantEntityType === "resume-revision-planning"
-      && assistantEntityId === planningSessionId
-    ) {
-      const derivedPlan = derivePlanFromConversation(currentConversation.messages);
-      if (derivedPlan) {
-        setPlan(derivedPlan);
-      }
-      return;
-    }
-
-    if (
-      stage === "actions"
-      && activeBranchId
-      && assistantEntityType === "resume-revision-actions"
-      && assistantEntityId === activeBranchId
+      activeBranchId &&
+      assistantEntityType === "resume-revision-actions" &&
+      assistantEntityId === activeBranchId
     ) {
       const derivedWorkItems = deriveWorkItemsFromConversation(currentConversation.messages);
       if (derivedWorkItems) {
@@ -454,15 +352,11 @@ export function useInlineResumeRevision({
     assistantEntityId,
     assistantEntityType,
     isOpen,
-    planningSessionId,
-    stage,
   ]);
+
   const isReadyToFinalize =
-    (workItems?.items.length ?? 0) > 0 &&
-    (workItems?.items.every(
-      (item) => item.status === "completed" || item.status === "no_changes_needed",
-    ) ?? false) &&
-    (suggestions?.suggestions.every((suggestion) => suggestion.status !== "pending") ?? true);
+    (suggestions?.suggestions.length ?? 0) > 0 &&
+    (suggestions?.suggestions.every((s) => s.status !== "pending") ?? false);
 
   const prepareFinalize = async () => {
     if (!activeBranchId) {
@@ -479,7 +373,7 @@ export function useInlineResumeRevision({
         });
       }
 
-      setStage("finalize");
+      setIsFinalized(true);
       hideDrawer();
     } finally {
       setIsPreparingFinalize(false);
@@ -525,23 +419,19 @@ export function useInlineResumeRevision({
 
   return {
     isOpen,
-    stage,
-    plan,
+    stage: isFinalized ? "finalize" as const : "revision" as const,
     workItems,
     suggestions: suggestions?.suggestions ?? [],
     selectedSuggestionId,
     sourceBranchName: sourceBranchName ?? activeBranchName,
     checklistWidth: INLINE_REVISION_CHECKLIST_WIDTH,
     chatWidth: INLINE_REVISION_CHAT_WIDTH,
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
+    toolRegistry,
+    toolContext,
     applyingSuggestionId,
     isPreparingFinalize,
     isReadyToFinalize,
-    isMovingToActions:
-      pendingActionBranchId !== null || forkResumeBranch.isPending || closeInlineConversation.isPending,
+    isOpening: forkResumeBranch.isPending,
     isMerging: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "merge",
     isKeeping: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "keep",
     reviewDialog,
@@ -551,9 +441,8 @@ export function useInlineResumeRevision({
       clearPersistedInlineRevisionSession(activeBranchId);
       reset();
     },
-    openActions,
     prepareFinalize,
-    backToActions: () => setStage("actions"),
+    backToRevision: () => setIsFinalized(false),
     selectSuggestion,
     openSuggestionReview,
     keepBranch: () => finish("keep"),

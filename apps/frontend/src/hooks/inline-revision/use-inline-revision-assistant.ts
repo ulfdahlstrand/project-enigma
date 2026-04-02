@@ -1,9 +1,8 @@
 import { useCallback } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
-  buildResumeRevisionActionPrompt,
-  buildResumeRevisionKickoff,
-  buildResumeRevisionPrompt,
+  buildUnifiedRevisionPrompt,
+  buildUnifiedRevisionKickoff,
 } from "../../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
   appendUniqueRevisionSuggestions,
@@ -11,9 +10,7 @@ import {
   resolveRevisionWorkItems,
 } from "../../components/revision/inline-revision";
 import { createResumeActionToolRegistry } from "../../lib/ai-tools/registries/resume-action-tools";
-import { createResumePlanningToolRegistry } from "../../lib/ai-tools/registries/resume-planning-tools";
 import type {
-  RevisionPlan,
   RevisionSuggestions,
   RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
@@ -30,8 +27,6 @@ type Params = {
   summary: string | null;
   language: string;
   t: (key: string) => string;
-  workItemsRef: { current: RevisionWorkItems | null };
-  setPlan: Dispatch<SetStateAction<RevisionPlan | null>>;
   setWorkItems: Dispatch<SetStateAction<RevisionWorkItems | null>>;
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
   openAssistant: (params: OpenAssistantOptions) => void;
@@ -50,8 +45,6 @@ export function useInlineRevisionAssistant({
   summary,
   language,
   t,
-  workItemsRef,
-  setPlan,
   setWorkItems,
   setSuggestions,
   openAssistant,
@@ -60,12 +53,7 @@ export function useInlineRevisionAssistant({
   assistantEntityId,
   assistantToolRoute,
 }: Params) {
-  const planningToolRegistry = createResumePlanningToolRegistry({
-    getResumeSnapshot: () => resumeInspectionSnapshot,
-    setRevisionPlan: setPlan,
-  });
-
-  const actionToolRegistry = createResumeActionToolRegistry({
+  const toolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
     setRevisionWorkItems: (incoming) => {
       setWorkItems((prev) => resolveRevisionWorkItems(prev, incoming));
@@ -91,35 +79,7 @@ export function useInlineRevisionAssistant({
     },
     appendRevisionSuggestions: (incoming) => {
       setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
-      setSuggestions((prev) => {
-        const activeItems = (workItemsRef.current?.items ?? []).filter(
-          (item) => item.status !== "completed" && item.status !== "no_changes_needed",
-        );
-        const allowedIds = new Set(activeItems.map((item) => item.id));
-        const filteredIncoming = {
-          ...incoming,
-          suggestions: incoming.suggestions.filter((suggestion) => {
-            const workItemId = suggestion.id.split(":")[0] ?? suggestion.id;
-            if (allowedIds.size === 0 || allowedIds.has(workItemId)) {
-              return true;
-            }
-
-            return activeItems.some((item) => {
-              if (suggestion.assignmentId && item.assignmentId) {
-                return item.assignmentId === suggestion.assignmentId;
-              }
-
-              return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
-            });
-          }),
-        };
-
-        if (filteredIncoming.suggestions.length === 0) {
-          return prev;
-        }
-
-        return appendUniqueRevisionSuggestions(prev, filteredIncoming);
-      });
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, incoming));
     },
     setRevisionSuggestions: (incoming) => {
       setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
@@ -127,13 +87,7 @@ export function useInlineRevisionAssistant({
     },
   });
 
-  const planningToolContext: AIToolContext = {
-    route: "/_authenticated/resumes/$id/planning",
-    entityType: "resume",
-    entityId: resumeId,
-  };
-
-  const actionToolContext: AIToolContext = {
+  const toolContext: AIToolContext = {
     route: "/_authenticated/resumes/$id/actions",
     entityType: "resume",
     entityId: resumeId,
@@ -143,11 +97,11 @@ export function useInlineRevisionAssistant({
     .filter(Boolean)
     .join("\n\n");
 
-  const openActionAssistant = useCallback((branchId: string, kickoffMessage?: string | null) => {
+  const openRevisionAssistant = useCallback((branchId: string, kickoffMessage?: string | null) => {
     if (
       assistantEntityType === "resume-revision-actions" &&
       assistantEntityId === branchId &&
-      assistantToolRoute === actionToolContext.route
+      assistantToolRoute === toolContext.route
     ) {
       hideDrawer();
       return;
@@ -157,18 +111,16 @@ export function useInlineRevisionAssistant({
       entityType: "resume-revision-actions",
       entityId: branchId,
       title: t("revision.inline.actionsConversationTitle"),
-      systemPrompt: buildResumeRevisionActionPrompt(language),
-      ...(kickoffMessage ? { kickoffMessage } : {}),
+      systemPrompt: buildUnifiedRevisionPrompt(language),
+      kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff(),
       originalContent,
-      toolRegistry: actionToolRegistry,
-      toolContext: actionToolContext,
+      toolRegistry,
+      toolContext,
       onAccept: () => {},
     });
 
     hideDrawer();
   }, [
-    actionToolContext,
-    actionToolRegistry,
     assistantEntityId,
     assistantEntityType,
     assistantToolRoute,
@@ -177,36 +129,13 @@ export function useInlineRevisionAssistant({
     openAssistant,
     originalContent,
     t,
+    toolContext,
+    toolRegistry,
   ]);
 
-  const openPlanning = (planningSessionId: string) => {
-    if (
-      assistantEntityType !== "resume-revision-planning" ||
-      assistantEntityId !== planningSessionId ||
-      assistantToolRoute !== planningToolContext.route
-    ) {
-      openAssistant({
-        entityType: "resume-revision-planning",
-        entityId: planningSessionId,
-        title: t("revision.inline.conversationTitle"),
-        systemPrompt: buildResumeRevisionPrompt(language),
-        kickoffMessage: buildResumeRevisionKickoff(),
-        originalContent,
-        toolRegistry: planningToolRegistry,
-        toolContext: planningToolContext,
-        onAccept: () => {},
-      });
-    }
-
-    hideDrawer();
-  };
-
   return {
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
-    openActionAssistant,
-    openPlanning,
+    toolRegistry,
+    toolContext,
+    openRevisionAssistant,
   };
 }

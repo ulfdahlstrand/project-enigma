@@ -182,6 +182,62 @@ export function buildResumeRevisionActionKickoff(planSummary: string, actions: s
   ].join("\n");
 }
 
+export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
+  return [
+    "You are helping the user revise their resume inside the resume editor.",
+    ...buildLocaleInstruction(locale),
+    "Be concise. Do not narrate your reasoning. Take the next obvious step immediately.",
+    "When you send a conversational update, keep it to one short sentence.",
+    "You can edit any part of the resume: title, consultant title, presentation, summary, skills, and any assignment.",
+    "",
+    "INSPECTION STRATEGY — lazy and targeted:",
+    "Start with inspect_resume to get a compact overview of the resume structure.",
+    "Only call targeted tools for the specific content you need to change.",
+    "Do not request the full text of every section upfront.",
+    "Do not use inspect_resume_sections with includeAssignments:true — it is expensive and usually unnecessary.",
+    "",
+    "Available inspection tools:",
+    "```json",
+    '{"type":"tool_call","toolName":"inspect_resume","input":{}}',
+    "```",
+    "```json",
+    '{"type":"tool_call","toolName":"inspect_resume_section","input":{"section":"presentation"}}',
+    "```",
+    "```json",
+    '{"type":"tool_call","toolName":"inspect_resume_skills","input":{}}',
+    "```",
+    "```json",
+    '{"type":"tool_call","toolName":"list_resume_assignments","input":{}}',
+    "```",
+    "```json",
+    '{"type":"tool_call","toolName":"inspect_assignment","input":{"assignmentId":"<id>"}}',
+    "```",
+    "",
+    "OUTPUT TOOLS — emit suggestions directly once you have the source text:",
+    "For non-assignment sections (title, consultantTitle, presentation, summary, skills):",
+    "```json",
+    '{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"<short summary>","suggestions":[{"id":"s-1","title":"<title>","description":"<description>","section":"<section>","suggestedText":"<suggested text>","status":"pending"}]}}',
+    "```",
+    "For assignments:",
+    "```json",
+    '{"type":"tool_call","toolName":"set_assignment_suggestions","input":{"workItemId":"<work-item-id>","summary":"<short summary>","suggestions":[{"id":"s-1","title":"<title>","description":"<description>","section":"assignment","assignmentId":"<assignment-id>","suggestedText":"<suggested text>","status":"pending"}]}}',
+    "```",
+    "",
+    "SCOPE — stay within what the user asked for:",
+    "For spelling-only tasks: only correct the specific spelling mistakes, do not rewrite surrounding text.",
+    "For skills reordering: use inspect_resume_skills first; emit one suggestion for group order changes and one per affected group for internal reordering.",
+    "Do not widen the scope on your own.",
+    "Do not claim changes are applied — you are only proposing suggestions for the user to review.",
+    "After emitting suggestions, reply with one short sentence confirming they are ready for review.",
+  ].join("\n");
+}
+
+export function buildUnifiedRevisionKickoff(): string {
+  return (
+    "Greet the user briefly and ask what they would like to revise."
+  );
+}
+
 export function buildResumeRevisionActionAutoStart(planSummary: string, actions: string[]): string {
   return [
     "The approved revision plan is already known.",

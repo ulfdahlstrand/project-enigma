@@ -126,18 +126,14 @@ export function ResumeEditWorkspace({
               stage={inlineRevision.stage}
               sourceBranchName={inlineRevision.sourceBranchName}
               branchName={activeBranchName}
-              plan={inlineRevision.plan}
-              workItems={inlineRevision.workItems}
               suggestions={inlineRevision.suggestions}
               selectedSuggestionId={inlineRevision.selectedSuggestionId}
               onSelectSuggestion={inlineRevision.selectSuggestion}
               onReviewSuggestion={inlineRevision.openSuggestionReview}
-              onMoveToActions={() => void inlineRevision.openActions()}
-              isMovingToActions={inlineRevision.isMovingToActions}
               onMoveToFinalize={() => void inlineRevision.prepareFinalize()}
               isReadyToFinalize={inlineRevision.isReadyToFinalize}
               isPreparingFinalize={inlineRevision.isPreparingFinalize}
-              onBackToActions={inlineRevision.backToActions}
+              onBackToRevision={inlineRevision.backToRevision}
             />
           </Box>
         </Slide>
@@ -196,16 +192,8 @@ export function ResumeEditWorkspace({
             }}
           >
             <InlineRevisionChatPanel
-              toolRegistry={
-                inlineRevision.stage === "actions"
-                  ? inlineRevision.actionToolRegistry
-                  : inlineRevision.planningToolRegistry
-              }
-              toolContext={
-                inlineRevision.stage === "actions"
-                  ? inlineRevision.actionToolContext
-                  : inlineRevision.planningToolContext
-              }
+              toolRegistry={inlineRevision.toolRegistry}
+              toolContext={inlineRevision.toolContext}
             />
           </Box>
         </Slide>

@@ -18,11 +18,7 @@ export function readPersistedInlineRevisionSession(
 
   try {
     const parsed = JSON.parse(raw) as PersistedInlineRevisionSession;
-    if (parsed.version !== 1) {
-      return null;
-    }
-
-    if (parsed.stage !== "actions" && parsed.stage !== "finalize") {
+    if (parsed.version !== 2) {
       return null;
     }
 

@@ -1,6 +1,6 @@
 import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
-export type InlineRevisionStage = "planning" | "actions" | "finalize";
+export type InlineRevisionStage = "revision" | "finalize";
 
 export const INLINE_REVISION_CHECKLIST_WIDTH = 300;
 export const INLINE_REVISION_CHAT_WIDTH = 360;
@@ -21,10 +21,11 @@ function slugifyInlineRevisionBranchLabel(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export function buildInlineRevisionBranchName(plan: RevisionPlan) {
-  const planLead =
-    slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
-    slugifyInlineRevisionBranchLabel(plan.summary);
+export function buildInlineRevisionBranchName(plan?: RevisionPlan | null) {
+  const planLead = plan
+    ? slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
+      slugifyInlineRevisionBranchLabel(plan.summary)
+    : "";
 
   if (!planLead) {
     const timestamp = new Date().toISOString().slice(0, 16).replace(/[TZ:]/g, "-");

@@ -17,24 +17,19 @@ vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
     const [isOpen, setIsOpen] = React.useState(false);
     return {
       isOpen,
-      stage: "planning",
-      plan: null,
+      stage: "revision",
       workItems: null,
       suggestions: [],
       selectedSuggestionId: null,
       sourceBranchName: "main",
       checklistWidth: 320,
       chatWidth: 360,
-      planningToolRegistry: { tools: [] },
-      actionToolRegistry: { tools: [] },
-      planningToolContext: { route: "resume", entityType: "resume", entityId: TEST_RESUME_ID },
-      actionToolContext: { route: "resume", entityType: "resume", entityId: TEST_RESUME_ID },
-      guardrail: { isSatisfied: true, reminderMessage: "" },
-      automation: null,
+      toolRegistry: { tools: [] },
+      toolContext: { route: "resume", entityType: "resume", entityId: TEST_RESUME_ID },
       applyingSuggestionId: null,
       isPreparingFinalize: false,
       isReadyToFinalize: false,
-      isMovingToActions: false,
+      isOpening: false,
       isMerging: false,
       isKeeping: false,
       reviewDialog: { open: false },
@@ -47,9 +42,8 @@ vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
         setIsOpen(false);
       },
       reset: vi.fn(),
-      openActions: vi.fn(),
       prepareFinalize: vi.fn(),
-      backToActions: vi.fn(),
+      backToRevision: vi.fn(),
       selectSuggestion: vi.fn(),
       openSuggestionReview: vi.fn(),
       keepBranch: vi.fn(),
@@ -222,12 +216,9 @@ describe("/resumes/$id/edit", () => {
       },
     ]);
     mockReadPersistedInlineRevisionSession.mockReturnValue({
-      version: 1,
+      version: 2,
       sourceBranchId: MAIN_BRANCH.id,
       sourceBranchName: "main",
-      stage: "actions",
-      plan: { summary: "Review presentation", actions: [] },
-      workItems: { items: [] },
       suggestions: null,
     });
 
