@@ -150,6 +150,10 @@ export interface ResumeCommitTable {
   /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
   content: ColumnType<ResumeCommitContent, string, string>;
   message: Generated<string>;
+  /** Short human-readable title for this commit (e.g. "ai(suggestion): …"). */
+  title: Generated<string>;
+  /** Optional extended description; empty string for most automated commits. */
+  description: Generated<string>;
   created_by: string | null;
   created_at: Generated<Date>;
 }

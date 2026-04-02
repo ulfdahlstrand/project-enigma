@@ -150,7 +150,7 @@ describe("Save with message", () => {
 
     expect(mockMutateAsync).toHaveBeenCalledWith({
       branchId: "branch-id-1",
-      message: "My version message",
+      title: "My version message",
     });
   });
 });

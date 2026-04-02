@@ -3,7 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database, ResumeCommitContent } from "../../../db/types.js";
+import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
@@ -64,8 +64,10 @@ export async function forkResumeBranch(
     throw new ORPCError("FORBIDDEN");
   }
 
-  // Create the new branch, copy assignments, and create an initial commit atomically
-  const { branch: newBranch, initialCommitId } = await db.transaction().execute(async (trx) => {
+  // Create the new branch and copy assignments atomically.
+  // No initial commit is created — the branch starts empty (headCommitId = null)
+  // and the fork point is tracked via forkedFromCommitId.
+  const newBranch = await db.transaction().execute(async (trx) => {
     const branch = await trx
       .insertInto("resume_branches")
       .values({
@@ -73,7 +75,7 @@ export async function forkResumeBranch(
         name: input.name,
         language: commit.source_language ?? "en",
         is_main: false,
-        head_commit_id: input.fromCommitId,
+        head_commit_id: null,
         forked_from_commit_id: input.fromCommitId,
         created_by: user.id,
       })
@@ -114,86 +116,7 @@ export async function forkResumeBranch(
       }
     }
 
-    // Build fresh content from the newly copied branch_assignments — all content is in ba.*
-    const freshAssignmentRows = await trx
-      .selectFrom("branch_assignments as ba")
-      .select([
-        "ba.assignment_id",
-        "ba.client_name",
-        "ba.role",
-        "ba.description",
-        "ba.start_date",
-        "ba.end_date",
-        "ba.technologies",
-        "ba.is_current",
-        "ba.keywords",
-        "ba.type",
-        "ba.highlight",
-        "ba.sort_order",
-      ])
-      .where("ba.branch_id", "=", branch.id)
-      .orderBy("ba.sort_order", "asc")
-      .execute();
-
-    const highlightedItemRows = await trx
-      .selectFrom("resume_highlighted_items")
-      .select(["text"])
-      .where("resume_id", "=", commit.resume_id)
-      .orderBy("sort_order", "asc")
-      .execute();
-
-    const sourceContent = commit.content as ResumeCommitContent;
-    const freshContent: ResumeCommitContent = {
-      ...sourceContent,
-      highlightedItems: highlightedItemRows.length > 0
-        ? highlightedItemRows.map((r) => r.text)
-        : sourceContent.highlightedItems,
-      assignments: freshAssignmentRows.map((a) => ({
-        assignmentId: a.assignment_id,
-        clientName: a.client_name,
-        role: a.role,
-        description: a.description,
-        startDate: a.start_date instanceof Date ? a.start_date.toISOString() : String(a.start_date),
-        endDate: a.end_date instanceof Date ? a.end_date.toISOString() : (a.end_date ? String(a.end_date) : null),
-        technologies: a.technologies ?? [],
-        isCurrent: a.is_current,
-        keywords: a.keywords,
-        type: a.type,
-        highlight: a.highlight,
-        sortOrder: a.sort_order,
-      })),
-    };
-
-    // Create an initial commit on the new branch, linked to the forked commit as parent
-    const initialCommit = await trx
-      .insertInto("resume_commits")
-      .values({
-        resume_id: commit.resume_id,
-        branch_id: branch.id,
-        content: JSON.stringify(freshContent),
-        message: `Create revision branch: ${input.name}`,
-        created_by: user.id,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    await trx
-      .insertInto("resume_commit_parents")
-      .values({
-        commit_id: initialCommit.id,
-        parent_commit_id: input.fromCommitId,
-        parent_order: 0,
-      })
-      .execute();
-
-    // Advance the branch head to the new initial commit
-    await trx
-      .updateTable("resume_branches")
-      .set({ head_commit_id: initialCommit.id })
-      .where("id", "=", branch.id)
-      .execute();
-
-    return { branch, initialCommitId: initialCommit.id };
+    return branch;
   });
 
   return {
@@ -202,7 +125,7 @@ export async function forkResumeBranch(
     name: newBranch.name,
     language: newBranch.language,
     isMain: newBranch.is_main,
-    headCommitId: initialCommitId,
+    headCommitId: newBranch.head_commit_id,
     forkedFromCommitId: newBranch.forked_from_commit_id,
     createdBy: newBranch.created_by,
     createdAt: newBranch.created_at,

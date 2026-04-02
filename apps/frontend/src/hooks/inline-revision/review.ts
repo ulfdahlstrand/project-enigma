@@ -6,7 +6,7 @@ import {
   type TextDiffReviewValue,
 } from "../../components/ai-assistant/DiffReviewDialog";
 import {
-  buildInlineRevisionSuggestionCommitMessage,
+  buildInlineRevisionSuggestionCommitTitle,
 } from "../../components/revision/inline-revision";
 import {
   renderSkillsReview,
@@ -75,6 +75,7 @@ type Params = {
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
   saveVersion: (input: {
     branchId: string;
+    title?: string;
     message?: string;
     consultantTitle?: string | null;
     presentation?: string[];
@@ -117,7 +118,7 @@ export function useInlineRevisionReview({
         try {
           await saveVersion({
             branchId: activeBranchId,
-            message: buildInlineRevisionSuggestionCommitMessage(suggestion),
+            title: buildInlineRevisionSuggestionCommitTitle(suggestion),
             ...nextPatch,
           });
         } finally {
@@ -132,7 +133,7 @@ export function useInlineRevisionReview({
             queryClient,
             updateBranchAssignment,
             saveVersion: async (input) => saveVersion(input),
-            buildCommitMessage: buildInlineRevisionSuggestionCommitMessage,
+            buildCommitMessage: buildInlineRevisionSuggestionCommitTitle,
           });
         } finally {
           setApplyingSuggestionId(null);
@@ -144,7 +145,7 @@ export function useInlineRevisionReview({
             activeBranchId,
             skills,
             saveVersion: async (input) => saveVersion(input),
-            buildCommitMessage: buildInlineRevisionSuggestionCommitMessage,
+            buildCommitMessage: buildInlineRevisionSuggestionCommitTitle,
           });
         } finally {
           setApplyingSuggestionId(null);

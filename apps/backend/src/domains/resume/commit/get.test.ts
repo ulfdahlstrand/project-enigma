@@ -25,6 +25,8 @@ const COMMIT_ROW = {
   parent_commit_id: null,
   content: { title: "Engineer", skills: [], assignments: [], language: "en", presentation: [], summary: null, consultantTitle: null },
   message: "Initial version",
+  title: "Initial version",
+  description: "",
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
   employee_id: EMPLOYEE_ID_1,

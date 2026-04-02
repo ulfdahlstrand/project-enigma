@@ -18,6 +18,28 @@ export function sortCategories(grouped: Record<string, SkillRow[]>): [string, Sk
   });
 }
 
+export function getNextSkillSortOrder(
+  sortedCategories: [string, SkillRow[]][],
+  category: string,
+): number {
+  const categoryIndex = sortedCategories.findIndex(([name]) => name === category);
+
+  if (categoryIndex === -1) {
+    const maxSortOrder = sortedCategories.flatMap(([, skills]) => skills).reduce(
+      (max, skill) => Math.max(max, skill.sortOrder),
+      -1,
+    );
+    return Math.max(maxSortOrder + 1, sortedCategories.length * 1000);
+  }
+
+  const categorySkills = sortedCategories[categoryIndex]![1];
+  const maxSortOrderInCategory = categorySkills.reduce(
+    (max, skill) => Math.max(max, skill.sortOrder),
+    -1,
+  );
+  return Math.max(maxSortOrderInCategory + 1, categoryIndex * 1000 + categorySkills.length);
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -66,8 +88,15 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
   });
 
   const addMutation = useMutation({
-    mutationFn: ({ name, category }: { name: string; category: string | null }) =>
-      orpc.createResumeSkill({ cvId: resumeId, name, category }),
+    mutationFn: ({
+      name,
+      category,
+      sortOrder,
+    }: {
+      name: string;
+      category: string | null;
+      sortOrder?: number;
+    }) => orpc.createResumeSkill({ cvId: resumeId, name, category, sortOrder }),
     onSuccess: async () => {
       setAddingToCategory(null);
       setNewSkillName("");
@@ -106,12 +135,20 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
 
   const commitAddToCategory = (cat: string) => {
     if (!newSkillName.trim()) return;
-    addMutation.mutate({ name: newSkillName.trim(), category: cat || null });
+    addMutation.mutate({
+      name: newSkillName.trim(),
+      category: cat || null,
+      sortOrder: getNextSkillSortOrder(sortedCategories, cat),
+    });
   };
 
   const commitAddCategory = () => {
     if (!newCategoryName.trim() || !newCategorySkillName.trim()) return;
-    addMutation.mutate({ name: newCategorySkillName.trim(), category: newCategoryName.trim() });
+    addMutation.mutate({
+      name: newCategorySkillName.trim(),
+      category: newCategoryName.trim(),
+      sortOrder: getNextSkillSortOrder(sortedCategories, newCategoryName.trim()),
+    });
   };
 
   const handleMoveCategory = async (index: number, direction: "up" | "down") => {

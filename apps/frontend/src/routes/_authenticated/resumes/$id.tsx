@@ -7,7 +7,13 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
-import { resumeBranchesKey, useForkResumeBranch, useResumeCommits } from "../../../hooks/versioning";
+import {
+  resumeBranchHistoryGraphKey,
+  resumeBranchesKey,
+  resumeCommitsKey,
+  useForkResumeBranch,
+  useResumeCommits,
+} from "../../../hooks/versioning";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
@@ -134,11 +140,12 @@ function ResumeDetailPage() {
 
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) });
-      if (activeBranch?.headCommitId) {
-        await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranch.headCommitId] });
-      }
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
+        queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+      ]);
     },
   });
   const forkResumeBranch = useForkResumeBranch();
@@ -345,17 +352,23 @@ function ResumeDetailPage() {
     return <ErrorState message={t("resume.detail.error")} />;
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const patch = buildDraftPatch();
 
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
-      saveVersion.mutate(
-        { branchId: activeBranchId, ...patch },
-        { onSuccess: () => setIsEditing(false) }
-      );
+      await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
+      setIsEditing(false);
     } else {
-      updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+      if (!mainBranchId) {
+        updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+        return;
+      }
+
+      // Main save must update the live resume and create a visible branch commit.
+      await updateResume.mutateAsync(patch);
+      await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
+      setIsEditing(false);
     }
   };
 
@@ -399,7 +412,9 @@ function ResumeDetailPage() {
       baseCommitId={baseCommitId}
       isSaving={updateResume.isPending || saveVersion.isPending || forkResumeBranch.isPending}
       canSaveAsNewVersion={baseCommitId !== null}
-      onSaveCurrent={handleSave}
+      onSaveCurrent={() => {
+        void handleSave();
+      }}
       onSaveAsNewVersion={handleSaveAsNewVersion}
       onEdit={() => setIsEditing(true)}
       onReviseWithAi={inlineRevision.open}

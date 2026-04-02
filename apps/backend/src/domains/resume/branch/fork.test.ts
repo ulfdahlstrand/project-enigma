@@ -16,18 +16,7 @@ const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const SOURCE_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
 const NEW_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440032";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
-const INITIAL_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440042";
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
-
-const COMMIT_CONTENT = {
-  title: "My Resume",
-  consultantTitle: "Senior Developer",
-  presentation: ["Para 1"],
-  summary: "Summary text",
-  language: "sv",
-  skills: [],
-  assignments: [],
-};
 
 const COMMIT_ROW = {
   id: COMMIT_ID,
@@ -35,51 +24,31 @@ const COMMIT_ROW = {
   source_branch_id: SOURCE_BRANCH_ID,
   employee_id: EMPLOYEE_ID_1,
   source_language: "sv",
-  content: COMMIT_CONTENT,
+  content: {
+    title: "My Resume",
+    consultantTitle: "Senior Developer",
+    presentation: ["Para 1"],
+    summary: "Summary text",
+    language: "sv",
+    skills: [],
+    assignments: [],
+  },
 };
 
 const NEW_BRANCH_ROW = {
   id: NEW_BRANCH_ID,
   resume_id: RESUME_ID,
   name: "Swedish Variant",
-  language: "en",
+  language: "sv",
   is_main: false,
-  head_commit_id: COMMIT_ID,
+  head_commit_id: null,
   forked_from_commit_id: COMMIT_ID,
-  created_by: CREATOR_ID,
-  created_at: new Date("2026-01-01T00:00:00.000Z"),
-};
-
-const INITIAL_COMMIT_ROW = {
-  id: INITIAL_COMMIT_ID,
-  resume_id: RESUME_ID,
-  branch_id: NEW_BRANCH_ID,
-  parent_commit_id: COMMIT_ID,
-  content: COMMIT_CONTENT,
-  message: "",
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
 };
 
 const SOURCE_ASSIGNMENTS = [
   { assignment_id: "550e8400-e29b-41d4-a716-446655440051", highlight: true, sort_order: 0 },
-];
-
-const FRESH_ASSIGNMENT_ROWS = [
-  {
-    assignment_id: "550e8400-e29b-41d4-a716-446655440051",
-    client_name: "Acme Corp",
-    role: "Developer",
-    description: "Built things",
-    start_date: new Date("2023-01-01"),
-    end_date: null,
-    technologies: ["TypeScript"],
-    is_current: true,
-    keywords: null,
-    type: null,
-    highlight: true,
-    sort_order: 0,
-  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -89,19 +58,13 @@ const FRESH_ASSIGNMENT_ROWS = [
 function buildDbMock(opts: {
   commitRow?: unknown;
   newBranchRow?: unknown;
-  initialCommitRow?: unknown;
   sourceAssignments?: unknown[];
-  freshAssignmentRows?: unknown[];
-  highlightedItemRows?: unknown[];
   employeeId?: string | null;
 } = {}) {
   const {
     commitRow = COMMIT_ROW,
     newBranchRow = NEW_BRANCH_ROW,
-    initialCommitRow = INITIAL_COMMIT_ROW,
     sourceAssignments = SOURCE_ASSIGNMENTS,
-    freshAssignmentRows = FRESH_ASSIGNMENT_ROWS,
-    highlightedItemRows = [],
     employeeId = null,
   } = opts;
 
@@ -131,70 +94,35 @@ function buildDbMock(opts: {
   const assignmentsSelectAll = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
   const assignmentsInnerJoin = vi.fn().mockReturnValue({ selectAll: assignmentsSelectAll });
 
-  // Fresh assignments query — branch_assignments as ba, select([...]) (content build step)
-  const freshAssignmentsExecute = vi.fn().mockResolvedValue(freshAssignmentRows);
-  const freshAssignmentsOrderBy = vi.fn().mockReturnValue({ execute: freshAssignmentsExecute });
-  const freshAssignmentsWhere = vi.fn().mockReturnValue({ orderBy: freshAssignmentsOrderBy });
-  const freshAssignmentsSelect = vi.fn().mockReturnValue({ where: freshAssignmentsWhere });
-
-  // Highlighted items query — resume_highlighted_items, select(["text"]).where().orderBy().execute()
-  const highlightedItemsExecute = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedItemsOrderBy = vi.fn().mockReturnValue({ execute: highlightedItemsExecute });
-  const highlightedItemsWhere = vi.fn().mockReturnValue({ orderBy: highlightedItemsOrderBy });
-  const highlightedItemsSelect = vi.fn().mockReturnValue({ where: highlightedItemsWhere });
-
   // Copy assignments insert (inside transaction)
   const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
   const copyInsertValues = vi.fn().mockReturnValue({ execute: copyInsertExecute });
 
-  // Initial commit insert (inside transaction)
-  const commitInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(initialCommitRow);
-  const commitInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: commitInsertExecuteTakeFirstOrThrow });
-  const commitInsertValues = vi.fn().mockReturnValue({ returningAll: commitInsertReturningAll });
-
-  // Parent commit insert (resume_commit_parents)
-  const parentCommitInsertExecute = vi.fn().mockResolvedValue(undefined);
-  const parentCommitInsertValues = vi.fn().mockReturnValue({ execute: parentCommitInsertExecute });
-
-  // updateTable for advancing head_commit_id (inside transaction)
-  const updateExecute = vi.fn().mockResolvedValue(undefined);
-  const updateWhere = vi.fn().mockReturnValue({ execute: updateExecute });
-  const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
-  const updateTable = vi.fn().mockReturnValue({ set: updateSet });
-
   const insertInto = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_branches") return { values: branchInsertValues };
     if (table === "branch_assignments") return { values: copyInsertValues };
-    if (table === "resume_commits") return { values: commitInsertValues };
-    if (table === "resume_commit_parents") return { values: parentCommitInsertValues };
     return {};
   });
 
   const trxSelectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "branch_assignments as ba") return {
-      // Source copy path starts with innerJoin; fresh content path starts with select
-      innerJoin: assignmentsInnerJoin,
-      select: freshAssignmentsSelect,
-    };
-    if (table === "resume_highlighted_items") return { select: highlightedItemsSelect };
+    if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
     return {};
   });
 
   const transaction = vi.fn().mockImplementation(() => ({
     execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
-      const trx = { insertInto, selectFrom: trxSelectFrom, updateTable };
+      const trx = { insertInto, selectFrom: trxSelectFrom };
       return fn(trx);
     }),
   }));
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    // commit + resume join
     return { innerJoin: commitInnerJoin };
   });
 
   const db = { selectFrom, transaction } as unknown as Kysely<Database>;
-  return { db, branchInsertValues, copyInsertValues, commitInsertValues, parentCommitInsertValues, updateSet, commitWhere };
+  return { db, branchInsertValues, copyInsertValues, commitWhere };
 }
 
 // ---------------------------------------------------------------------------
@@ -215,68 +143,24 @@ describe("forkResumeBranch", () => {
         resume_id: RESUME_ID,
         name: "Swedish Variant",
         forked_from_commit_id: COMMIT_ID,
+        head_commit_id: null,
         is_main: false,
         created_by: MOCK_ADMIN.id,
       })
     );
     expect(result.id).toBe(NEW_BRANCH_ID);
-    // headCommitId points to the initial commit, not the forked commit
-    expect(result.headCommitId).toBe(INITIAL_COMMIT_ID);
+    expect(result.headCommitId).toBeNull();
     expect(result.forkedFromCommitId).toBe(COMMIT_ID);
     expect(result.isMain).toBe(false);
   });
 
-  it("creates an initial commit on the new branch with parent_commit_id = fromCommitId", async () => {
-    const { db, commitInsertValues, parentCommitInsertValues } = buildDbMock();
+  it("does not create any commits on fork — headCommitId is null", async () => {
+    const { db } = buildDbMock();
 
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
+    const result = await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 
-    expect(commitInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        resume_id: RESUME_ID,
-        branch_id: NEW_BRANCH_ID,
-        message: "Create revision branch: Fork",
-        created_by: MOCK_ADMIN.id,
-      })
-    );
-    expect(parentCommitInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        commit_id: INITIAL_COMMIT_ID,
-        parent_commit_id: COMMIT_ID,
-        parent_order: 0,
-      })
-    );
-  });
-
-  it("builds initial commit content from fresh branch_assignments (not stale JSONB)", async () => {
-    const { db, commitInsertValues } = buildDbMock();
-
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    const call = commitInsertValues.mock.calls[0][0] as { content: string };
-    const content = JSON.parse(call.content) as { assignments: { assignmentId: string; clientName: string }[] };
-    expect(content.assignments).toHaveLength(1);
-    expect(content.assignments[0].assignmentId).toBe(FRESH_ASSIGNMENT_ROWS[0].assignment_id);
-    expect(content.assignments[0].clientName).toBe(FRESH_ASSIGNMENT_ROWS[0].client_name);
-  });
-
-  it("initial commit content preserves scalar fields from the source commit", async () => {
-    const { db, commitInsertValues } = buildDbMock();
-
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    const call = commitInsertValues.mock.calls[0][0] as { content: string };
-    const content = JSON.parse(call.content) as { title: string; summary: string };
-    expect(content.title).toBe(COMMIT_CONTENT.title);
-    expect(content.summary).toBe(COMMIT_CONTENT.summary);
-  });
-
-  it("advances branch head_commit_id to the initial commit", async () => {
-    const { db, updateSet } = buildDbMock();
-
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(updateSet).toHaveBeenCalledWith({ head_commit_id: INITIAL_COMMIT_ID });
+    // The branch should have no HEAD commit; the first real save will create commit #1
+    expect(result.headCommitId).toBeNull();
   });
 
   it("inherits language from the source branch", async () => {
