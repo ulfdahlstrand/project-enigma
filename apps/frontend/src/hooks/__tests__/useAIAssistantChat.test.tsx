@@ -197,6 +197,37 @@ describe("useAIAssistantChat", () => {
     });
   });
 
+  it("does not resend automation when the same internal autostart message already exists", async () => {
+    mockContext.activeConversationId = "conv-1";
+    mockConversation = {
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "[[internal_autostart]] Process only this work item now.",
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "Already working on it.",
+        },
+      ],
+    };
+
+    renderHook(() =>
+      useAIAssistantChat({
+        automation: {
+          key: "process-work-item-1",
+          message: "Process only this work item now.",
+        },
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockSendMessage.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   it("opens diff state from the latest suggestion and applies it through the assistant context", async () => {
     mockContext.activeConversationId = "conv-1";
     mockConversation = { messages: [buildSuggestionMessage("Improved presentation")] };

@@ -151,7 +151,7 @@ export function useInlineRevisionAssistant({
     .filter(Boolean)
     .join("\n\n");
 
-  const openActionAssistant = useCallback((branchId: string) => {
+  const openActionAssistant = useCallback((branchId: string, kickoffMessage?: string | null) => {
     if (
       assistantEntityType === "resume-revision-actions" &&
       assistantEntityId === branchId &&
@@ -166,6 +166,7 @@ export function useInlineRevisionAssistant({
       entityId: branchId,
       title: t("revision.inline.actionsConversationTitle"),
       systemPrompt: buildResumeRevisionActionPrompt(language),
+      ...(kickoffMessage ? { kickoffMessage } : {}),
       originalContent,
       toolRegistry: actionToolRegistry,
       toolContext: actionToolContext,

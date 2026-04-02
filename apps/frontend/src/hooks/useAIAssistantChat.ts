@@ -94,6 +94,10 @@ export function useAIAssistantChat({
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
   const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
   const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
+  const hasMatchingAutoStartMessage = (message: string) =>
+    messages.some((entry) => entry.role === "user" && entry.content === `${INTERNAL_AUTOSTART_PREFIX} ${message}`);
+  const hasMatchingGuardrailMessage = (message: string) =>
+    messages.some((entry) => entry.role === "user" && entry.content === `${INTERNAL_GUARDRAIL_PREFIX} ${message}`);
 
   // Auto-create conversation
   useEffect(() => {
@@ -183,7 +187,7 @@ export function useAIAssistantChat({
     }
 
     const hasUserMessages = messages.some((message) => message.role === "user");
-    if (hasUserMessages) return;
+    if (hasUserMessages || hasMatchingAutoStartMessage(autoStartMessage)) return;
 
     processedAutoStartConversationsRef.current.add(activeConversationId);
     void sendMessage.mutateAsync({
@@ -206,13 +210,14 @@ export function useAIAssistantChat({
 
     const scopedKey = `${activeConversationId}:${automation.key}`;
     if (processedAutomationKeysRef.current.has(scopedKey)) return;
+    if (hasMatchingAutoStartMessage(automation.message)) return;
 
     processedAutomationKeysRef.current.add(scopedKey);
     void sendMessage.mutateAsync({
       conversationId: activeConversationId,
       userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${automation.message}`,
     });
-  }, [activeConversationId, activeToolExecutionCount, automation, hasPendingToolCall, sendMessage]);
+  }, [activeConversationId, activeToolExecutionCount, automation, hasPendingToolCall, messages, sendMessage]);
 
   // Guardrail
   useEffect(() => {
@@ -232,6 +237,7 @@ export function useAIAssistantChat({
 
     if (processedGuardrailMessagesRef.current.has(latestRawAssistantMessage.id)) return;
     if (extractToolCalls(latestRawAssistantMessage.content).length > 0) return;
+    if (hasMatchingGuardrailMessage(guardrail.reminderMessage)) return;
 
     processedGuardrailMessagesRef.current.add(latestRawAssistantMessage.id);
     void sendMessage.mutateAsync({
@@ -244,6 +250,7 @@ export function useAIAssistantChat({
     guardrail,
     latestRawAssistantMessage,
     latestUserMessage,
+    messages,
     sendMessage,
   ]);
 

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
+import { readPersistedInlineRevisionSession } from "../../../hooks/inline-revision/storage";
 import {
   resumeBranchHistoryGraphKey,
   resumeBranchesKey,
@@ -346,10 +347,20 @@ export function ResumeDetailPage({
   });
 
   useEffect(() => {
-    if (isEditRoute && assistantMode === "true" && !inlineRevision.isOpen) {
-      inlineRevision.open();
+    if (!isEditRoute || assistantMode !== "true" || inlineRevision.isOpen) {
+      return;
     }
-  }, [assistantMode, inlineRevision, isEditRoute]);
+
+    if (
+      selectedBranchId &&
+      selectedBranchId !== mainBranchId &&
+      readPersistedInlineRevisionSession(selectedBranchId)
+    ) {
+      return;
+    }
+
+    inlineRevision.open();
+  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 

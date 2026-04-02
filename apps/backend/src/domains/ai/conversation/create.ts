@@ -7,6 +7,8 @@ import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { logger } from "../../../infra/logger.js";
+import { sendAIMessage } from "./message.js";
+import { INTERNAL_AUTOSTART_PREFIX } from "./tool-parsing.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 512;
@@ -68,6 +70,34 @@ export async function createAIConversation(
     hasKickoffMessage: Boolean(input.kickoffMessage),
     userId,
   });
+
+  // For action-stage revision conversations, kickoff should behave like the
+  // first internal automation step instead of a greeting. This lets the
+  // backend orchestration loop execute immediately on conversation creation.
+  if (input.kickoffMessage && input.entityType === "resume-revision-actions") {
+    await sendAIMessage(db, openaiClient, {
+      conversationId: row.id,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${input.kickoffMessage}`,
+    });
+
+    const refreshed = await db
+      .selectFrom("ai_conversations")
+      .selectAll()
+      .where("id", "=", row.id)
+      .executeTakeFirstOrThrow();
+
+    return {
+      id: refreshed.id,
+      createdBy: refreshed.created_by,
+      entityType: refreshed.entity_type,
+      entityId: refreshed.entity_id,
+      systemPrompt: refreshed.system_prompt,
+      title: refreshed.title,
+      isClosed: refreshed.is_closed,
+      createdAt: refreshed.created_at.toISOString(),
+      updatedAt: refreshed.updated_at.toISOString(),
+    };
+  }
 
   // Send the kickoff message to the AI (not stored) and save only the greeting.
   if (input.kickoffMessage) {

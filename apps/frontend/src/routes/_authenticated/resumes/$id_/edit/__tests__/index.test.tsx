@@ -9,6 +9,7 @@ const TEST_RESUME_ID = "resume-test-id-99";
 const mockNavigate = vi.fn();
 const mockOpenInlineRevision = vi.fn();
 const mockCloseInlineRevision = vi.fn();
+const mockReadPersistedInlineRevisionSession = vi.fn();
 let mockSearch: { branchId?: string; assistant?: "true" } = {};
 
 vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
@@ -55,6 +56,11 @@ vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
       mergeBranch: vi.fn(),
     };
   },
+}));
+
+vi.mock("../../../../../../hooks/inline-revision/storage", () => ({
+  readPersistedInlineRevisionSession: (...args: unknown[]) =>
+    mockReadPersistedInlineRevisionSession(...args),
 }));
 
 vi.mock("../../../../../../components/RouterButton", () => ({
@@ -166,6 +172,8 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockOpenInlineRevision.mockReset();
   mockCloseInlineRevision.mockReset();
+  mockReadPersistedInlineRevisionSession.mockReset();
+  mockReadPersistedInlineRevisionSession.mockReturnValue(null);
   mockGetResume.mockResolvedValue(TEST_RESUME);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
@@ -197,6 +205,40 @@ describe("/resumes/$id/edit", () => {
         `assistant:resume:${TEST_RESUME_ID}:resume`
       );
     });
+  });
+
+  it("does not restart planning when assistant route opens a persisted revision branch session", async () => {
+    mockSearch = { branchId: "branch-revision-1", assistant: "true" };
+    mockListResumeBranches.mockResolvedValue([
+      MAIN_BRANCH,
+      {
+        id: "branch-revision-1",
+        resumeId: TEST_RESUME_ID,
+        name: "revision/review-presentation",
+        isMain: false,
+        language: "en",
+        headCommitId: "commit-2",
+        createdAt: "2024-01-02T00:00:00Z",
+      },
+    ]);
+    mockReadPersistedInlineRevisionSession.mockReturnValue({
+      version: 1,
+      sourceBranchId: MAIN_BRANCH.id,
+      sourceBranchName: "main",
+      stage: "actions",
+      plan: { summary: "Review presentation", actions: [] },
+      workItems: { items: [] },
+      suggestions: null,
+    });
+
+    renderPage();
+
+    await screen.findAllByText(TEST_RESUME.title);
+
+    await waitFor(() => {
+      expect(mockReadPersistedInlineRevisionSession).toHaveBeenCalledWith("branch-revision-1");
+    });
+    expect(mockOpenInlineRevision).not.toHaveBeenCalled();
   });
 
   it("updates the URL and opens assistant when Assistant is clicked", async () => {

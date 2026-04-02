@@ -19,6 +19,7 @@ import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
   buildInlineRevisionBranchName,
+  buildInlineRevisionWorkItemAutomationMessage,
   buildInlineRevisionWorkItemsFromPlan,
   type InlineRevisionStage,
 } from "../components/revision/inline-revision";
@@ -215,11 +216,14 @@ export function useInlineResumeRevision({
       return;
     }
 
+    const initialWorkItems = buildInlineRevisionWorkItemsFromPlan(plan);
+    const initialAutomationMessage = buildInlineRevisionWorkItemAutomationMessage(initialWorkItems)?.message ?? null;
+
     setStage("actions");
     setPendingActionBranchId(null);
-    setWorkItems(buildInlineRevisionWorkItemsFromPlan(plan));
+    setWorkItems(initialWorkItems);
     setSuggestions(null);
-    openActionAssistant(activeBranchId);
+    openActionAssistant(activeBranchId, initialAutomationMessage);
   }, [
     activeBranchId,
     openActionAssistant,
@@ -264,9 +268,9 @@ export function useInlineResumeRevision({
 
     setPendingActionBranchId(newBranch.id);
     await navigate({
-      to: "/resumes/$id",
+      to: "/resumes/$id/edit",
       params: { id: resumeId },
-      search: { branchId: newBranch.id },
+      search: { branchId: newBranch.id, assistant: "true" },
       replace: true,
     });
   };
@@ -345,11 +349,25 @@ export function useInlineResumeRevision({
     setPendingActionBranchId(null);
     setIsPreparingFinalize(false);
     if (persistedSession.stage === "actions") {
-      openActionAssistant(activeBranchId);
+      const restoredAutomationMessage =
+        existingActionConversationId === null
+          ? buildInlineRevisionWorkItemAutomationMessage(persistedSession.workItems)?.message ?? null
+          : null;
+      openActionAssistant(activeBranchId, restoredAutomationMessage);
     } else {
       hideDrawer();
     }
-  }, [activeBranchId, hideDrawer, isEditRoute, isOpen, mainBranchId, navigate, openActionAssistant, resumeId]);
+  }, [
+    activeBranchId,
+    existingActionConversationId,
+    hideDrawer,
+    isEditRoute,
+    isOpen,
+    mainBranchId,
+    navigate,
+    openActionAssistant,
+    resumeId,
+  ]);
 
   useLayoutEffect(() => {
     if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {

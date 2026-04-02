@@ -66,6 +66,42 @@ describe("revision action AI integration", () => {
     resetOpenAIClientForTests();
   });
 
+  it("can start the first action-step automation during conversation creation", async () => {
+    const scripted = createScriptedOpenAI([
+      '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```',
+      "Jag har nu granskat resultatet och kan gå vidare med ett konkret förslag.",
+    ]);
+    setOpenAIClientForTests(scripted.client);
+
+    const client = createIntegrationOrpcClient(baseUrl, authHeader);
+    const entityId = "30000000-0000-4000-8000-000000000004";
+
+    const conversation = await client.createAIConversation({
+      entityType: "resume-revision-actions",
+      entityId,
+      systemPrompt: "You are an action assistant.",
+      kickoffMessage: "Process only this work item now.",
+    });
+
+    expect(conversation.entityType).toBe("resume-revision-actions");
+    expect(scripted.calls).toHaveLength(2);
+
+    const persistedConversation = await client.getAIConversation({
+      conversationId: conversation.id,
+    });
+
+    expect(persistedConversation.messages.map((m) => m.role)).toEqual([
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+    ]);
+    expect(persistedConversation.messages[0]?.content).toContain("[[internal_autostart]]");
+    expect(persistedConversation.messages[1]?.content).toContain('"toolName":"inspect_resume"');
+    expect(persistedConversation.messages[2]?.content).toContain('"type":"tool_result"');
+    expect(persistedConversation.messages[3]?.content).toContain("konkret förslag");
+  });
+
   it("executes backend inspect tool loop and returns final response in one sendAIMessage call", async () => {
     // Backend orchestration: sendAIMessage handles the entire loop internally.
     //   - scripted[0]: kickoff reply (createAIConversation)

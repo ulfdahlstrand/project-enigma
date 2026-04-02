@@ -19,6 +19,9 @@ export interface ToolResultPayload {
   error?: string;
 }
 
+export const INTERNAL_AUTOSTART_PREFIX = "[[internal_autostart]]";
+export const INTERNAL_GUARDRAIL_PREFIX = "[[internal_guardrail]]";
+
 const MAX_TOOL_RESULT_MESSAGE_LENGTH = 9000;
 const MAX_TOOL_STRING_LENGTH = 500;
 const MAX_TOOL_ARRAY_ITEMS = 12;
