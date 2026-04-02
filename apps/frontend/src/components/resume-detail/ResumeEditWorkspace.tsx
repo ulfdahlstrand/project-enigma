@@ -1,4 +1,5 @@
 import Box from "@mui/material/Box";
+import Slide from "@mui/material/Slide";
 import type { MutableRefObject, RefObject } from "react";
 import { FinalReview } from "../revision/FinalReview";
 import { InlineRevisionChatPanel } from "../revision/InlineRevisionChatPanel";
@@ -102,7 +103,13 @@ export function ResumeEditWorkspace({
           overflow: inlineRevision.isOpen ? "hidden" : "visible",
         }}
       >
-        {inlineRevision.isOpen && (
+        <Slide
+          in={inlineRevision.isOpen}
+          direction="right"
+          mountOnEnter
+          unmountOnExit
+          timeout={{ enter: 220, exit: 180 }}
+        >
           <Box
             sx={{
               width: { xs: "100%", lg: inlineRevision.checklistWidth },
@@ -134,7 +141,7 @@ export function ResumeEditWorkspace({
               onBackToActions={inlineRevision.backToActions}
             />
           </Box>
-        )}
+        </Slide>
 
         <Box
           sx={{
@@ -143,7 +150,8 @@ export function ResumeEditWorkspace({
             minWidth: 0,
             minHeight: inlineRevision.isOpen ? 0 : undefined,
             overflow: inlineRevision.isOpen ? "auto" : "hidden",
-            p: inlineRevision.isOpen ? 2 : 0,
+            px: inlineRevision.isOpen ? { xs: 2, md: 3 } : 0,
+            py: inlineRevision.isOpen ? 4 : 0,
           }}
         >
           {inlineRevision.stage === "finalize" ? (
@@ -166,7 +174,13 @@ export function ResumeEditWorkspace({
           )}
         </Box>
 
-        {inlineRevision.isOpen && inlineRevision.stage !== "finalize" && (
+        <Slide
+          in={inlineRevision.isOpen && inlineRevision.stage !== "finalize"}
+          direction="left"
+          mountOnEnter
+          unmountOnExit
+          timeout={{ enter: 220, exit: 180 }}
+        >
           <Box
             sx={{
               width: { xs: "100%", lg: inlineRevision.chatWidth },
@@ -200,7 +214,7 @@ export function ResumeEditWorkspace({
               guardrail={inlineRevision.guardrail}
             />
           </Box>
-        )}
+        </Slide>
       </Box>
     </Box>
   );
