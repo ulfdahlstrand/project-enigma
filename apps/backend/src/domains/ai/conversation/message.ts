@@ -19,6 +19,10 @@ import {
   BACKEND_INSPECT_TOOLS,
   executeBackendInspectTool,
 } from "./tool-execution.js";
+import {
+  deriveNextActionOrchestrationMessage,
+  deriveNextPlanningOrchestrationMessage,
+} from "./action-orchestration.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -122,11 +126,75 @@ export async function sendAIMessage(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  // Backend tool-call loop (only for resume-revision-actions in Phase 1)
-  if (conversation.entity_type === "resume-revision-actions") {
+  // Backend tool-call loop with lightweight action orchestration for
+  // resume-revision-actions conversations.
+  if (
+    conversation.entity_type === "resume-revision-actions"
+    || conversation.entity_type === "resume-revision-planning"
+  ) {
     for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
       const toolCalls = extractToolCalls(assistantContent);
-      if (toolCalls.length === 0) break;
+      if (toolCalls.length === 0) {
+        const updatedHistory = await db
+          .selectFrom("ai_messages")
+          .selectAll()
+          .where("conversation_id", "=", input.conversationId)
+          .orderBy("created_at", "asc")
+          .execute();
+
+        const orchestrationHistory = updatedHistory.map((message) => ({
+          role: message.role as "user" | "assistant",
+          content: message.content,
+        }));
+        const orchestrationMessage =
+          conversation.entity_type === "resume-revision-actions"
+            ? deriveNextActionOrchestrationMessage(orchestrationHistory)
+            : deriveNextPlanningOrchestrationMessage(orchestrationHistory);
+
+        if (!orchestrationMessage) {
+          break;
+        }
+
+        await db
+          .insertInto("ai_messages")
+          .values({
+            conversation_id: input.conversationId,
+            role: "user",
+            content: orchestrationMessage.content,
+          })
+          .execute();
+
+        const nextMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: conversation.system_prompt },
+          ...updatedHistory
+            .concat({
+              id: "internal-orchestration",
+              conversation_id: input.conversationId,
+              role: "user",
+              content: orchestrationMessage.content,
+              created_at: new Date(),
+            })
+            .slice(-MAX_HISTORY_MESSAGES)
+            .map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            })),
+        ];
+
+        assistantContent = await callOpenAI(nextMessages);
+
+        assistantRow = await db
+          .insertInto("ai_messages")
+          .values({
+            conversation_id: input.conversationId,
+            role: "assistant",
+            content: assistantContent,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        continue;
+      }
 
       const toolCall = toolCalls[0]!;
       if (!BACKEND_INSPECT_TOOLS.has(toolCall.toolName)) break;

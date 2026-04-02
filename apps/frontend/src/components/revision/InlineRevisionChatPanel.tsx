@@ -4,30 +4,15 @@ import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import { AIAssistantChat } from "../ai-assistant/AIAssistantChat";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
-import type { InlineRevisionStage } from "./inline-revision";
 
 type InlineRevisionChatPanelProps = {
-  stage: InlineRevisionStage;
   toolRegistry: AIToolRegistry;
   toolContext: AIToolContext;
-  autoStartMessage?: string | null;
-  automation?: {
-    key: string;
-    message: string;
-  } | null;
-  guardrail: {
-    isSatisfied: boolean;
-    reminderMessage: string;
-  };
 };
 
 export function InlineRevisionChatPanel({
-  stage,
   toolRegistry,
   toolContext,
-  autoStartMessage,
-  automation,
-  guardrail,
 }: InlineRevisionChatPanelProps) {
   const { t } = useTranslation("common");
 
@@ -54,9 +39,6 @@ export function InlineRevisionChatPanel({
           toolRegistry={toolRegistry}
           toolContext={toolContext}
           showApplyChanges={false}
-          autoStartMessage={autoStartMessage}
-          automation={automation}
-          guardrail={guardrail}
         />
       </Box>
     </Box>

@@ -152,25 +152,6 @@ describe("useAIAssistantChat", () => {
     expect(mockContext.setActiveConversationId).toHaveBeenCalledWith("conv-1");
   });
 
-  it("sends the autostart message once when the conversation has no user messages", async () => {
-    mockContext.activeConversationId = "conv-1";
-    mockConversation = { messages: [] };
-
-    const { rerender } = renderHook(() =>
-      useAIAssistantChat({ autoStartMessage: "Plan the revision." })
-    );
-
-    await waitFor(() => {
-      expect(mockSendMessage.mutateAsync).toHaveBeenCalledWith({
-        conversationId: "conv-1",
-        userMessage: "[[internal_autostart]] Plan the revision.",
-      });
-    });
-
-    rerender();
-    expect(mockSendMessage.mutateAsync).toHaveBeenCalledTimes(1);
-  });
-
   it("executes assistant tool calls and sends back a tool result message", async () => {
     mockContext.activeConversationId = "conv-1";
     mockContext.toolRegistry = { tools: [{ name: "inspect_resume" }] };
@@ -194,37 +175,6 @@ describe("useAIAssistantChat", () => {
         conversationId: "conv-1",
         userMessage: expect.stringContaining('"type":"tool_result"'),
       });
-    });
-  });
-
-  it("does not resend automation when the same internal autostart message already exists", async () => {
-    mockContext.activeConversationId = "conv-1";
-    mockConversation = {
-      messages: [
-        {
-          id: "user-1",
-          role: "user",
-          content: "[[internal_autostart]] Process only this work item now.",
-        },
-        {
-          id: "assistant-1",
-          role: "assistant",
-          content: "Already working on it.",
-        },
-      ],
-    };
-
-    renderHook(() =>
-      useAIAssistantChat({
-        automation: {
-          key: "process-work-item-1",
-          message: "Process only this work item now.",
-        },
-      })
-    );
-
-    await waitFor(() => {
-      expect(mockSendMessage.mutateAsync).not.toHaveBeenCalled();
     });
   });
 

@@ -15,24 +15,16 @@ import {
   isToolResultMessage,
   isInternalGuardrailMessage,
   isInternalAutoStartMessage,
-  INTERNAL_GUARDRAIL_PREFIX,
-  INTERNAL_AUTOSTART_PREFIX,
 } from "../components/ai-assistant/ai-message-parsing";
 
 export interface UseAIAssistantChatOptions {
   toolRegistry?: AIToolRegistry | null | undefined;
   toolContext?: AIToolContext | null | undefined;
-  autoStartMessage?: string | null | undefined;
-  automation?: { key: string; message: string } | null | undefined;
-  guardrail?: { isSatisfied: boolean; reminderMessage: string } | null | undefined;
 }
 
 export function useAIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
-  autoStartMessage = null,
-  automation = null,
-  guardrail = null,
 }: UseAIAssistantChatOptions = {}) {
   const {
     entityType,
@@ -60,9 +52,6 @@ export function useAIAssistantChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const createInitiated = useRef(false);
   const processedToolCallsRef = useRef<Set<string>>(new Set());
-  const processedGuardrailMessagesRef = useRef<Set<string>>(new Set());
-  const processedAutoStartConversationsRef = useRef<Set<string>>(new Set());
-  const processedAutomationKeysRef = useRef<Set<string>>(new Set());
 
   const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
   const createConversation = useCreateAIConversation();
@@ -94,10 +83,6 @@ export function useAIAssistantChat({
     Boolean(latestRawAssistantMessage && extractToolCalls(latestRawAssistantMessage.content).length > 0);
   const latestAssistantMsg = [...visibleMessages].reverse().find((m) => m.role === "assistant");
   const latestSuggestion = latestAssistantMsg ? extractSuggestion(latestAssistantMsg.content) : null;
-  const hasMatchingAutoStartMessage = (message: string) =>
-    messages.some((entry) => entry.role === "user" && entry.content === `${INTERNAL_AUTOSTART_PREFIX} ${message}`);
-  const hasMatchingGuardrailMessage = (message: string) =>
-    messages.some((entry) => entry.role === "user" && entry.content === `${INTERNAL_GUARDRAIL_PREFIX} ${message}`);
 
   // Auto-create conversation
   useEffect(() => {
@@ -173,86 +158,6 @@ export function useAIAssistantChat({
       }
     })();
   }, [activeConversationId, messages, sendMessage, toolContext, toolRegistry]);
-
-  // Auto-start message
-  useEffect(() => {
-    if (
-      !autoStartMessage ||
-      !activeConversationId ||
-      sendMessage.isPending ||
-      activeToolExecutionCount > 0 ||
-      processedAutoStartConversationsRef.current.has(activeConversationId)
-    ) {
-      return;
-    }
-
-    const hasUserMessages = messages.some((message) => message.role === "user");
-    if (hasUserMessages || hasMatchingAutoStartMessage(autoStartMessage)) return;
-
-    processedAutoStartConversationsRef.current.add(activeConversationId);
-    void sendMessage.mutateAsync({
-      conversationId: activeConversationId,
-      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${autoStartMessage}`,
-    });
-  }, [activeConversationId, activeToolExecutionCount, autoStartMessage, messages, sendMessage]);
-
-  // Automation
-  useEffect(() => {
-    if (
-      !automation ||
-      !activeConversationId ||
-      sendMessage.isPending ||
-      hasPendingToolCall ||
-      activeToolExecutionCount > 0
-    ) {
-      return;
-    }
-
-    const scopedKey = `${activeConversationId}:${automation.key}`;
-    if (processedAutomationKeysRef.current.has(scopedKey)) return;
-    if (hasMatchingAutoStartMessage(automation.message)) return;
-
-    processedAutomationKeysRef.current.add(scopedKey);
-    void sendMessage.mutateAsync({
-      conversationId: activeConversationId,
-      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${automation.message}`,
-    });
-  }, [activeConversationId, activeToolExecutionCount, automation, hasPendingToolCall, messages, sendMessage]);
-
-  // Guardrail
-  useEffect(() => {
-    if (
-      !guardrail ||
-      guardrail.isSatisfied ||
-      !activeConversationId ||
-      !latestRawAssistantMessage ||
-      !latestUserMessage ||
-      hasPendingToolCall ||
-      activeToolExecutionCount > 0 ||
-      isInternalGuardrailMessage(latestUserMessage.content) ||
-      sendMessage.isPending
-    ) {
-      return;
-    }
-
-    if (processedGuardrailMessagesRef.current.has(latestRawAssistantMessage.id)) return;
-    if (extractToolCalls(latestRawAssistantMessage.content).length > 0) return;
-    if (hasMatchingGuardrailMessage(guardrail.reminderMessage)) return;
-
-    processedGuardrailMessagesRef.current.add(latestRawAssistantMessage.id);
-    void sendMessage.mutateAsync({
-      conversationId: activeConversationId,
-      userMessage: `${INTERNAL_GUARDRAIL_PREFIX} ${guardrail.reminderMessage}`,
-    });
-  }, [
-    activeConversationId,
-    activeToolExecutionCount,
-    guardrail,
-    latestRawAssistantMessage,
-    latestUserMessage,
-    messages,
-    sendMessage,
-  ]);
 
   // Handlers
   const handleSend = (value: string) => {

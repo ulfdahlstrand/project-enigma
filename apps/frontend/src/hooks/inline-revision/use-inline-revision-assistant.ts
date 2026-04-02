@@ -7,10 +7,8 @@ import {
 } from "../../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
   appendUniqueRevisionSuggestions,
-  buildInlineRevisionWorkItemAutomationMessage,
   markWorkItemsCompletedFromSuggestions,
   resolveRevisionWorkItems,
-  type InlineRevisionStage,
 } from "../../components/revision/inline-revision";
 import { createResumeActionToolRegistry } from "../../lib/ai-tools/registries/resume-action-tools";
 import { createResumePlanningToolRegistry } from "../../lib/ai-tools/registries/resume-planning-tools";
@@ -32,9 +30,6 @@ type Params = {
   summary: string | null;
   language: string;
   t: (key: string) => string;
-  stage: InlineRevisionStage;
-  plan: RevisionPlan | null;
-  workItems: RevisionWorkItems | null;
   workItemsRef: { current: RevisionWorkItems | null };
   setPlan: Dispatch<SetStateAction<RevisionPlan | null>>;
   setWorkItems: Dispatch<SetStateAction<RevisionWorkItems | null>>;
@@ -55,9 +50,6 @@ export function useInlineRevisionAssistant({
   summary,
   language,
   t,
-  stage,
-  plan,
-  workItems,
   workItemsRef,
   setPlan,
   setWorkItems,
@@ -209,41 +201,6 @@ export function useInlineRevisionAssistant({
     hideDrawer();
   };
 
-  const guardrail =
-    stage === "actions"
-      ? {
-          isSatisfied:
-            (workItems?.items.length ?? 0) > 0 &&
-            (workItems?.items.every(
-              (item) => item.status === "completed" || item.status === "no_changes_needed",
-            ) ?? false),
-          reminderMessage: [
-            "You must use the available tools for this stage.",
-            "Use the approved plan that was already provided in the kickoff context.",
-            "The approved work items already define the allowed scope for this action step.",
-            "Do not create extra work items or inspect assignments outside the approved plan.",
-            "After inspecting the source text for a work item, your next response must be a terminal tool call for that same work item.",
-            "Use set_assignment_suggestions or set_revision_suggestions if changes are needed, or mark_revision_work_item_no_changes_needed if none are needed.",
-            "Do not respond with plain text between inspect_assignment or inspect_resume_section and that terminal tool call.",
-            "Use inspect_assignment or inspect_resume_section to read exact source text for each work item.",
-            "For each work item, either create concrete suggestions or mark it as no changes needed.",
-            "Do not claim that changes are applied or complete until every work item has been handled.",
-            "Return a tool call now.",
-          ].join(" "),
-        }
-      : {
-          isSatisfied: plan !== null,
-          reminderMessage: [
-            "You must use the available tools for this stage.",
-            "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
-            "If the user's goal is broad, such as proofreading the whole CV, the plan must include multiple section-based actions and must not collapse to a single typo or a single section.",
-            "Do not continue with free-text execution updates until the plan has been created.",
-            "Return a tool call now.",
-          ].join(" "),
-        };
-
-  const automation = stage === "actions" ? buildInlineRevisionWorkItemAutomationMessage(workItems) : null;
-
   return {
     planningToolRegistry,
     actionToolRegistry,
@@ -251,7 +208,5 @@ export function useInlineRevisionAssistant({
     actionToolContext,
     openActionAssistant,
     openPlanning,
-    guardrail,
-    automation,
   };
 }

@@ -196,7 +196,6 @@ export function ResumeEditWorkspace({
             }}
           >
             <InlineRevisionChatPanel
-              stage={inlineRevision.stage}
               toolRegistry={
                 inlineRevision.stage === "actions"
                   ? inlineRevision.actionToolRegistry
@@ -207,9 +206,6 @@ export function ResumeEditWorkspace({
                   ? inlineRevision.actionToolContext
                   : inlineRevision.planningToolContext
               }
-              autoStartMessage={null}
-              automation={inlineRevision.automation}
-              guardrail={inlineRevision.guardrail}
             />
           </Box>
         </Slide>

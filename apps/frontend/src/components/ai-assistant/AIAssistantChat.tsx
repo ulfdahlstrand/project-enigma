@@ -20,9 +20,6 @@ export interface AIAssistantChatProps {
   toolRegistry?: AIToolRegistry | null;
   toolContext?: AIToolContext | null;
   showApplyChanges?: boolean;
-  autoStartMessage?: string | null | undefined;
-  automation?: { key: string; message: string } | null | undefined;
-  guardrail?: { isSatisfied: boolean; reminderMessage: string } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,17 +74,11 @@ export function AIAssistantChat({
   toolRegistry: toolRegistryProp,
   toolContext: toolContextProp,
   showApplyChanges = true,
-  autoStartMessage = null,
-  automation = null,
-  guardrail = null,
 }: AIAssistantChatProps = {}) {
   const { t } = useTranslation("common");
   const chat = useAIAssistantChat({
     toolRegistry: toolRegistryProp,
     toolContext: toolContextProp,
-    autoStartMessage,
-    automation,
-    guardrail,
   });
 
   if (chat.createConversation.isError) {
