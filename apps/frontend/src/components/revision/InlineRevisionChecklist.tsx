@@ -11,7 +11,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tools";
+import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 import type { InlineRevisionStage } from "./inline-revision";
 import { CollapsibleWorkItemGroup } from "./CollapsibleWorkItemGroup";
 import { CollapsibleSection } from "./CollapsibleSection";

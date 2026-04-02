@@ -40,14 +40,14 @@ import {
   renderSkillsReview,
   type SkillsReviewValue,
 } from "../components/revision/SkillsReviewContent";
+import { createResumePlanningToolRegistry } from "../lib/ai-tools/registries/resume-planning-tools";
+import { createResumeActionToolRegistry } from "../lib/ai-tools/registries/resume-action-tools";
 import {
-  createResumeActionToolRegistry,
-  createResumePlanningToolRegistry,
   normalizeRevisionSuggestionsInput,
   type RevisionPlan,
   type RevisionSuggestions,
   type RevisionWorkItems,
-} from "../lib/ai-tools/registries/resume-tools";
+} from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import type { AIToolContext } from "../lib/ai-tools/types";
 

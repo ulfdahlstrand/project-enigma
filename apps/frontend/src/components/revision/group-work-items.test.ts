@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { groupWorkItems, groupPlanActions } from "./group-work-items";
-import type { RevisionPlan, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tools";
+import type { RevisionPlan, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
 type PlanAction = RevisionPlan["actions"][number];
 

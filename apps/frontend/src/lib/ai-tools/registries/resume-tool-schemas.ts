@@ -1,0 +1,216 @@
+import { z } from "zod";
+
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
+
+const revisionPlanActionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  assignmentId: z.string().optional(),
+  status: z.enum(["pending", "done", "skipped"]).default("pending"),
+});
+
+export const revisionPlanSchema = z.object({
+  summary: z.string().min(1),
+  actions: z.array(revisionPlanActionSchema),
+});
+
+export type RevisionPlan = z.infer<typeof revisionPlanSchema>;
+
+const revisionWorkItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  section: z.string().min(1),
+  assignmentId: z.string().optional(),
+  status: z.enum(["pending", "in_progress", "completed", "no_changes_needed"]).default("pending"),
+  note: z.string().optional(),
+});
+
+export const revisionWorkItemsSchema = z.object({
+  summary: z.string().min(1),
+  items: z.array(revisionWorkItemSchema),
+});
+
+export type RevisionWorkItems = z.infer<typeof revisionWorkItemsSchema>;
+
+const revisionSuggestionSkillSchema = z.object({
+  name: z.string().min(1),
+  level: z.string().nullable().optional(),
+  category: z.string().nullable(),
+  sortOrder: z.number(),
+});
+
+const revisionSuggestionSkillScopeSchema = z.object({
+  type: z.enum(["group_order", "group_contents"]),
+  category: z.string().min(1).optional(),
+});
+
+export const revisionSuggestionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  section: z.string().min(1),
+  assignmentId: z.string().optional(),
+  suggestedText: z.string().min(1),
+  skills: z.array(revisionSuggestionSkillSchema).optional(),
+  skillScope: revisionSuggestionSkillScopeSchema.optional(),
+  status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
+});
+
+export const revisionSuggestionsSchema = z.object({
+  summary: z.string().min(1),
+  suggestions: z.array(revisionSuggestionSchema),
+});
+
+export type RevisionSuggestions = z.infer<typeof revisionSuggestionsSchema>;
+
+export const legacyRevisionSuggestionSchema = z.object({
+  location: z.string().min(1),
+  assignmentId: z.string().optional(),
+  text: z.string().min(1).optional(),
+  suggestion: z.string().min(1),
+  title: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+});
+
+const revisionSuggestionsInputShapeSchema = z.object({
+  summary: z.string().min(1).optional(),
+  suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
+});
+
+export function normalizeRevisionSuggestionsInput(input: unknown): RevisionSuggestions {
+  const parsed = revisionSuggestionsInputShapeSchema.parse(input);
+
+  return {
+    summary: parsed.summary ?? "Suggested revision actions",
+    suggestions: parsed.suggestions.map((suggestion, index) => {
+      if ("suggestedText" in suggestion) {
+        return suggestion;
+      }
+
+      const fallbackTitle = suggestion.title ?? `Suggestion ${index + 1}`;
+      const sourceText = suggestion.text?.trim();
+      const proposedText = suggestion.suggestion.trim();
+
+      return {
+        id: `suggestion-${index + 1}`,
+        title: fallbackTitle,
+        description:
+          suggestion.description ??
+          (sourceText
+            ? `Replace "${sourceText}" with the proposed correction.`
+            : "Review and apply the proposed correction."),
+        section: suggestion.location,
+        assignmentId: suggestion.assignmentId,
+        suggestedText: proposedText,
+        status: "pending" as const,
+      };
+    }),
+  };
+}
+
+export const revisionSuggestionsInputSchema = revisionSuggestionsInputShapeSchema.transform(
+  (input) => normalizeRevisionSuggestionsInput(input),
+);
+
+// ---------------------------------------------------------------------------
+// Snapshot interfaces
+// ---------------------------------------------------------------------------
+
+export interface ResumeSkillSnapshot {
+  name: string;
+  level: string | null;
+  category: string | null;
+  sortOrder: number;
+}
+
+export interface ResumeAssignmentSnapshot {
+  id: string;
+  clientName: string;
+  role: string;
+  description: string;
+  technologies: string[];
+  isCurrent: boolean;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface ResumeInspectionSnapshot {
+  resumeId: string;
+  employeeName: string;
+  title: string;
+  consultantTitle: string | null;
+  language: string | null | undefined;
+  presentation: string[];
+  summary: string | null;
+  skills: ResumeSkillSnapshot[];
+  assignments: ResumeAssignmentSnapshot[];
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+export function excerpt(text: string, maxLength = 280): string {
+  const trimmed = text.trim().replace(/\s+/g, " ");
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, maxLength)}…`;
+}
+
+export function groupSkills(skills: ResumeSkillSnapshot[]) {
+  const grouped = skills.reduce<Record<string, { names: string[]; sortOrders: number[] }>>((acc, skill) => {
+    const category = skill.category?.trim() || "Other";
+    const current = acc[category] ?? { names: [], sortOrders: [] };
+    return {
+      ...acc,
+      [category]: {
+        names: [...current.names, skill.name],
+        sortOrders: [...current.sortOrders, skill.sortOrder],
+      },
+    };
+  }, {});
+
+  return Object.entries(grouped)
+    .map(([category, value]) => ({
+      category,
+      names: value.names.slice(0, 12),
+      total: value.names.length,
+      minSortOrder: Math.min(...value.sortOrders),
+    }))
+    .sort((a, b) => a.minSortOrder - b.minSortOrder);
+}
+
+export function buildInspectResumeResult(
+  snapshot: ResumeInspectionSnapshot,
+  includeAssignments: boolean,
+) {
+  const groupedSkills = groupSkills(snapshot.skills);
+  const compactAssignments = snapshot.assignments.slice(0, 8).map((assignment) => ({
+    id: assignment.id,
+    clientName: assignment.clientName,
+    role: assignment.role,
+    period: assignment.isCurrent
+      ? `${assignment.startDate ?? "?"} - present`
+      : `${assignment.startDate ?? "?"} - ${assignment.endDate ?? "?"}`,
+    technologies: assignment.technologies.slice(0, 8),
+    descriptionExcerpt: excerpt(assignment.description),
+  }));
+
+  return {
+    resumeId: snapshot.resumeId,
+    employeeName: snapshot.employeeName,
+    title: snapshot.title,
+    consultantTitle: snapshot.consultantTitle,
+    language: snapshot.language,
+    presentation: snapshot.presentation.map((paragraph) => excerpt(paragraph, 320)),
+    summary: snapshot.summary ? excerpt(snapshot.summary, 240) : null,
+    skillGroups: groupedSkills,
+    assignmentCount: snapshot.assignments.length,
+    assignments: includeAssignments ? compactAssignments : [],
+  };
+}
