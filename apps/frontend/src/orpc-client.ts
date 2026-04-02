@@ -24,7 +24,11 @@ import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { contract, type AppRouter } from "@cv-tool/contracts";
 import { clearAuthSession } from "./auth/session-store";
 
-const apiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
+const rawApiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
+const apiUrl =
+  typeof window !== "undefined" && rawApiUrl.startsWith("/")
+    ? new URL(rawApiUrl, window.location.origin).toString()
+    : rawApiUrl;
 
 async function fetchWithAuth(request: Request, init?: RequestInit): Promise<Response> {
   const res = await globalThis.fetch(new Request(request, {
