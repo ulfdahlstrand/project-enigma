@@ -60,7 +60,15 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
       }}
     >
       {/* Left: title + chip + breadcrumbs */}
-      <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          minWidth: 0,
+          gridColumn: { md: 1 },
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography
             variant="h5"
@@ -102,6 +110,7 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
             alignItems: "center",
             justifyContent: "center",
             minWidth: 0,
+            gridColumn: { md: 2 },
           }}
         >
           {centerContent}
@@ -110,7 +119,16 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
 
       {/* Right: actions */}
       {actions && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", justifySelf: { md: "end" } }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+            justifySelf: { md: "end" },
+            gridColumn: { md: 3 },
+          }}
+        >
           {actions}
         </Box>
       )}
