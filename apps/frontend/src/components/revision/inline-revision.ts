@@ -5,7 +5,6 @@ export type InlineRevisionStage = "planning" | "actions" | "finalize";
 export const INLINE_REVISION_CHECKLIST_WIDTH = 300;
 export const INLINE_REVISION_CHAT_WIDTH = 360;
 
-const INLINE_REVISION_BRANCH_PREFIX = "AI revision";
 const INLINE_REVISION_BRANCH_NAME_MAX_LENGTH = 72;
 
 function normalizeInlineRevisionBranchLabel(value: string) {
@@ -15,17 +14,24 @@ function normalizeInlineRevisionBranchLabel(value: string) {
     .trim();
 }
 
+function slugifyInlineRevisionBranchLabel(value: string) {
+  return normalizeInlineRevisionBranchLabel(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function buildInlineRevisionBranchName(plan: RevisionPlan) {
   const planLead =
-    normalizeInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
-    normalizeInlineRevisionBranchLabel(plan.summary);
+    slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
+    slugifyInlineRevisionBranchLabel(plan.summary);
 
   if (!planLead) {
-    const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
-    return `${INLINE_REVISION_BRANCH_PREFIX} ${timestamp}`;
+    const timestamp = new Date().toISOString().slice(0, 16).replace(/[TZ:]/g, "-");
+    return `revision/${timestamp}`;
   }
 
-  const branchName = `${INLINE_REVISION_BRANCH_PREFIX}: ${planLead}`;
+  const branchName = `revision/${planLead}`;
   return branchName.length > INLINE_REVISION_BRANCH_NAME_MAX_LENGTH
     ? `${branchName.slice(0, INLINE_REVISION_BRANCH_NAME_MAX_LENGTH - 1).trimEnd()}…`
     : branchName;

@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildInlineRevisionBranchName,
   buildInlineRevisionWorkItemAutomationMessage,
   buildInlineRevisionWorkItemsFromPlan,
   resolveRevisionWorkItems,
 } from "./inline-revision";
 
 describe("inline revision work items", () => {
+  it("builds revision branch names with a revision/ prefix", () => {
+    expect(buildInlineRevisionBranchName({
+      summary: "Förbättra presentation",
+      actions: [
+        {
+          id: "action-1",
+          title: "Uppdatera Avla-uppdraget",
+          description: "Justera innehållet.",
+          status: "pending",
+        },
+      ],
+    })).toBe("revision/uppdatera-avla-uppdraget");
+  });
+
   it("treats Swedish skill reordering actions as skills work", () => {
     const workItems = buildInlineRevisionWorkItemsFromPlan({
       summary: "Omorganisera färdigheter",

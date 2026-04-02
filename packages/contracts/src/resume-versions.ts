@@ -181,6 +181,18 @@ export const finaliseResumeBranchOutputSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// deleteResumeBranch schemas
+// ---------------------------------------------------------------------------
+
+export const deleteResumeBranchInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const deleteResumeBranchOutputSchema = z.object({
+  deleted: z.boolean(),
+});
+
+// ---------------------------------------------------------------------------
 // listResumeBranches schemas
 // ---------------------------------------------------------------------------
 

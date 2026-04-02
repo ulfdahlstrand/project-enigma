@@ -265,7 +265,26 @@
       "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
       "viewInResumeButton": "Visa i CV",
       "headBadge": "Aktuell",
-      "compareButton": "Jämför versioner"
+      "compareButton": "Jämför versioner",
+      "mergeButton": "Merga gren",
+      "deleteBranchButton": "Ta bort gren",
+      "mergeDialog": {
+        "title": "Merga gren",
+        "message": "Välj vilken gren \"{{branchName}}\" ska mergas in i.",
+        "targetLabel": "Merga till",
+        "cancel": "Avbryt",
+        "confirm": "Merga",
+        "merging": "Mergar…",
+        "error": "Det gick inte att merga grenen. Försök igen."
+      },
+      "deleteDialog": {
+        "title": "Ta bort gren",
+        "message": "Är du säker på att du vill ta bort \"{{branchName}}\"? Detta går inte att ångra.",
+        "cancel": "Avbryt",
+        "confirm": "Ta bort",
+        "deleting": "Tar bort…",
+        "error": "Det gick inte att ta bort grenen. Försök igen."
+      }
     },
     "variants": {
       "pageTitle": "Varianter",

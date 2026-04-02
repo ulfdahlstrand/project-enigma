@@ -163,6 +163,32 @@ describe("forkResumeBranch", () => {
     expect(result.headCommitId).toBeNull();
   });
 
+  it("normalises legacy AI revision names to revision-prefixed branch names", async () => {
+    const { db, branchInsertValues } = buildDbMock();
+
+    await forkResumeBranch(db, MOCK_ADMIN, {
+      fromCommitId: COMMIT_ID,
+      name: "AI revision: Review presentation",
+    });
+
+    expect(branchInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "revision/review-presentation" }),
+    );
+  });
+
+  it("keeps revision-prefixed branch names in normalized slug form", async () => {
+    const { db, branchInsertValues } = buildDbMock();
+
+    await forkResumeBranch(db, MOCK_ADMIN, {
+      fromCommitId: COMMIT_ID,
+      name: "revision/Review presentation",
+    });
+
+    expect(branchInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "revision/review-presentation" }),
+    );
+  });
+
   it("inherits language from the source branch", async () => {
     const { db, branchInsertValues } = buildDbMock();
 

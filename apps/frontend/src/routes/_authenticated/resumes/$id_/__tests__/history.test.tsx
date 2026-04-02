@@ -11,7 +11,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../../../locales/en/common.json";
@@ -25,12 +25,16 @@ import { Route } from "../history/index";
 vi.mock("../../../../../orpc-client", () => ({
   orpc: {
     getResumeBranchHistoryGraph: vi.fn(),
+    finaliseResumeBranch: vi.fn(),
+    deleteResumeBranch: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../../orpc-client";
 
 const mockGetResumeBranchHistoryGraph = orpc.getResumeBranchHistoryGraph as ReturnType<typeof vi.fn>;
+const mockFinaliseResumeBranch = orpc.finaliseResumeBranch as ReturnType<typeof vi.fn>;
+const mockDeleteResumeBranch = orpc.deleteResumeBranch as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -109,6 +113,8 @@ const GRAPH = {
       branchId: "branch-id-1",
       parentCommitId: null,
       message: "Initial version",
+      title: "",
+      description: "",
       createdAt: "2024-06-01T10:00:00Z",
     },
     {
@@ -117,6 +123,8 @@ const GRAPH = {
       branchId: "branch-id-1",
       parentCommitId: "commit-id-1",
       message: "",
+      title: "",
+      description: "",
       createdAt: "2024-06-02T10:00:00Z",
     },
     {
@@ -125,6 +133,8 @@ const GRAPH = {
       branchId: "branch-id-2",
       parentCommitId: "commit-id-1",
       message: "Swedish version",
+      title: "",
+      description: "",
       createdAt: "2024-06-03T10:00:00Z",
     },
     {
@@ -133,6 +143,8 @@ const GRAPH = {
       branchId: "branch-id-3",
       parentCommitId: "commit-id-3",
       message: "German version",
+      title: "",
+      description: "",
       createdAt: "2024-06-04T10:00:00Z",
     },
   ],
@@ -198,6 +210,8 @@ describe("Empty state", () => {
 describe("Commit list", () => {
   beforeEach(() => {
     mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
+    mockFinaliseResumeBranch.mockResolvedValue({ resultBranchId: "branch-id-1" });
+    mockDeleteResumeBranch.mockResolvedValue({ deleted: true });
   });
 
   it("renders the page title", async () => {
@@ -442,6 +456,59 @@ describe("UX improvements", () => {
     renderPage();
     await screen.findByText("Initial version");
     expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
+  });
+
+  it("disables merge and delete actions for the main branch", async () => {
+    renderPage();
+    await screen.findByText("Initial version");
+
+    expect(screen.getByRole("button", { name: enCommon.resume.history.mergeButton })).toBeDisabled();
+    expect(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton })).toBeDisabled();
+  });
+
+  it("opens merge dialog and merges selected branch into chosen target branch", async () => {
+    const user = userEvent.setup();
+    mockSearch = { branchId: "branch-id-2", view: "list" };
+    renderPage();
+
+    await screen.findByText("Swedish version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeButton }));
+
+    expect(screen.getByRole("heading", { name: enCommon.resume.history.mergeDialog.title })).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: enCommon.resume.history.mergeDialog.title });
+    await user.click(within(dialog).getByRole("combobox"));
+    await user.click(screen.getByText("German Variant"));
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeDialog.confirm }));
+
+    expect(mockFinaliseResumeBranch).toHaveBeenCalledWith({
+      sourceBranchId: "branch-id-3",
+      revisionBranchId: "branch-id-2",
+      action: "merge",
+    });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-3", view: "list" },
+    });
+  });
+
+  it("opens delete dialog and deletes the selected branch", async () => {
+    const user = userEvent.setup();
+    mockSearch = { branchId: "branch-id-2", view: "list" };
+    renderPage();
+
+    await screen.findByText("Swedish version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton }));
+
+    expect(screen.getByRole("heading", { name: enCommon.resume.history.deleteDialog.title })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteDialog.confirm }));
+
+    expect(mockDeleteResumeBranch).toHaveBeenCalledWith({ branchId: "branch-id-2" });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-1", view: "list" },
+    });
   });
 
   it("renders the head badge on the most recent commit in list view", async () => {

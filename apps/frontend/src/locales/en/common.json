@@ -265,7 +265,26 @@
       "description": "Each saved version is a snapshot of this resume at a point in time. Switch between branches to see their individual histories, or use the tree view for a full overview.",
       "viewInResumeButton": "View in resume",
       "headBadge": "Current",
-      "compareButton": "Compare versions"
+      "compareButton": "Compare versions",
+      "mergeButton": "Merge branch",
+      "deleteBranchButton": "Delete branch",
+      "mergeDialog": {
+        "title": "Merge branch",
+        "message": "Choose which branch to merge \"{{branchName}}\" into.",
+        "targetLabel": "Merge into",
+        "cancel": "Cancel",
+        "confirm": "Merge",
+        "merging": "Merging…",
+        "error": "Failed to merge the branch. Please try again."
+      },
+      "deleteDialog": {
+        "title": "Delete branch",
+        "message": "Are you sure you want to delete \"{{branchName}}\"? This cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "deleting": "Deleting…",
+        "error": "Failed to delete the branch. Please try again."
+      }
     },
     "variants": {
       "pageTitle": "Variants",

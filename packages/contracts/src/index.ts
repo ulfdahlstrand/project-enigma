@@ -68,6 +68,8 @@ import {
   forkResumeBranchOutputSchema,
   finaliseResumeBranchInputSchema,
   finaliseResumeBranchOutputSchema,
+  deleteResumeBranchInputSchema,
+  deleteResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
   getResumeBranchHistoryGraphInputSchema,
@@ -237,6 +239,8 @@ export {
   forkResumeBranchOutputSchema,
   finaliseResumeBranchInputSchema,
   finaliseResumeBranchOutputSchema,
+  deleteResumeBranchInputSchema,
+  deleteResumeBranchOutputSchema,
   listResumeBranchesInputSchema,
   listResumeBranchesOutputSchema,
   getResumeBranchHistoryGraphInputSchema,
@@ -398,6 +402,9 @@ export const contract = oc.router({
   finaliseResumeBranch: oc
     .input(finaliseResumeBranchInputSchema)
     .output(finaliseResumeBranchOutputSchema),
+  deleteResumeBranch: oc
+    .input(deleteResumeBranchInputSchema)
+    .output(deleteResumeBranchOutputSchema),
   listResumeBranches: oc
     .input(listResumeBranchesInputSchema)
     .output(listResumeBranchesOutputSchema),
