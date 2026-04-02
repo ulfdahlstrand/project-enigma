@@ -5,7 +5,7 @@ import { ResumeDetailPage } from "../../$id";
 export const Route = createFileRoute("/_authenticated/resumes/$id_/edit/")({
   validateSearch: z.object({
     branchId: z.string().optional(),
-    ai: z.enum(["open"]).optional(),
+    assistant: z.enum(["true"]).optional(),
   }),
   component: ResumeEditPage,
 });

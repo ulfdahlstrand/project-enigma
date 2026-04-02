@@ -43,8 +43,11 @@ export function ResumeDetailPage({
   const id = idParam!;
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId, ai: aiMode } =
-    useSearch({ strict: false }) as any as { branchId?: string; ai?: "open" };
+  const { branchId: selectedBranchId, assistant: assistantMode } =
+    useSearch({ strict: false }) as any as {
+      branchId?: string;
+      assistant?: "true";
+    };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -343,10 +346,10 @@ export function ResumeDetailPage({
   });
 
   useEffect(() => {
-    if (isEditRoute && aiMode === "open" && !inlineRevision.isOpen) {
+    if (isEditRoute && assistantMode === "true" && !inlineRevision.isOpen) {
       inlineRevision.open();
     }
-  }, [aiMode, inlineRevision, isEditRoute]);
+  }, [assistantMode, inlineRevision, isEditRoute]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
@@ -430,6 +433,33 @@ export function ResumeDetailPage({
     inlineRevision.reset();
   };
 
+  const handleOpenAssistant = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+    }
+
+    inlineRevision.open();
+  };
+
+  const handleCloseRevision = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: activeBranchId ? { branchId: activeBranchId } : {},
+      });
+    }
+
+    inlineRevision.close();
+  };
+
   const toolbarActions = (
     <ResumeDetailActions
       resumeId={id}
@@ -458,23 +488,8 @@ export function ResumeDetailPage({
           search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
-      onOpenAiHelp={inlineRevision.open}
-      onReviseWithAi={() => {
-        if (isEditRoute) {
-          inlineRevision.open();
-          return;
-        }
-
-        void navigate({
-          to: "/resumes/$id/edit",
-          params: { id },
-          search: {
-            ...(activeBranchId ? { branchId: activeBranchId } : {}),
-            ai: "open",
-          },
-        });
-      }}
-      onCloseRevision={inlineRevision.isOpen ? inlineRevision.close : handleExitEditing}
+      onOpenAiHelp={handleOpenAssistant}
+      onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
       isDeleteError={deleteResume.isError}

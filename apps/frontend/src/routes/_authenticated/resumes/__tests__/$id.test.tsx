@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../../locales/en/common.json";
@@ -329,19 +329,6 @@ describe("Navigation", () => {
     });
   });
 
-  it("navigates to the edit page with AI open from the edit menu", async () => {
-    renderPage();
-    await screen.findAllByText(TEST_RESUME.title);
-
-    fireEvent.click(screen.getByRole("button", { name: enCommon.resume.detail.editMenuLabel }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: enCommon.revision.reviseButton }));
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/edit",
-      params: { id: TEST_RESUME_ID },
-      search: { branchId: MAIN_BRANCH.id, ai: "open" },
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------

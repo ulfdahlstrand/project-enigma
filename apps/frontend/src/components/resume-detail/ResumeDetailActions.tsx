@@ -42,7 +42,6 @@ interface ResumeDetailActionsProps {
   onSaveAsNewVersion: (name: string) => Promise<void>;
   onEdit: () => void;
   onOpenAiHelp: () => void;
-  onReviseWithAi: () => void;
   onCloseRevision: () => void;
   onDeleteResume: () => void;
   isDeletePending: boolean;
@@ -141,50 +140,13 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
   );
 }
 
-function EditSplitButton({
-  onEdit,
-  onReviseWithAi,
-}: {
-  onEdit: () => void;
-  onReviseWithAi: () => void;
-}) {
+function EditButton({ onEdit }: { onEdit: () => void }) {
   const { t } = useTranslation("common");
-  const [open, setOpen] = useState(false);
-  const anchorRef = useState<HTMLDivElement | null>(null);
 
   return (
-    <>
-      <ButtonGroup variant="contained" ref={(el) => {
-        anchorRef[1](el);
-      }}>
-        <Button startIcon={<EditIcon />} onClick={onEdit}>
-          {t("resume.detail.editButton")}
-        </Button>
-        <Button size="small" onClick={() => setOpen((p) => !p)} aria-label={t("resume.detail.editMenuLabel")}>
-          <ArrowDropDownIcon />
-        </Button>
-      </ButtonGroup>
-      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal sx={{ zIndex: 1300 }}>
-        {({ TransitionProps }) => (
-          <Grow {...TransitionProps}>
-            <Paper>
-              <ClickAwayListener onClickAway={() => setOpen(false)}>
-                <MenuList autoFocusItem>
-                  <MenuItem
-                    onClick={() => {
-                      setOpen(false);
-                      onReviseWithAi();
-                    }}
-                  >
-                    {t("revision.reviseButton")}
-                  </MenuItem>
-                </MenuList>
-              </ClickAwayListener>
-            </Paper>
-          </Grow>
-        )}
-      </Popper>
-    </>
+    <Button variant="contained" startIcon={<EditIcon />} onClick={onEdit}>
+      {t("resume.detail.editButton")}
+    </Button>
   );
 }
 
@@ -203,7 +165,6 @@ export function ResumeDetailActions({
   onSaveAsNewVersion,
   onEdit,
   onOpenAiHelp,
-  onReviseWithAi,
   onCloseRevision,
   onDeleteResume,
   isDeletePending,
@@ -302,7 +263,7 @@ export function ResumeDetailActions({
           ) : (
             <>
               <ExportSplitButton resumeId={resumeId} />
-              <EditSplitButton onEdit={onEdit} onReviseWithAi={onReviseWithAi} />
+              <EditButton onEdit={onEdit} />
             </>
           )}
           <IconButton
