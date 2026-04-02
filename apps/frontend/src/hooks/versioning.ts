@@ -131,6 +131,22 @@ export function useFinaliseResumeBranch() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.sourceBranchId) }),
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.revisionBranchId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: ["listResumeBranches"] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteResumeBranch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ branchId }: { branchId: string }) => orpc.deleteResumeBranch({ branchId }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: ["listResumeBranches"] }),
       ]);
     },
   });

@@ -9,17 +9,27 @@
  * Styling: MUI sx prop only
  */
 import { z } from "zod";
+import { useState } from "react";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
-import { useResumeBranchHistoryGraph } from "../../../../../hooks/versioning";
+import Alert from "@mui/material/Alert";
+import {
+  useDeleteResumeBranch,
+  useFinaliseResumeBranch,
+  useResumeBranchHistoryGraph,
+} from "../../../../../hooks/versioning";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
@@ -38,10 +48,15 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
 function VersionHistoryPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mergeTargetBranchId, setMergeTargetBranchId] = useState("");
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
   const { branchId: branchIdFromSearch, view: viewFromSearch } =
     useSearch({ strict: false }) as { branchId?: string; view?: "list" | "tree" };
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
+  const finaliseResumeBranch = useFinaliseResumeBranch();
+  const deleteResumeBranch = useDeleteResumeBranch();
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
@@ -57,6 +72,50 @@ function VersionHistoryPage() {
   const commits = sortByCreatedAt(
     graphCommits.filter((commit) => commit.branchId === selectedBranchId),
   ).reverse();
+  const mergeTargetBranches = branches.filter((branch) => branch.id !== selectedBranchId);
+  const canMergeSelectedBranch = Boolean(
+    selectedBranch && !selectedBranch.isMain && selectedBranch.headCommitId && mergeTargetBranches.length > 0,
+  );
+  const canDeleteSelectedBranch = Boolean(selectedBranch && !selectedBranch.isMain);
+
+  function openMergeDialog() {
+    const firstTargetBranchId = mergeTargetBranches[0]?.id ?? "";
+    setMergeTargetBranchId(firstTargetBranchId);
+    setMergeDialogOpen(true);
+  }
+
+  async function handleMergeSelectedBranch() {
+    if (!selectedBranchId || !mergeTargetBranchId || selectedBranchId === mergeTargetBranchId) {
+      return;
+    }
+
+    await finaliseResumeBranch.mutateAsync({
+      sourceBranchId: mergeTargetBranchId,
+      revisionBranchId: selectedBranchId,
+      action: "merge",
+    });
+
+    setMergeDialogOpen(false);
+    await navigate({
+      to: "/resumes/$id/history",
+      params: { id: resumeId },
+      search: { branchId: mergeTargetBranchId, view: selectedView },
+    });
+  }
+
+  async function handleDeleteSelectedBranch() {
+    if (!selectedBranchId || !selectedBranch || selectedBranch.isMain) {
+      return;
+    }
+
+    await deleteResumeBranch.mutateAsync({ branchId: selectedBranchId });
+    setDeleteDialogOpen(false);
+    await navigate({
+      to: "/resumes/$id/history",
+      params: { id: resumeId },
+      search: { branchId: mainBranchId || undefined, view: selectedView },
+    });
+  }
 
   if (isLoading) return <LoadingState label={t("resume.history.loading")} />;
   if (isError) return <ErrorState message={t("resume.history.error")} />;
@@ -130,6 +189,23 @@ function VersionHistoryPage() {
             <Button
               variant="outlined"
               size="small"
+              disabled={!canMergeSelectedBranch}
+              onClick={openMergeDialog}
+            >
+              {t("resume.history.mergeButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              disabled={!canDeleteSelectedBranch}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              {t("resume.history.deleteBranchButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
               onClick={() =>
                 void navigate({ to: "/resumes/$id/compare", params: { id: resumeId } })
               }
@@ -162,6 +238,91 @@ function VersionHistoryPage() {
         ) : (
           <HistoryCommitTable commits={commits} selectedBranch={selectedBranch} />
         )}
+
+        <Dialog
+          open={mergeDialogOpen}
+          onClose={() => !finaliseResumeBranch.isPending && setMergeDialogOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>{t("resume.history.mergeDialog.title")}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {selectedBranch
+                ? t("resume.history.mergeDialog.message", { branchName: selectedBranch.name })
+                : null}
+            </Typography>
+            <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+              <InputLabel>{t("resume.history.mergeDialog.targetLabel")}</InputLabel>
+              <Select
+                value={mergeTargetBranchId}
+                label={t("resume.history.mergeDialog.targetLabel")}
+                onChange={(event) => setMergeTargetBranchId(event.target.value)}
+              >
+                {mergeTargetBranches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {finaliseResumeBranch.isError ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {t("resume.history.mergeDialog.error")}
+              </Alert>
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setMergeDialogOpen(false)} disabled={finaliseResumeBranch.isPending}>
+              {t("resume.history.mergeDialog.cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleMergeSelectedBranch()}
+              variant="contained"
+              disabled={!mergeTargetBranchId || mergeTargetBranchId === selectedBranchId || finaliseResumeBranch.isPending}
+            >
+              {finaliseResumeBranch.isPending
+                ? t("resume.history.mergeDialog.merging")
+                : t("resume.history.mergeDialog.confirm")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => !deleteResumeBranch.isPending && setDeleteDialogOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>{t("resume.history.deleteDialog.title")}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              {selectedBranch
+                ? t("resume.history.deleteDialog.message", { branchName: selectedBranch.name })
+                : null}
+            </Typography>
+            {deleteResumeBranch.isError ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {t("resume.history.deleteDialog.error")}
+              </Alert>
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteResumeBranch.isPending}>
+              {t("resume.history.deleteDialog.cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleDeleteSelectedBranch()}
+              color="error"
+              variant="contained"
+              disabled={deleteResumeBranch.isPending}
+            >
+              {deleteResumeBranch.isPending
+                ? t("resume.history.deleteDialog.deleting")
+                : t("resume.history.deleteDialog.confirm")}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </PageContent>
     </>
   );
