@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import AddIcon from "@mui/icons-material/Add";
 
 interface SkillsAddCategoryFormProps {
   adding: boolean;
@@ -25,16 +24,12 @@ export function SkillsAddCategoryForm({
   onSkillNameChange,
   onCommit,
   onCancel,
-  onStartAdding,
+  onStartAdding: _onStartAdding,
 }: SkillsAddCategoryFormProps) {
   const { t } = useTranslation("common");
 
   if (!adding) {
-    return (
-      <Button startIcon={<AddIcon />} size="small" onClick={onStartAdding}>
-        {t("resume.edit.skillAddCategoryButton")}
-      </Button>
-    );
+    return null;
   }
 
   return (

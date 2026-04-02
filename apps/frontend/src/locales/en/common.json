@@ -474,6 +474,7 @@
     "backButton": "Back to resume",
     "reviseButton": "Revise with AI",
     "inline": {
+      "aiHelpButton": "Assistant",
       "branchBadge": "AI revision mode",
       "checklistTitle": "Revision checklist",
       "workItemsTitle": "Worklist",

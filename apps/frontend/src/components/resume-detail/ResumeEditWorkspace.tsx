@@ -1,14 +1,10 @@
-import type { MutableRefObject, RefObject } from "react";
 import Box from "@mui/material/Box";
-import { ImprovePresentationFab } from "../ai-assistant/ImprovePresentationFab";
+import Slide from "@mui/material/Slide";
+import type { MutableRefObject, RefObject } from "react";
 import { FinalReview } from "../revision/FinalReview";
 import { InlineRevisionChatPanel } from "../revision/InlineRevisionChatPanel";
 import { InlineRevisionChecklist } from "../revision/InlineRevisionChecklist";
-import { ResumeAssignmentsPage } from "./ResumeAssignmentsPage";
-import { ResumeCoverPage } from "./ResumeCoverPage";
-import { ResumeSkillsPage } from "./ResumeSkillsPage";
-import type { SkillRow } from "../SkillsEditor";
-import type { AssignmentRow as EditorAssignmentRow } from "../AssignmentEditor";
+import { ResumeDocumentCanvas } from "./ResumeDocumentCanvas";
 
 type Assignment = {
   id: string;
@@ -23,7 +19,7 @@ type Assignment = {
   keywords?: string | null;
 };
 
-interface ResumeRevisionWorkspaceProps {
+interface ResumeEditWorkspaceProps {
   inlineRevision: any;
   activeBranchId: string | null;
   activeBranchName: string;
@@ -36,7 +32,6 @@ interface ResumeRevisionWorkspaceProps {
   presentation: string[];
   summary: string | null;
   highlightedItems: string[];
-  isEditing: boolean;
   draftTitle: string;
   draftPresentation: string;
   draftSummary: string;
@@ -74,56 +69,12 @@ interface ResumeRevisionWorkspaceProps {
   assignmentItemRefs: MutableRefObject<Record<string, HTMLElement | null>>;
 }
 
-export function ResumeRevisionWorkspace({
+export function ResumeEditWorkspace({
   inlineRevision,
   activeBranchId,
   activeBranchName,
-  resumeId,
-  resumeTitle,
-  language,
-  totalPages,
-  employeeName,
-  consultantTitle,
-  presentation,
-  summary,
-  highlightedItems,
-  isEditing,
-  draftTitle,
-  draftPresentation,
-  draftSummary,
-  draftHighlightedItems,
-  onDraftTitleChange,
-  onDraftPresentationChange,
-  onDraftSummaryChange,
-  onDraftHighlightedItemsChange,
-  showSkillsPage,
-  skillsPage,
-  skills,
-  degrees,
-  certifications,
-  languages,
-  isSnapshotMode,
-  getResumeQueryKey,
-  fabTop,
-  onImprovePresentationAccept,
-  hasAssignments,
-  assignmentsPage,
-  assignments,
-  showFullAssignments,
-  onToggleShowFullAssignments,
-  canvasRef,
-  newAssignmentId,
-  onAutoEditConsumed,
-  onCreateAssignment,
-  createAssignmentPending,
-  canCreateAssignment,
-  assignmentsFabTop,
-  presentationRef,
-  coverSectionRef,
-  skillsSectionRef,
-  assignmentsSectionRef,
-  assignmentItemRefs,
-}: ResumeRevisionWorkspaceProps) {
+  ...props
+}: ResumeEditWorkspaceProps) {
   return (
     <Box
       sx={{
@@ -151,7 +102,13 @@ export function ResumeRevisionWorkspace({
           overflow: inlineRevision.isOpen ? "hidden" : "visible",
         }}
       >
-        {inlineRevision.isOpen && (
+        <Slide
+          in={inlineRevision.isOpen}
+          direction="right"
+          mountOnEnter
+          unmountOnExit
+          timeout={{ enter: 220, exit: 180 }}
+        >
           <Box
             sx={{
               width: { xs: "100%", lg: inlineRevision.checklistWidth },
@@ -183,7 +140,7 @@ export function ResumeRevisionWorkspace({
               onBackToActions={inlineRevision.backToActions}
             />
           </Box>
-        )}
+        </Slide>
 
         <Box
           sx={{
@@ -192,7 +149,8 @@ export function ResumeRevisionWorkspace({
             minWidth: 0,
             minHeight: inlineRevision.isOpen ? 0 : undefined,
             overflow: inlineRevision.isOpen ? "auto" : "hidden",
-            p: inlineRevision.isOpen ? 2 : 0,
+            px: inlineRevision.isOpen ? { xs: 2, md: 3 } : 0,
+            py: inlineRevision.isOpen ? 4 : 0,
           }}
         >
           {inlineRevision.stage === "finalize" ? (
@@ -204,98 +162,23 @@ export function ResumeRevisionWorkspace({
               isKeeping={inlineRevision.isKeeping}
             />
           ) : (
-            <Box
-              ref={canvasRef}
-              sx={{
-                position: "relative",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 3,
-              }}
-            >
-              <ResumeCoverPage
-                title={resumeTitle}
-                language={language}
-                page={1}
-                totalPages={totalPages}
-                employeeName={employeeName}
-                consultantTitle={consultantTitle}
-                presentation={presentation}
-                summary={summary}
-                highlightedItems={highlightedItems}
-                presentationRef={presentationRef}
-                isEditing={isEditing}
-                draftTitle={draftTitle}
-                draftPresentation={draftPresentation}
-                draftSummary={draftSummary}
-                draftHighlightedItems={draftHighlightedItems}
-                onDraftTitleChange={onDraftTitleChange}
-                onDraftPresentationChange={onDraftPresentationChange}
-                onDraftSummaryChange={onDraftSummaryChange}
-                onDraftHighlightedItemsChange={onDraftHighlightedItemsChange}
-                sectionRef={coverSectionRef}
-              />
-
-              {showSkillsPage && skillsPage !== null && (
-                <ResumeSkillsPage
-                  title={resumeTitle}
-                  language={language}
-                  page={skillsPage}
-                  totalPages={totalPages}
-                  employeeName={employeeName}
-                  skills={skills as SkillRow[]}
-                  degrees={degrees}
-                  certifications={certifications}
-                  languages={languages}
-                  isEditing={isEditing}
-                  isSnapshotMode={isSnapshotMode}
-                  resumeId={resumeId}
-                  queryKey={getResumeQueryKey(resumeId)}
-                  sectionRef={skillsSectionRef}
-                />
-              )}
-
-              {isEditing && !inlineRevision.isOpen && !isSnapshotMode && presentation.length > 0 && (
-                <ImprovePresentationFab
-                  resumeId={resumeId}
-                  presentation={presentation}
-                  consultantTitle={consultantTitle}
-                  employeeName={employeeName}
-                  top={fabTop}
-                  onAccept={onImprovePresentationAccept}
-                />
-              )}
-
-              {hasAssignments && assignmentsPage !== null && (
-                <ResumeAssignmentsPage
-                  title={resumeTitle}
-                  language={language}
-                  page={assignmentsPage}
-                  totalPages={totalPages}
-                  assignments={assignments as EditorAssignmentRow[]}
-                  showFullAssignments={showFullAssignments}
-                  onToggleShowFullAssignments={onToggleShowFullAssignments}
-                  isEditing={isEditing}
-                  isSnapshotMode={isSnapshotMode}
-                  canCreateAssignment={canCreateAssignment}
-                  canvasEl={canvasRef.current}
-                  newAssignmentId={newAssignmentId}
-                  onAutoEditConsumed={onAutoEditConsumed}
-                  onCreateAssignment={onCreateAssignment}
-                  createAssignmentPending={createAssignmentPending}
-                  assignmentsFabTop={assignmentsFabTop}
-                  showToggleFab={!isEditing && !inlineRevision.isOpen}
-                  sectionRef={assignmentsSectionRef}
-                  assignmentItemRefs={assignmentItemRefs}
-                  activeBranchId={activeBranchId}
-                />
-              )}
-            </Box>
+            <ResumeDocumentCanvas
+              {...props}
+              activeBranchId={activeBranchId}
+              isEditing={true}
+              showImprovePresentationFab={!inlineRevision.isOpen && !props.isSnapshotMode}
+              showAssignmentsToggleFab={!inlineRevision.isOpen}
+            />
           )}
         </Box>
 
-        {inlineRevision.isOpen && inlineRevision.stage !== "finalize" && (
+        <Slide
+          in={inlineRevision.isOpen && inlineRevision.stage !== "finalize"}
+          direction="left"
+          mountOnEnter
+          unmountOnExit
+          timeout={{ enter: 220, exit: 180 }}
+        >
           <Box
             sx={{
               width: { xs: "100%", lg: inlineRevision.chatWidth },
@@ -329,7 +212,7 @@ export function ResumeRevisionWorkspace({
               guardrail={inlineRevision.guardrail}
             />
           </Box>
-        )}
+        </Slide>
       </Box>
     </Box>
   );

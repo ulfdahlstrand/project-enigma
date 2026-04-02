@@ -21,7 +21,8 @@ import type { AssignmentRow as EditorAssignmentRow } from "../../../components/A
 import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDetailActions";
 import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
 import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/ResumeRevisionReviewDialog";
-import { ResumeRevisionWorkspace } from "../../../components/resume-detail/ResumeRevisionWorkspace";
+import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
+import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
 export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
@@ -30,15 +31,24 @@ export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
     branchId: z.string().optional(),
   }),
-  component: ResumeDetailPage,
+  component: () => <ResumeDetailPage routeMode="detail" />,
 });
 
-function ResumeDetailPage() {
+export function ResumeDetailPage({
+  routeMode = "detail",
+}: {
+  routeMode?: "detail" | "edit";
+}) {
   const { t } = useTranslation("common");
   const { id: idParam } = useParams({ strict: false });
   const id = idParam!;
+  const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId } = useSearch({ strict: false }) as any as { branchId?: string };
+  const { branchId: selectedBranchId, assistant: assistantMode } =
+    useSearch({ strict: false }) as any as {
+      branchId?: string;
+      assistant?: "true";
+    };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -85,7 +95,7 @@ function ResumeDetailPage() {
     enabled: !!resume?.employeeId,
   });
 
-  const [isEditing, setIsEditing] = useState(false);
+  const isEditing = isEditRoute;
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
@@ -291,8 +301,7 @@ function ResumeDetailPage() {
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
   const inlineRevision = useInlineResumeRevision({
     resumeId: id,
-    isEditing,
-    setIsEditing,
+    isEditRoute,
     activeBranchId,
     activeBranchName,
     activeBranchHeadCommitId: activeBranch?.headCommitId ?? null,
@@ -336,6 +345,12 @@ function ResumeDetailPage() {
     buildDraftPatchFromValues,
   });
 
+  useEffect(() => {
+    if (isEditRoute && assistantMode === "true" && !inlineRevision.isOpen) {
+      inlineRevision.open();
+    }
+  }, [assistantMode, inlineRevision, isEditRoute]);
+
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
   if (isError) {
@@ -358,17 +373,15 @@ function ResumeDetailPage() {
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
-      setIsEditing(false);
     } else {
       if (!mainBranchId) {
-        updateResume.mutate(patch, { onSuccess: () => setIsEditing(false) });
+        updateResume.mutate(patch);
         return;
       }
 
       // Main save must update the live resume and create a visible branch commit.
       await updateResume.mutateAsync(patch);
       await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
-      setIsEditing(false);
     }
   };
 
@@ -389,16 +402,51 @@ function ResumeDetailPage() {
       ...patch,
     });
 
-    setIsEditing(false);
     await navigate({
-      to: "/resumes/$id",
+      to: isEditRoute ? "/resumes/$id/edit" : "/resumes/$id",
       params: { id },
       search: { branchId: newBranch.id },
     });
   };
 
   const handleExitEditing = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id",
+        params: { id },
+        search: activeBranchId ? { branchId: activeBranchId } : {},
+      });
+      return;
+    }
+
     inlineRevision.reset();
+  };
+
+  const handleOpenAssistant = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+    }
+
+    inlineRevision.open();
+  };
+
+  const handleCloseRevision = () => {
+    if (isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: activeBranchId ? { branchId: activeBranchId } : {},
+      });
+    }
+
+    inlineRevision.close();
   };
 
   const toolbarActions = (
@@ -406,6 +454,7 @@ function ResumeDetailPage() {
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
       isRevisionOpen={inlineRevision.isOpen}
@@ -416,9 +465,15 @@ function ResumeDetailPage() {
         void handleSave();
       }}
       onSaveAsNewVersion={handleSaveAsNewVersion}
-      onEdit={() => setIsEditing(true)}
-      onReviseWithAi={inlineRevision.open}
-      onCloseRevision={inlineRevision.isOpen ? inlineRevision.close : handleExitEditing}
+      onEdit={() => {
+        void navigate({
+          to: "/resumes/$id/edit",
+          params: { id },
+          search: activeBranchId ? { branchId: activeBranchId } : {},
+        });
+      }}
+      onOpenAiHelp={handleOpenAssistant}
+      onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
       isDeleteError={deleteResume.isError}
@@ -458,62 +513,95 @@ function ResumeDetailPage() {
         centerContent={<VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />}
         actions={toolbarActions}
       />
-      <ResumeRevisionWorkspace
-        inlineRevision={inlineRevision}
-        activeBranchId={activeBranchId}
-        activeBranchName={activeBranchName}
-        resumeId={id}
-        resumeTitle={resumeTitle}
-        language={language ?? null}
-        totalPages={totalPages}
-        employeeName={employee?.name ?? ""}
-        consultantTitle={consultantTitle}
-        presentation={presentation}
-        summary={summary}
-        highlightedItems={highlightedItems}
-        isEditing={isEditing}
-        draftTitle={draftTitle}
-        draftPresentation={draftPresentation}
-        draftSummary={draftSummary}
-        draftHighlightedItems={draftHighlightedItems}
-        onDraftTitleChange={setDraftTitle}
-        onDraftPresentationChange={setDraftPresentation}
-        onDraftSummaryChange={setDraftSummary}
-        onDraftHighlightedItemsChange={setDraftHighlightedItems}
-        showSkillsPage={showSkillsPage}
-        skillsPage={skillsPage}
-        skills={skills}
-        degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-        certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-        languages={education.filter((e) => e.type === "language").map((e) => e.value)}
-        isSnapshotMode={isSnapshotMode}
-        getResumeQueryKey={getResumeQueryKey}
-        fabTop={fabTop}
-        onImprovePresentationAccept={(improved) => {
-          const paragraphs = improved
-            .split(/\n\n+/)
-            .map((p) => p.trim())
-            .filter(Boolean);
-          updateResume.mutate({ presentation: paragraphs });
-        }}
-        hasAssignments={hasAssignments}
-        assignmentsPage={assignmentsPage}
-        assignments={editableAssignments}
-        showFullAssignments={showFullAssignments}
-        onToggleShowFullAssignments={() => setShowFullAssignments((v) => !v)}
-        canvasRef={canvasRef}
-        newAssignmentId={newAssignmentId}
-        onAutoEditConsumed={() => setNewAssignmentId(null)}
-        onCreateAssignment={() => void createAssignment.mutate()}
-        createAssignmentPending={createAssignment.isPending}
-        canCreateAssignment={!!activeBranchId && !!resume?.employeeId}
-        assignmentsFabTop={assignmentsFabTop}
-        presentationRef={presentationRef}
-        coverSectionRef={coverSectionRef}
-        skillsSectionRef={skillsSectionRef}
-        assignmentsSectionRef={assignmentsSectionRef}
-        assignmentItemRefs={assignmentItemRefs}
-      />
+      {isEditRoute ? (
+        <ResumeEditWorkspace
+          inlineRevision={inlineRevision}
+          activeBranchId={activeBranchId}
+          activeBranchName={activeBranchName}
+          resumeId={id}
+          resumeTitle={resumeTitle}
+          language={language ?? null}
+          totalPages={totalPages}
+          employeeName={employee?.name ?? ""}
+          consultantTitle={consultantTitle}
+          presentation={presentation}
+          summary={summary}
+          highlightedItems={highlightedItems}
+          draftTitle={draftTitle}
+          draftPresentation={draftPresentation}
+          draftSummary={draftSummary}
+          draftHighlightedItems={draftHighlightedItems}
+          onDraftTitleChange={setDraftTitle}
+          onDraftPresentationChange={setDraftPresentation}
+          onDraftSummaryChange={setDraftSummary}
+          onDraftHighlightedItemsChange={setDraftHighlightedItems}
+          showSkillsPage={showSkillsPage}
+          skillsPage={skillsPage}
+          skills={skills}
+          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          isSnapshotMode={isSnapshotMode}
+          getResumeQueryKey={getResumeQueryKey}
+          fabTop={fabTop}
+          onImprovePresentationAccept={(improved) => {
+            const paragraphs = improved
+              .split(/\n\n+/)
+              .map((p) => p.trim())
+              .filter(Boolean);
+            updateResume.mutate({ presentation: paragraphs });
+          }}
+          hasAssignments={hasAssignments}
+          assignmentsPage={assignmentsPage}
+          assignments={editableAssignments}
+          showFullAssignments={showFullAssignments}
+          onToggleShowFullAssignments={() => setShowFullAssignments((v) => !v)}
+          canvasRef={canvasRef}
+          newAssignmentId={newAssignmentId}
+          onAutoEditConsumed={() => setNewAssignmentId(null)}
+          onCreateAssignment={() => void createAssignment.mutate()}
+          createAssignmentPending={createAssignment.isPending}
+          canCreateAssignment={!!activeBranchId && !!resume?.employeeId}
+          assignmentsFabTop={assignmentsFabTop}
+          presentationRef={presentationRef}
+          coverSectionRef={coverSectionRef}
+          skillsSectionRef={skillsSectionRef}
+          assignmentsSectionRef={assignmentsSectionRef}
+          assignmentItemRefs={assignmentItemRefs}
+        />
+      ) : (
+        <ResumeViewWorkspace
+          resumeId={id}
+          resumeTitle={resumeTitle}
+          language={language ?? null}
+          totalPages={totalPages}
+          employeeName={employee?.name ?? ""}
+          consultantTitle={consultantTitle}
+          presentation={presentation}
+          summary={summary}
+          highlightedItems={highlightedItems}
+          showSkillsPage={showSkillsPage}
+          skillsPage={skillsPage}
+          skills={skills}
+          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          isSnapshotMode={isSnapshotMode}
+          getResumeQueryKey={getResumeQueryKey}
+          hasAssignments={hasAssignments}
+          assignmentsPage={assignmentsPage}
+          assignments={editableAssignments}
+          showFullAssignments={showFullAssignments}
+          onToggleShowFullAssignments={() => setShowFullAssignments((v) => !v)}
+          canvasRef={canvasRef}
+          presentationRef={presentationRef}
+          coverSectionRef={coverSectionRef}
+          skillsSectionRef={skillsSectionRef}
+          assignmentsSectionRef={assignmentsSectionRef}
+          assignmentItemRefs={assignmentItemRefs}
+          activeBranchId={activeBranchId}
+        />
+      )}
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
     </Box>
   );

@@ -4,11 +4,11 @@ import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
 import type { ReactNode } from "react";
 
-const PAGE_WIDTH = 794;
+export const RESUME_PAGE_WIDTH = 794;
 const PAGE_MIN_HEIGHT = 1123;
 const PAGE_MX = "80px";
-const PAGE_MY = "56px";
-const HEADER_HEIGHT = 52;
+export const RESUME_PAGE_VERTICAL_PADDING = 56;
+export const RESUME_PAGE_HEADER_HEIGHT = 52;
 const FOOTER_HEIGHT = 40;
 
 interface ResumeDocumentPageProps {
@@ -32,7 +32,7 @@ export function ResumeDocumentPage({
     <Paper
       elevation={2}
       sx={{
-        width: PAGE_WIDTH,
+        width: RESUME_PAGE_WIDTH,
         maxWidth: "100%",
         minHeight: PAGE_MIN_HEIGHT,
         border: "none",
@@ -44,7 +44,7 @@ export function ResumeDocumentPage({
       {!hideHeader && (
         <Box
           sx={{
-            height: HEADER_HEIGHT,
+            height: RESUME_PAGE_HEADER_HEIGHT,
             flexShrink: 0,
             borderBottom: "1px solid transparent",
             px: PAGE_MX,
@@ -62,7 +62,15 @@ export function ResumeDocumentPage({
         </Box>
       )}
 
-      <Box sx={{ flexGrow: 1, px: PAGE_MX, py: PAGE_MY, display: "flex", flexDirection: "column" }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          px: PAGE_MX,
+          py: `${RESUME_PAGE_VERTICAL_PADDING}px`,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {children}
       </Box>
 

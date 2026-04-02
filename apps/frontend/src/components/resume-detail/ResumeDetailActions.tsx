@@ -31,6 +31,7 @@ interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
+  isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
   isRevisionOpen: boolean;
@@ -40,7 +41,7 @@ interface ResumeDetailActionsProps {
   onSaveCurrent: () => void;
   onSaveAsNewVersion: (name: string) => Promise<void>;
   onEdit: () => void;
-  onReviseWithAi: () => void;
+  onOpenAiHelp: () => void;
   onCloseRevision: () => void;
   onDeleteResume: () => void;
   isDeletePending: boolean;
@@ -139,50 +140,13 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
   );
 }
 
-function EditSplitButton({
-  onEdit,
-  onReviseWithAi,
-}: {
-  onEdit: () => void;
-  onReviseWithAi: () => void;
-}) {
+function EditButton({ onEdit }: { onEdit: () => void }) {
   const { t } = useTranslation("common");
-  const [open, setOpen] = useState(false);
-  const anchorRef = useState<HTMLDivElement | null>(null);
 
   return (
-    <>
-      <ButtonGroup variant="contained" ref={(el) => {
-        anchorRef[1](el);
-      }}>
-        <Button startIcon={<EditIcon />} onClick={onEdit}>
-          {t("resume.detail.editButton")}
-        </Button>
-        <Button size="small" onClick={() => setOpen((p) => !p)} aria-label={t("resume.detail.editMenuLabel")}>
-          <ArrowDropDownIcon />
-        </Button>
-      </ButtonGroup>
-      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal sx={{ zIndex: 1300 }}>
-        {({ TransitionProps }) => (
-          <Grow {...TransitionProps}>
-            <Paper>
-              <ClickAwayListener onClickAway={() => setOpen(false)}>
-                <MenuList autoFocusItem>
-                  <MenuItem
-                    onClick={() => {
-                      setOpen(false);
-                      onReviseWithAi();
-                    }}
-                  >
-                    {t("revision.reviseButton")}
-                  </MenuItem>
-                </MenuList>
-              </ClickAwayListener>
-            </Paper>
-          </Grow>
-        )}
-      </Popper>
-    </>
+    <Button variant="contained" startIcon={<EditIcon />} onClick={onEdit}>
+      {t("resume.detail.editButton")}
+    </Button>
   );
 }
 
@@ -190,6 +154,7 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
+  isEditRoute,
   isSnapshotMode,
   isEditing,
   isRevisionOpen,
@@ -199,7 +164,7 @@ export function ResumeDetailActions({
   onSaveCurrent,
   onSaveAsNewVersion,
   onEdit,
-  onReviseWithAi,
+  onOpenAiHelp,
   onCloseRevision,
   onDeleteResume,
   isDeletePending,
@@ -288,6 +253,9 @@ export function ResumeDetailActions({
                 canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
                 isPending={isSaving}
               />
+              <Button variant="outlined" onClick={onOpenAiHelp}>
+                {t("revision.inline.aiHelpButton")}
+              </Button>
               <Button variant="outlined" onClick={onCloseRevision}>
                 {t("resume.edit.backButton")}
               </Button>
@@ -295,7 +263,7 @@ export function ResumeDetailActions({
           ) : (
             <>
               <ExportSplitButton resumeId={resumeId} />
-              <EditSplitButton onEdit={onEdit} onReviseWithAi={onReviseWithAi} />
+              <EditButton onEdit={onEdit} />
             </>
           )}
           <IconButton

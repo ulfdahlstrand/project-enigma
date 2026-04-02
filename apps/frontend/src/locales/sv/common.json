@@ -474,6 +474,7 @@
     "backButton": "Tillbaka till CV",
     "reviseButton": "Revidera med AI",
     "inline": {
+      "aiHelpButton": "Assistant",
       "branchBadge": "AI-revisionsläge",
       "checklistTitle": "Revisionschecklista",
       "workItemsTitle": "Arbetslista",

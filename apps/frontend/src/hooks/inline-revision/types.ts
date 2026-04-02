@@ -83,8 +83,7 @@ export type PersistedToolCall = {
 
 export type UseInlineResumeRevisionParams = {
   resumeId: string;
-  isEditing: boolean;
-  setIsEditing: (value: boolean) => void;
+  isEditRoute: boolean;
   activeBranchId: string | null;
   activeBranchName: string;
   activeBranchHeadCommitId: string | null;

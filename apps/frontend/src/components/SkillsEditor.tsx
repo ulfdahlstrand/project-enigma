@@ -14,10 +14,9 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import Fab from "@mui/material/Fab";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -29,6 +28,10 @@ import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
+import {
+  RESUME_PAGE_HEADER_HEIGHT,
+  RESUME_PAGE_VERTICAL_PADDING,
+} from "./resume-detail/ResumeDocumentPage";
 
 export interface SkillRow {
   id: string;
@@ -47,6 +50,7 @@ interface SkillsEditorProps {
 export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) {
   const { t } = useTranslation("common");
   const editor = useSkillsEditor({ resumeId, skills, queryKey });
+  const pageTopOffset = RESUME_PAGE_HEADER_HEIGHT + RESUME_PAGE_VERTICAL_PADDING;
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -149,26 +153,76 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
   // View toggle
   // ---------------------------------------------------------------------------
 
-  const toggle = (
-    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
-      <ToggleButtonGroup
-        value={editor.view}
-        exclusive
-        size="small"
-        onChange={(_, v) => { if (v) editor.setView(v as "detail" | "list"); }}
+  const floatingActions = (
+    <>
+      <Tooltip
+        title={
+          editor.view === "detail"
+            ? t("resume.edit.skillsListViewTooltip")
+            : t("resume.edit.skillsDetailViewTooltip")
+        }
+        placement="left"
       >
-        <ToggleButton value="detail">
-          <Tooltip title={t("resume.edit.skillsDetailViewTooltip")}>
-            <ViewAgendaIcon fontSize="small" />
-          </Tooltip>
-        </ToggleButton>
-        <ToggleButton value="list">
-          <Tooltip title={t("resume.edit.skillsListViewTooltip")}>
+        <Fab
+          size="small"
+          aria-label={
+            editor.view === "detail"
+              ? t("resume.edit.skillsListViewTooltip")
+              : t("resume.edit.skillsDetailViewTooltip")
+          }
+          onClick={() =>
+            editor.setView(editor.view === "detail" ? "list" : "detail")
+          }
+          sx={{
+            position: "absolute",
+            left: `calc(50% + ${794 / 2}px + 16px)`,
+            top: (theme) =>
+              `calc(${theme.spacing(2)} - ${pageTopOffset}px)`,
+            zIndex: 10,
+            bgcolor: "transparent",
+            color: "action.active",
+            boxShadow: 0,
+            opacity: 0.5,
+            transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+            "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+          }}
+        >
+          {editor.view === "detail" ? (
             <FormatListBulletedIcon fontSize="small" />
-          </Tooltip>
-        </ToggleButton>
-      </ToggleButtonGroup>
-    </Box>
+          ) : (
+            <ViewAgendaIcon fontSize="small" />
+          )}
+        </Fab>
+      </Tooltip>
+
+      <Tooltip title={t("resume.edit.skillAddCategoryButton")} placement="left">
+        <Fab
+          size="small"
+          aria-label={t("resume.edit.skillAddCategoryButton")}
+          onClick={() => {
+            editor.setAddingCategory(true);
+            editor.setNewCategoryName("");
+            editor.setNewCategorySkillName("");
+          }}
+          sx={{
+            position: "absolute",
+            left: `calc(50% + ${794 / 2}px + 16px)`,
+            top: (theme) =>
+              `calc(${theme.spacing(7)} - ${pageTopOffset}px)`,
+            zIndex: 10,
+            bgcolor: "transparent",
+            color: "action.active",
+            boxShadow: 0,
+            opacity: 0.5,
+            transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
+            "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
+          }}
+        >
+          <AddIcon fontSize="small" />
+        </Fab>
+      </Tooltip>
+
+    </>
   );
 
   // ---------------------------------------------------------------------------
@@ -177,8 +231,8 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
 
   if (editor.view === "list") {
     return (
-      <Box>
-        {toggle}
+      <Box sx={{ position: "relative" }}>
+        {floatingActions}
         {editor.isReordering && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
             <CircularProgress size={20} />
@@ -245,8 +299,8 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
   // ---------------------------------------------------------------------------
 
   return (
-    <Box>
-      {toggle}
+    <Box sx={{ position: "relative" }}>
+      {floatingActions}
       {skills.length === 0 && !editor.addingCategory ? (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t("resume.detail.noSkills")}
