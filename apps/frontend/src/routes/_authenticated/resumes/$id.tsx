@@ -94,7 +94,7 @@ export function ResumeDetailPage({
     enabled: !!resume?.employeeId,
   });
 
-  const [isEditing, setIsEditing] = useState(isEditRoute);
+  const isEditing = isEditRoute;
   const [draftTitle, setDraftTitle] = useState("");
   const [draftPresentation, setDraftPresentation] = useState("");
   const [draftSummary, setDraftSummary] = useState("");
@@ -300,8 +300,7 @@ export function ResumeDetailPage({
   const assignmentsPage = hasAssignments ? (hasSkills ? 3 : 2) : null;
   const inlineRevision = useInlineResumeRevision({
     resumeId: id,
-    isEditing,
-    setIsEditing,
+    isEditRoute,
     activeBranchId,
     activeBranchName,
     activeBranchHeadCommitId: activeBranch?.headCommitId ?? null,
@@ -373,25 +372,15 @@ export function ResumeDetailPage({
     if (isSnapshotMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
-      if (!isEditRoute) {
-        setIsEditing(false);
-      }
     } else {
       if (!mainBranchId) {
-        updateResume.mutate(patch, { onSuccess: () => {
-          if (!isEditRoute) {
-            setIsEditing(false);
-          }
-        } });
+        updateResume.mutate(patch);
         return;
       }
 
       // Main save must update the live resume and create a visible branch commit.
       await updateResume.mutateAsync(patch);
       await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
-      if (!isEditRoute) {
-        setIsEditing(false);
-      }
     }
   };
 
@@ -412,7 +401,6 @@ export function ResumeDetailPage({
       ...patch,
     });
 
-    setIsEditing(false);
     await navigate({
       to: isEditRoute ? "/resumes/$id/edit" : "/resumes/$id",
       params: { id },
@@ -477,11 +465,6 @@ export function ResumeDetailPage({
       }}
       onSaveAsNewVersion={handleSaveAsNewVersion}
       onEdit={() => {
-        if (isEditRoute) {
-          setIsEditing(true);
-          return;
-        }
-
         void navigate({
           to: "/resumes/$id/edit",
           params: { id },

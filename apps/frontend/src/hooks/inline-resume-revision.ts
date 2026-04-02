@@ -32,8 +32,7 @@ import { useInlineRevisionReview } from "./inline-revision/review";
 
 export function useInlineResumeRevision({
   resumeId,
-  isEditing,
-  setIsEditing,
+  isEditRoute,
   activeBranchId,
   activeBranchName,
   activeBranchHeadCommitId,
@@ -115,7 +114,7 @@ export function useInlineResumeRevision({
   const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditRoute) {
       return;
     }
 
@@ -127,7 +126,7 @@ export function useInlineResumeRevision({
     if (!hasPersistedSession) {
       setIsOpen(false);
     }
-  }, [activeBranchId, isEditing, mainBranchId]);
+  }, [activeBranchId, isEditRoute, mainBranchId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -273,7 +272,6 @@ export function useInlineResumeRevision({
   };
 
   const open = () => {
-    setIsEditing(true);
     setIsOpen(true);
     setSourceBranchName(activeBranchName);
     setSourceBranchId(activeBranchId);
@@ -287,7 +285,6 @@ export function useInlineResumeRevision({
 
   const reset = () => {
     setIsOpen(false);
-    setIsEditing(false);
     setStage("planning");
     setPlan(null);
     setWorkItems(null);
@@ -327,7 +324,16 @@ export function useInlineResumeRevision({
     }
 
     restoredBranchIdRef.current = activeBranchId;
-    setIsEditing(true);
+    if (!isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id: resumeId },
+        search: { branchId: activeBranchId, assistant: "true" },
+        replace: true,
+      });
+      return;
+    }
+
     setIsOpen(true);
     setStage(persistedSession.stage);
     setPlan(persistedSession.plan);
@@ -343,7 +349,7 @@ export function useInlineResumeRevision({
     } else {
       hideDrawer();
     }
-  }, [activeBranchId, hideDrawer, isOpen, mainBranchId, openActionAssistant, setIsEditing]);
+  }, [activeBranchId, hideDrawer, isEditRoute, isOpen, mainBranchId, navigate, openActionAssistant, resumeId]);
 
   useLayoutEffect(() => {
     if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {
