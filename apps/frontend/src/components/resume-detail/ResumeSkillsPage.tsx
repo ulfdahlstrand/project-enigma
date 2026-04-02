@@ -18,7 +18,6 @@ interface ResumeSkillsPageProps {
   isSnapshotMode: boolean;
   resumeId: string;
   queryKey: readonly unknown[];
-  skillsFabTop: number;
   sectionRef?: RefObject<HTMLDivElement | null>;
 }
 
@@ -36,7 +35,6 @@ export function ResumeSkillsPage({
   isSnapshotMode,
   resumeId,
   queryKey,
-  skillsFabTop,
   sectionRef,
 }: ResumeSkillsPageProps) {
   return (
@@ -47,7 +45,6 @@ export function ResumeSkillsPage({
             resumeId={resumeId}
             skills={skills}
             queryKey={queryKey}
-            skillsFabTop={skillsFabTop}
           />
         ) : (
           <ResumeSkillsPageContent

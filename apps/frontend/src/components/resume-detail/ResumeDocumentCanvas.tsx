@@ -47,7 +47,6 @@ interface ResumeDocumentCanvasProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string) => readonly ["getResume", string];
-  skillsFabTop: number;
   showImprovePresentationFab: boolean;
   fabTop: number;
   onImprovePresentationAccept: (improved: string) => void;
@@ -99,7 +98,6 @@ export function ResumeDocumentCanvas({
   languages,
   isSnapshotMode,
   getResumeQueryKey,
-  skillsFabTop,
   showImprovePresentationFab,
   fabTop,
   onImprovePresentationAccept,
@@ -172,7 +170,6 @@ export function ResumeDocumentCanvas({
           isSnapshotMode={isSnapshotMode}
           resumeId={resumeId}
           queryKey={getResumeQueryKey(resumeId)}
-          skillsFabTop={skillsFabTop}
           sectionRef={skillsSectionRef}
         />
       )}

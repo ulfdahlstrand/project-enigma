@@ -33,7 +33,6 @@ interface ResumeViewWorkspaceProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string) => readonly ["getResume", string];
-  skillsFabTop: number;
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];
@@ -79,7 +78,6 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
             onDraftPresentationChange={() => {}}
             onDraftSummaryChange={() => {}}
             onDraftHighlightedItemsChange={() => {}}
-            skillsFabTop={props.skillsFabTop}
             showImprovePresentationFab={false}
             fabTop={0}
             onImprovePresentationAccept={() => {}}

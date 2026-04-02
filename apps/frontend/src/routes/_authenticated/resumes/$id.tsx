@@ -171,7 +171,6 @@ export function ResumeDetailPage({
   const assignmentsSectionRef = useRef<HTMLDivElement>(null);
   const assignmentItemRefs = useRef<Record<string, HTMLElement | null>>({});
   const [fabTop, setFabTop] = useState(0);
-  const [skillsFabTop, setSkillsFabTop] = useState(0);
   const [assignmentsFabTop, setAssignmentsFabTop] = useState(0);
 
   useLayoutEffect(() => {
@@ -179,9 +178,6 @@ export function ResumeDetailPage({
     const canvasRect = canvasRef.current.getBoundingClientRect();
     if (presentationRef.current) {
       setFabTop(presentationRef.current.getBoundingClientRect().top - canvasRect.top);
-    }
-    if (skillsSectionRef.current) {
-      setSkillsFabTop(skillsSectionRef.current.getBoundingClientRect().top - canvasRect.top);
     }
     if (assignmentsSectionRef.current) {
       setAssignmentsFabTop(assignmentsSectionRef.current.getBoundingClientRect().top - canvasRect.top);
@@ -547,7 +543,6 @@ export function ResumeDetailPage({
           languages={education.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
-          skillsFabTop={skillsFabTop}
           fabTop={fabTop}
           onImprovePresentationAccept={(improved) => {
             const paragraphs = improved
@@ -593,7 +588,6 @@ export function ResumeDetailPage({
           languages={education.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
-          skillsFabTop={skillsFabTop}
           hasAssignments={hasAssignments}
           assignmentsPage={assignmentsPage}
           assignments={editableAssignments}

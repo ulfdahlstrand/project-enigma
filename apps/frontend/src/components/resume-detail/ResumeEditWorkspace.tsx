@@ -48,7 +48,6 @@ interface ResumeEditWorkspaceProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string) => readonly ["getResume", string];
-  skillsFabTop: number;
   fabTop: number;
   onImprovePresentationAccept: (improved: string) => void;
   hasAssignments: boolean;
@@ -167,7 +166,6 @@ export function ResumeEditWorkspace({
               {...props}
               activeBranchId={activeBranchId}
               isEditing={true}
-              skillsFabTop={props.skillsFabTop}
               showImprovePresentationFab={!inlineRevision.isOpen && !props.isSnapshotMode}
               showAssignmentsToggleFab={!inlineRevision.isOpen}
             />

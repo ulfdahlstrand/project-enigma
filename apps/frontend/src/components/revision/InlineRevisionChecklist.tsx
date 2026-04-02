@@ -440,24 +440,6 @@ export function InlineRevisionChecklist({
               secondary={t("revision.inline.checklistWaitingDescription")}
             />
           </ListItem>
-          <ListItem>
-            <ListItemText
-              primary={t("revision.inline.intentStatusTitle")}
-              secondary={t("revision.inline.intentStatusDescription")}
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary={t("revision.inline.branchStatusTitle")}
-              secondary={t("revision.inline.branchStatusDescription")}
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary={t("revision.inline.diffStatusTitle")}
-              secondary={t("revision.inline.diffStatusDescription")}
-            />
-          </ListItem>
         </List>
       )}
     </Paper>

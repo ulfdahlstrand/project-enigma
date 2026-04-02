@@ -45,10 +45,9 @@ interface SkillsEditorProps {
   resumeId: string;
   skills: SkillRow[];
   queryKey: readonly unknown[];
-  skillsFabTop: number;
 }
 
-export function SkillsEditor({ resumeId, skills, queryKey, skillsFabTop: _skillsFabTop }: SkillsEditorProps) {
+export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) {
   const { t } = useTranslation("common");
   const editor = useSkillsEditor({ resumeId, skills, queryKey });
   const pageTopOffset = RESUME_PAGE_HEADER_HEIGHT + RESUME_PAGE_VERTICAL_PADDING;
