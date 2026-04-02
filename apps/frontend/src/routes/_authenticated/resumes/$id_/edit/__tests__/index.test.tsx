@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders, buildTestQueryClient } from "../../../../../../test-utils/render";
 import enCommon from "../../../../../../locales/en/common.json";
 import { Route } from "../index";
@@ -8,43 +8,53 @@ import { Route } from "../index";
 const TEST_RESUME_ID = "resume-test-id-99";
 const mockNavigate = vi.fn();
 const mockOpenInlineRevision = vi.fn();
+const mockCloseInlineRevision = vi.fn();
 let mockSearch: { branchId?: string; assistant?: "true" } = {};
 
 vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
-  useInlineResumeRevision: () => ({
-    isOpen: false,
-    stage: "planning",
-    plan: null,
-    workItems: null,
-    suggestions: [],
-    selectedSuggestionId: null,
-    sourceBranchName: "main",
-    checklistWidth: 320,
-    chatWidth: 360,
-    planningToolRegistry: {},
-    actionToolRegistry: {},
-    planningToolContext: { route: "resume" },
-    actionToolContext: { route: "resume" },
-    guardrail: { isSatisfied: true, reminderMessage: "" },
-    automation: null,
-    applyingSuggestionId: null,
-    isPreparingFinalize: false,
-    isReadyToFinalize: false,
-    isMovingToActions: false,
-    isMerging: false,
-    isKeeping: false,
-    reviewDialog: { open: false },
-    open: mockOpenInlineRevision,
-    close: vi.fn(),
-    reset: vi.fn(),
-    openActions: vi.fn(),
-    prepareFinalize: vi.fn(),
-    backToActions: vi.fn(),
-    selectSuggestion: vi.fn(),
-    openSuggestionReview: vi.fn(),
-    keepBranch: vi.fn(),
-    mergeBranch: vi.fn(),
-  }),
+  useInlineResumeRevision: () => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    return {
+      isOpen,
+      stage: "planning",
+      plan: null,
+      workItems: null,
+      suggestions: [],
+      selectedSuggestionId: null,
+      sourceBranchName: "main",
+      checklistWidth: 320,
+      chatWidth: 360,
+      planningToolRegistry: { tools: [] },
+      actionToolRegistry: { tools: [] },
+      planningToolContext: { route: "resume", entityType: "resume", entityId: TEST_RESUME_ID },
+      actionToolContext: { route: "resume", entityType: "resume", entityId: TEST_RESUME_ID },
+      guardrail: { isSatisfied: true, reminderMessage: "" },
+      automation: null,
+      applyingSuggestionId: null,
+      isPreparingFinalize: false,
+      isReadyToFinalize: false,
+      isMovingToActions: false,
+      isMerging: false,
+      isKeeping: false,
+      reviewDialog: { open: false },
+      open: () => {
+        mockOpenInlineRevision();
+        setIsOpen(true);
+      },
+      close: () => {
+        mockCloseInlineRevision();
+        setIsOpen(false);
+      },
+      reset: vi.fn(),
+      openActions: vi.fn(),
+      prepareFinalize: vi.fn(),
+      backToActions: vi.fn(),
+      selectSuggestion: vi.fn(),
+      openSuggestionReview: vi.fn(),
+      keepBranch: vi.fn(),
+      mergeBranch: vi.fn(),
+    };
+  },
 }));
 
 vi.mock("../../../../../../components/RouterButton", () => ({
@@ -58,6 +68,18 @@ vi.mock("../../../../../../components/RouterButton", () => ({
 
 vi.mock("../../../../../../components/resume-detail/ResumeRevisionReviewDialog", () => ({
   ResumeRevisionReviewDialog: () => null,
+}));
+
+vi.mock("../../../../../../components/revision/InlineRevisionChatPanel", () => ({
+  InlineRevisionChatPanel: ({
+    toolContext,
+  }: {
+    toolContext: { route?: string; entityType?: string; entityId?: string };
+  }) => (
+    <div data-testid="assistant-chat-panel">
+      assistant:{toolContext.entityType}:{toolContext.entityId}:{toolContext.route}
+    </div>
+  ),
 }));
 
 vi.mock("../../../../../../orpc-client", () => ({
@@ -143,6 +165,7 @@ beforeEach(() => {
   mockSearch = {};
   mockNavigate.mockReset();
   mockOpenInlineRevision.mockReset();
+  mockCloseInlineRevision.mockReset();
   mockGetResume.mockResolvedValue(TEST_RESUME);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
@@ -158,7 +181,7 @@ describe("/resumes/$id/edit", () => {
 
     expect(screen.getByRole("button", { name: enCommon.revision.inline.aiHelpButton })).toBeInTheDocument();
     expect(screen.queryByText(enCommon.revision.inline.checklistTitle)).toBeNull();
-    expect(screen.queryByText(enCommon.revision.inline.chatTitle)).toBeNull();
+    expect(screen.queryByTestId("assistant-chat-panel")).toBeNull();
     expect(mockOpenInlineRevision).not.toHaveBeenCalled();
   });
 
@@ -168,7 +191,12 @@ describe("/resumes/$id/edit", () => {
 
     await screen.findAllByText(TEST_RESUME.title);
 
-    expect(mockOpenInlineRevision).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOpenInlineRevision).toHaveBeenCalled();
+      expect(screen.getByTestId("assistant-chat-panel")).toHaveTextContent(
+        `assistant:resume:${TEST_RESUME_ID}:resume`
+      );
+    });
   });
 
   it("updates the URL and opens assistant when Assistant is clicked", async () => {
@@ -182,6 +210,9 @@ describe("/resumes/$id/edit", () => {
       params: { id: TEST_RESUME_ID },
       search: { assistant: "true" },
     });
-    expect(mockOpenInlineRevision).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOpenInlineRevision).toHaveBeenCalled();
+      expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();
+    });
   });
 });
