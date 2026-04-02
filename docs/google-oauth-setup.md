@@ -102,6 +102,6 @@ VITE_GOOGLE_CLIENT_ID=your_actual_client_id_here.apps.googleusercontent.com
    ```
 2. Navigate to `http://localhost:5173/login`
 3. Click **Sign in with Google** — the Google account picker should appear
-4. After signing in, you should be redirected to `/employee`
+4. After signing in, you should be redirected to `/employees`
 
 If you see an error like `"idpiframe_initialization_failed"` or `"origin not allowed"`, double-check that `http://localhost:5173` is listed under **Authorised JavaScript origins** in your Google Cloud OAuth client.

@@ -278,11 +278,11 @@ Split `docs/architecture.md` into a concise **index file** plus **five domain-sp
 
 | File | Domain | Content moved from `architecture.md` |
 |------|--------|--------------------------------------|
-| `docs/arch/frontend.md` | UI, components, styling, routing, data-fetching, i18n | Material UI rules, flag icons, TanStack Router/Query patterns, react-i18next, frontend directory structure |
-| `docs/arch/backend.md` | Server, API, services, shared contracts | oRPC API layer rules, shared type contracts, database access patterns, backend directory structure |
+| `docs/arch/frontend/index.md` | UI, components, styling, routing, data-fetching, i18n | Material UI rules, flag icons, TanStack Router/Query patterns, react-i18next, frontend directory structure |
+| `docs/arch/backend/index.md` | Server, API, services, shared contracts | oRPC API layer rules, shared type contracts, database access patterns, backend directory structure |
 | `docs/arch/data-model.md` | Database, schema, migrations | PostgreSQL setup, migration conventions, database client constraints |
-| `docs/arch/testing.md` | Test framework, file conventions, coverage | Placeholder — decisions pending |
-| `docs/arch/infrastructure.md` | Docker, Turborepo pipeline, CI/CD, environments, deployment | Docker Compose setup, Turborepo pipeline config, environment variable conventions |
+| `docs/arch/testing/index.md` | Test framework, file conventions, coverage | Placeholder — decisions pending |
+| `docs/arch/infrastructure/index.md` | Docker, Turborepo pipeline, CI/CD, environments, deployment | Docker Compose setup, Turborepo pipeline config, environment variable conventions |
 
 The restructured `architecture.md` retains:
 - High-level system overview and major components table
@@ -305,7 +305,7 @@ The restructured `architecture.md` retains:
 **Status:** Accepted
 
 **Context:**
-The testing architecture sub-document (`docs/arch/testing.md`) was a placeholder with no decisions recorded. Multiple feature tasks require unit and integration tests, but there was no architectural guidance on: test runner selection, file naming/location conventions, coverage thresholds, mocking patterns, or the Turborepo `test` pipeline. Without these decisions, each developer task would make ad-hoc choices leading to inconsistent test infrastructure across workspaces.
+The testing architecture sub-document (`docs/arch/testing/index.md`) was a placeholder with no decisions recorded. Multiple feature tasks require unit and integration tests, but there was no architectural guidance on: test runner selection, file naming/location conventions, coverage thresholds, mocking patterns, or the Turborepo `test` pipeline. Without these decisions, each developer task would make ad-hoc choices leading to inconsistent test infrastructure across workspaces.
 
 **Decision:**
 1. **Test runner: Vitest.** Vitest is the sole test runner for all workspaces. It integrates natively with the existing Vite toolchain (used by the frontend), supports TypeScript via esbuild without additional transforms, and provides a Jest-compatible API (`describe`, `it`, `expect`, `vi.mock`, `vi.fn`). No other test runners (Jest, Mocha, Node.js native test runner) are permitted.
@@ -338,21 +338,24 @@ The testing architecture sub-document (`docs/arch/testing.md`) was a placeholder
 As the project grows, manual test execution before merging pull requests is error-prone and inconsistent. The tester agent previously ran tests as part of the PR-creation step, but this approach is fragile: it depends on the agent's local environment, is not visible to reviewers, and does not block merging if skipped. A mandatory automated CI pipeline is needed to enforce a baseline of correctness (type safety + unit tests) on every PR.
 
 **Decision:**
-Use **GitHub Actions** with a workflow file at `.github/workflows/ci.yml` to run the following checks on every pull request targeting `main`:
+Use **GitHub Actions** with a workflow file at `.github/workflows/ci.yml` to run the following checks on pull requests targeting `main` or `dev`:
 
-1. **Build contracts** — `npm run build --workspace=packages/contracts`. Required because both downstream `tsc` checks and backend tests consume the compiled `dist/` output.
-2. **Type check contracts** — `npx tsc --noEmit -p packages/contracts/tsconfig.json`.
-3. **Type check backend** — `npx tsc --noEmit -p apps/backend/tsconfig.json`.
-4. **Vitest backend** — `npx vitest run` executed in `apps/backend/`, covering all unit tests including procedure handler tests and structural criteria tests.
+1. **Install dependencies** — `npm ci`
+2. **Build contracts** — `npm run build --workspace=packages/contracts`
+3. **Build utils** — `npm run build --workspace=packages/utils`
+4. **Type check contracts** — `npx tsc --noEmit -p packages/contracts/tsconfig.json`
+5. **Type check backend** — `npx tsc --noEmit -p apps/backend/tsconfig.json`
+6. **Type check frontend** — `npx tsc --noEmit -p apps/frontend/tsconfig.json`
+7. **Vitest backend** — `npx vitest run` in `apps/backend`
+8. **Vitest frontend** — `npx vitest run` in `apps/frontend`
 
-The workflow uses Node.js 20 (matching the local development environment) and `npm ci` for reproducible installs.
+The workflow uses Node.js 20 and `npm ci` for reproducible installs.
 
 **Consequences:**
-- All PRs must pass type checks and backend tests before merging. The pipeline is a required status check on the `main` branch.
-- The contracts build step is a prerequisite for the remaining steps; failures there will short-circuit the entire run.
-- Frontend type checks and Vitest are not yet included — to be added once the frontend test suite is stabilised and coverage thresholds meet ADR-011's 80% requirement.
-- End-to-end tests are out of scope for this pipeline; a future ADR will decide the E2E strategy.
-- The tester agent no longer runs tests as part of PR creation; CI is the authoritative gate.
+- All PRs must pass type checks and backend/frontend tests before merging.
+- The contracts and utils build steps are prerequisites for downstream type and test checks.
+- The pipeline is the authoritative automated gate for baseline correctness.
+- End-to-end tests are still outside this CI workflow.
 
 ---
 

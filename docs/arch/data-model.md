@@ -120,7 +120,7 @@ Kysely's Migrator automatically creates and manages a `kysely_migration` table i
 
 ## Database Client
 
-The database client is **Kysely** — a type-safe SQL query builder for TypeScript (ADR-012). See [backend.md](./backend.md) for full usage patterns, dependencies, and query examples.
+The database client is **Kysely** — a type-safe SQL query builder for TypeScript (ADR-012). See [backend/index.md](./backend/index.md) for full usage patterns, dependencies, and query examples.
 
 **Constraints (from ADR-006, enforced by ADR-012):**
 - Must support TypeScript — ✅ Kysely is TypeScript-native.
