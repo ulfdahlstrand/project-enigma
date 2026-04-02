@@ -16,6 +16,27 @@ import type { forkResumeBranchInputSchema, forkResumeBranchOutputSchema } from "
 type ForkResumeBranchInput = z.infer<typeof forkResumeBranchInputSchema>;
 type ForkResumeBranchOutput = z.infer<typeof forkResumeBranchOutputSchema>;
 
+function normaliseRevisionBranchName(name: string): string {
+  const trimmed = name.trim();
+  const isRevisionBranch =
+    /^AI revision:\s*/i.test(trimmed) ||
+    /^revision\//i.test(trimmed);
+
+  if (!isRevisionBranch) {
+    return trimmed;
+  }
+
+  const slug = trimmed
+    .replace(/^AI revision:\s*/i, "")
+    .replace(/^revision\//i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  return slug ? `revision/${slug}` : "revision/untitled";
+}
+
 /**
  * Creates a new branch forked from a specific commit.
  *
@@ -72,7 +93,7 @@ export async function forkResumeBranch(
       .insertInto("resume_branches")
       .values({
         resume_id: commit.resume_id,
-        name: input.name,
+        name: normaliseRevisionBranchName(input.name),
         language: commit.source_language ?? "en",
         is_main: false,
         head_commit_id: null,
