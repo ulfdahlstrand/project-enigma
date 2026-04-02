@@ -1,4 +1,4 @@
-import type { RevisionPlan, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tools";
+import type { RevisionPlan, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 import { inferRevisionWorkItemSection } from "./inline-revision";
 
 type WorkItem = RevisionWorkItems["items"][number];

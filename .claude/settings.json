@@ -5,5 +5,8 @@
       "Bash(npm install)",
       "Bash(npx tsc --noEmit)"
     ]
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true
   }
 }

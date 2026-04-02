@@ -1,4 +1,4 @@
-import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tools";
+import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
 export type InlineRevisionStage = "planning" | "actions" | "finalize";
 
