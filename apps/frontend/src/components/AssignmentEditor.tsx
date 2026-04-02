@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { toQuarter } from "@cv-tool/utils";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,10 @@ interface AssignmentEditorProps {
   queryKey: readonly unknown[];
   /** Canvas element (position:relative) used to portal AI FABs outside the paper. */
   canvasEl?: HTMLElement | null;
+  /** When set, immediately opens this assignment id in edit mode. */
+  autoEditId?: string | null;
+  /** Called after autoEditId has been consumed so the parent can clear it. */
+  onAutoEditConsumed?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +68,7 @@ interface DraftState {
   isCurrent: boolean;
   description: string;
   technologies: string;
+  keywords: string;
 }
 
 function buildDraft(a: AssignmentRow): DraftState {
@@ -75,6 +80,7 @@ function buildDraft(a: AssignmentRow): DraftState {
     isCurrent: a.isCurrent,
     description: a.description,
     technologies: a.technologies.join(", "),
+    keywords: a.keywords ?? "",
   };
 }
 
@@ -82,16 +88,26 @@ function buildDraft(a: AssignmentRow): DraftState {
 // AssignmentEditor
 // ---------------------------------------------------------------------------
 
-export function AssignmentEditor({ assignments, queryKey, canvasEl }: AssignmentEditorProps) {
+export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, onAutoEditConsumed }: AssignmentEditorProps) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    if (!autoEditId) return;
+    const target = assignments.find((a) => a.id === autoEditId);
+    if (!target) return;
+    startEdit(target);
+    onAutoEditConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEditId, assignments]);
 
   useLayoutEffect(() => {
     if (!canvasEl) return;
@@ -102,6 +118,16 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
     });
     setCardTops(tops);
   }, [canvasEl, assignments, editingId]);
+
+  // Delete uses the assignment identity id (cascades across branches)
+  const deleteMutation = useMutation({
+    mutationFn: (assignmentId: string) => orpc.deleteAssignment({ id: assignmentId }),
+    onSuccess: async () => {
+      setConfirmDeleteId(null);
+      cancelEdit();
+      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+    },
+  });
 
   // All content edits go through updateBranchAssignment (id = branch_assignment id)
   const updateMutation = useMutation({
@@ -145,6 +171,9 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
     if (JSON.stringify(newTechs) !== JSON.stringify(original.technologies)) {
       patch.technologies = newTechs;
     }
+
+    const newKeywords = draft.keywords.trim() || null;
+    if (newKeywords !== original.keywords) patch.keywords = newKeywords;
 
     const origStart = toDateInput(original.startDate);
     if (draft.startDate !== origStart) patch.startDate = draft.startDate;
@@ -271,29 +300,73 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl }: Assignment
                     fullWidth
                   />
 
+                  <TextField
+                    label={t("assignment.new.keywordsLabel")}
+                    value={draft.keywords}
+                    onChange={(e) => setDraftField("keywords", e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+
                   {saveError && (
                     <Alert severity="error">{t("resume.edit.assignment.saveError")}</Alert>
                   )}
 
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      disabled={updateMutation.isPending}
-                      onClick={() => handleSave(a)}
-                    >
-                      {updateMutation.isPending
-                        ? t("resume.edit.assignment.saving")
-                        : t("assignment.detail.saveButton")}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      disabled={updateMutation.isPending}
-                      onClick={cancelEdit}
-                    >
-                      {t("resume.edit.assignment.cancelButton")}
-                    </Button>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={updateMutation.isPending || deleteMutation.isPending}
+                        onClick={() => handleSave(a)}
+                      >
+                        {updateMutation.isPending
+                          ? t("resume.edit.assignment.saving")
+                          : t("assignment.detail.saveButton")}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        disabled={updateMutation.isPending || deleteMutation.isPending}
+                        onClick={cancelEdit}
+                      >
+                        {t("resume.edit.assignment.cancelButton")}
+                      </Button>
+                    </Box>
+
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {confirmDeleteId === a.assignmentId ? (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => deleteMutation.mutate(a.assignmentId)}
+                          >
+                            {t("resume.edit.assignment.confirmDelete")}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            {t("resume.edit.assignment.cancelButton")}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          disabled={updateMutation.isPending || deleteMutation.isPending}
+                          onClick={() => setConfirmDeleteId(a.assignmentId)}
+                        >
+                          {t("resume.edit.assignment.deleteButton")}
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               ) : (

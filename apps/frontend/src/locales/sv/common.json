@@ -156,6 +156,8 @@
       "consultantProfileLabel": "Konsultprofil",
       "editButton": "Redigera",
       "addAssignment": "Lägg till uppdrag",
+      "newAssignmentClientPlaceholder": "Ny kund",
+      "newAssignmentRolePlaceholder": "Ny roll",
       "assignmentsHeading": "Urval av kvalifikationer",
       "noAssignments": "Inga uppdrag tillagda.",
       "assignmentPresent": "Nuvarande",
@@ -196,7 +198,9 @@
         "editButton": "Redigera",
         "cancelButton": "Avbryt",
         "saving": "Sparar…",
-        "saveError": "Det gick inte att spara uppdraget. Försök igen."
+        "saveError": "Det gick inte att spara uppdraget. Försök igen.",
+        "deleteButton": "Ta bort",
+        "confirmDelete": "Ja, ta bort"
       },
       "pageTitle": "Redigera meritförteckning",
       "consultantTitleLabel": "Konsulttitel",
@@ -346,23 +350,7 @@
     "tableHeaderCurrent": "Pågående",
     "addAssignment": "Lägg till uppdrag",
     "new": {
-      "pageTitle": "Nytt uppdrag",
-      "clientNameLabel": "Kundnamn",
-      "roleLabel": "Roll",
-      "descriptionLabel": "Beskrivning",
-      "startDateLabel": "Startdatum",
-      "endDateLabel": "Slutdatum",
-      "technologiesLabel": "Teknologier (kommaseparerade)",
-      "keywordsLabel": "Nyckelord",
-      "isCurrentLabel": "Pågående uppdrag",
-      "saveButton": "Spara",
-      "cancel": "Avbryt",
-      "saveError": "Det gick inte att spara uppdraget. Försök igen.",
-      "sectionClient": "Kund & Roll",
-      "sectionPeriod": "Period",
-      "sectionContent": "Innehåll",
-      "sectionSkills": "Kompetenser",
-      "contextLabel": "Lägger till uppdrag i meritförteckning"
+      "keywordsLabel": "Nyckelord"
     },
     "detail": {
       "loading": "Laddar uppdrag…",
@@ -468,8 +456,8 @@
     "reviseButton": "Revidera med AI",
     "inline": {
       "branchBadge": "AI-revisionsläge",
-    "checklistTitle": "Revisionschecklista",
-    "workItemsTitle": "Arbetslista",
+      "checklistTitle": "Revisionschecklista",
+      "workItemsTitle": "Arbetslista",
       "checklistDescription": "Checklistan visas här när AI har förstått målet och startat en revisionsgren.",
       "checklistWaitingTitle": "Väntar på revisionsplan",
       "checklistWaitingDescription": "Berätta vad du vill ändra. När riktningen är tydlig dyker föreslagna uppgifter upp här.",

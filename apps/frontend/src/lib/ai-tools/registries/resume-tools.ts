@@ -416,7 +416,7 @@ export function createResumeActionToolRegistry({
         return {
           title: snapshot.title,
           consultantTitle: snapshot.consultantTitle ?? "",
-          presentation: snapshot.presentation,
+          presentation: snapshot.presentation.join("\n\n"),
           summary: snapshot.summary ?? "",
           assignments: includeAssignments
             ? snapshot.assignments.map((assignment) => ({

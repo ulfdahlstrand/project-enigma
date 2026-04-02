@@ -581,7 +581,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
           <ArrowDropDownIcon />
         </Button>
       </ButtonGroup>
-      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal>
+      <Popper open={open} anchorEl={anchorRef[0]} placement="bottom-end" transition disablePortal sx={{ zIndex: 1300 }}>
         {({ TransitionProps }) => (
           <Grow {...TransitionProps}>
             <Paper>
@@ -755,6 +755,24 @@ function ResumeDetailPage() {
         to: "/resumes",
         search: resume?.employeeId ? { employeeId: resume.employeeId } : {},
       });
+    },
+  });
+
+  const [newAssignmentId, setNewAssignmentId] = useState<string | null>(null);
+
+  const createAssignment = useMutation({
+    mutationFn: () =>
+      orpc.createAssignment({
+        employeeId: resume!.employeeId,
+        branchId: activeBranchId!,
+        clientName: t("resume.detail.newAssignmentClientPlaceholder"),
+        role: t("resume.detail.newAssignmentRolePlaceholder"),
+        startDate: new Date().toISOString().slice(0, 10),
+        isCurrent: true,
+      }),
+    onSuccess: async (result) => {
+      setNewAssignmentId(result.id);
+      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
     },
   });
 
@@ -1305,6 +1323,8 @@ function ResumeDetailPage() {
                       assignments={sortedAssignments}
                       queryKey={["listBranchAssignmentsFull", activeBranchId]}
                       canvasEl={canvasRef.current}
+                      autoEditId={newAssignmentId}
+                      onAutoEditConsumed={() => setNewAssignmentId(null)}
                     />
                   ) : showFullAssignments ? (
                     /* Full document-style view */
@@ -1485,20 +1505,14 @@ function ResumeDetailPage() {
               </Tooltip>
             )}
 
-            {/* Add assignment FAB — visible only while editing, below the toggle FAB position */}
-            {hasAssignments && isEditing && !inlineRevision.isOpen && !isSnapshotMode && (
+            {/* Add assignment FAB — visible while editing, including during AI revision */}
+            {hasAssignments && isEditing && !isSnapshotMode && (
               <Tooltip title={t("resume.detail.addAssignment")} placement="left">
                 <Fab
                   size="small"
                   aria-label={t("resume.detail.addAssignment")}
-                  onClick={() => void navigate({
-                    to: "/assignments/new",
-                    search: {
-                      resumeId: id,
-                      employeeId: resume?.employeeId,
-                      ...(activeBranchId ? { branchId: activeBranchId } : {}),
-                    },
-                  })}
+                  disabled={createAssignment.isPending || !activeBranchId || !resume?.employeeId}
+                  onClick={() => void createAssignment.mutate()}
                   sx={{
                     position: "absolute",
                     left: `calc(50% + ${PAGE_WIDTH / 2}px + 16px)`,
