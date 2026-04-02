@@ -8,6 +8,7 @@ import {
   useCloseAIConversation,
 } from "./ai-assistant";
 import {
+  resumeCommitsKey,
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
   useFinaliseResumeBranch,
@@ -84,11 +85,12 @@ export function useInlineResumeRevision({
 
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) });
-      if (activeBranchHeadCommitId) {
-        await queryClient.invalidateQueries({ queryKey: ["getResumeCommit", activeBranchHeadCommitId] });
-      }
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
+        queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+      ]);
     },
   });
 

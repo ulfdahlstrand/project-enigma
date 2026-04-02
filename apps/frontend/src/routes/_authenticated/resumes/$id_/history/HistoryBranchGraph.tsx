@@ -259,14 +259,15 @@ export function HistoryBranchGraph({
               >
                 <Typography
                   variant="caption"
-                  noWrap
                   sx={{
                     position: "absolute",
                     left: graphLayout.labelColumnX,
-                    right: 8,
+                    width: "max-content",
+                    maxWidth: "none",
                     color: "text.primary",
                     fontSize: "0.75rem",
                     lineHeight: 1,
+                    whiteSpace: "nowrap",
                     pointerEvents: "none",
                   }}
                 >
