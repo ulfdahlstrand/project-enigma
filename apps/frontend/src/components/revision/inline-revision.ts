@@ -230,7 +230,18 @@ export function appendUniqueRevisionSuggestions(
     const existingIndex = nextSuggestions.findIndex((item) => item.id === suggestion.id);
 
     if (existingIndex >= 0) {
-      nextSuggestions[existingIndex] = suggestion;
+      const existingSuggestion = nextSuggestions[existingIndex];
+      if (!existingSuggestion) {
+        nextSuggestions.push(suggestion);
+        continue;
+      }
+      nextSuggestions[existingIndex] = {
+        ...suggestion,
+        status:
+          existingSuggestion.status !== "pending" && suggestion.status === "pending"
+            ? existingSuggestion.status
+            : suggestion.status,
+      };
     } else {
       nextSuggestions.push(suggestion);
     }

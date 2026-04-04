@@ -54,6 +54,7 @@ export function useAIAssistantChat({
   const closeConversation = useCloseAIConversation(entityType, entityId);
 
   const messages = conversation?.messages ?? [];
+  const isConversationClosed = conversation?.isClosed ?? false;
   const visibleMessages = messages.filter(
     (message) =>
       !isToolResultMessage(message.content) &&
@@ -102,7 +103,7 @@ export function useAIAssistantChat({
   // Handlers
   const handleSend = (value: string) => {
     const trimmed = value.trim();
-    if (!trimmed || !activeConversationId || sendMessage.isPending) return;
+    if (!trimmed || !activeConversationId || sendMessage.isPending || isConversationClosed) return;
     sendMessage.mutate({ conversationId: activeConversationId, userMessage: trimmed });
   };
 
@@ -151,6 +152,8 @@ export function useAIAssistantChat({
     pendingSuggestion,
     sendMessage,
     createConversation,
+    conversation,
+    isConversationClosed,
     handleSend,
     handleApplyClick,
     handleDiffApply,

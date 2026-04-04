@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { useAIAssistantChat } from "../useAIAssistantChat";
+import { buildToolResultMessage } from "../../components/ai-assistant/ai-message-parsing";
 
 type Message = {
   id: string;
@@ -44,8 +45,6 @@ const mockCloseConversation = {
   isPending: false,
 };
 
-const mockExecuteAIToolCall = vi.fn();
-
 vi.mock("../ai-assistant", () => ({
   useAIConversation: () => ({
     data: mockConversation,
@@ -60,10 +59,6 @@ vi.mock("../../lib/ai-assistant-context", () => ({
   useAIAssistantContext: () => mockContext,
 }));
 
-vi.mock("../../lib/ai-tools/runtime", () => ({
-  executeAIToolCall: (...args: unknown[]) => mockExecuteAIToolCall(...args),
-}));
-
 function buildToolCallMessage(toolName = "inspect_resume") {
   return {
     id: "assistant-tool-call",
@@ -71,6 +66,18 @@ function buildToolCallMessage(toolName = "inspect_resume") {
     content: `\`\`\`json
 {"type":"tool_call","toolName":"${toolName}","input":{"includeAssignments":true}}
 \`\`\``,
+  };
+}
+
+function buildToolResultOnlyMessage() {
+  return {
+    id: "assistant-tool-result",
+    role: "assistant" as const,
+    content: buildToolResultMessage({
+      ok: true,
+      output: { inspected: true },
+      meta: { toolName: "inspect_resume" },
+    }),
   };
 }
 
@@ -105,13 +112,6 @@ describe("useAIAssistantChat", () => {
     mockSendMessage.isError = false;
 
     mockCloseConversation.mutate.mockReset();
-    mockExecuteAIToolCall.mockReset();
-    mockExecuteAIToolCall.mockResolvedValue({
-      ok: true,
-      output: { inspected: true },
-      meta: { toolName: "inspect_resume" },
-    });
-
     mockContext = {
       entityType: "resume",
       entityId: "resume-1",
@@ -152,29 +152,21 @@ describe("useAIAssistantChat", () => {
     expect(mockContext.setActiveConversationId).toHaveBeenCalledWith("conv-1");
   });
 
-  it("executes assistant tool calls and sends back a tool result message", async () => {
+  it("hides internal tool payload messages from the visible chat transcript", async () => {
     mockContext.activeConversationId = "conv-1";
-    mockContext.toolRegistry = { tools: [{ name: "inspect_resume" }] };
-    mockConversation = { messages: [buildToolCallMessage()] };
+    mockConversation = {
+      messages: [
+        buildToolCallMessage(),
+        buildToolResultOnlyMessage(),
+        { id: "assistant-visible", role: "assistant", content: "Visible summary" },
+      ],
+    };
 
-    renderHook(() => useAIAssistantChat());
-
-    await waitFor(() => {
-      expect(mockExecuteAIToolCall).toHaveBeenCalledWith(
-        mockContext.toolRegistry,
-        {
-          toolName: "inspect_resume",
-          input: { includeAssignments: true },
-        },
-        mockContext.toolContext,
-      );
-    });
+    const { result } = renderHook(() => useAIAssistantChat());
 
     await waitFor(() => {
-      expect(mockSendMessage.mutateAsync).toHaveBeenCalledWith({
-        conversationId: "conv-1",
-        userMessage: expect.stringContaining('"type":"tool_result"'),
-      });
+      expect(result.current.visibleMessages).toHaveLength(2);
+      expect(result.current.visibleMessages.at(-1)?.content).toBe("Visible summary");
     });
   });
 

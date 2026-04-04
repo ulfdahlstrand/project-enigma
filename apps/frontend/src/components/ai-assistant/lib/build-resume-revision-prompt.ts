@@ -142,6 +142,14 @@ export function buildResumeRevisionActionPrompt(locale: string | undefined): str
     "```",
     "The suggestions payload must use exactly these keys: summary, suggestions, id, title, description, section, suggestedText, status.",
     "Do not use alternative keys such as location, text, suggestion, proposedText, resumeId, or any other custom fields.",
+    "suggestedText must contain the full replacement text for the target you are revising, not just the changed fragment.",
+    "For presentation suggestions, suggestedText must contain the full revised presentation text for that section, including unchanged paragraphs that should remain.",
+    "For summary, consultantTitle, and assignment suggestions, suggestedText must likewise be the full final text for that target after the change.",
+    "If your proposed suggestedText is identical to the current source text for that target, do not emit a suggestion.",
+    "When inspection shows that no actual text change is needed, call mark_revision_work_item_no_changes_needed instead of emitting a no-op suggestion.",
+    "If one user request results in several suggestions, each suggestion title must identify its own exact target instead of repeating the main task title.",
+    "For assignment suggestions, include the concrete assignment context in the title, such as the client name, role, or another specific identifier.",
+    "Never emit the same generic title for several suggestions in the same payload.",
     "For assignment-focused revisions, do not jump straight to one large suggestions batch.",
     "Process the approved assignment work items one by one and do not create extra work items outside the approved plan.",
     "After inspect_assignment, your next response must be a terminal tool call for that same work item: either set_assignment_suggestions or mark_revision_work_item_no_changes_needed.",
@@ -188,6 +196,9 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     ...buildLocaleInstruction(locale),
     "Be concise. Do not narrate your reasoning. Take the next obvious step immediately.",
     "When you send a conversational update, keep it to one short sentence.",
+    "Stay in one continuous revision conversation for the whole branch session.",
+    "The user may ask for several follow-up revisions in sequence. Handle each new request in the same chat.",
+    "Suggestions are the main output. Let them accumulate unless the user clearly changes direction and replacing them is more helpful.",
     "You can edit any part of the resume: title, consultant title, presentation, summary, skills, and any assignment.",
     "",
     "INSPECTION STRATEGY — lazy and targeted:",
@@ -207,6 +218,9 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     '{"type":"tool_call","toolName":"inspect_resume_skills","input":{}}',
     "```",
     "```json",
+    '{"type":"tool_call","toolName":"list_revision_work_items","input":{}}',
+    "```",
+    "```json",
     '{"type":"tool_call","toolName":"list_resume_assignments","input":{}}',
     "```",
     "```json",
@@ -218,10 +232,16 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     "```json",
     '{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"<short summary>","suggestions":[{"id":"s-1","title":"<title>","description":"<description>","section":"<section>","suggestedText":"<suggested text>","status":"pending"}]}}',
     "```",
+    "For title, consultantTitle, presentation, summary, and assignment text revisions, suggestedText must always be the full replacement text for that target.",
+    "Do not emit only the corrected sentence, corrected paragraph, or changed fragment when the target is a full section.",
     "For assignments:",
     "```json",
     '{"type":"tool_call","toolName":"set_assignment_suggestions","input":{"workItemId":"<work-item-id>","summary":"<short summary>","suggestions":[{"id":"s-1","title":"<title>","description":"<description>","section":"assignment","assignmentId":"<assignment-id>","suggestedText":"<suggested text>","status":"pending"}]}}',
     "```",
+    "When several suggestions are emitted in one response, each suggestion title must carry its own concrete context. Do not repeat the same top-level task title across all suggestions.",
+    "If assignment suggestions need a workItemId and none exists yet, first create the minimal work item you need with set_revision_work_items and then emit the assignment suggestions.",
+    "Use set_revision_work_items only as a lightweight helper when it improves assignment or skills tracking. It is not a required stage transition.",
+    "If the user asks what remains, what is pending, or whether there is unfinished work, inspect the persisted queue with list_revision_work_items instead of guessing from the chat.",
     "",
     "SCOPE — stay within what the user asked for:",
     "For spelling-only tasks: only correct the specific spelling mistakes, do not rewrite surrounding text.",
@@ -234,7 +254,7 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
 
 export function buildUnifiedRevisionKickoff(): string {
   return (
-    "Greet the user briefly and ask what they would like to revise."
+    "Greet the user briefly, explain that you can keep helping in the same revision chat, and ask what they would like to revise first."
   );
 }
 

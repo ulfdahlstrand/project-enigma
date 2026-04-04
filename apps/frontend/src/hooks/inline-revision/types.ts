@@ -64,9 +64,10 @@ export type ResumeInspectionSnapshot = {
 };
 
 export type PersistedInlineRevisionSession = {
-  version: 2;
+  version: 3;
   sourceBranchId: string | null;
   sourceBranchName: string | null;
+  conversationId: string | null;
   suggestions: RevisionSuggestions | null;
 };
 

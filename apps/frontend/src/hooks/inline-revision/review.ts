@@ -31,6 +31,7 @@ import type {
 } from "./types";
 
 type Suggestion = RevisionSuggestions["suggestions"][number];
+type SuggestionsState = RevisionSuggestions | null;
 type ReviewDialog =
   | {
       kind: "skills";
@@ -73,6 +74,7 @@ type Params = {
   queryClient: QueryClient;
   suggestions: RevisionSuggestions | null;
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
+  persistSuggestions: (updater: (prev: RevisionSuggestions | null) => RevisionSuggestions | null) => void;
   saveVersion: (input: {
     branchId: string;
     title?: string;
@@ -100,6 +102,7 @@ export function useInlineRevisionReview({
   queryClient,
   suggestions,
   setSuggestions,
+  persistSuggestions,
   saveVersion,
   updateBranchAssignment,
   buildDraftPatchFromValues,
@@ -154,7 +157,7 @@ export function useInlineRevisionReview({
     }
 
     setSelectedSuggestionId(suggestionId);
-    setSuggestions((prev) => {
+    const updater = (prev: SuggestionsState): SuggestionsState => {
       if (!prev) {
         return prev;
       }
@@ -162,15 +165,17 @@ export function useInlineRevisionReview({
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
-          item.id === suggestionId ? { ...item, status: "accepted" } : item,
+          item.id === suggestionId ? { ...item, status: "accepted" as const } : item,
         ),
       };
-    });
+    };
+    setSuggestions(updater);
+    persistSuggestions(updater);
   };
 
   const dismissSuggestion = (suggestionId: string) => {
     setSelectedSuggestionId(suggestionId);
-    setSuggestions((prev) => {
+    const updater = (prev: SuggestionsState): SuggestionsState => {
       if (!prev) {
         return prev;
       }
@@ -178,10 +183,12 @@ export function useInlineRevisionReview({
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
-          item.id === suggestionId ? { ...item, status: "dismissed" } : item,
+          item.id === suggestionId ? { ...item, status: "dismissed" as const } : item,
         ),
       };
-    });
+    };
+    setSuggestions(updater);
+    persistSuggestions(updater);
   };
 
   const openSuggestionReview = (suggestionId: string) => {
@@ -195,6 +202,43 @@ export function useInlineRevisionReview({
     setReviewSuggestionId(null);
   };
 
+  const resolveAssignmentTarget = (suggestion: Suggestion) => {
+    if (suggestion.assignmentId) {
+      const directTarget = sectionRefs.assignmentItemRefs.current[suggestion.assignmentId];
+      if (directTarget) {
+        return directTarget;
+      }
+
+      const matchingAssignment = sortedAssignments.find((assignment) => {
+        const assignmentIdentityId = assignment.assignmentId ?? assignment.id;
+        return assignmentIdentityId === suggestion.assignmentId;
+      });
+      if (matchingAssignment) {
+        const assignmentIdentityId = matchingAssignment.assignmentId ?? matchingAssignment.id;
+        return sectionRefs.assignmentItemRefs.current[assignmentIdentityId] ?? null;
+      }
+    }
+
+    const haystack = [
+      suggestion.title,
+      suggestion.description,
+      suggestion.section,
+    ].join(" ").toLowerCase();
+
+    const matchingAssignment = sortedAssignments.find((assignment) => {
+      const client = assignment.clientName.toLowerCase();
+      const role = assignment.role.toLowerCase();
+      return haystack.includes(client) || haystack.includes(role);
+    });
+
+    if (!matchingAssignment) {
+      return null;
+    }
+
+    const assignmentIdentityId = matchingAssignment.assignmentId ?? matchingAssignment.id;
+    return sectionRefs.assignmentItemRefs.current[assignmentIdentityId] ?? null;
+  };
+
   const selectSuggestion = (suggestionId: string) => {
     const suggestion = suggestions?.suggestions.find((item) => item.id === suggestionId);
     if (!suggestion) {
@@ -204,13 +248,11 @@ export function useInlineRevisionReview({
     const section = suggestion.section.trim().toLowerCase();
     let target: HTMLElement | null = null;
 
-    if (suggestion.assignmentId) {
-      const assignmentTarget = sectionRefs.assignmentItemRefs.current[suggestion.assignmentId];
-      if (assignmentTarget) {
-        setSelectedSuggestionId(suggestionId);
-        assignmentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
+    const assignmentTarget = resolveAssignmentTarget(suggestion);
+    if (assignmentTarget) {
+      setSelectedSuggestionId(suggestionId);
+      assignmentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
 
     if (section.includes("skills") || section.includes("kompetens")) {
@@ -305,6 +347,7 @@ export function useInlineRevisionReview({
     reviewDialog,
     hasUnsavedChanges,
     openSuggestionReview,
+    dismissSuggestion,
     selectSuggestion,
   };
 }

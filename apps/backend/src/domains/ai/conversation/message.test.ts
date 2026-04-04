@@ -6,6 +6,8 @@ import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
 import { sendAIMessage, createSendAIMessageHandler } from "./message.js";
 import * as toolExecution from "./tool-execution.js";
+import * as revisionWorkItems from "./revision-work-items.js";
+import * as actionOrchestration from "./action-orchestration.js";
 
 const CONV_ID = "550e8400-e29b-41d4-a716-446655440002";
 const ENTITY_ID = "550e8400-e29b-41d4-a716-446655440003";
@@ -18,6 +20,7 @@ const CONVERSATION_ROW = {
   entity_type: "assignment",
   entity_id: ENTITY_ID,
   system_prompt: "You are a CV expert.",
+  is_closed: false,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
 };
@@ -30,9 +33,25 @@ const ASSISTANT_MSG_ROW = {
   created_at: new Date("2026-03-19T00:01:00.000Z"),
 };
 
+const USER_MSG_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440011",
+  conversation_id: CONV_ID,
+  role: "user",
+  content: "Improve this text.",
+  created_at: new Date("2026-03-19T00:00:30.000Z"),
+};
+
 function buildOpenAI(content: string | null): OpenAI {
   const message = content !== null ? { content } : { content: null };
   const create = vi.fn().mockResolvedValue({ choices: [{ message }] });
+  return { chat: { completions: { create } } } as unknown as OpenAI;
+}
+
+function buildOpenAISequence(messages: Array<Record<string, unknown>>): OpenAI {
+  const create = vi.fn();
+  for (const message of messages) {
+    create.mockResolvedValueOnce({ choices: [{ message }] });
+  }
   return { chat: { completions: { create } } } as unknown as OpenAI;
 }
 
@@ -127,6 +146,113 @@ describe("sendAIMessage", () => {
       (err: unknown) => err instanceof ORPCError && err.code === "INTERNAL_SERVER_ERROR"
     );
   });
+
+  it("throws FAILED_PRECONDITION when conversation is closed", async () => {
+    const db = buildDb({
+      conversation: { ...CONVERSATION_ROW, is_closed: true },
+    });
+    const openai = buildOpenAI("text");
+    await expect(
+      sendAIMessage(db, openai, { conversationId: CONV_ID, userMessage: "test" })
+    ).rejects.toSatisfy(
+      (err: unknown) => err instanceof ORPCError && err.code === "FAILED_PRECONDITION"
+    );
+  });
+
+  it("returns a persisted help message without calling OpenAI for /help", async () => {
+    const helpConversation = {
+      ...CONVERSATION_ROW,
+      entity_type: "resume-revision-actions",
+      system_prompt: "IMPORTANT: You must respond in Swedish.",
+    };
+    const helpAssistantRow = {
+      ...ASSISTANT_MSG_ROW,
+      content: "Här är vad du kan be mig om i den här revisionschatten:",
+    };
+    const db = buildDb({
+      conversation: helpConversation,
+      assistantRow: helpAssistantRow,
+    });
+    const openai = buildOpenAI("should not be used");
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "/help",
+    });
+
+    expect(result.content).toContain("revisionschatten");
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("returns a persisted status summary without calling OpenAI for /status", async () => {
+    const statusConversation = {
+      ...CONVERSATION_ROW,
+      entity_type: "resume-revision-actions",
+      system_prompt: "IMPORTANT: You must respond in Swedish.",
+    };
+    const statusAssistantRow = {
+      ...ASSISTANT_MSG_ROW,
+      content: "Status för revisionsarbetet: 2 work item(s).",
+    };
+    const db = buildDb({
+      conversation: statusConversation,
+      assistantRow: statusAssistantRow,
+    });
+    const listSpy = vi.spyOn(revisionWorkItems, "listPersistedRevisionWorkItems").mockResolvedValue([
+      {
+        id: "row-1",
+        conversation_id: CONV_ID,
+        branch_id: BRANCH_ID,
+        work_item_id: "work-item-1",
+        title: "Review presentation",
+        description: "Check presentation text.",
+        section: "presentation",
+        assignment_id: null,
+        status: "completed",
+        note: null,
+        position: 0,
+        attempt_count: 0,
+        last_error: null,
+        payload: null,
+        completed_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      {
+        id: "row-2",
+        conversation_id: CONV_ID,
+        branch_id: BRANCH_ID,
+        work_item_id: "work-item-2",
+        title: "Review assignments",
+        description: "Check assignment text.",
+        section: "assignment",
+        assignment_id: null,
+        status: "pending",
+        note: null,
+        position: 1,
+        attempt_count: 0,
+        last_error: null,
+        payload: null,
+        completed_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    ] as never);
+    const openai = buildOpenAI("should not be used");
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "/status",
+    });
+
+    expect(result.content).toContain("Status för revisionsarbetet");
+    expect(listSpy).toHaveBeenCalledWith(db, CONV_ID);
+    expect(create).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -141,16 +267,9 @@ const REVISION_CONVERSATION_ROW = {
   entity_type: "resume-revision-actions",
   entity_id: BRANCH_ID,
   system_prompt: "You are a revision assistant.",
+  is_closed: false,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
-};
-
-const TOOL_CALL_MSG_ROW = {
-  id: "msg-tool-call",
-  conversation_id: CONV_ID,
-  role: "assistant",
-  content: '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{"includeAssignments":true}}\n```',
-  created_at: new Date("2026-03-19T00:01:00.000Z"),
 };
 
 const FINAL_MSG_ROW = {
@@ -167,18 +286,20 @@ const FINAL_MSG_ROW = {
  * `selectFrom` is called multiple times in the loop:
  *   - call 0: fetch conversation
  *   - call 1: fetch existing messages
- *   - call 2: re-fetch history after tool result insert (inside loop iteration)
+ *   - call 2: re-fetch history after an internal loop step
  *   - subsequent: update conversation updated_at (updateTable handles that)
  */
 function buildRevisionDb({
-  toolCallRow = TOOL_CALL_MSG_ROW as unknown,
+  userRow = USER_MSG_ROW as unknown,
+  intermediateAssistantRows = [] as unknown[],
   finalRow = FINAL_MSG_ROW as unknown,
   updatedHistoryMessages = [] as unknown[],
 } = {}) {
-  const executeTakeFirstOrThrow = vi
-    .fn()
-    .mockResolvedValueOnce(toolCallRow)  // 1st insert (tool call response)
-    .mockResolvedValueOnce(finalRow);    // 2nd insert (final response)
+  const executeTakeFirstOrThrow = vi.fn().mockResolvedValueOnce(userRow);
+  for (const row of intermediateAssistantRows) {
+    executeTakeFirstOrThrow.mockResolvedValueOnce(row);
+  }
+  executeTakeFirstOrThrow.mockResolvedValueOnce(finalRow);
 
   const returningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow });
 
@@ -234,11 +355,21 @@ describe("sendAIMessage — backend tool-call loop", () => {
       output: { resumeId: BRANCH_ID, employeeName: "Ada" },
     });
 
-    // First call: tool call response. Second call: final response.
-    const create = vi.fn()
-      .mockResolvedValueOnce({ choices: [{ message: { content: TOOL_CALL_MSG_ROW.content } }] })
-      .mockResolvedValueOnce({ choices: [{ message: { content: FINAL_MSG_ROW.content } }] });
-    const openai = { chat: { completions: { create } } } as unknown as OpenAI;
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-inspect",
+          type: "function",
+          function: {
+            name: "inspect_resume",
+            arguments: "{\"includeAssignments\":true}",
+          },
+        }],
+      },
+      { content: FINAL_MSG_ROW.content },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
     const db = buildRevisionDb();
     const result = await sendAIMessage(db, openai, {
@@ -253,14 +384,25 @@ describe("sendAIMessage — backend tool-call loop", () => {
     vi.restoreAllMocks();
   });
 
-  it("stops loop when tool is not a backend inspect tool", async () => {
+  it("persists work-item write tools and continues the loop", async () => {
     const writeToolContent =
-      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{}}\n```';
+      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review","items":[]}}\n```';
 
-    const create = vi.fn().mockResolvedValue({
-      choices: [{ message: { content: writeToolContent } }],
-    });
-    const openai = { chat: { completions: { create } } } as unknown as OpenAI;
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-write",
+          type: "function",
+          function: {
+            name: "set_revision_work_items",
+            arguments: "{\"summary\":\"Review\",\"items\":[]}",
+          },
+        }],
+      },
+      { content: "Work items are now ready for review." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
     const writeToolRow = {
       id: "msg-write",
@@ -269,27 +411,133 @@ describe("sendAIMessage — backend tool-call loop", () => {
       content: writeToolContent,
       created_at: new Date(),
     };
-    const db = buildRevisionDb({ toolCallRow: writeToolRow, finalRow: writeToolRow });
+    const db = buildRevisionDb({
+      intermediateAssistantRows: [writeToolRow],
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Work items are now ready for review.",
+      },
+    });
 
     const executeSpy = vi
       .spyOn(toolExecution, "executeBackendInspectTool")
       .mockResolvedValue({ ok: true, output: {} });
+    const persistSpy = vi
+      .spyOn(revisionWorkItems, "persistRevisionToolCallWorkItems")
+      .mockResolvedValue(true);
 
     const result = await sendAIMessage(db, openai, {
       conversationId: CONV_ID,
       userMessage: "Run the write tool.",
     });
 
-    expect(result.content).toBe(writeToolContent);
+    expect(result.content).toBe("Work items are now ready for review.");
     expect(executeSpy).not.toHaveBeenCalled();
-    expect(create).toHaveBeenCalledTimes(1);
+    expect(persistSpy).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledTimes(2);
+
+    vi.restoreAllMocks();
+  });
+
+  it("auto-resumes from persisted pending work items when chat history has no fresh tool call", async () => {
+    const openai = buildOpenAISequence([
+      { content: "Jag tittar på det." },
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-follow-up",
+          type: "function",
+          function: {
+            name: "inspect_resume_section",
+            arguments: "{\"section\":\"presentation\"}",
+          },
+        }],
+      },
+      { content: "Nu har jag fortsatt med nästa arbetsuppgift." },
+      { content: "Nu har jag fortsatt med nästa arbetsuppgift." },
+      { content: "Nu har jag fortsatt med nästa arbetsuppgift." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const db = buildRevisionDb({
+      intermediateAssistantRows: [
+        {
+          id: "msg-first",
+          conversation_id: CONV_ID,
+          role: "assistant",
+          content: "Jag tittar på det.",
+          created_at: new Date(),
+        },
+        {
+          id: "msg-second",
+          conversation_id: CONV_ID,
+          role: "assistant",
+          content: "Nu har jag fortsatt med nästa arbetsuppgift.",
+          created_at: new Date(),
+        },
+        {
+          id: "msg-third",
+          conversation_id: CONV_ID,
+          role: "assistant",
+          content: "Nu har jag fortsatt med nästa arbetsuppgift.",
+          created_at: new Date(),
+        },
+      ],
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Nu har jag fortsatt med nästa arbetsuppgift.",
+      },
+    });
+
+    const listSpy = vi
+      .spyOn(revisionWorkItems, "listPersistedRevisionWorkItems")
+      .mockResolvedValueOnce([
+        {
+          id: "row-1",
+          conversation_id: CONV_ID,
+          branch_id: BRANCH_ID,
+          work_item_id: "work-item-1",
+          title: "Review presentation",
+          description: "Check presentation text.",
+          section: "presentation",
+          assignment_id: null,
+          status: "pending",
+          note: null,
+          position: 0,
+          attempt_count: 0,
+          last_error: null,
+          payload: null,
+          completed_at: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+    const orchestrationSpy = vi.spyOn(
+      actionOrchestration,
+      "deriveNextActionOrchestrationMessageFromWorkItems",
+    );
+    const executeSpy = vi.spyOn(toolExecution, "executeBackendInspectTool").mockResolvedValue({
+      ok: true,
+      output: { section: "presentation", text: "Current text" },
+    });
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "Fortsätt.",
+    });
+
+    expect(result.content).toBe("Nu har jag fortsatt med nästa arbetsuppgift.");
+    expect(listSpy).toHaveBeenCalled();
+    expect(orchestrationSpy).toHaveBeenCalled();
+    expect(executeSpy).toHaveBeenCalled();
+    expect(create.mock.calls.length).toBeGreaterThanOrEqual(3);
 
     vi.restoreAllMocks();
   });
 
   it("does not run the loop for non-revision entity types", async () => {
-    const toolCallContent =
-      '```json\n{"type":"tool_call","toolName":"inspect_resume","input":{}}\n```';
+    const toolCallContent = "Inspecting.";
 
     // Use a DB that returns the tool call content in the assistant row
     const toolCallRow = { ...ASSISTANT_MSG_ROW, id: "msg-tc", content: toolCallContent };

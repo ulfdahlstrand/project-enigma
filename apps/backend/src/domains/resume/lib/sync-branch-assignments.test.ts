@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
-import { normaliseAssignmentIds } from "./sync-branch-assignments.js";
+import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "./sync-branch-assignments.js";
 
 const EMPLOYEE_ID = "550e8400-e29b-41d4-a716-446655440011";
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440051";
@@ -36,6 +36,24 @@ function buildDbMock(generatedId = GENERATED_UUID) {
     db: { insertInto } as unknown as Kysely<Database>,
     insertInto,
     insertValues,
+  };
+}
+
+function buildSyncDbMock() {
+  const execute = vi.fn().mockResolvedValue(undefined);
+  const doUpdateSet = vi.fn().mockReturnValue({ execute });
+  const columns = vi.fn().mockReturnValue({ doUpdateSet });
+  const onConflict = vi.fn().mockImplementation((callback: (builder: { columns: typeof columns }) => unknown) => {
+    callback({ columns });
+    return { execute };
+  });
+  const values = vi.fn().mockReturnValue({ onConflict });
+  const insertInto = vi.fn().mockReturnValue({ values });
+
+  return {
+    db: { insertInto } as unknown as Kysely<Database>,
+    insertInto,
+    values,
   };
 }
 
@@ -129,5 +147,35 @@ describe("normaliseAssignmentIds", () => {
     const result = await normaliseAssignmentIds(db, EMPLOYEE_ID, content);
 
     expect(result.assignments[0].startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("syncBranchAssignmentsFromContent", () => {
+  it("joins legacy description arrays before writing branch assignments", async () => {
+    const { db, values } = buildSyncDbMock();
+    const content = {
+      assignments: [{
+        assignmentId: VALID_UUID,
+        clientName: "Acme",
+        role: "Engineer",
+        description: ["First paragraph", "Second paragraph"],
+        startDate: "2020-01-01",
+        endDate: null,
+        technologies: [],
+        isCurrent: false,
+        keywords: null,
+        type: null,
+        highlight: false,
+        sortOrder: null,
+      }],
+    } as unknown as ResumeCommitContent;
+
+    await syncBranchAssignmentsFromContent(db, "branch-1", content);
+
+    expect(values).toHaveBeenCalledWith([
+      expect.objectContaining({
+        description: "First paragraph\n\nSecond paragraph",
+      }),
+    ]);
   });
 });

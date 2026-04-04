@@ -130,6 +130,7 @@ export function ResumeEditWorkspace({
               selectedSuggestionId={inlineRevision.selectedSuggestionId}
               onSelectSuggestion={inlineRevision.selectSuggestion}
               onReviewSuggestion={inlineRevision.openSuggestionReview}
+              onDismissSuggestion={inlineRevision.dismissSuggestion}
               onMoveToFinalize={() => void inlineRevision.prepareFinalize()}
               isReadyToFinalize={inlineRevision.isReadyToFinalize}
               isPreparingFinalize={inlineRevision.isPreparingFinalize}

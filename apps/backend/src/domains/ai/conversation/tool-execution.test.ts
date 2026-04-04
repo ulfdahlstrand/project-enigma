@@ -61,10 +61,12 @@ function buildDb({
   branchRow = BRANCH_ROW as unknown,
   commitContent = COMMIT_CONTENT,
   assignments = [ASSIGNMENT_ROW],
+  revisionWorkItems = [] as unknown[],
 }: {
   branchRow?: unknown;
   commitContent?: typeof COMMIT_CONTENT | null;
   assignments?: typeof ASSIGNMENT_ROW[];
+  revisionWorkItems?: unknown[];
 } = {}) {
   // Query 3: branch_assignments
   const assignmentExecute = vi.fn().mockResolvedValue(assignments);
@@ -77,6 +79,15 @@ function buildDb({
       }),
     }),
     innerJoin: vi.fn().mockReturnThis(),
+  };
+
+  const revisionWorkItemsExecute = vi.fn().mockResolvedValue(revisionWorkItems);
+  const revisionWorkItemsQuery = {
+    selectAll: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({ execute: revisionWorkItemsExecute }),
+      }),
+    }),
   };
 
   // Query 2: resume_commits
@@ -103,7 +114,8 @@ function buildDb({
     const i = callIndex++;
     if (i === 0) return branchQuery;
     if (i === 1) return commitQuery;
-    return assignmentQuery;
+    if (i === 2) return assignmentQuery;
+    return revisionWorkItemsQuery;
   });
 
   return { selectFrom } as unknown as Kysely<Database>;
@@ -124,6 +136,7 @@ describe("BACKEND_INSPECT_TOOLS", () => {
       "inspect_resume_sections",
       "inspect_resume_section",
       "inspect_resume_skills",
+      "list_revision_work_items",
       "list_resume_assignments",
       "inspect_assignment",
     ]);
@@ -384,6 +397,61 @@ describe("executeBackendInspectTool — list_resume_assignments", () => {
     expect(first.index).toBe(0);
     expect(first.assignmentId).toBe(ASSIGNMENT_ID);
     expect(first.clientName).toBe("Acme Corp");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// executeBackendInspectTool — list_revision_work_items
+// ---------------------------------------------------------------------------
+
+describe("executeBackendInspectTool — list_revision_work_items", () => {
+  it("returns persisted work items with remaining count", async () => {
+    const db = buildDb({
+      revisionWorkItems: [
+        {
+          work_item_id: "work-item-1",
+          title: "Review presentation",
+          description: "Check presentation text.",
+          section: "presentation",
+          assignment_id: null,
+          status: "completed",
+          note: null,
+          attempt_count: 1,
+          last_error: null,
+          position: 0,
+          completed_at: new Date("2026-04-04T08:00:00.000Z"),
+          updated_at: new Date("2026-04-04T08:00:00.000Z"),
+        },
+        {
+          work_item_id: "work-item-2",
+          title: "Review assignments",
+          description: "Check assignment text.",
+          section: "assignment",
+          assignment_id: null,
+          status: "pending",
+          note: null,
+          attempt_count: 0,
+          last_error: null,
+          position: 1,
+          completed_at: null,
+          updated_at: new Date("2026-04-04T08:05:00.000Z"),
+        },
+      ],
+    });
+
+    const result = await executeBackendInspectTool(
+      db,
+      "resume-revision-actions",
+      BRANCH_ID,
+      toolCall("list_revision_work_items"),
+      { conversationId: "conversation-1" },
+    );
+
+    expect(result.ok).toBe(true);
+    const output = result.output as Record<string, unknown>;
+    expect(output.totalWorkItems).toBe(2);
+    expect(output.remainingWorkItems).toBe(1);
+    expect(Array.isArray(output.items)).toBe(true);
   });
 });
 

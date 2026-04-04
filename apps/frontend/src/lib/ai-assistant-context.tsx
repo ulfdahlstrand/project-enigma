@@ -26,6 +26,8 @@ export interface OpenAssistantOptions {
   toolRegistry?: AIToolRegistry;
   /** Explicit execution context for any registered tools. */
   toolContext?: AIToolContext;
+  /** Reopen a specific existing conversation instead of auto-creating one. */
+  initialConversationId?: string | null | undefined;
   /** Called with the suggested text when the user clicks Apply in the diff dialog. */
   onAccept: (suggested: string) => void;
 }
@@ -98,7 +100,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       originalContent: options.originalContent ?? null,
       toolRegistry: options.toolRegistry ?? null,
       toolContext: options.toolContext ?? null,
-      activeConversationId: null,
+      activeConversationId: options.initialConversationId ?? null,
       pendingSuggestion: null,
       onAccept: options.onAccept,
     });

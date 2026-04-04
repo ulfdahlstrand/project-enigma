@@ -20,6 +20,16 @@ type ActionWorkItem = {
   note?: string;
 };
 
+type ActionWorkItemLike = {
+  id: string;
+  title: string;
+  description: string;
+  section: string;
+  assignmentId?: string;
+  status: string;
+  note?: string;
+};
+
 const PLANNING_GUARDRAIL_MESSAGE = [
   "You must use the available tools for this stage.",
   "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
@@ -178,6 +188,31 @@ function buildNextWorkItemAutomationMessage(workItems: ActionWorkItem[] | null) 
     "Do not revisit completed work items.",
     "Return a tool call now.",
   ].join(" ");
+}
+
+export function deriveNextActionOrchestrationMessageFromWorkItems(
+  workItems: ActionWorkItemLike[] | null,
+) {
+  if (!workItems || workItems.length === 0) {
+    return null;
+  }
+
+  const normalizedItems: ActionWorkItem[] = workItems.map((item) => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    section: item.section,
+    ...(item.assignmentId ? { assignmentId: item.assignmentId } : {}),
+    status:
+      item.status === "completed"
+      || item.status === "no_changes_needed"
+      || item.status === "in_progress"
+        ? item.status
+        : "pending",
+    ...(item.note ? { note: item.note } : {}),
+  }));
+
+  return buildNextWorkItemAutomationMessage(normalizedItems);
 }
 
 function markWorkItemById(items: ActionWorkItem[], workItemId: string, status: ActionWorkItem["status"]) {

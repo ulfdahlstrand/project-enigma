@@ -18,6 +18,7 @@ import { orpc } from "../orpc-client";
 import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
+  appendUniqueRevisionSuggestions,
   buildInlineRevisionBranchName,
 } from "../components/revision/inline-revision";
 import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
@@ -26,7 +27,12 @@ import {
   deriveSuggestionsFromConversation,
   deriveWorkItemsFromConversation,
 } from "./inline-revision/conversation";
-import { clearPersistedInlineRevisionSession, readPersistedInlineRevisionSession, writePersistedInlineRevisionSession } from "./inline-revision/storage";
+import {
+  clearPersistedInlineRevisionSession,
+  patchPersistedInlineRevisionSession,
+  readPersistedInlineRevisionSession,
+  writePersistedInlineRevisionSession,
+} from "./inline-revision/storage";
 import type { UseInlineResumeRevisionParams } from "./inline-revision/types";
 import { useInlineRevisionAssistant } from "./inline-revision/use-inline-revision-assistant";
 import { useInlineRevisionReview } from "./inline-revision/review";
@@ -74,6 +80,7 @@ export function useInlineResumeRevision({
   const [isPreparingFinalize, setIsPreparingFinalize] = useState(false);
   const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
   const restoredBranchIdRef = useRef<string | null>(null);
+  const openingRevisionBranchIdRef = useRef<string | null>(null);
 
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
@@ -104,6 +111,10 @@ export function useInlineResumeRevision({
   );
   const existingActionConversationId =
     existingActionConversations?.conversations.at(-1)?.id ?? null;
+  const latestOpenActionConversationId =
+    [...(existingActionConversations?.conversations ?? [])]
+      .reverse()
+      .find((conversation) => !conversation.isClosed)?.id ?? null;
   const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
   const { data: activeAssistantConversation } = useAIConversation(assistantConversationId);
 
@@ -135,7 +146,8 @@ export function useInlineResumeRevision({
 
     if (
       lastInlineRevisionBranchIdRef.current !== null &&
-      activeBranchId !== lastInlineRevisionBranchIdRef.current
+      activeBranchId !== lastInlineRevisionBranchIdRef.current &&
+      activeBranchId !== openingRevisionBranchIdRef.current
     ) {
       closeAssistant();
     }
@@ -165,12 +177,18 @@ export function useInlineResumeRevision({
     assistantToolRoute: assistantToolContext?.route,
   });
 
+  const openRevisionAssistantRef = useRef(openRevisionAssistant);
+  useLayoutEffect(() => {
+    openRevisionAssistantRef.current = openRevisionAssistant;
+  });
+
   const {
     selectedSuggestionId,
     applyingSuggestionId,
     reviewDialog,
     hasUnsavedChanges,
     openSuggestionReview,
+    dismissSuggestion,
     selectSuggestion,
   } = useInlineRevisionReview({
     activeBranchId,
@@ -185,13 +203,35 @@ export function useInlineResumeRevision({
     queryClient,
     suggestions,
     setSuggestions,
+    persistSuggestions: (updater) => {
+      if (!activeBranchId || activeBranchId === mainBranchId) {
+        return;
+      }
+
+      patchPersistedInlineRevisionSession(activeBranchId, (current) => {
+        const nextSuggestions = updater(current?.suggestions ?? suggestions ?? null);
+        return {
+          version: 3,
+          sourceBranchId: current?.sourceBranchId ?? sourceBranchId,
+          sourceBranchName: current?.sourceBranchName ?? sourceBranchName,
+          conversationId:
+            current?.conversationId
+            ?? (
+              assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
+                ? assistantConversationId
+                : null
+            ),
+          suggestions: nextSuggestions,
+        };
+      });
+    },
     saveVersion: async (input) => saveVersion.mutateAsync(input),
     updateBranchAssignment: updateBranchAssignment.mutateAsync,
     buildDraftPatchFromValues,
   });
 
   const open = async () => {
-    if (!baseCommitId) {
+    if (!baseCommitId || isOpen || forkResumeBranch.isPending) {
       return;
     }
 
@@ -202,27 +242,40 @@ export function useInlineResumeRevision({
     setWorkItems(null);
     setSuggestions(null);
 
-    const newBranch = await forkResumeBranch.mutateAsync({
-      fromCommitId: baseCommitId,
-      name: buildInlineRevisionBranchName(),
-      resumeId,
-    });
+    try {
+      const newBranch = await forkResumeBranch.mutateAsync({
+        fromCommitId: baseCommitId,
+        name: buildInlineRevisionBranchName(),
+        resumeId,
+      });
 
-    writePersistedInlineRevisionSession(newBranch.id, {
-      version: 2,
-      sourceBranchId: activeBranchId,
-      sourceBranchName: activeBranchName,
-      suggestions: null,
-    });
+      writePersistedInlineRevisionSession(newBranch.id, {
+        version: 3,
+        sourceBranchId: activeBranchId,
+        sourceBranchName: activeBranchName,
+        conversationId: null,
+        suggestions: null,
+      });
 
-    await navigate({
-      to: "/resumes/$id/edit",
-      params: { id: resumeId },
-      search: { branchId: newBranch.id, assistant: "true" },
-      replace: true,
-    });
+      openingRevisionBranchIdRef.current = newBranch.id;
+      await navigate({
+        to: "/resumes/$id/edit",
+        params: { id: resumeId },
+        search: { branchId: newBranch.id, assistant: "true" },
+        replace: true,
+      });
 
-    openRevisionAssistant(newBranch.id);
+      openRevisionAssistantRef.current({ branchId: newBranch.id });
+    } catch (error) {
+      setIsOpen(false);
+      setSourceBranchName(null);
+      setSourceBranchId(null);
+      setWorkItems(null);
+      setSuggestions(null);
+      throw error;
+    } finally {
+      openingRevisionBranchIdRef.current = null;
+    }
   };
 
   const reset = () => {
@@ -280,14 +333,20 @@ export function useInlineResumeRevision({
     setSourceBranchName(persistedSession.sourceBranchName);
     setWorkItems(null);
 
-    const restoredKickoff = existingActionConversationId === null ? null : undefined;
-    openRevisionAssistant(activeBranchId, restoredKickoff);
+    const restoredConversationId =
+      persistedSession.conversationId ?? latestOpenActionConversationId ?? existingActionConversationId;
+    const restoredKickoff = restoredConversationId === null ? null : undefined;
+    openRevisionAssistant({
+      branchId: activeBranchId,
+      kickoffMessage: restoredKickoff,
+      initialConversationId: restoredConversationId,
+    });
   }, [
     activeBranchId,
     existingActionConversationId,
-    hideDrawer,
     isEditRoute,
     isOpen,
+    latestOpenActionConversationId,
     mainBranchId,
     navigate,
     openRevisionAssistant,
@@ -300,13 +359,20 @@ export function useInlineResumeRevision({
     }
 
     writePersistedInlineRevisionSession(activeBranchId, {
-      version: 2,
+      version: 3,
       sourceBranchId,
       sourceBranchName,
+      conversationId:
+        assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
+          ? assistantConversationId
+          : null,
       suggestions,
     });
   }, [
     activeBranchId,
+    assistantConversationId,
+    assistantEntityId,
+    assistantEntityType,
     isOpen,
     mainBranchId,
     sourceBranchId,
@@ -321,7 +387,7 @@ export function useInlineResumeRevision({
 
     const restoredSuggestions = deriveSuggestionsFromConversation(existingActionConversation.messages);
     if (restoredSuggestions) {
-      setSuggestions(restoredSuggestions);
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, restoredSuggestions));
     }
   }, [existingActionConversation, isOpen, suggestions]);
 
@@ -343,7 +409,7 @@ export function useInlineResumeRevision({
 
       const derivedSuggestions = deriveSuggestionsFromConversation(currentConversation.messages);
       if (derivedSuggestions) {
-        setSuggestions(derivedSuggestions);
+        setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, derivedSuggestions));
       }
     }
   }, [
@@ -445,6 +511,7 @@ export function useInlineResumeRevision({
     backToRevision: () => setIsFinalized(false),
     selectSuggestion,
     openSuggestionReview,
+    dismissSuggestion,
     keepBranch: () => finish("keep"),
     mergeBranch: () => finish("merge"),
   };

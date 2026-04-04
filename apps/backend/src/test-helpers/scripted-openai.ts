@@ -1,25 +1,33 @@
 import type OpenAI from "openai";
 
 type ChatCompletionInput = Parameters<OpenAI["chat"]["completions"]["create"]>[0];
-type ChatCompletionResponse = Awaited<ReturnType<OpenAI["chat"]["completions"]["create"]>>;
+type ScriptedMessage = Record<string, unknown>;
 
 type ScriptedResponse =
   | string
   | null
-  | ((input: ChatCompletionInput, callIndex: number) => string | null | Promise<string | null>);
+  | ScriptedMessage
+  | ((
+      input: ChatCompletionInput,
+      callIndex: number,
+    ) => string | null | ScriptedMessage | Promise<string | null | ScriptedMessage>);
 
 export function createScriptedOpenAI(responses: ScriptedResponse[]) {
   const calls: ChatCompletionInput[] = [];
 
-  const create = async (input: ChatCompletionInput): Promise<ChatCompletionResponse> => {
+  const create = async (input: ChatCompletionInput): Promise<any> => {
     const callIndex = calls.length;
     calls.push(input);
 
     const scripted = responses[callIndex];
-    const content =
+    const resolved =
       typeof scripted === "function"
         ? await scripted(input, callIndex)
         : scripted;
+    const message =
+      typeof resolved === "string" || resolved === null
+        ? { role: "assistant", content: resolved }
+        : { role: "assistant", content: (resolved ?? {}).content ?? null, ...(resolved ?? {}) };
 
     return {
       id: `chatcmpl-test-${callIndex + 1}`,
@@ -30,10 +38,7 @@ export function createScriptedOpenAI(responses: ScriptedResponse[]) {
         {
           index: 0,
           finish_reason: "stop",
-          message: {
-            role: "assistant",
-            content,
-          },
+          message,
         },
       ],
       usage: {
@@ -41,7 +46,7 @@ export function createScriptedOpenAI(responses: ScriptedResponse[]) {
         completion_tokens: 0,
         total_tokens: 0,
       },
-    } as ChatCompletionResponse;
+    };
   };
 
   return {

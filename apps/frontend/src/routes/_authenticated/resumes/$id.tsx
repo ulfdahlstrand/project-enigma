@@ -235,11 +235,18 @@ export function ResumeDetailPage({
     setDraftHighlightedItems(nextHighlightedItems);
   }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
-  const skills = snapshotContent?.skills
-    ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
-    : (resume?.skills ?? []);
+  const snapshotSkills = snapshotContent?.skills
+    ? snapshotContent.skills.map((skill, index) => ({
+        id: `snapshot-skill-${index}-${skill.name}`,
+        name: skill.name,
+        category: skill.category ?? null,
+        level: skill.level ?? null,
+        sortOrder: skill.sortOrder ?? index,
+      }))
+    : null;
+  const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
   const hasSkills = skills.length > 0;
-  const showSkillsPage = hasSkills || (isEditing && !isSnapshotMode);
+  const showSkillsPage = hasSkills || isEditing;
   const hasAssignments = assignments.length > 0;
   const baseCommitId = activeBranch?.headCommitId ?? null;
   const buildDraftPatch = () => {
@@ -434,18 +441,7 @@ export function ResumeDetailPage({
   };
 
   const handleOpenAssistant = () => {
-    if (isEditRoute) {
-      void navigate({
-        to: "/resumes/$id/edit",
-        params: { id },
-        search: {
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
-          assistant: "true",
-        },
-      });
-    }
-
-    inlineRevision.open();
+    void inlineRevision.open();
   };
 
   const handleCloseRevision = () => {

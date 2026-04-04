@@ -53,6 +53,44 @@ export function useInlineRevisionAssistant({
   assistantEntityId,
   assistantToolRoute,
 }: Params) {
+  const normalizeComparableText = (value: string | null | undefined) =>
+    (value ?? "").replace(/\r\n/g, "\n").trim();
+
+  const filterNoOpSuggestions = (incoming: RevisionSuggestions): RevisionSuggestions => {
+    const filteredSuggestions = incoming.suggestions.filter((suggestion) => {
+      const nextText = normalizeComparableText(suggestion.suggestedText);
+      const section = suggestion.section.trim().toLowerCase();
+
+      if (suggestion.assignmentId) {
+        const assignment = resumeInspectionSnapshot.assignments.find((item) => item.id === suggestion.assignmentId);
+        return normalizeComparableText(assignment?.description) !== nextText;
+      }
+
+      if (section.includes("title") || section.includes("titel")) {
+        return normalizeComparableText(resumeTitle) !== nextText;
+      }
+
+      if (section.includes("consultant")) {
+        return normalizeComparableText(consultantTitle) !== nextText;
+      }
+
+      if (section.includes("presentation") || section.includes("profil") || section.includes("intro")) {
+        return normalizeComparableText(presentation.join("\n\n")) !== nextText;
+      }
+
+      if (section.includes("summary") || section.includes("sammanfatt")) {
+        return normalizeComparableText(summary) !== nextText;
+      }
+
+      return true;
+    });
+
+    return {
+      ...incoming,
+      suggestions: filteredSuggestions,
+    };
+  };
+
   const toolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
     setRevisionWorkItems: (incoming) => {
@@ -78,17 +116,27 @@ export function useInlineRevisionAssistant({
       });
     },
     appendRevisionSuggestions: (incoming) => {
-      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
-      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, incoming));
+      const nextSuggestions = filterNoOpSuggestions(incoming);
+      if (nextSuggestions.suggestions.length === 0) {
+        return;
+      }
+
+      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, nextSuggestions));
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, nextSuggestions));
     },
     setRevisionSuggestions: (incoming) => {
-      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
-      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, incoming));
+      const nextSuggestions = filterNoOpSuggestions(incoming);
+      if (nextSuggestions.suggestions.length === 0) {
+        return;
+      }
+
+      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, nextSuggestions));
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, nextSuggestions));
     },
   });
 
   const toolContext: AIToolContext = {
-    route: "/_authenticated/resumes/$id/actions",
+    route: "/_authenticated/resumes/$id/revision",
     entityType: "resume",
     entityId: resumeId,
   };
@@ -97,7 +145,15 @@ export function useInlineRevisionAssistant({
     .filter(Boolean)
     .join("\n\n");
 
-  const openRevisionAssistant = useCallback((branchId: string, kickoffMessage?: string | null) => {
+  const openRevisionAssistant = useCallback(({
+    branchId,
+    kickoffMessage,
+    initialConversationId,
+  }: {
+    branchId: string;
+    kickoffMessage?: string | null | undefined;
+    initialConversationId?: string | null | undefined;
+  }) => {
     if (
       assistantEntityType === "resume-revision-actions" &&
       assistantEntityId === branchId &&
@@ -110,9 +166,10 @@ export function useInlineRevisionAssistant({
     openAssistant({
       entityType: "resume-revision-actions",
       entityId: branchId,
-      title: t("revision.inline.actionsConversationTitle"),
+      title: t("revision.inline.conversationTitle"),
       systemPrompt: buildUnifiedRevisionPrompt(language),
       kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff(),
+      initialConversationId,
       originalContent,
       toolRegistry,
       toolContext,

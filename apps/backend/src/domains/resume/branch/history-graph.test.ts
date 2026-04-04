@@ -210,6 +210,39 @@ describe("getResumeBranchHistoryGraph", () => {
     expect(result).toEqual({ branches: [], commits: [], edges: [] });
   });
 
+  it("filters out commits that are not attached to an existing branch", async () => {
+    const orphanCommitId = "550e8400-e29b-41d4-a716-446655440045";
+    const { db } = buildDbMock({
+      commitRows: [
+        ...COMMIT_ROWS,
+        {
+          id: orphanCommitId,
+          resume_id: RESUME_ID,
+          branch_id: null,
+          parent_commit_id: MAIN_COMMIT_ID_2,
+          message: "Orphan commit",
+          title: "Orphan commit",
+          description: "",
+          created_by: CREATOR_ID,
+          created_at: new Date("2026-01-06T00:00:00.000Z"),
+        },
+      ],
+      commitParentRows: [
+        ...COMMIT_PARENT_ROWS,
+        {
+          commit_id: orphanCommitId,
+          parent_commit_id: MAIN_COMMIT_ID_2,
+          parent_order: 0,
+        },
+      ],
+    });
+
+    const result = await getResumeBranchHistoryGraph(db, MOCK_ADMIN, { resumeId: RESUME_ID });
+
+    expect(result.commits.map((commit) => commit.id)).not.toContain(orphanCommitId);
+    expect(result.edges.some((edge) => edge.commitId === orphanCommitId)).toBe(false);
+  });
+
   it("throws NOT_FOUND when resume does not exist", async () => {
     const { db } = buildDbMock({ resumeRow: null });
 

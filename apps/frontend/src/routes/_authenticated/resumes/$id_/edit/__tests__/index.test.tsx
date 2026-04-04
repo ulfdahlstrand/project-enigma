@@ -232,17 +232,12 @@ describe("/resumes/$id/edit", () => {
     expect(mockOpenInlineRevision).not.toHaveBeenCalled();
   });
 
-  it("updates the URL and opens assistant when Assistant is clicked", async () => {
+  it("calls open and shows assistant when Assistant is clicked", async () => {
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
 
     fireEvent.click(screen.getByRole("button", { name: enCommon.revision.inline.aiHelpButton }));
 
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/edit",
-      params: { id: TEST_RESUME_ID },
-      search: { assistant: "true" },
-    });
     await waitFor(() => {
       expect(mockOpenInlineRevision).toHaveBeenCalled();
       expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();

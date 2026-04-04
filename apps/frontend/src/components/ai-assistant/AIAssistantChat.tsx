@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
@@ -6,6 +7,10 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
+import Paper from "@mui/material/Paper";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import SendIcon from "@mui/icons-material/Send";
 import { DiffReviewDialog, renderTextDiffReview, type TextDiffReviewValue } from "./DiffReviewDialog";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
@@ -80,6 +85,30 @@ export function AIAssistantChat({
     toolRegistry: toolRegistryProp,
     toolContext: toolContextProp,
   });
+  const slashCommands = useMemo(() => ([
+    {
+      command: "/help",
+      description: t("aiAssistant.commands.help"),
+    },
+    {
+      command: "/status",
+      description: t("aiAssistant.commands.status"),
+    },
+  ]), [t]);
+  const isSlashQuery = chat.inputValue.trimStart().startsWith("/");
+  const normalizedSlashQuery = chat.inputValue.trim().toLowerCase();
+  const filteredSlashCommands = isSlashQuery
+    ? slashCommands.filter((item) => item.command.startsWith(normalizedSlashQuery))
+    : [];
+  const [highlightedSlashCommandIndex, setHighlightedSlashCommandIndex] = useState(0);
+
+  useEffect(() => {
+    setHighlightedSlashCommandIndex(0);
+  }, [normalizedSlashQuery]);
+
+  const selectSlashCommand = (command: string) => {
+    chat.setInputValue(command);
+  };
 
   if (chat.createConversation.isError) {
     return (
@@ -138,23 +167,84 @@ export function AIAssistantChat({
 
       {/* Input area */}
       <Box sx={{ px: 2, pb: 2, pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+        {chat.isConversationClosed && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            {t("aiAssistant.conversationClosedNotice")}
+          </Alert>
+        )}
+        {filteredSlashCommands.length > 0 && !chat.isConversationClosed && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mb: 1,
+              overflow: "hidden",
+            }}
+          >
+            <List dense disablePadding>
+              {filteredSlashCommands.map((item) => (
+                <ListItemButton
+                  key={item.command}
+                  selected={filteredSlashCommands[highlightedSlashCommandIndex]?.command === item.command}
+                  onMouseEnter={() => {
+                    const index = filteredSlashCommands.findIndex((candidate) => candidate.command === item.command);
+                    setHighlightedSlashCommandIndex(index === -1 ? 0 : index);
+                  }}
+                  onClick={() => selectSlashCommand(item.command)}
+                >
+                  <ListItemText
+                    primary={item.command}
+                    secondary={item.description}
+                    primaryTypographyProps={{
+                      fontFamily: "monospace",
+                      fontSize: 13,
+                    }}
+                    secondaryTypographyProps={{
+                      fontSize: 12,
+                    }}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </Paper>
+        )}
         <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
           <TextField
             fullWidth
             multiline
             maxRows={4}
             size="small"
-            placeholder={t("aiAssistant.inputPlaceholder")}
+            placeholder={chat.isConversationClosed ? t("aiAssistant.closedInputPlaceholder") : t("aiAssistant.inputPlaceholder")}
             value={chat.inputValue}
             onChange={(e) => chat.setInputValue(e.target.value)}
             onKeyDown={(e) => {
+              if (filteredSlashCommands.length > 0 && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+                e.preventDefault();
+                setHighlightedSlashCommandIndex((current) => {
+                  if (e.key === "ArrowDown") {
+                    return current >= filteredSlashCommands.length - 1 ? 0 : current + 1;
+                  }
+
+                  return current <= 0 ? filteredSlashCommands.length - 1 : current - 1;
+                });
+                return;
+              }
+
+              if (filteredSlashCommands.length > 0 && e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                const selectedCommand = filteredSlashCommands[highlightedSlashCommandIndex];
+                if (selectedCommand) {
+                  selectSlashCommand(selectedCommand.command);
+                }
+                return;
+              }
+
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 chat.handleSend(chat.inputValue);
                 chat.setInputValue("");
               }
             }}
-            disabled={chat.isInitialising || chat.sendMessage.isPending}
+            disabled={chat.isInitialising || chat.sendMessage.isPending || chat.isConversationClosed}
           />
           <IconButton
             color="primary"
@@ -162,7 +252,7 @@ export function AIAssistantChat({
               chat.handleSend(chat.inputValue);
               chat.setInputValue("");
             }}
-            disabled={!chat.inputValue.trim() || chat.isInitialising || chat.sendMessage.isPending}
+            disabled={!chat.inputValue.trim() || chat.isInitialising || chat.sendMessage.isPending || chat.isConversationClosed}
             aria-label={t("aiAssistant.sendButton")}
           >
             <SendIcon />
@@ -174,7 +264,7 @@ export function AIAssistantChat({
             variant="contained"
             color="success"
             sx={{ mt: 1.5 }}
-            disabled={!chat.latestSuggestion || chat.isInitialising}
+            disabled={!chat.latestSuggestion || chat.isInitialising || chat.isConversationClosed}
             onClick={chat.handleApplyClick}
           >
             {t("aiAssistant.applyChanges")}

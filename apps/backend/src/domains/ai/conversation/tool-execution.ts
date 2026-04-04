@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
+import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
 
 // ---------------------------------------------------------------------------
 // Backend-executable inspect tools
@@ -20,6 +21,7 @@ export const BACKEND_INSPECT_TOOLS = new Set([
   "inspect_resume_sections",
   "inspect_resume_section",
   "inspect_resume_skills",
+  "list_revision_work_items",
   "list_resume_assignments",
   "inspect_assignment",
 ]);
@@ -65,6 +67,7 @@ async function buildResumeSnapshotFromBranch(
     .select([
       "rb.id as branchId",
       "rb.head_commit_id",
+      "rb.forked_from_commit_id",
       "r.id as resumeId",
       "e.name as employeeName",
     ])
@@ -74,11 +77,12 @@ async function buildResumeSnapshotFromBranch(
   if (!branch) return null;
 
   let content: ResumeCommitContent | null = null;
-  if (branch.head_commit_id) {
+  const snapshotCommitId = branch.head_commit_id ?? branch.forked_from_commit_id;
+  if (snapshotCommitId) {
     const commit = await db
       .selectFrom("resume_commits")
       .select("content")
-      .where("id", "=", branch.head_commit_id)
+      .where("id", "=", snapshotCommitId)
       .executeTakeFirst();
     content = commit?.content ?? null;
   }
@@ -263,6 +267,34 @@ function buildListResumeAssignmentsOutput(snapshot: ResumeSnapshot) {
   };
 }
 
+async function buildListRevisionWorkItemsOutput(
+  db: Kysely<Database>,
+  conversationId: string,
+) {
+  const workItems = await listPersistedRevisionWorkItems(db, conversationId);
+
+  return {
+    totalWorkItems: workItems.length,
+    remainingWorkItems: workItems.filter((item) =>
+      item.status === "pending" || item.status === "in_progress" || item.status === "blocked" || item.status === "failed"
+    ).length,
+    items: workItems.map((item) => ({
+      id: item.work_item_id,
+      title: item.title,
+      description: item.description,
+      section: item.section,
+      assignmentId: item.assignment_id,
+      status: item.status,
+      note: item.note,
+      attemptCount: item.attempt_count,
+      lastError: item.last_error,
+      position: item.position,
+      completedAt: item.completed_at?.toISOString() ?? null,
+      updatedAt: item.updated_at.toISOString(),
+    })),
+  };
+}
+
 function buildInspectAssignmentOutput(
   snapshot: ResumeSnapshot,
   assignmentId: string,
@@ -291,6 +323,7 @@ export async function executeBackendInspectTool(
   entityType: string,
   entityId: string,
   toolCall: ToolCallPayload,
+  options?: { conversationId?: string },
 ): Promise<{ ok: boolean; output?: unknown; error?: string }> {
   if (entityType !== "resume-revision-actions") {
     return {
@@ -329,6 +362,15 @@ export async function executeBackendInspectTool(
 
     case "inspect_resume_skills":
       return { ok: true, output: buildInspectResumeSkillsOutput(snapshot) };
+
+    case "list_revision_work_items":
+      if (!options?.conversationId) {
+        return { ok: false, error: "Conversation id is required for list_revision_work_items" };
+      }
+      return {
+        ok: true,
+        output: await buildListRevisionWorkItemsOutput(db, options.conversationId),
+      };
 
     case "list_resume_assignments":
       return { ok: true, output: buildListResumeAssignmentsOutput(snapshot) };

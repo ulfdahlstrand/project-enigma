@@ -136,6 +136,7 @@ describe("getResumeCommit", () => {
     const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
 
     expect(result.content.assignments[0]).toMatchObject({
+      description: "Legacy description",
       endDate: null,
       technologies: [],
       keywords: null,
@@ -143,6 +144,37 @@ describe("getResumeCommit", () => {
       highlight: false,
       sortOrder: null,
     });
+  });
+
+  it("normalises legacy assignment description arrays into paragraph text", async () => {
+    const { db } = buildDbMock({
+      commitRow: {
+        ...COMMIT_ROW,
+        content: {
+          ...COMMIT_ROW.content,
+          assignments: [
+            {
+              assignmentId: "550e8400-e29b-41d4-a716-446655440055",
+              clientName: "Legacy Co",
+              role: "Consultant",
+              description: ["First paragraph", "Second paragraph"],
+              startDate: "2024-01-01",
+              endDate: null,
+              technologies: [],
+              isCurrent: false,
+              keywords: null,
+              type: null,
+              highlight: false,
+              sortOrder: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
+
+    expect(result.content.assignments[0]?.description).toBe("First paragraph\n\nSecond paragraph");
   });
 });
 

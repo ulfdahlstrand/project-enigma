@@ -228,6 +228,18 @@ export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
 // ---------------------------------------------------------------------------
 
 export type AIMessageRole = "user" | "assistant";
+export type AIMessageDeliveryKind =
+  | "visible_message"
+  | "internal_message"
+  | "tool_call"
+  | "tool_result";
+export type AIRevisionWorkItemStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "no_changes_needed"
+  | "failed"
+  | "blocked";
 
 export interface AIConversationTable {
   id: Generated<string>;
@@ -254,6 +266,45 @@ export interface AIMessageTable {
 
 export type AIMessage = Selectable<AIMessageTable>;
 export type NewAIMessage = Insertable<AIMessageTable>;
+
+export interface AIMessageDeliveryTable {
+  id: Generated<string>;
+  conversation_id: string;
+  ai_message_id: string | null;
+  kind: AIMessageDeliveryKind;
+  role: string | null;
+  content: string | null;
+  tool_name: string | null;
+  payload: unknown | null;
+  created_at: Generated<Date>;
+}
+
+export type AIMessageDelivery = Selectable<AIMessageDeliveryTable>;
+export type NewAIMessageDelivery = Insertable<AIMessageDeliveryTable>;
+
+export interface AIRevisionWorkItemTable {
+  id: Generated<string>;
+  conversation_id: string;
+  branch_id: string;
+  work_item_id: string;
+  title: string;
+  description: string;
+  section: string;
+  assignment_id: string | null;
+  status: AIRevisionWorkItemStatus;
+  note: string | null;
+  position: number;
+  attempt_count: Generated<number>;
+  last_error: string | null;
+  payload: unknown | null;
+  completed_at: Date | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type AIRevisionWorkItem = Selectable<AIRevisionWorkItemTable>;
+export type NewAIRevisionWorkItem = Insertable<AIRevisionWorkItemTable>;
+export type AIRevisionWorkItemUpdate = Updateable<AIRevisionWorkItemTable>;
 
 // ---------------------------------------------------------------------------
 // user_sessions table
@@ -300,6 +351,8 @@ export interface Database {
   export_records: ExportRecordTable;
   ai_conversations: AIConversationTable;
   ai_messages: AIMessageTable;
+  ai_message_deliveries: AIMessageDeliveryTable;
+  ai_revision_work_items: AIRevisionWorkItemTable;
   user_sessions: UserSessionTable;
 }
 
