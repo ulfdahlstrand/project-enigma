@@ -3,7 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database } from "../../../db/types.js";
+import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
@@ -32,7 +32,8 @@ type GetResumeOutput = z.infer<typeof getResumeOutputSchema>;
 export async function getResume(
   db: Kysely<Database>,
   user: AuthUser,
-  id: string
+  id: string,
+  branchId?: string,
 ): Promise<GetResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
@@ -54,6 +55,7 @@ export async function getResume(
       "r.updated_at",
       "rb.id as branch_id",
       "rb.head_commit_id",
+      "rb.forked_from_commit_id",
     ])
     .where("r.id", "=", id)
     .executeTakeFirst();
@@ -64,6 +66,36 @@ export async function getResume(
 
   if (ownerEmployeeId !== null && resumeRow.employee_id !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
+  }
+
+  let snapshotContent: ResumeCommitContent | null = null;
+  if (branchId) {
+    const branchRow = await db
+      .selectFrom("resume_branches")
+      .select(["id", "resume_id", "head_commit_id", "forked_from_commit_id"])
+      .where("id", "=", branchId)
+      .executeTakeFirst();
+
+    if (branchRow === undefined || branchRow.resume_id !== id) {
+      throw new ORPCError("NOT_FOUND");
+    }
+
+    const snapshotCommitId = branchRow.head_commit_id ?? branchRow.forked_from_commit_id;
+    if (snapshotCommitId) {
+      const commitRow = await db
+        .selectFrom("resume_commits")
+        .select("content")
+        .where("id", "=", snapshotCommitId)
+        .executeTakeFirst();
+      snapshotContent = commitRow?.content ?? null;
+    }
+  } else if (resumeRow.head_commit_id) {
+    const commitRow = await db
+      .selectFrom("resume_commits")
+      .select("content")
+      .where("id", "=", resumeRow.head_commit_id)
+      .executeTakeFirst();
+    snapshotContent = commitRow?.content ?? null;
   }
 
   const skillRows = await db
@@ -83,12 +115,12 @@ export async function getResume(
   return {
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
-    title: resumeRow.title,
-    consultantTitle: resumeRow.consultant_title,
-    presentation: resumeRow.presentation ?? [],
-    summary: resumeRow.summary,
-    highlightedItems: highlightedItemRows.map((item) => item.text),
-    language: resumeRow.language,
+    title: snapshotContent?.title ?? resumeRow.title,
+    consultantTitle: snapshotContent?.consultantTitle ?? resumeRow.consultant_title,
+    presentation: snapshotContent?.presentation ?? resumeRow.presentation ?? [],
+    summary: snapshotContent?.summary ?? resumeRow.summary,
+    highlightedItems: snapshotContent?.highlightedItems ?? highlightedItemRows.map((item) => item.text),
+    language: snapshotContent?.language ?? resumeRow.language,
     isMain: resumeRow.is_main,
     mainBranchId: resumeRow.branch_id ?? null,
     headCommitId: resumeRow.head_commit_id ?? null,
@@ -112,7 +144,7 @@ export async function getResume(
 export const getResumeHandler = implement(contract.getResume).handler(
   async ({ input, context }) => {
     const user = requireAuth(context as AuthContext);
-    return getResume(getDb(), user, input.id);
+    return getResume(getDb(), user, input.id, input.branchId);
   }
 );
 
@@ -130,7 +162,7 @@ export function createGetResumeHandler(db: Kysely<Database>) {
   return implement(contract.getResume).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return getResume(db, user, input.id);
+      return getResume(db, user, input.id, input.branchId);
     }
   );
 }

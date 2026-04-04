@@ -80,6 +80,7 @@ export async function getAIConversation(
     .where("conversation_id", "=", conversationId)
     .orderBy("created_at", "asc")
     .execute();
+  const validSuggestionRows = suggestionRows.filter((row) => row.suggested_text.trim().length > 0);
 
   const latestBranchHandoffDelivery = await db
     .selectFrom("ai_message_deliveries")
@@ -123,13 +124,13 @@ export async function getAIConversation(
       content: m.content,
       createdAt: m.created_at.toISOString(),
     })),
-    revisionSuggestions: suggestionRows.length === 0
+    revisionSuggestions: validSuggestionRows.length === 0
       ? null
       : {
           summary:
-            suggestionRows.find((row) => row.summary && row.summary.trim().length > 0)?.summary
+            validSuggestionRows.find((row) => row.summary && row.summary.trim().length > 0)?.summary
             ?? "Suggested revision actions",
-          suggestions: suggestionRows.map((row) => ({
+          suggestions: validSuggestionRows.map((row) => ({
             id: row.suggestion_id,
             title: row.title,
             description: row.description,

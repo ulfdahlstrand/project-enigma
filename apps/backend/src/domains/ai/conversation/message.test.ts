@@ -254,6 +254,115 @@ describe("sendAIMessage", () => {
 
     vi.restoreAllMocks();
   });
+
+  it("returns a persisted explanation without calling OpenAI for /explain", async () => {
+    const explainConversation = {
+      ...CONVERSATION_ROW,
+      entity_type: "resume-revision-actions",
+      system_prompt: "IMPORTANT: You must respond in Swedish.",
+    };
+    const explainAssistantRow = {
+      ...ASSISTANT_MSG_ROW,
+      content: "## Förklaring",
+    };
+    const db = buildDb({
+      conversation: explainConversation,
+      assistantRow: explainAssistantRow,
+    });
+    vi.spyOn(revisionWorkItems, "listPersistedRevisionWorkItems").mockResolvedValue([
+      {
+        id: "row-1",
+        conversation_id: CONV_ID,
+        branch_id: BRANCH_ID,
+        work_item_id: "work-item-1",
+        title: "Review presentation",
+        description: "Check presentation text.",
+        section: "presentation",
+        assignment_id: null,
+        status: "completed",
+        note: null,
+        position: 0,
+        attempt_count: 0,
+        last_error: null,
+        payload: null,
+        completed_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    ] as never);
+    vi.spyOn(revisionSuggestions, "listPersistedRevisionSuggestions").mockResolvedValue([
+      {
+        id: "s-row-1",
+        conversation_id: CONV_ID,
+        branch_id: BRANCH_ID,
+        work_item_id: "work-item-1",
+        suggestion_id: "suggestion-1",
+        summary: "Suggested revision actions",
+        title: "Fix spelling in presentation",
+        description: "Correct the misspelled word in the presentation.",
+        section: "presentation",
+        assignment_id: null,
+        suggested_text: "Updated text",
+        status: "pending",
+        skills: null,
+        skill_scope: null,
+        payload: null,
+        resolved_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    ] as never);
+
+    const selectFrom = db.selectFrom as unknown as ReturnType<typeof vi.fn>;
+    selectFrom.mockImplementationOnce(() => ({
+      selectAll: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          executeTakeFirst: vi.fn().mockResolvedValue(explainConversation),
+        }),
+      }),
+    }));
+    selectFrom.mockImplementationOnce(() => ({
+      selectAll: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({
+            execute: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+    }));
+    selectFrom.mockImplementationOnce(() => ({
+      select: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              execute: vi.fn().mockResolvedValue([
+                {
+                  tool_name: "inspect_resume_section",
+                  payload: { input: { section: "presentation" } },
+                  created_at: new Date(),
+                },
+              ]),
+            }),
+          }),
+        }),
+      }),
+    }));
+
+    const openai = buildOpenAI("should not be used");
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "/explain",
+    });
+
+    expect(result.content).toContain("## Förklaring");
+    expect(result.content).toContain("Genomgånget innehåll");
+    expect(result.content).toContain("Fix spelling in presentation");
+    expect(create).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
 });
 
 // ---------------------------------------------------------------------------

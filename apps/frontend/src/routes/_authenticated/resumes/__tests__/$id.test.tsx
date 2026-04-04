@@ -377,9 +377,14 @@ describe("Generic error state", () => {
 // ---------------------------------------------------------------------------
 
 describe("getResumeQueryKey", () => {
-  it("returns a tuple with 'getResume' and the given id", () => {
+  it("returns a tuple with 'getResume', the id, and the branch id", () => {
+    const key = getResumeQueryKey("my-resume-id", "my-branch-id");
+    expect(key).toEqual(["getResume", "my-resume-id", "my-branch-id"]);
+  });
+
+  it("uses null when no branch id is provided", () => {
     const key = getResumeQueryKey("my-resume-id");
-    expect(key).toEqual(["getResume", "my-resume-id"]);
+    expect(key).toEqual(["getResume", "my-resume-id", null]);
   });
 });
 

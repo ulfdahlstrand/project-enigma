@@ -74,10 +74,14 @@ function normalizeSuggestionRows(
       ? parsed.workItemId
       : null;
 
-  return parsed.suggestions.map((suggestion) => {
+  return parsed.suggestions.flatMap((suggestion) => {
+    if (suggestion.suggestedText.trim().length === 0) {
+      return [];
+    }
+
     const status = normalizeStatus(suggestion.status);
     const suggestionId = workItemId ? `${workItemId}:${suggestion.id}` : suggestion.id;
-    return {
+    return [{
       work_item_id: workItemId,
       suggestion_id: suggestionId,
       summary: parsed.summary ?? null,
@@ -91,7 +95,7 @@ function normalizeSuggestionRows(
       skill_scope: suggestion.skillScope ?? null,
       payload: suggestion,
       resolved_at: resolvedAtForStatus(status),
-    };
+    }];
   });
 }
 

@@ -47,7 +47,7 @@ interface ResumeEditWorkspaceProps {
   certifications: string[];
   languages: string[];
   isSnapshotMode: boolean;
-  getResumeQueryKey: (id: string) => readonly ["getResume", string];
+  getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
   fabTop: number;
   onImprovePresentationAccept: (improved: string) => void;
   hasAssignments: boolean;

@@ -34,7 +34,10 @@ import {
 } from "./revision-tools.js";
 import { persistRevisionToolCallWorkItems } from "./revision-work-items.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
-import { persistRevisionToolCallSuggestions } from "./revision-suggestions.js";
+import {
+  listPersistedRevisionSuggestions,
+  persistRevisionToolCallSuggestions,
+} from "./revision-suggestions.js";
 import { forkResumeBranch } from "../../resume/branch/fork.js";
 
 const MODEL = "gpt-4o";
@@ -72,7 +75,37 @@ function isWaitingForRevisionScopeDecision(content: string) {
     || normalized.includes("only change")
     || normalized.includes("after that");
 
-  return asksAboutMoreChanges || asksAboutCurrentScope;
+  const asksAboutBranchCreation =
+    normalized.includes("skapa den nu")
+    || normalized.includes("skapa en ny branch")
+    || normalized.includes("skapa en ny gren")
+    || normalized.includes("ska vi skapa")
+    || normalized.includes("vill du att vi skapar")
+    || normalized.includes("create it now")
+    || normalized.includes("create a new branch")
+    || normalized.includes("should we create");
+
+  return asksAboutMoreChanges || asksAboutCurrentScope || asksAboutBranchCreation;
+}
+
+function isExplicitBranchCreationConfirmation(message: string) {
+  const normalized = message.trim().toLowerCase();
+
+  return normalized === "ja"
+    || normalized === "ja tack"
+    || normalized === "ja, tack"
+    || normalized === "ja gör det"
+    || normalized === "ja, gör det"
+    || normalized === "gör det"
+    || normalized === "skapa den"
+    || normalized === "skapa den nu"
+    || normalized === "skapa en ny branch"
+    || normalized === "skapa en ny gren"
+    || normalized === "yes"
+    || normalized === "yes please"
+    || normalized === "do it"
+    || normalized === "create it"
+    || normalized === "create the branch";
 }
 
 function detectConversationLanguage(systemPrompt: string) {
@@ -96,6 +129,7 @@ function buildHelpMessage(entityType: string, language: "sv" | "en") {
         "Tips på kommandon:",
         "- `/help` visar den här hjälpen igen.",
         "- `vad återstår?` visar nuvarande work items och deras status.",
+        "- `/explain` förklarar varför förslag skapats och vad som redan har granskats.",
         "- `fixa stavfel i presentationen` skapar konkreta förslag när något behöver ändras.",
       ].join("\n");
     }
@@ -114,6 +148,7 @@ function buildHelpMessage(entityType: string, language: "sv" | "en") {
       "Useful commands:",
       "- `/help` shows this help again.",
       "- `what is left?` shows the current work items and their statuses.",
+      "- `/explain` explains why suggestions were created and what has already been inspected.",
       "- `fix spelling in the presentation` creates concrete suggestions when changes are needed.",
     ].join("\n");
   }
@@ -140,6 +175,177 @@ function buildHelpMessage(entityType: string, language: "sv" | "en") {
     "",
     "Tip:",
     "- `/help` shows this help again.",
+  ].join("\n");
+}
+
+function describeInspectedTarget(
+  toolName: string | null,
+  payload: unknown,
+  language: "sv" | "en",
+) {
+  const input =
+    payload && typeof payload === "object" && "input" in payload
+      ? (payload as { input?: unknown }).input
+      : null;
+
+  if (toolName === "inspect_resume") {
+    return language === "sv" ? "Översikt av hela CV:t" : "Whole resume overview";
+  }
+
+  if (toolName === "inspect_resume_sections") {
+    const includeAssignments =
+      input && typeof input === "object" && input !== null && "includeAssignments" in input
+        ? Boolean((input as { includeAssignments?: unknown }).includeAssignments)
+        : false;
+    return includeAssignments
+      ? (language === "sv"
+          ? "Alla redigerbara sektioner inklusive uppdrag"
+          : "All editable sections including assignments")
+      : (language === "sv"
+          ? "Alla redigerbara sektioner"
+          : "All editable sections");
+  }
+
+  if (toolName === "inspect_resume_skills") {
+    return language === "sv" ? "Kompetensstrukturen" : "Skills structure";
+  }
+
+  if (toolName === "list_resume_assignments") {
+    return language === "sv" ? "Uppdragslistan" : "Assignment list";
+  }
+
+  if (toolName === "inspect_resume_section") {
+    const section =
+      input && typeof input === "object" && input !== null && "section" in input
+        ? (input as { section?: unknown }).section
+        : null;
+    const assignmentId =
+      input && typeof input === "object" && input !== null && "assignmentId" in input
+        ? (input as { assignmentId?: unknown }).assignmentId
+        : null;
+
+    if (typeof section === "string") {
+      if (section === "assignment" && typeof assignmentId === "string") {
+        return language === "sv"
+          ? `Uppdrag ${assignmentId.slice(0, 8)}`
+          : `Assignment ${assignmentId.slice(0, 8)}`;
+      }
+      return language === "sv" ? `Sektionen ${section}` : `Section ${section}`;
+    }
+  }
+
+  if (toolName === "inspect_assignment") {
+    const assignmentId =
+      input && typeof input === "object" && input !== null && "assignmentId" in input
+        ? (input as { assignmentId?: unknown }).assignmentId
+        : null;
+    if (typeof assignmentId === "string") {
+      return language === "sv"
+        ? `Uppdrag ${assignmentId.slice(0, 8)}`
+        : `Assignment ${assignmentId.slice(0, 8)}`;
+    }
+    return language === "sv" ? "Ett uppdrag" : "An assignment";
+  }
+
+  return null;
+}
+
+async function buildExplainMessage(
+  db: Kysely<Database>,
+  input: { conversationId: string; entityType: string; language: "sv" | "en" },
+) {
+  if (input.entityType !== "resume-revision-actions") {
+    return input.language === "sv"
+      ? "Det finns ingen särskild revisionsförklaring för den här chatten."
+      : "There is no special revision explanation for this chat.";
+  }
+
+  const [workItems, suggestions, deliveries] = await Promise.all([
+    listPersistedRevisionWorkItems(db, input.conversationId),
+    listPersistedRevisionSuggestions(db, input.conversationId),
+    db
+      .selectFrom("ai_message_deliveries")
+      .select(["tool_name", "payload", "created_at"])
+      .where("conversation_id", "=", input.conversationId)
+      .where("kind", "=", "tool_call")
+      .orderBy("created_at", "asc")
+      .execute(),
+  ]);
+
+  const inspectedTargets = deliveries
+    .filter((delivery) => BACKEND_INSPECT_TOOLS.has(delivery.tool_name ?? ""))
+    .map((delivery) => describeInspectedTarget(delivery.tool_name, delivery.payload, input.language))
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, array) => array.indexOf(value) === index);
+
+  const workItemById = new Map(workItems.map((item) => [item.work_item_id, item]));
+
+  if (input.language === "sv") {
+    return [
+      "## Förklaring",
+      "",
+      "### Genomgånget innehåll",
+      "",
+      ...(inspectedTargets.length > 0
+        ? inspectedTargets.map((target) => `- ${target}`)
+        : ["- Inga inspekterade delar är registrerade ännu."]),
+      "",
+      "### Varför förslagen skapades",
+      "",
+      ...(suggestions.length > 0
+        ? suggestions.flatMap((suggestion) => {
+            const workItem = suggestion.work_item_id
+              ? workItemById.get(suggestion.work_item_id) ?? null
+              : null;
+            return [
+              `- **${suggestion.title}**`,
+              `  Orsak: ${suggestion.description}`,
+              `  Mål: ${suggestion.section}${suggestion.assignment_id ? ` (${suggestion.assignment_id.slice(0, 8)})` : ""}`,
+              `  Status: ${suggestion.status === "accepted" ? "accepterad" : suggestion.status === "dismissed" ? "avfärdad" : "pending"}`,
+              ...(workItem ? [`  Work item: ${workItem.title}`] : []),
+            ];
+          })
+        : ["- Det finns inga persisterade förslag i den här revisionschatten ännu."]),
+      "",
+      "### Arbetsläge",
+      "",
+      ...(workItems.length > 0
+        ? workItems.map((item) => `- **${item.title}**: ${item.status}${item.note ? ` — ${item.note}` : ""}`)
+        : ["- Inga work items är registrerade ännu."]),
+    ].join("\n");
+  }
+
+  return [
+    "## Explanation",
+    "",
+    "### Reviewed Content",
+    "",
+    ...(inspectedTargets.length > 0
+      ? inspectedTargets.map((target) => `- ${target}`)
+      : ["- No inspected content has been recorded yet."]),
+    "",
+    "### Why Each Suggestion Was Created",
+    "",
+    ...(suggestions.length > 0
+      ? suggestions.flatMap((suggestion) => {
+          const workItem = suggestion.work_item_id
+            ? workItemById.get(suggestion.work_item_id) ?? null
+            : null;
+          return [
+            `- **${suggestion.title}**`,
+            `  Reason: ${suggestion.description}`,
+            `  Target: ${suggestion.section}${suggestion.assignment_id ? ` (${suggestion.assignment_id.slice(0, 8)})` : ""}`,
+            `  Status: ${suggestion.status}`,
+            ...(workItem ? [`  Work item: ${workItem.title}`] : []),
+          ];
+        })
+      : ["- There are no persisted suggestions in this revision chat yet."]),
+    "",
+    "### Work State",
+    "",
+    ...(workItems.length > 0
+      ? workItems.map((item) => `- **${item.title}**: ${item.status}${item.note ? ` — ${item.note}` : ""}`)
+      : ["- No work items have been recorded yet."]),
   ].join("\n");
 }
 
@@ -366,10 +572,16 @@ export async function sendAIMessage(
   }
 
   const trimmedUserMessage = input.userMessage.trim();
-  if (trimmedUserMessage === "/help" || trimmedUserMessage === "/status") {
+  if (trimmedUserMessage === "/help" || trimmedUserMessage === "/status" || trimmedUserMessage === "/explain") {
     const language = detectConversationLanguage(conversation.system_prompt);
     const content = trimmedUserMessage === "/help"
       ? buildHelpMessage(conversation.entity_type, language)
+      : trimmedUserMessage === "/explain"
+        ? await buildExplainMessage(db, {
+            conversationId: input.conversationId,
+            entityType: conversation.entity_type,
+            language,
+          })
       : await buildStatusMessage(db, {
           conversationId: input.conversationId,
           entityType: conversation.entity_type,
@@ -573,6 +785,41 @@ export async function sendAIMessage(
           }
 
           if (toolCall.toolName === "create_revision_branch") {
+            if (!isExplicitBranchCreationConfirmation(input.userMessage)) {
+              const toolResult = {
+                ok: false,
+                error: "Branch creation requires an explicit user confirmation first.",
+              };
+
+              await insertAIDelivery(db, {
+                conversationId: input.conversationId,
+                kind: "tool_result",
+                role: "tool",
+                toolName: toolCall.toolName,
+                payload: toolResult,
+                content: toolResult.error,
+              });
+
+              openAIMessages.push({
+                role: "assistant",
+                content: assistantMessage.content ?? "",
+                tool_calls: [{
+                  id: toolCall.id,
+                  type: "function",
+                  function: {
+                    name: toolCall.toolName,
+                    arguments: JSON.stringify(toolCall.input ?? {}),
+                  },
+                }],
+              });
+              openAIMessages.push({
+                role: "tool",
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResult),
+              });
+              continue;
+            }
+
             const output = await createRevisionBranchFromConversation(db, conversation, {
               goal:
                 toolCall.input

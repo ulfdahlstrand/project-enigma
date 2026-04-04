@@ -56,7 +56,10 @@ export const listResumesOutputSchema = z.array(resumeSchema);
 // getResume schemas
 // ---------------------------------------------------------------------------
 
-export const getResumeInputSchema = z.object({ id: z.string().uuid() });
+export const getResumeInputSchema = z.object({
+  id: z.string().uuid(),
+  branchId: z.string().uuid().optional(),
+});
 export const getResumeOutputSchema = resumeWithSkillsSchema;
 
 // ---------------------------------------------------------------------------

@@ -94,6 +94,10 @@ export function AIAssistantChat({
       command: "/status",
       description: t("aiAssistant.commands.status"),
     },
+    {
+      command: "/explain",
+      description: t("aiAssistant.commands.explain"),
+    },
   ]), [t]);
   const isSlashQuery = chat.inputValue.trimStart().startsWith("/");
   const normalizedSlashQuery = chat.inputValue.trim().toLowerCase();

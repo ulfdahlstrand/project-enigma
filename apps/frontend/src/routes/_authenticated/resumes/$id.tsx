@@ -26,7 +26,8 @@ import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEdi
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
-export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
+export const getResumeQueryKey = (id: string, branchId?: string | null) =>
+  ["getResume", id, branchId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
@@ -52,10 +53,11 @@ export function ResumeDetailPage({
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const requestedBranchId = selectedBranchId ?? null;
 
   const { data: resume, isLoading, isError, error } = useQuery({
-    queryKey: getResumeQueryKey(id),
-    queryFn: () => orpc.getResume({ id }),
+    queryKey: getResumeQueryKey(id, requestedBranchId),
+    queryFn: () => orpc.getResume({ id, branchId: requestedBranchId ?? undefined }),
     retry: false,
   });
 
@@ -115,7 +117,7 @@ export function ResumeDetailPage({
     }) =>
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
     },
   });
 
@@ -123,7 +125,7 @@ export function ResumeDetailPage({
     mutationFn: () => orpc.deleteResume({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
       void navigate({
         to: "/resumes",
         search: resume?.employeeId ? { employeeId: resume.employeeId } : {},

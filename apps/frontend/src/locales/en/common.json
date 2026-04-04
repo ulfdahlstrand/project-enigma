@@ -428,6 +428,11 @@
     "suggestion": "Suggested text",
     "analysisInProgress": "AI is analysing the current content...",
     "toolsContext": "{{count}} tools available for {{entityType}} in this chat session.",
+    "commands": {
+      "help": "Show help and examples of what this chat can help with.",
+      "status": "Show a short status summary for the current work queue.",
+      "explain": "Explain why suggestions were created and what has already been reviewed."
+    },
     "toolStatus": {
       "create_revision_branch": "Creating a new revision branch",
       "inspect_resume": "Inspecting resume",

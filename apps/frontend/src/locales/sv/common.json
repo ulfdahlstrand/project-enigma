@@ -430,7 +430,8 @@
     "toolsContext": "{{count}} tools tillgängliga för {{entityType}} i den här chattsessionen.",
     "commands": {
       "help": "Visa hjälp och exempel på vad chatten kan hjälpa till med.",
-      "status": "Visa en kort status för nuvarande arbetslista."
+      "status": "Visa en kort status för nuvarande arbetslista.",
+      "explain": "Förklara varför förslag skapats och vad som redan har gåtts igenom."
     },
     "toolStatus": {
       "create_revision_branch": "Skapar ny revisionsgren",
