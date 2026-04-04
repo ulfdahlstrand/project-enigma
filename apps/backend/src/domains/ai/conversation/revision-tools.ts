@@ -46,6 +46,9 @@ const inspectAssignmentSchema = z.object({
 const listResumeAssignmentsSchema = z.object({});
 const inspectResumeSkillsSchema = z.object({});
 const listRevisionWorkItemsSchema = z.object({});
+const createRevisionBranchSchema = z.object({
+  goal: z.string().min(1),
+});
 
 const setRevisionSuggestionsSchema = z.object({
   summary: z.string().min(1).optional(),
@@ -136,6 +139,19 @@ const TOOL_SPECS = [
       additionalProperties: false,
     },
     parse: (input: unknown) => inspectAssignmentSchema.parse(input),
+  },
+  {
+    name: "create_revision_branch",
+    description: "Create a new revision branch for a broader multi-step revision effort and hand off the work there.",
+    parameters: {
+      type: "object",
+      properties: {
+        goal: { type: "string" },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+    parse: (input: unknown) => createRevisionBranchSchema.parse(input),
   },
   {
     name: "set_revision_work_items",

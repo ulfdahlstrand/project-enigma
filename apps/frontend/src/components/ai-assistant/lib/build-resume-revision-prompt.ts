@@ -190,7 +190,16 @@ export function buildResumeRevisionActionKickoff(planSummary: string, actions: s
   ].join("\n");
 }
 
-export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
+type UnifiedRevisionPromptOptions = {
+  branchAlreadyCreated?: boolean;
+};
+
+export function buildUnifiedRevisionPrompt(
+  locale: string | undefined,
+  options?: UnifiedRevisionPromptOptions,
+): string {
+  const branchAlreadyCreated = options?.branchAlreadyCreated === true;
+
   return [
     "You are helping the user revise their resume inside the resume editor.",
     ...buildLocaleInstruction(locale),
@@ -200,6 +209,26 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     "The user may ask for several follow-up revisions in sequence. Handle each new request in the same chat.",
     "Suggestions are the main output. Let them accumulate unless the user clearly changes direction and replacing them is more helpful.",
     "You can edit any part of the resume: title, consultant title, presentation, summary, skills, and any assignment.",
+    branchAlreadyCreated
+      ? "This branch was already created because the user indicated that they want to keep working on several changes here."
+      : "In a brand-new or otherwise empty branch chat, start exactly as today: greet briefly and ask what the user wants to revise.",
+    branchAlreadyCreated
+      ? "Do not ask again whether the user plans to make more changes after the current one. That is already known."
+      : "When the first concrete user request in that fresh chat is narrow and local, for example one section or one assignment, do not jump straight into inspection yet.",
+    branchAlreadyCreated
+      ? "Continue directly with the current revision scope, produce the needed suggestions, and then invite the user to say what else should be revised in this branch."
+      : "First ask one short follow-up question about scope, for example whether the user expects to keep making more edits after this one.",
+    "If you ask that scope question, you must stop there and wait for the user's answer.",
+    "Do not inspect, do not emit suggestions, and do not propose concrete text changes until the user has answered whether more changes are coming.",
+    "If the user confirms that they only want this single narrow change, continue with normal inspection and suggestion generation in the current branch.",
+    "If the user says they want several follow-up changes after the first one, suggest that a dedicated revision branch would be better before you continue with broader work.",
+    "If the user's first concrete request is already broad, for example spelling in the whole CV, several sections at once, or all assignments, do not ask the narrow-scope follow-up question.",
+    "Instead, immediately recommend creating a dedicated revision branch for that broader revision effort.",
+    "When you recommend a new revision branch, do not create suggestions yet in the same response.",
+    "If the user agrees that a dedicated branch should be created, create that branch first and only then continue with suggestions in the new branch chat.",
+    "Keep that branch recommendation short and concrete: explain that the request spans several edits and that a dedicated revision branch is the safer workflow.",
+    "If the user agrees that you should create that new branch, use the create_revision_branch tool immediately.",
+    "When you call create_revision_branch, pass the main revision goal as the goal field.",
     "",
     "INSPECTION STRATEGY — lazy and targeted:",
     "Start with inspect_resume to get a compact overview of the resume structure.",
@@ -208,6 +237,9 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     "Do not use inspect_resume_sections with includeAssignments:true — it is expensive and usually unnecessary.",
     "",
     "Available inspection tools:",
+    "```json",
+    '{"type":"tool_call","toolName":"create_revision_branch","input":{"goal":"<main revision goal>"}}',
+    "```",
     "```json",
     '{"type":"tool_call","toolName":"inspect_resume","input":{}}',
     "```",
@@ -247,15 +279,43 @@ export function buildUnifiedRevisionPrompt(locale: string | undefined): string {
     "For spelling-only tasks: only correct the specific spelling mistakes, do not rewrite surrounding text.",
     "For skills reordering: use inspect_resume_skills first; emit one suggestion for group order changes and one per affected group for internal reordering.",
     "Do not widen the scope on your own.",
+    "Treat requests like 'hela CV:t', 'alla uppdrag', or several named sections together as broad scope.",
+    "Treat requests like one presentation tweak, one summary tweak, one title change, or one assignment as narrow scope unless the user says more changes are coming.",
     "Do not claim changes are applied — you are only proposing suggestions for the user to review.",
     "After emitting suggestions, reply with one short sentence confirming they are ready for review.",
   ].join("\n");
 }
 
-export function buildUnifiedRevisionKickoff(): string {
-  return (
-    "Greet the user briefly, explain that you can keep helping in the same revision chat, and ask what they would like to revise first."
-  );
+type UnifiedRevisionKickoffOptions = {
+  branchAlreadyCreated?: boolean;
+  branchGoal?: string | null | undefined;
+};
+
+export function buildUnifiedRevisionKickoff(options?: UnifiedRevisionKickoffOptions): string {
+  if (options?.branchAlreadyCreated) {
+    return [
+      "A dedicated revision branch has already been created for a broader revision effort.",
+      options.branchGoal ? `Current branch goal: ${options.branchGoal}` : null,
+      "Do not ask whether the user wants to keep making more changes in this branch. That is already decided.",
+      "Continue directly with the current requested scope, then ask what else the user wants to revise next in this same branch.",
+    ].filter(Boolean).join("\n");
+  }
+
+  return "Greet the user briefly, explain that you can keep helping in the same revision chat, and ask what they would like to revise first.";
+}
+
+export function buildUnifiedRevisionAutoStart(options?: UnifiedRevisionKickoffOptions): string | null {
+  if (!options?.branchAlreadyCreated || !options.branchGoal) {
+    return null;
+  }
+
+  return [
+    "A dedicated revision branch has already been created for this broader effort.",
+    `Current branch goal: ${options.branchGoal}`,
+    "Continue with that goal now.",
+    "Do not ask whether the user wants to keep making more changes in this branch.",
+    "Inspect the necessary content and emit concrete suggestions immediately.",
+  ].join("\n");
 }
 
 export function buildResumeRevisionActionAutoStart(planSummary: string, actions: string[]): string {

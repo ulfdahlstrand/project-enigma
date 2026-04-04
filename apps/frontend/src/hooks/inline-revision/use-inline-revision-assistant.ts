@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   buildUnifiedRevisionPrompt,
   buildUnifiedRevisionKickoff,
+  buildUnifiedRevisionAutoStart,
 } from "../../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
   appendUniqueRevisionSuggestions,
@@ -149,10 +150,14 @@ export function useInlineRevisionAssistant({
     branchId,
     kickoffMessage,
     initialConversationId,
+    branchAlreadyCreated,
+    branchGoal,
   }: {
     branchId: string;
     kickoffMessage?: string | null | undefined;
     initialConversationId?: string | null | undefined;
+    branchAlreadyCreated?: boolean | null | undefined;
+    branchGoal?: string | null | undefined;
   }) => {
     if (
       assistantEntityType === "resume-revision-actions" &&
@@ -167,8 +172,24 @@ export function useInlineRevisionAssistant({
       entityType: "resume-revision-actions",
       entityId: branchId,
       title: t("revision.inline.conversationTitle"),
-      systemPrompt: buildUnifiedRevisionPrompt(language),
-      kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff(),
+      systemPrompt: buildUnifiedRevisionPrompt(language, {
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+      }),
+      kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff({
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+        branchGoal,
+      }),
+      ...(buildUnifiedRevisionAutoStart({
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+        branchGoal,
+      }) !== null
+        ? {
+            autoStartMessage: buildUnifiedRevisionAutoStart({
+              branchAlreadyCreated: branchAlreadyCreated ?? false,
+              branchGoal,
+            })!,
+          }
+        : {}),
       initialConversationId,
       originalContent,
       toolRegistry,

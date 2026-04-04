@@ -429,6 +429,7 @@
     "analysisInProgress": "AI is analysing the current content...",
     "toolsContext": "{{count}} tools available for {{entityType}} in this chat session.",
     "toolStatus": {
+      "create_revision_branch": "Creating a new revision branch",
       "inspect_resume": "Inspecting resume",
       "inspect_revision_plan": "Reading revision plan",
       "list_resume_assignments": "Reading the assignment list",

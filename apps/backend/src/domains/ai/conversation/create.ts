@@ -7,6 +7,8 @@ import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { logger } from "../../../infra/logger.js";
+import { sendAIMessage } from "./message.js";
+import { INTERNAL_AUTOSTART_PREFIX } from "./tool-parsing.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 512;
@@ -14,7 +16,14 @@ const MAX_TOKENS = 512;
 export async function createAIConversation(
   db: Kysely<Database>,
   openaiClient: OpenAI,
-  input: { entityType: string; entityId: string; systemPrompt: string; title?: string | undefined; kickoffMessage?: string | undefined },
+  input: {
+    entityType: string;
+    entityId: string;
+    systemPrompt: string;
+    title?: string | undefined;
+    kickoffMessage?: string | undefined;
+    autoStartMessage?: string | undefined;
+  },
   userId: string
 ) {
   // Resume an existing open conversation for the same entity rather than
@@ -99,6 +108,13 @@ export async function createAIConversation(
     logger.info("AI kickoff greeting stored", {
       conversationId: row.id,
       greetingLength: greeting.length,
+    });
+  }
+
+  if (input.autoStartMessage) {
+    await sendAIMessage(db, openaiClient, {
+      conversationId: row.id,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${input.autoStartMessage}`,
     });
   }
 

@@ -21,21 +21,27 @@ function slugifyInlineRevisionBranchLabel(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+export function buildInlineRevisionBranchNameFromGoal(goal: string | null | undefined) {
+  const normalizedGoal = goal ? slugifyInlineRevisionBranchLabel(goal) : "";
+
+  if (!normalizedGoal) {
+    const timestamp = new Date().toISOString().slice(0, 16).replace(/[TZ:]/g, "-");
+    return `revision/${timestamp}`;
+  }
+
+  const branchName = `revision/${normalizedGoal}`;
+  return branchName.length > INLINE_REVISION_BRANCH_NAME_MAX_LENGTH
+    ? `${branchName.slice(0, INLINE_REVISION_BRANCH_NAME_MAX_LENGTH - 1).trimEnd()}…`
+    : branchName;
+}
+
 export function buildInlineRevisionBranchName(plan?: RevisionPlan | null) {
   const planLead = plan
     ? slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
       slugifyInlineRevisionBranchLabel(plan.summary)
     : "";
 
-  if (!planLead) {
-    const timestamp = new Date().toISOString().slice(0, 16).replace(/[TZ:]/g, "-");
-    return `revision/${timestamp}`;
-  }
-
-  const branchName = `revision/${planLead}`;
-  return branchName.length > INLINE_REVISION_BRANCH_NAME_MAX_LENGTH
-    ? `${branchName.slice(0, INLINE_REVISION_BRANCH_NAME_MAX_LENGTH - 1).trimEnd()}…`
-    : branchName;
+  return buildInlineRevisionBranchNameFromGoal(planLead);
 }
 
 export function buildInlineRevisionSuggestionCommitTitle(
@@ -250,6 +256,77 @@ export function appendUniqueRevisionSuggestions(
   return {
     summary: incoming.summary || existing.summary,
     suggestions: nextSuggestions,
+  };
+}
+
+function normalizeComparableText(value: string | null | undefined) {
+  return (value ?? "").replace(/\r\n/g, "\n").trim();
+}
+
+function normalizeSkillsSignature(
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  return JSON.stringify(
+    [...skills]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((skill) => ({
+        name: skill.name.trim(),
+        level: skill.level ?? null,
+        category: skill.category ?? null,
+        sortOrder: skill.sortOrder,
+      })),
+  );
+}
+
+export function reconcileRevisionSuggestionsWithCurrentContent(
+  suggestions: RevisionSuggestions | null,
+  current: {
+    title: string;
+    consultantTitle: string | null;
+    presentation: string[];
+    summary: string | null;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+    assignments: Array<{ id: string; description?: string }>;
+  },
+): RevisionSuggestions | null {
+  if (!suggestions) {
+    return null;
+  }
+
+  const currentSkillsSignature = normalizeSkillsSignature(current.skills);
+
+  return {
+    ...suggestions,
+    suggestions: suggestions.suggestions.map((suggestion) => {
+      if (suggestion.status === "dismissed") {
+        return suggestion;
+      }
+
+      const section = suggestion.section.trim().toLowerCase();
+      let isApplied = false;
+
+      if (suggestion.skills && suggestion.skills.length > 0) {
+        isApplied = normalizeSkillsSignature(suggestion.skills.map((skill) => ({
+          name: skill.name,
+          level: skill.level ?? null,
+          category: skill.category,
+          sortOrder: skill.sortOrder,
+        }))) === currentSkillsSignature;
+      } else if (suggestion.assignmentId) {
+        const assignment = current.assignments.find((item) => item.id === suggestion.assignmentId);
+        isApplied = normalizeComparableText(assignment?.description) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("consultant")) {
+        isApplied = normalizeComparableText(current.consultantTitle) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("presentation") || section.includes("profil") || section.includes("intro")) {
+        isApplied = normalizeComparableText(current.presentation.join("\n\n")) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("summary") || section.includes("sammanfatt")) {
+        isApplied = normalizeComparableText(current.summary) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("title") || section.includes("titel")) {
+        isApplied = normalizeComparableText(current.title) === normalizeComparableText(suggestion.suggestedText);
+      }
+
+      return isApplied ? { ...suggestion, status: "accepted" as const } : suggestion;
+    }),
   };
 }
 

@@ -7,6 +7,7 @@ import type { Database } from "../../../db/types.js";
 import { sendAIMessage, createSendAIMessageHandler } from "./message.js";
 import * as toolExecution from "./tool-execution.js";
 import * as revisionWorkItems from "./revision-work-items.js";
+import * as revisionSuggestions from "./revision-suggestions.js";
 import * as actionOrchestration from "./action-orchestration.js";
 
 const CONV_ID = "550e8400-e29b-41d4-a716-446655440002";
@@ -425,6 +426,9 @@ describe("sendAIMessage — backend tool-call loop", () => {
     const persistSpy = vi
       .spyOn(revisionWorkItems, "persistRevisionToolCallWorkItems")
       .mockResolvedValue(true);
+    const suggestionPersistSpy = vi
+      .spyOn(revisionSuggestions, "persistRevisionToolCallSuggestions")
+      .mockResolvedValue(false);
 
     const result = await sendAIMessage(db, openai, {
       conversationId: CONV_ID,
@@ -434,6 +438,7 @@ describe("sendAIMessage — backend tool-call loop", () => {
     expect(result.content).toBe("Work items are now ready for review.");
     expect(executeSpy).not.toHaveBeenCalled();
     expect(persistSpy).toHaveBeenCalledOnce();
+    expect(suggestionPersistSpy).toHaveBeenCalledOnce();
     expect(create).toHaveBeenCalledTimes(2);
 
     vi.restoreAllMocks();
@@ -532,6 +537,39 @@ describe("sendAIMessage — backend tool-call loop", () => {
     expect(orchestrationSpy).toHaveBeenCalled();
     expect(executeSpy).toHaveBeenCalled();
     expect(create.mock.calls.length).toBeGreaterThanOrEqual(3);
+
+    vi.restoreAllMocks();
+  });
+
+  it("waits for a scope decision question instead of forcing tools immediately", async () => {
+    const openai = buildOpenAISequence([
+      { content: "Kommer du att vilja göra fler ändringar efter det, eller är det bara presentationen som behöver rättas?" },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const waitingRow = {
+      id: "msg-waiting",
+      conversation_id: CONV_ID,
+      role: "assistant",
+      content: "Kommer du att vilja göra fler ändringar efter det, eller är det bara presentationen som behöver rättas?",
+      created_at: new Date(),
+    };
+    const db = buildRevisionDb({
+      finalRow: waitingRow,
+    });
+
+    const executeSpy = vi
+      .spyOn(toolExecution, "executeBackendInspectTool")
+      .mockResolvedValue({ ok: true, output: {} });
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "jag vill fixa stavfel i presentationen",
+    });
+
+    expect(result.content).toBe(waitingRow.content);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(executeSpy).not.toHaveBeenCalled();
 
     vi.restoreAllMocks();
   });

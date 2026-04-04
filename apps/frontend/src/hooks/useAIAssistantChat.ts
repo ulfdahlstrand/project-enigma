@@ -28,6 +28,7 @@ export function useAIAssistantChat({
     entityId,
     systemPrompt,
     kickoffMessage,
+    autoStartMessage,
     originalContent,
     toolRegistry: toolRegistryFromContext,
     toolContext: toolContextFromContext,
@@ -81,6 +82,7 @@ export function useAIAssistantChat({
           entityId,
           systemPrompt,
           ...(kickoffMessage !== null && { kickoffMessage }),
+          ...(autoStartMessage !== null && { autoStartMessage }),
         })
         .then((conv) => {
           setActiveConversationId(conv.id);

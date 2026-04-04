@@ -34,6 +34,8 @@ import {
 } from "./revision-tools.js";
 import { persistRevisionToolCallWorkItems } from "./revision-work-items.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { persistRevisionToolCallSuggestions } from "./revision-suggestions.js";
+import { forkResumeBranch } from "../../resume/branch/fork.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -47,6 +49,31 @@ const REVISION_TOOL_GUARDRAIL_MESSAGE = [
   "Do not continue with free-text status updates.",
   "Return a tool call now.",
 ].join(" ");
+
+function isWaitingForRevisionScopeDecision(content: string) {
+  const normalized = content.trim().toLowerCase();
+  if (!normalized.endsWith("?")) {
+    return false;
+  }
+
+  const asksAboutMoreChanges =
+    normalized.includes("fler ändringar")
+    || normalized.includes("något mer")
+    || normalized.includes("något annat")
+    || normalized.includes("more changes")
+    || normalized.includes("anything else")
+    || normalized.includes("what else");
+
+  const asksAboutCurrentScope =
+    normalized.includes("bara presentationen")
+    || normalized.includes("den enda ändringen")
+    || normalized.includes("just nu")
+    || normalized.includes("only the presentation")
+    || normalized.includes("only change")
+    || normalized.includes("after that");
+
+  return asksAboutMoreChanges || asksAboutCurrentScope;
+}
 
 function detectConversationLanguage(systemPrompt: string) {
   return systemPrompt.toLowerCase().includes("swedish") ? "sv" : "en";
@@ -114,6 +141,88 @@ function buildHelpMessage(entityType: string, language: "sv" | "en") {
     "Tip:",
     "- `/help` shows this help again.",
   ].join("\n");
+}
+
+function slugifyRevisionGoal(goal: string) {
+  return goal
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function buildRevisionBranchNameFromGoal(goal: string) {
+  const slug = slugifyRevisionGoal(goal);
+  return slug ? `revision/${slug}` : "revision/untitled";
+}
+
+function buildBranchCreatedMessage(language: "sv" | "en", branchName: string) {
+  if (language === "sv") {
+    return `Jag öppnar nu en ny revisionsgren för det här arbetet: ${branchName}.`;
+  }
+
+  return `Opening a new revision branch for this work now: ${branchName}.`;
+}
+
+async function createRevisionBranchFromConversation(
+  db: Kysely<Database>,
+  conversation: {
+    id: string;
+    created_by: string;
+    entity_id: string;
+    entity_type: string;
+    system_prompt: string;
+  },
+  input: { goal: string },
+) {
+  if (conversation.entity_type !== "resume-revision-actions") {
+    throw new ORPCError("FAILED_PRECONDITION", {
+      message: "Revision branches can only be created from revision action conversations.",
+    });
+  }
+
+  const branch = await db
+    .selectFrom("resume_branches")
+    .select(["id", "head_commit_id", "forked_from_commit_id"])
+    .where("id", "=", conversation.entity_id)
+    .executeTakeFirst();
+
+  if (!branch) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Source branch not found for revision branch creation.",
+    });
+  }
+
+  const fromCommitId = branch.head_commit_id ?? branch.forked_from_commit_id;
+  if (!fromCommitId) {
+    throw new ORPCError("FAILED_PRECONDITION", {
+      message: "Missing fork point for revision branch creation.",
+    });
+  }
+
+  const user = await db
+    .selectFrom("users")
+    .selectAll()
+    .where("id", "=", conversation.created_by)
+    .executeTakeFirst();
+
+  if (!user) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Conversation owner not found.",
+    });
+  }
+
+  const newBranch = await forkResumeBranch(db, user, {
+    fromCommitId,
+    name: buildRevisionBranchNameFromGoal(input.goal),
+  });
+
+  return {
+    branchId: newBranch.id,
+    branchName: newBranch.name,
+    goal: input.goal,
+  };
 }
 
 async function buildStatusMessage(
@@ -403,6 +512,7 @@ export async function sendAIMessage(
       if (isRevisionConversation && revisionToolCalls.length > 0) {
         const persistedToolCalls: Array<{ toolName: string; input?: unknown }> = [];
         const frontendToolCalls: Array<{ toolName: string; input?: unknown }> = [];
+        let branchHandoffCreated = false;
 
         for (const toolCall of revisionToolCalls) {
           await insertAIDelivery(db, {
@@ -462,7 +572,55 @@ export async function sendAIMessage(
             continue;
           }
 
+          if (toolCall.toolName === "create_revision_branch") {
+            const output = await createRevisionBranchFromConversation(db, conversation, {
+              goal:
+                toolCall.input
+                && typeof toolCall.input === "object"
+                && toolCall.input !== null
+                && "goal" in toolCall.input
+                && typeof (toolCall.input as { goal?: unknown }).goal === "string"
+                  ? (toolCall.input as { goal: string }).goal
+                  : "Revision branch",
+            });
+
+            const toolResult = { ok: true, output };
+            await insertAIDelivery(db, {
+              conversationId: input.conversationId,
+              kind: "tool_result",
+              role: "tool",
+              toolName: toolCall.toolName,
+              payload: toolResult,
+              content: JSON.stringify(toolResult.output),
+            });
+
+            const assistantBranchRow = await persistAssistantMessage(
+              buildBranchCreatedMessage(
+                detectConversationLanguage(conversation.system_prompt),
+                output.branchName,
+              ),
+            );
+
+            await db
+              .updateTable("ai_conversations")
+              .set({ is_closed: true, updated_at: new Date() })
+              .where("id", "=", input.conversationId)
+              .execute();
+
+            assistantRow = assistantBranchRow;
+            assistantContent = assistantBranchRow.content;
+            branchHandoffCreated = true;
+            break;
+          }
+
           const persisted = await persistRevisionToolCallWorkItems(db, {
+            conversationId: input.conversationId,
+            branchId: conversation.entity_id,
+            toolName: toolCall.toolName,
+            toolCallInput: toolCall.input,
+          });
+
+          await persistRevisionToolCallSuggestions(db, {
             conversationId: input.conversationId,
             branchId: conversation.entity_id,
             toolName: toolCall.toolName,
@@ -516,6 +674,10 @@ export async function sendAIMessage(
           assistantRow = await persistAssistantMessage(persistedContent);
         }
 
+        if (branchHandoffCreated) {
+          break;
+        }
+
         if (frontendToolCalls.length > 0) {
           assistantContent = buildLegacyAssistantToolCallContent(frontendToolCalls);
           assistantRow = await persistAssistantMessage(assistantContent);
@@ -529,6 +691,13 @@ export async function sendAIMessage(
 
       const toolCalls = legacyToolCalls;
       if (toolCalls.length === 0) {
+        if (isRevisionConversation && isWaitingForRevisionScopeDecision(assistantContent)) {
+          if (!assistantRow || assistantRow.content !== assistantContent) {
+            assistantRow = await persistAssistantMessage(assistantContent);
+          }
+          break;
+        }
+
         if (isRevisionConversation && i === 0) {
           const guardrailContent = `${INTERNAL_GUARDRAIL_PREFIX} ${REVISION_TOOL_GUARDRAIL_MESSAGE}`;
           await insertAIDelivery(db, {
@@ -545,6 +714,10 @@ export async function sendAIMessage(
 
         if (!assistantRow || assistantRow.content !== assistantContent) {
           assistantRow = await persistAssistantMessage(assistantContent);
+        }
+
+        if (conversation.entity_type === "resume-revision-actions" && isWaitingForRevisionScopeDecision(assistantContent)) {
+          break;
         }
 
         const updatedHistory = await db

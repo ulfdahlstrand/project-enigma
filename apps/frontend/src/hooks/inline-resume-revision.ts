@@ -12,14 +12,13 @@ import {
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
   useFinaliseResumeBranch,
-  useForkResumeBranch,
 } from "./versioning";
 import { orpc } from "../orpc-client";
 import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
   appendUniqueRevisionSuggestions,
-  buildInlineRevisionBranchName,
+  reconcileRevisionSuggestionsWithCurrentContent,
 } from "../components/revision/inline-revision";
 import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
@@ -102,20 +101,20 @@ export function useInlineResumeRevision({
     },
   });
 
-  const closeInlineConversation = useCloseAIConversation("resume", resumeId);
-  const forkResumeBranch = useForkResumeBranch();
   const finaliseInlineRevision = useFinaliseResumeBranch();
+  const closeActionConversation = useCloseAIConversation(
+    "resume-revision-actions",
+    activeBranchId,
+  );
   const { data: existingActionConversations } = useAIConversations(
     activeBranchId && activeBranchId !== mainBranchId ? "resume-revision-actions" : null,
     activeBranchId && activeBranchId !== mainBranchId ? activeBranchId : null,
   );
-  const existingActionConversationId =
-    existingActionConversations?.conversations.at(-1)?.id ?? null;
   const latestOpenActionConversationId =
     [...(existingActionConversations?.conversations ?? [])]
       .reverse()
       .find((conversation) => !conversation.isClosed)?.id ?? null;
-  const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
+  const { data: existingActionConversation } = useAIConversation(latestOpenActionConversationId);
   const { data: activeAssistantConversation } = useAIConversation(assistantConversationId);
 
   useEffect(() => {
@@ -182,6 +181,8 @@ export function useInlineResumeRevision({
     openRevisionAssistantRef.current = openRevisionAssistant;
   });
 
+  const handledBranchHandoffRef = useRef<string | null>(null);
+
   const {
     selectedSuggestionId,
     applyingSuggestionId,
@@ -231,7 +232,7 @@ export function useInlineResumeRevision({
   });
 
   const open = async () => {
-    if (!baseCommitId || isOpen || forkResumeBranch.isPending) {
+    if (!activeBranchId || isOpen) {
       return;
     }
 
@@ -243,29 +244,7 @@ export function useInlineResumeRevision({
     setSuggestions(null);
 
     try {
-      const newBranch = await forkResumeBranch.mutateAsync({
-        fromCommitId: baseCommitId,
-        name: buildInlineRevisionBranchName(),
-        resumeId,
-      });
-
-      writePersistedInlineRevisionSession(newBranch.id, {
-        version: 3,
-        sourceBranchId: activeBranchId,
-        sourceBranchName: activeBranchName,
-        conversationId: null,
-        suggestions: null,
-      });
-
-      openingRevisionBranchIdRef.current = newBranch.id;
-      await navigate({
-        to: "/resumes/$id/edit",
-        params: { id: resumeId },
-        search: { branchId: newBranch.id, assistant: "true" },
-        replace: true,
-      });
-
-      openRevisionAssistantRef.current({ branchId: newBranch.id });
+      openRevisionAssistantRef.current({ branchId: activeBranchId });
     } catch (error) {
       setIsOpen(false);
       setSourceBranchName(null);
@@ -273,8 +252,6 @@ export function useInlineResumeRevision({
       setWorkItems(null);
       setSuggestions(null);
       throw error;
-    } finally {
-      openingRevisionBranchIdRef.current = null;
     }
   };
 
@@ -334,7 +311,7 @@ export function useInlineResumeRevision({
     setWorkItems(null);
 
     const restoredConversationId =
-      persistedSession.conversationId ?? latestOpenActionConversationId ?? existingActionConversationId;
+      persistedSession.conversationId ?? latestOpenActionConversationId ?? null;
     const restoredKickoff = restoredConversationId === null ? null : undefined;
     openRevisionAssistant({
       branchId: activeBranchId,
@@ -343,7 +320,6 @@ export function useInlineResumeRevision({
     });
   }, [
     activeBranchId,
-    existingActionConversationId,
     isEditRoute,
     isOpen,
     latestOpenActionConversationId,
@@ -385,7 +361,9 @@ export function useInlineResumeRevision({
       return;
     }
 
-    const restoredSuggestions = deriveSuggestionsFromConversation(existingActionConversation.messages);
+    const restoredSuggestions =
+      existingActionConversation.revisionSuggestions
+      ?? deriveSuggestionsFromConversation(existingActionConversation.messages);
     if (restoredSuggestions) {
       setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, restoredSuggestions));
     }
@@ -407,7 +385,9 @@ export function useInlineResumeRevision({
         setWorkItems(derivedWorkItems);
       }
 
-      const derivedSuggestions = deriveSuggestionsFromConversation(currentConversation.messages);
+      const derivedSuggestions =
+        currentConversation.revisionSuggestions
+        ?? deriveSuggestionsFromConversation(currentConversation.messages);
       if (derivedSuggestions) {
         setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, derivedSuggestions));
       }
@@ -418,6 +398,104 @@ export function useInlineResumeRevision({
     assistantEntityId,
     assistantEntityType,
     isOpen,
+  ]);
+
+  useEffect(() => {
+    if (!suggestions) {
+      return;
+    }
+
+    const reconciled = reconcileRevisionSuggestionsWithCurrentContent(suggestions, {
+      title: resumeTitle,
+      consultantTitle,
+      presentation,
+      summary,
+      skills,
+      assignments: sortedAssignments.map((assignment) => ({
+        id: assignment.assignmentId ?? assignment.id,
+        ...(assignment.description !== undefined ? { description: assignment.description } : {}),
+      })),
+    });
+
+    const didChange = JSON.stringify(reconciled) !== JSON.stringify(suggestions);
+    if (!didChange) {
+      return;
+    }
+
+    setSuggestions(reconciled);
+
+    if (activeBranchId && activeBranchId !== mainBranchId) {
+      patchPersistedInlineRevisionSession(activeBranchId, (current) => current ? {
+        ...current,
+        suggestions: reconciled,
+      } : current);
+    }
+  }, [
+    activeBranchId,
+    consultantTitle,
+    mainBranchId,
+    presentation,
+    resumeTitle,
+    skills,
+    sortedAssignments,
+    suggestions,
+    summary,
+  ]);
+
+  useEffect(() => {
+    const branchHandoff = activeAssistantConversation?.latestBranchHandoff;
+    if (
+      !isOpen
+      || !assistantConversationId
+      || !branchHandoff
+      || handledBranchHandoffRef.current === branchHandoff.branchId
+    ) {
+      return;
+    }
+
+    handledBranchHandoffRef.current = branchHandoff.branchId;
+
+    clearPersistedInlineRevisionSession(activeBranchId);
+
+    writePersistedInlineRevisionSession(branchHandoff.branchId, {
+      version: 3,
+      sourceBranchId: activeBranchId,
+      sourceBranchName: activeBranchName,
+      conversationId: null,
+      suggestions: null,
+    });
+
+    openingRevisionBranchIdRef.current = branchHandoff.branchId;
+
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
+      queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
+      queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
+    ]).then(() =>
+      navigate({
+        to: "/resumes/$id/edit",
+        params: { id: resumeId },
+        search: { branchId: branchHandoff.branchId, assistant: "true" },
+        replace: true,
+      }).then(() => {
+        openRevisionAssistantRef.current({
+          branchId: branchHandoff.branchId,
+          branchAlreadyCreated: true,
+          branchGoal: branchHandoff.goal,
+        });
+      })
+    ).finally(() => {
+      openingRevisionBranchIdRef.current = null;
+    });
+  }, [
+    activeAssistantConversation,
+    activeBranchId,
+    activeBranchName,
+    assistantConversationId,
+    isOpen,
+    navigate,
+    queryClient,
+    resumeId,
   ]);
 
   const isReadyToFinalize =
@@ -459,11 +537,18 @@ export function useInlineResumeRevision({
       },
       {
         onSuccess: async (data) => {
+          if (assistantConversationId && !activeAssistantConversation?.isClosed) {
+            await closeActionConversation.mutateAsync({ conversationId: assistantConversationId });
+          }
+
           clearPersistedInlineRevisionSession(activeBranchId);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
             queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
             queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
+            queryClient.invalidateQueries({
+              queryKey: ["listAIConversations", "resume-revision-actions", activeBranchId],
+            }),
             queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", sourceBranchId] }),
             queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", data.resultBranchId] }),
           ]);
@@ -497,7 +582,7 @@ export function useInlineResumeRevision({
     applyingSuggestionId,
     isPreparingFinalize,
     isReadyToFinalize,
-    isOpening: forkResumeBranch.isPending,
+    isOpening: false,
     isMerging: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "merge",
     isKeeping: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "keep",
     reviewDialog,

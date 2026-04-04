@@ -26,9 +26,46 @@ export const aiMessageSchema = z.object({
   createdAt: z.string(),
 });
 
+export const aiBranchHandoffSchema = z.object({
+  branchId: z.string().uuid(),
+  branchName: z.string(),
+  goal: z.string().nullable(),
+});
+
+const aiRevisionSuggestionSkillSchema = z.object({
+  name: z.string().min(1),
+  level: z.string().nullable().optional(),
+  category: z.string().nullable(),
+  sortOrder: z.number(),
+});
+
+const aiRevisionSuggestionSkillScopeSchema = z.object({
+  type: z.enum(["group_order", "group_contents"]),
+  category: z.string().min(1).optional(),
+});
+
+export const aiRevisionSuggestionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  section: z.string().min(1),
+  assignmentId: z.string().uuid().optional(),
+  suggestedText: z.string().min(1),
+  skills: z.array(aiRevisionSuggestionSkillSchema).optional(),
+  skillScope: aiRevisionSuggestionSkillScopeSchema.optional(),
+  status: z.enum(["pending", "accepted", "dismissed"]),
+});
+
+export const aiRevisionSuggestionsSchema = z.object({
+  summary: z.string().min(1),
+  suggestions: z.array(aiRevisionSuggestionSchema),
+});
+
 export type AIConversation = z.infer<typeof aiConversationSchema>;
 export type AIMessage = z.infer<typeof aiMessageSchema>;
 export type AIMessageRole = z.infer<typeof aiMessageRoleSchema>;
+export type AIBranchHandoff = z.infer<typeof aiBranchHandoffSchema>;
+export type AIRevisionSuggestions = z.infer<typeof aiRevisionSuggestionsSchema>;
 
 // ---------------------------------------------------------------------------
 // createAIConversation
@@ -46,6 +83,8 @@ export const createAIConversationInputSchema = z.object({
    * generating an opening greeting that acknowledges the user's intent.
    */
   kickoffMessage: z.string().optional(),
+  /** Optional hidden autostart instruction executed immediately after creation. */
+  autoStartMessage: z.string().optional(),
 });
 
 export const createAIConversationOutputSchema = aiConversationSchema;
@@ -77,6 +116,8 @@ export const getAIConversationInputSchema = z.object({
 
 export const getAIConversationOutputSchema = aiConversationSchema.extend({
   messages: z.array(aiMessageSchema),
+  latestBranchHandoff: aiBranchHandoffSchema.nullable(),
+  revisionSuggestions: aiRevisionSuggestionsSchema.nullable(),
 });
 
 export type GetAIConversationInput = z.infer<typeof getAIConversationInputSchema>;

@@ -306,6 +306,37 @@ export type AIRevisionWorkItem = Selectable<AIRevisionWorkItemTable>;
 export type NewAIRevisionWorkItem = Insertable<AIRevisionWorkItemTable>;
 export type AIRevisionWorkItemUpdate = Updateable<AIRevisionWorkItemTable>;
 
+export type AIRevisionSuggestionStatus =
+  | "pending"
+  | "accepted"
+  | "dismissed"
+  | "applied";
+
+export interface AIRevisionSuggestionTable {
+  id: Generated<string>;
+  conversation_id: string;
+  branch_id: string;
+  work_item_id: string | null;
+  suggestion_id: string;
+  summary: string | null;
+  title: string;
+  description: string;
+  section: string;
+  assignment_id: string | null;
+  suggested_text: string;
+  status: AIRevisionSuggestionStatus;
+  skills: unknown | null;
+  skill_scope: unknown | null;
+  payload: unknown | null;
+  resolved_at: Date | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type AIRevisionSuggestion = Selectable<AIRevisionSuggestionTable>;
+export type NewAIRevisionSuggestion = Insertable<AIRevisionSuggestionTable>;
+export type AIRevisionSuggestionUpdate = Updateable<AIRevisionSuggestionTable>;
+
 // ---------------------------------------------------------------------------
 // user_sessions table
 // ---------------------------------------------------------------------------
@@ -353,6 +384,7 @@ export interface Database {
   ai_messages: AIMessageTable;
   ai_message_deliveries: AIMessageDeliveryTable;
   ai_revision_work_items: AIRevisionWorkItemTable;
+  ai_revision_suggestions: AIRevisionSuggestionTable;
   user_sessions: UserSessionTable;
 }
 

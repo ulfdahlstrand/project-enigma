@@ -433,6 +433,7 @@
       "status": "Visa en kort status för nuvarande arbetslista."
     },
     "toolStatus": {
+      "create_revision_branch": "Skapar ny revisionsgren",
       "inspect_resume": "Inspekterar CV:t",
       "inspect_revision_plan": "Läser revisionsplanen",
       "list_resume_assignments": "Läser uppdragslistan",
