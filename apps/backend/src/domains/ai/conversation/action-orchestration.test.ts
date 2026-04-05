@@ -53,6 +53,20 @@ describe("deriveNextActionOrchestrationMessage", () => {
 
     expect(result).toBeNull();
   });
+
+  it("expands a broad assignment work item into explicit assignment work items", () => {
+    const result = deriveNextActionOrchestrationMessage([
+      {
+        role: "assistant",
+        content:
+          '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review assignments","items":[{"id":"work-item-1","title":"Review assignments","description":"Check all assignments","section":"assignment","status":"pending"}]}}\n```',
+      },
+    ]);
+
+    expect(result).toMatchObject({ kind: "automation" });
+    expect(result?.content).toContain("list_resume_assignments");
+    expect(result?.content).toContain("set_revision_work_items");
+  });
 });
 
 describe("deriveNextPlanningOrchestrationMessage", () => {

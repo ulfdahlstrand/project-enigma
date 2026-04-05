@@ -101,6 +101,10 @@ function isBroadSkillsWorkItem(item: ActionWorkItem) {
   );
 }
 
+function isBroadAssignmentWorkItem(item: ActionWorkItem) {
+  return item.section === "assignment" && !item.assignmentId;
+}
+
 function parseActionWorkItems(input: unknown): ActionWorkItem[] | null {
   if (
     typeof input !== "object"
@@ -162,7 +166,15 @@ function buildNextWorkItemAutomationMessage(workItems: ActionWorkItem[] | null) 
     `Process only this work item now: ${nextPendingItem.id}.`,
     `Title: ${nextPendingItem.title}.`,
     `Description: ${nextPendingItem.description}.`,
-    isBroadSkillsWorkItem(nextPendingItem)
+    isBroadAssignmentWorkItem(nextPendingItem)
+      ? [
+          "This is a broad assignment-review task.",
+          "First inspect the available assignments with list_resume_assignments.",
+          "Then replace the current action-stage worklist with explicit assignment work items using set_revision_work_items.",
+          "Create one work item per assignment that must be reviewed.",
+          "Do not propose concrete suggestions yet in this first response after inspection.",
+        ].join(" ")
+      : isBroadSkillsWorkItem(nextPendingItem)
       ? [
           "This is a broad skills-ordering task.",
           "First inspect the current skills structure with inspect_resume_skills.",
@@ -177,6 +189,7 @@ function buildNextWorkItemAutomationMessage(workItems: ActionWorkItem[] | null) 
         : nextPendingItem.section === "skills"
           ? [
               "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only.",
+              "If this work item still covers skills broadly, replace it with more explicit skills work items using set_revision_work_items before creating suggestions.",
               "If this work item names a specific skills group, reorder only the skills inside that group.",
               'Treat phrases like "<group> group ordering" as internal ordering within that named group, not as reordering the groups themselves.',
               "Do not reorder the overall group order unless this work item explicitly asks for that.",

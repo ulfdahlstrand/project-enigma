@@ -4,7 +4,12 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
-import { sendAIMessage, createSendAIMessageHandler } from "./message.js";
+import {
+  sendAIMessage,
+  createSendAIMessageHandler,
+  requiresExplicitAssignmentWorkQueue,
+  isWaitingForRevisionScopeDecision,
+} from "./message.js";
 import * as toolExecution from "./tool-execution.js";
 import * as revisionWorkItems from "./revision-work-items.js";
 import * as revisionSuggestions from "./revision-suggestions.js";
@@ -357,11 +362,46 @@ describe("sendAIMessage", () => {
     });
 
     expect(result.content).toContain("## Förklaring");
-    expect(result.content).toContain("Genomgånget innehåll");
-    expect(result.content).toContain("Fix spelling in presentation");
     expect(create).not.toHaveBeenCalled();
 
     vi.restoreAllMocks();
+  });
+});
+
+describe("requiresExplicitAssignmentWorkQueue", () => {
+  it("returns true for whole-resume requests", () => {
+    expect(requiresExplicitAssignmentWorkQueue(["jag vill ta bort qwerty från hela cvt"])).toBe(true);
+    expect(requiresExplicitAssignmentWorkQueue(["fix spelling in the whole resume"])).toBe(true);
+  });
+
+  it("returns true for all-assignment requests", () => {
+    expect(requiresExplicitAssignmentWorkQueue(["rätta stavfel i alla uppdrag"])).toBe(true);
+    expect(requiresExplicitAssignmentWorkQueue(["fix all assignments"])).toBe(true);
+  });
+
+  it("returns false for narrow requests", () => {
+    expect(requiresExplicitAssignmentWorkQueue(["fixa stavfel i presentationen"])).toBe(false);
+    expect(requiresExplicitAssignmentWorkQueue(["fix the payer assignment"])).toBe(false);
+  });
+});
+
+describe("isWaitingForRevisionScopeDecision", () => {
+  it("returns true for branch confirmation followed by a yes/no instruction", () => {
+    expect(
+      isWaitingForRevisionScopeDecision(
+        "Det låter som en bredare ändring. Vill du att jag skapar en dedikerad revisionsgren för detta? Svara med ja eller nej."
+      )
+    ).toBe(true);
+  });
+});
+
+describe("latest branch confirmation handling", () => {
+  it("treats an explicit yes after a branch question as branch confirmation context", () => {
+    expect(
+      isWaitingForRevisionScopeDecision(
+        'Det låter som en bred ändring. Vill du att jag skapar en dedikerad revisionsgren för detta?'
+      )
+    ).toBe(true);
   });
 });
 

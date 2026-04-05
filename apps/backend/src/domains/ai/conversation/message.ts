@@ -53,12 +53,80 @@ const REVISION_TOOL_GUARDRAIL_MESSAGE = [
   "Return a tool call now.",
 ].join(" ");
 
-function isWaitingForRevisionScopeDecision(content: string) {
-  const normalized = content.trim().toLowerCase();
-  if (!normalized.endsWith("?")) {
-    return false;
+function normalizeScopeMessage(content: string) {
+  return content.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function detectBroadRevisionScope(messages: string[]) {
+  let foundWholeResume = false;
+  let foundAllAssignments = false;
+
+  for (const content of messages) {
+    const normalized = normalizeScopeMessage(content);
+    const mentionsAllAssignments =
+      normalized.includes("alla uppdrag")
+      || normalized.includes("samtliga uppdrag")
+      || normalized.includes("all assignments")
+      || normalized.includes("every assignment");
+
+    const mentionsWholeResume =
+      normalized.includes("hela cv")
+      || normalized.includes("hela cvt")
+      || normalized.includes("whole cv")
+      || normalized.includes("whole resume")
+      || normalized.includes("entire resume")
+      || normalized.includes("full resume");
+
+    foundWholeResume ||= mentionsWholeResume;
+    foundAllAssignments ||= mentionsAllAssignments;
   }
 
+  if (foundWholeResume) {
+    return "whole_resume" as const;
+  }
+
+  if (foundAllAssignments) {
+    return "all_assignments" as const;
+  }
+
+  return null;
+}
+
+export function requiresExplicitAssignmentWorkQueue(messages: string[]) {
+  return detectBroadRevisionScope(messages) !== null;
+}
+
+function messageAsksAboutBranchCreation(content: string) {
+  const normalized = normalizeScopeMessage(content);
+  return normalized.includes("skapa den nu")
+    || normalized.includes("skapa en ny branch")
+    || normalized.includes("skapa en ny gren")
+    || normalized.includes("skapa en ny revisionsgren")
+    || normalized.includes("ska vi skapa")
+    || normalized.includes("vill du att vi skapar")
+    || normalized.includes("vill du att jag skapar")
+    || normalized.includes("create it now")
+    || normalized.includes("create a new branch")
+    || normalized.includes("should we create");
+}
+
+async function hasListedAssignmentsForConversation(
+  db: Kysely<Database>,
+  conversationId: string,
+) {
+  const row = await db
+    .selectFrom("ai_message_deliveries")
+    .select("id")
+    .where("conversation_id", "=", conversationId)
+    .where("kind", "=", "tool_call")
+    .where("tool_name", "=", "list_resume_assignments")
+    .executeTakeFirst();
+
+  return row !== undefined;
+}
+
+export function isWaitingForRevisionScopeDecision(content: string) {
+  const normalized = content.trim().toLowerCase();
   const asksAboutMoreChanges =
     normalized.includes("fler ändringar")
     || normalized.includes("något mer")
@@ -75,17 +143,65 @@ function isWaitingForRevisionScopeDecision(content: string) {
     || normalized.includes("only change")
     || normalized.includes("after that");
 
-  const asksAboutBranchCreation =
-    normalized.includes("skapa den nu")
-    || normalized.includes("skapa en ny branch")
-    || normalized.includes("skapa en ny gren")
-    || normalized.includes("ska vi skapa")
-    || normalized.includes("vill du att vi skapar")
-    || normalized.includes("create it now")
-    || normalized.includes("create a new branch")
-    || normalized.includes("should we create");
+  const branchCreationQuestion = messageAsksAboutBranchCreation(content);
 
-  return asksAboutMoreChanges || asksAboutCurrentScope || asksAboutBranchCreation;
+  const explicitlyRequestsYesNo =
+    normalized.includes("svara med ja eller nej")
+    || normalized.includes("answer yes or no");
+
+  if (!normalized.endsWith("?") && !explicitlyRequestsYesNo) {
+    return false;
+  }
+
+  return asksAboutMoreChanges || asksAboutCurrentScope || branchCreationQuestion;
+}
+
+function parseRevisionWorkItemsFromInput(input: unknown) {
+  if (
+    typeof input !== "object"
+    || input === null
+    || !("items" in input)
+    || !Array.isArray((input as { items?: unknown[] }).items)
+  ) {
+    return [];
+  }
+
+  return (input as { items: unknown[] }).items.flatMap((item) => {
+    if (typeof item !== "object" || item === null) {
+      return [];
+    }
+
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.id !== "string"
+      || typeof row.title !== "string"
+      || typeof row.description !== "string"
+      || typeof row.section !== "string"
+    ) {
+      return [];
+    }
+
+    return [{
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      section: row.section,
+      assignmentId: typeof row.assignmentId === "string" ? row.assignmentId : null,
+    }];
+  });
+}
+
+async function countAssignmentsForBranch(
+  db: Kysely<Database>,
+  branchId: string,
+) {
+  const rows = await db
+    .selectFrom("branch_assignments")
+    .select("assignment_id")
+    .where("branch_id", "=", branchId)
+    .execute();
+
+  return rows.length;
 }
 
 function isExplicitBranchCreationConfirmation(message: string) {
@@ -106,6 +222,152 @@ function isExplicitBranchCreationConfirmation(message: string) {
     || normalized === "do it"
     || normalized === "create it"
     || normalized === "create the branch";
+}
+
+function latestAssistantRequestedBranchCreation(messages: Array<{ role: string; content: string }>) {
+  const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  return latestAssistant ? messageAsksAboutBranchCreation(latestAssistant.content) : false;
+}
+
+function nextOpenWorkItem<T extends {
+  work_item_id: string;
+  title: string;
+  description: string;
+  section: string;
+  assignment_id: string | null;
+  status: string;
+}>(items: T[]) {
+  return items.find((item) => item.status === "pending" || item.status === "in_progress") ?? null;
+}
+
+function isSuggestionTargetingPendingSection(
+  nextPendingItem: {
+    work_item_id: string;
+    section: string;
+    assignment_id: string | null;
+  },
+  input: unknown,
+) {
+  if (typeof input !== "object" || input === null || !("suggestions" in input)) {
+    return false;
+  }
+
+  const suggestions = (input as { suggestions?: unknown[] }).suggestions;
+  if (!Array.isArray(suggestions) || suggestions.length !== 1) {
+    return false;
+  }
+
+  const suggestion = suggestions[0];
+  if (typeof suggestion !== "object" || suggestion === null) {
+    return false;
+  }
+
+  const row = suggestion as Record<string, unknown>;
+  const suggestionSection = typeof row.section === "string" ? row.section : null;
+  const suggestionAssignmentId = typeof row.assignmentId === "string" ? row.assignmentId : null;
+
+  if (nextPendingItem.assignment_id) {
+    return suggestionSection === "assignment" && suggestionAssignmentId === nextPendingItem.assignment_id;
+  }
+
+  return suggestionSection === nextPendingItem.section;
+}
+
+function isAllowedToolCallForPendingWorkItem(
+  toolCall: { toolName: string; input: unknown },
+  nextPendingItem: {
+    work_item_id: string;
+    section: string;
+    assignment_id: string | null;
+  },
+) {
+  if (!nextPendingItem.assignment_id && nextPendingItem.section === "assignment") {
+    return toolCall.toolName === "list_resume_assignments" || toolCall.toolName === "set_revision_work_items";
+  }
+
+  if (!nextPendingItem.assignment_id && nextPendingItem.section === "skills") {
+    return toolCall.toolName === "inspect_resume_skills" || toolCall.toolName === "set_revision_work_items";
+  }
+
+  if (toolCall.toolName === "mark_revision_work_item_no_changes_needed") {
+    return (
+      typeof toolCall.input === "object"
+      && toolCall.input !== null
+      && "workItemId" in toolCall.input
+      && (toolCall.input as { workItemId?: unknown }).workItemId === nextPendingItem.work_item_id
+    );
+  }
+
+  if (nextPendingItem.assignment_id) {
+    if (toolCall.toolName === "inspect_assignment") {
+      return (
+        typeof toolCall.input === "object"
+        && toolCall.input !== null
+        && "assignmentId" in toolCall.input
+        && (toolCall.input as { assignmentId?: unknown }).assignmentId === nextPendingItem.assignment_id
+      );
+    }
+
+    if (toolCall.toolName === "set_assignment_suggestions") {
+      return (
+        typeof toolCall.input === "object"
+        && toolCall.input !== null
+        && "workItemId" in toolCall.input
+        && (toolCall.input as { workItemId?: unknown }).workItemId === nextPendingItem.work_item_id
+      );
+    }
+
+    return false;
+  }
+
+  if (toolCall.toolName === "inspect_resume_section") {
+    return (
+      typeof toolCall.input === "object"
+      && toolCall.input !== null
+      && "section" in toolCall.input
+      && (toolCall.input as { section?: unknown }).section === nextPendingItem.section
+    );
+  }
+
+  if (toolCall.toolName === "set_revision_suggestions") {
+    return isSuggestionTargetingPendingSection(nextPendingItem, toolCall.input);
+  }
+
+  return false;
+}
+
+function buildPendingWorkItemGuardrailMessage(item: {
+  work_item_id: string;
+  title: string;
+  description: string;
+  section: string;
+  assignment_id: string | null;
+}) {
+  return [
+    `Process only this work item now: ${item.work_item_id}.`,
+    `Title: ${item.title}.`,
+    `Description: ${item.description}.`,
+    item.assignment_id
+      ? `Inspect assignment ${item.assignment_id} and then resolve only this work item.`
+      : item.section === "assignment"
+        ? "This is a broad assignment work item. First call list_resume_assignments, then replace it with explicit assignment work items using set_revision_work_items."
+        : item.section === "skills"
+          ? "This is a broad skills work item. First inspect the skills structure with inspect_resume_skills, then replace it with more explicit skills work items using set_revision_work_items."
+      : `Inspect the exact source text for section ${item.section} and then resolve only this work item.`,
+    "Your next tool call must be either the matching inspect tool, set the concrete suggestions for this same work item, or mark it as no changes needed.",
+    "Do not inspect or resolve any other work item yet.",
+    "Do not say that the revision is ready for review until there are no pending work items left.",
+    "Return a tool call now.",
+  ].join(" ");
+}
+
+function looksLikeRevisionReadyMessage(content: string) {
+  const normalized = content.trim().toLowerCase();
+  return normalized.includes("redo för granskning")
+    || normalized.includes("ready for review")
+    || normalized.includes("förslagen är redo")
+    || normalized.includes("förslag") && normalized.includes("granskning")
+    || normalized.includes("all set for review");
 }
 
 function detectConversationLanguage(systemPrompt: string) {
@@ -706,6 +968,17 @@ export async function sendAIMessage(
     conversation.entity_type === "resume-revision-actions"
     || conversation.entity_type === "resume-revision-planning"
   ) {
+    const broadRevisionScope = detectBroadRevisionScope([
+      ...existingMessages
+        .filter((message) => message.role === "user")
+        .map((message) => message.content),
+      input.userMessage,
+    ]);
+    const assignmentQueueRequired = broadRevisionScope !== null;
+    const branchCreationConfirmed =
+      isExplicitBranchCreationConfirmation(input.userMessage)
+      && latestAssistantRequestedBranchCreation(existingMessages);
+
     for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
       const revisionToolCalls = isRevisionConversation
         ? (assistantMessage.tool_calls ?? []).map((toolCall: any) => ({
@@ -722,6 +995,119 @@ export async function sendAIMessage(
       const legacyToolCalls = !isRevisionConversation ? extractToolCalls(assistantContent) : [];
 
       if (isRevisionConversation && revisionToolCalls.length > 0) {
+        if (branchCreationConfirmed) {
+          const isAllowedBranchStep =
+            revisionToolCalls.length === 1
+            && revisionToolCalls[0]?.toolName === "create_revision_branch";
+
+          if (!isAllowedBranchStep) {
+            const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} The user has explicitly confirmed that a new revision branch should be created. Your next tool call must be create_revision_branch. Do not inspect assignments or emit suggestions yet. Return that tool call now.`;
+
+            await insertAIDelivery(db, {
+              conversationId: input.conversationId,
+              kind: "internal_message",
+              role: "user",
+              content: enforcementContent,
+            });
+
+            openAIMessages.push({ role: "user", content: enforcementContent });
+            assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+            assistantContent = assistantMessage.content ?? "";
+            continue;
+          }
+        }
+
+        const persistedWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+        const assignmentsAlreadyListed = assignmentQueueRequired
+          ? await hasListedAssignmentsForConversation(db, input.conversationId)
+          : false;
+
+        if (assignmentQueueRequired && !branchCreationConfirmed && persistedWorkItems.length === 0) {
+          const currentToolNames = revisionToolCalls.map(
+            (toolCall: { toolName: string }) => toolCall.toolName,
+          );
+          const mustListAssignmentsFirst = !assignmentsAlreadyListed;
+          const allowedToolName = mustListAssignmentsFirst
+            ? "list_resume_assignments"
+            : "set_revision_work_items";
+          const isAllowedStep =
+            currentToolNames.length === 1
+            && currentToolNames[0] === allowedToolName;
+
+          if (!isAllowedStep) {
+            const enforcementContent = mustListAssignmentsFirst
+              ? `${INTERNAL_GUARDRAIL_PREFIX} For broad assignment or whole-resume revision requests, first call list_resume_assignments. Do not inspect individual assignments or emit suggestions yet. Return that tool call now.`
+              : `${INTERNAL_GUARDRAIL_PREFIX} For broad assignment or whole-resume revision requests, you must now create explicit work items with set_revision_work_items before emitting any suggestions. Include one work item per assignment that must be reviewed, plus any other relevant sections already in scope. Return that tool call now.`;
+
+            await insertAIDelivery(db, {
+              conversationId: input.conversationId,
+              kind: "internal_message",
+              role: "user",
+              content: enforcementContent,
+            });
+
+            openAIMessages.push({ role: "user", content: enforcementContent });
+            assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+            assistantContent = assistantMessage.content ?? "";
+            continue;
+          }
+
+          if (currentToolNames[0] === "set_revision_work_items") {
+            const proposedItems = parseRevisionWorkItemsFromInput(revisionToolCalls[0]!.input);
+            const assignmentItemCount = proposedItems.filter((item) => item.assignmentId !== null).length;
+            const hasNonAssignmentItem = proposedItems.some((item) => item.assignmentId === null);
+            const totalAssignments = await countAssignmentsForBranch(db, conversation.entity_id);
+            const hasFullAssignmentCoverage = assignmentItemCount >= totalAssignments;
+            const hasWholeResumeCoverage =
+              broadRevisionScope !== "whole_resume" || hasNonAssignmentItem;
+
+            if (!hasFullAssignmentCoverage || !hasWholeResumeCoverage) {
+              const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} For this broad revision request, the work-item queue is incomplete. Create one assignment work item per assignment in the branch. ${
+                broadRevisionScope === "whole_resume"
+                  ? "Also include the other resume sections that are in scope, such as presentation, summary, consultant title, or skills when relevant."
+                  : ""
+              } Do not emit suggestions yet. Return a complete set_revision_work_items call now.`;
+
+              await insertAIDelivery(db, {
+                conversationId: input.conversationId,
+                kind: "internal_message",
+                role: "user",
+                content: enforcementContent,
+              });
+
+              openAIMessages.push({ role: "user", content: enforcementContent });
+              assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+              assistantContent = assistantMessage.content ?? "";
+              continue;
+            }
+          }
+        }
+
+        if (assignmentQueueRequired && persistedWorkItems.length > 0) {
+          const nextPendingItem = nextOpenWorkItem(persistedWorkItems);
+          if (nextPendingItem) {
+            const isAllowedStep =
+              revisionToolCalls.length === 1
+              && isAllowedToolCallForPendingWorkItem(revisionToolCalls[0]!, nextPendingItem);
+
+            if (!isAllowedStep) {
+              const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} ${buildPendingWorkItemGuardrailMessage(nextPendingItem)}`;
+
+              await insertAIDelivery(db, {
+                conversationId: input.conversationId,
+                kind: "internal_message",
+                role: "user",
+                content: enforcementContent,
+              });
+
+              openAIMessages.push({ role: "user", content: enforcementContent });
+              assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+              assistantContent = assistantMessage.content ?? "";
+              continue;
+            }
+          }
+        }
+
         const persistedToolCalls: Array<{ toolName: string; input?: unknown }> = [];
         const frontendToolCalls: Array<{ toolName: string; input?: unknown }> = [];
         let branchHandoffCreated = false;
@@ -938,6 +1324,11 @@ export async function sendAIMessage(
 
       const toolCalls = legacyToolCalls;
       if (toolCalls.length === 0) {
+        const persistedWorkItems = isRevisionConversation
+          ? await listPersistedRevisionWorkItems(db, input.conversationId)
+          : [];
+        const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
+
         if (isRevisionConversation && isWaitingForRevisionScopeDecision(assistantContent)) {
           if (!assistantRow || assistantRow.content !== assistantContent) {
             assistantRow = await persistAssistantMessage(assistantContent);
@@ -959,7 +1350,13 @@ export async function sendAIMessage(
           continue;
         }
 
-        if (!assistantRow || assistantRow.content !== assistantContent) {
+        if (
+          isRevisionConversation
+          && hasPendingWorkItems
+          && looksLikeRevisionReadyMessage(assistantContent)
+        ) {
+          assistantRow = null;
+        } else if (!assistantRow || assistantRow.content !== assistantContent) {
           assistantRow = await persistAssistantMessage(assistantContent);
         }
 
