@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
-import { readPersistedInlineRevisionSession } from "../../../hooks/inline-revision/storage";
 import {
   resumeBranchHistoryGraphKey,
   resumeBranchesKey,
@@ -46,10 +45,11 @@ export function ResumeDetailPage({
   const id = idParam!;
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId, assistant: assistantMode } =
+  const { branchId: selectedBranchId, assistant: assistantMode, sourceBranchId: urlSourceBranchId } =
     useSearch({ strict: false }) as any as {
       branchId?: string;
       assistant?: "true";
+      sourceBranchId?: string;
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -360,16 +360,14 @@ export function ResumeDetailPage({
       return;
     }
 
-    if (
-      selectedBranchId &&
-      selectedBranchId !== mainBranchId &&
-      readPersistedInlineRevisionSession(selectedBranchId)
-    ) {
+    // Session restoration from URL params is handled inside useInlineResumeRevision.
+    // Only call open() for a fresh start when there is no sourceBranchId in the URL.
+    if (urlSourceBranchId) {
       return;
     }
 
     inlineRevision.open();
-  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId]);
+  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 

@@ -1,6 +1,5 @@
 import type { MutableRefObject, RefObject } from "react";
 import type {
-  RevisionSuggestions,
   RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
@@ -61,14 +60,6 @@ export type ResumeInspectionSnapshot = {
     startDate: string | null;
     endDate: string | null;
   }>;
-};
-
-export type PersistedInlineRevisionSession = {
-  version: 3;
-  sourceBranchId: string | null;
-  sourceBranchName: string | null;
-  conversationId: string | null;
-  suggestions: RevisionSuggestions | null;
 };
 
 export type PersistedToolCall = {

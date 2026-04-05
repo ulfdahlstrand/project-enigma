@@ -160,3 +160,20 @@ export const closeAIConversationOutputSchema = z.object({
 
 export type CloseAIConversationInput = z.infer<typeof closeAIConversationInputSchema>;
 export type CloseAIConversationOutput = z.infer<typeof closeAIConversationOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// resolveRevisionSuggestion
+// ---------------------------------------------------------------------------
+
+export const resolveRevisionSuggestionInputSchema = z.object({
+  conversationId: z.string().uuid(),
+  suggestionId: z.string().min(1),
+  status: z.enum(["accepted", "dismissed"]),
+});
+
+export const resolveRevisionSuggestionOutputSchema = z.object({
+  success: z.boolean(),
+});
+
+export type ResolveRevisionSuggestionInput = z.infer<typeof resolveRevisionSuggestionInputSchema>;
+export type ResolveRevisionSuggestionOutput = z.infer<typeof resolveRevisionSuggestionOutputSchema>;

@@ -108,6 +108,8 @@ import {
   listAIConversationsOutputSchema,
   closeAIConversationInputSchema,
   closeAIConversationOutputSchema,
+  resolveRevisionSuggestionInputSchema,
+  resolveRevisionSuggestionOutputSchema,
 } from "./ai-conversations.js";
 
 // ---------------------------------------------------------------------------
@@ -318,6 +320,8 @@ export {
   listAIConversationsOutputSchema,
   closeAIConversationInputSchema,
   closeAIConversationOutputSchema,
+  resolveRevisionSuggestionInputSchema,
+  resolveRevisionSuggestionOutputSchema,
 } from "./ai-conversations.js";
 export type {
   AIConversation,
@@ -333,6 +337,8 @@ export type {
   ListAIConversationsOutput,
   CloseAIConversationInput,
   CloseAIConversationOutput,
+  ResolveRevisionSuggestionInput,
+  ResolveRevisionSuggestionOutput,
 } from "./ai-conversations.js";
 
 // ---------------------------------------------------------------------------
@@ -453,6 +459,10 @@ export const contract = oc.router({
     .route({ method: "POST", path: "/ai/conversations/close" })
     .input(closeAIConversationInputSchema)
     .output(closeAIConversationOutputSchema),
+  resolveRevisionSuggestion: oc
+    .route({ method: "POST", path: "/ai/conversations/suggestions/resolve" })
+    .input(resolveRevisionSuggestionInputSchema)
+    .output(resolveRevisionSuggestionOutputSchema),
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */

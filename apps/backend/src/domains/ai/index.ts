@@ -4,3 +4,4 @@ export { sendAIMessageHandler } from "./conversation/message.js";
 export { getAIConversationHandler } from "./conversation/get.js";
 export { listAIConversationsHandler } from "./conversation/list.js";
 export { closeAIConversationHandler } from "./conversation/close.js";
+export { resolveRevisionSuggestionHandler } from "./conversation/resolve.js";

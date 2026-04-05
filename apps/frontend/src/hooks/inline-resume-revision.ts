@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,12 +25,6 @@ import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import {
   deriveWorkItemsFromConversation,
 } from "./inline-revision/conversation";
-import {
-  clearPersistedInlineRevisionSession,
-  patchPersistedInlineRevisionSession,
-  readPersistedInlineRevisionSession,
-  writePersistedInlineRevisionSession,
-} from "./inline-revision/storage";
 import type { UseInlineResumeRevisionParams } from "./inline-revision/types";
 import { useInlineRevisionAssistant } from "./inline-revision/use-inline-revision-assistant";
 import { useInlineRevisionReview } from "./inline-revision/review";
@@ -68,6 +62,14 @@ export function useInlineResumeRevision({
     entityId: assistantEntityId,
     toolContext: assistantToolContext,
   } = useAIAssistantContext();
+
+  // Read URL search params (strict: false so this works from any route)
+  const { assistant: assistantMode, sourceBranchId: urlSourceBranchId, sourceBranchName: urlSourceBranchName } =
+    useSearch({ strict: false }) as {
+      assistant?: "true";
+      sourceBranchId?: string;
+      sourceBranchName?: string;
+    };
 
   const [isOpen, setIsOpen] = useState(false);
   const [isFinalized, setIsFinalized] = useState(false);
@@ -121,15 +123,17 @@ export function useInlineResumeRevision({
       return;
     }
 
-    const hasPersistedSession =
+    if (
       activeBranchId !== null &&
       activeBranchId !== mainBranchId &&
-      readPersistedInlineRevisionSession(activeBranchId) !== null;
-
-    if (!hasPersistedSession) {
-      setIsOpen(false);
+      assistantMode === "true"
+    ) {
+      // Still on view route — let the restore effect handle after navigation
+      return;
     }
-  }, [activeBranchId, isEditRoute, mainBranchId]);
+
+    setIsOpen(false);
+  }, [activeBranchId, assistantMode, isEditRoute, mainBranchId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -192,6 +196,9 @@ export function useInlineResumeRevision({
     selectSuggestion,
   } = useInlineRevisionReview({
     activeBranchId,
+    conversationId: assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
+      ? assistantConversationId
+      : latestOpenActionConversationId,
     consultantTitle,
     presentation,
     summary,
@@ -203,28 +210,6 @@ export function useInlineResumeRevision({
     queryClient,
     suggestions,
     setSuggestions,
-    persistSuggestions: (updater) => {
-      if (!activeBranchId || activeBranchId === mainBranchId) {
-        return;
-      }
-
-      patchPersistedInlineRevisionSession(activeBranchId, (current) => {
-        const nextSuggestions = updater(current?.suggestions ?? suggestions ?? null);
-        return {
-          version: 3,
-          sourceBranchId: current?.sourceBranchId ?? sourceBranchId,
-          sourceBranchName: current?.sourceBranchName ?? sourceBranchName,
-          conversationId:
-            current?.conversationId
-            ?? (
-              assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
-                ? assistantConversationId
-                : null
-            ),
-          suggestions: nextSuggestions,
-        };
-      });
-    },
     saveVersion: async (input) => saveVersion.mutateAsync(input),
     updateBranchAssignment: updateBranchAssignment.mutateAsync,
     buildDraftPatchFromValues,
@@ -242,6 +227,18 @@ export function useInlineResumeRevision({
     setWorkItems(null);
     setSuggestions(null);
 
+    // Persist session state in URL so page reloads restore the session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (navigate as any)({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        assistant: "true",
+        sourceBranchId: activeBranchId,
+        sourceBranchName: activeBranchName,
+      }),
+      replace: true,
+    });
+
     try {
       openRevisionAssistantRef.current({ branchId: activeBranchId });
     } catch (error) {
@@ -254,6 +251,22 @@ export function useInlineResumeRevision({
     }
   };
 
+  const clearUrlSessionParams = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (navigate as any)({
+      search: (prev: Record<string, unknown>) => {
+        const { assistant: _a, sourceBranchId: _s, sourceBranchName: _n, ...rest } = prev as {
+          assistant?: string;
+          sourceBranchId?: string;
+          sourceBranchName?: string;
+          [key: string]: unknown;
+        };
+        return rest;
+      },
+      replace: true,
+    });
+  };
+
   const reset = () => {
     setIsOpen(false);
     setIsFinalized(false);
@@ -263,15 +276,18 @@ export function useInlineResumeRevision({
     setSourceBranchId(null);
     setIsPreparingFinalize(false);
     closeAssistant();
+    clearUrlSessionParams();
   };
 
   const close = () => {
     setIsOpen(false);
     hideDrawer();
+    clearUrlSessionParams();
   };
 
+  // Restore session from URL params when page loads with ?assistant=true
   useEffect(() => {
-    if (!activeBranchId || activeBranchId === mainBranchId) {
+    if (!activeBranchId || activeBranchId === mainBranchId || !isEditRoute) {
       restoredBranchIdRef.current = null;
       return;
     }
@@ -285,74 +301,44 @@ export function useInlineResumeRevision({
       return;
     }
 
-    const persistedSession = readPersistedInlineRevisionSession(activeBranchId);
-    if (!persistedSession) {
+    if (assistantMode !== "true") {
       restoredBranchIdRef.current = activeBranchId;
       return;
     }
 
-    restoredBranchIdRef.current = activeBranchId;
-    if (!isEditRoute) {
-      void navigate({
-        to: "/resumes/$id/edit",
-        params: { id: resumeId },
-        search: { branchId: activeBranchId, assistant: "true" },
-        replace: true,
-      });
+    // Wait for the conversation list to load before deciding whether to restore
+    if (existingActionConversations === undefined) {
       return;
     }
 
+    restoredBranchIdRef.current = activeBranchId;
+
     setIsOpen(true);
     setIsFinalized(false);
-    setSuggestions(persistedSession.suggestions);
-    setSourceBranchId(persistedSession.sourceBranchId);
-    setSourceBranchName(persistedSession.sourceBranchName);
+    setSuggestions(null);
+    setSourceBranchId(urlSourceBranchId ?? activeBranchId);
+    setSourceBranchName(urlSourceBranchName ?? activeBranchName);
     setWorkItems(null);
 
-    const restoredConversationId =
-      persistedSession.conversationId ?? latestOpenActionConversationId ?? null;
+    const restoredConversationId = latestOpenActionConversationId ?? null;
     const restoredKickoff = restoredConversationId === null ? null : undefined;
     openRevisionAssistant({
       branchId: activeBranchId,
       kickoffMessage: restoredKickoff,
-      initialConversationId: restoredConversationId,
+      initialConversationId: restoredConversationId ?? undefined,
     });
   }, [
     activeBranchId,
+    assistantMode,
+    existingActionConversations,
     isEditRoute,
     isOpen,
     latestOpenActionConversationId,
     mainBranchId,
-    navigate,
     openRevisionAssistant,
-    resumeId,
-  ]);
-
-  useLayoutEffect(() => {
-    if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {
-      return;
-    }
-
-    writePersistedInlineRevisionSession(activeBranchId, {
-      version: 3,
-      sourceBranchId,
-      sourceBranchName,
-      conversationId:
-        assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
-          ? assistantConversationId
-          : null,
-      suggestions,
-    });
-  }, [
-    activeBranchId,
-    assistantConversationId,
-    assistantEntityId,
-    assistantEntityType,
-    isOpen,
-    mainBranchId,
-    sourceBranchId,
-    sourceBranchName,
-    suggestions,
+    urlSourceBranchId,
+    urlSourceBranchName,
+    activeBranchName,
   ]);
 
   useEffect(() => {
@@ -418,17 +404,8 @@ export function useInlineResumeRevision({
     }
 
     setSuggestions(reconciled);
-
-    if (activeBranchId && activeBranchId !== mainBranchId) {
-      patchPersistedInlineRevisionSession(activeBranchId, (current) => current ? {
-        ...current,
-        suggestions: reconciled,
-      } : current);
-    }
   }, [
-    activeBranchId,
     consultantTitle,
-    mainBranchId,
     presentation,
     resumeTitle,
     skills,
@@ -450,16 +427,6 @@ export function useInlineResumeRevision({
 
     handledBranchHandoffRef.current = branchHandoff.branchId;
 
-    clearPersistedInlineRevisionSession(activeBranchId);
-
-    writePersistedInlineRevisionSession(branchHandoff.branchId, {
-      version: 3,
-      sourceBranchId: activeBranchId,
-      sourceBranchName: activeBranchName,
-      conversationId: null,
-      suggestions: null,
-    });
-
     openingRevisionBranchIdRef.current = branchHandoff.branchId;
 
     void Promise.all([
@@ -470,7 +437,12 @@ export function useInlineResumeRevision({
       navigate({
         to: "/resumes/$id/edit",
         params: { id: resumeId },
-        search: { branchId: branchHandoff.branchId, assistant: "true" },
+        search: {
+          branchId: branchHandoff.branchId,
+          assistant: "true",
+          sourceBranchId: activeBranchId ?? undefined,
+          sourceBranchName: activeBranchName,
+        },
         replace: true,
       }).then(() => {
         openRevisionAssistantRef.current({
@@ -520,13 +492,14 @@ export function useInlineResumeRevision({
   };
 
   const finish = (action: "merge" | "keep") => {
-    if (!activeBranchId || !sourceBranchId) {
+    const currentSourceBranchId = sourceBranchId ?? urlSourceBranchId;
+    if (!activeBranchId || !currentSourceBranchId) {
       return;
     }
 
     finaliseInlineRevision.mutate(
       {
-        sourceBranchId,
+        sourceBranchId: currentSourceBranchId,
         revisionBranchId: activeBranchId,
         action,
       },
@@ -536,7 +509,6 @@ export function useInlineResumeRevision({
             await closeActionConversation.mutateAsync({ conversationId: assistantConversationId });
           }
 
-          clearPersistedInlineRevisionSession(activeBranchId);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
             queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
@@ -544,7 +516,7 @@ export function useInlineResumeRevision({
             queryClient.invalidateQueries({
               queryKey: ["listAIConversations", "resume-revision-actions", activeBranchId],
             }),
-            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", sourceBranchId] }),
+            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", currentSourceBranchId] }),
             queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", data.resultBranchId] }),
           ]);
 
@@ -569,7 +541,7 @@ export function useInlineResumeRevision({
     workItems,
     suggestions: suggestions?.suggestions ?? [],
     selectedSuggestionId,
-    sourceBranchName: sourceBranchName ?? activeBranchName,
+    sourceBranchName: sourceBranchName ?? urlSourceBranchName ?? activeBranchName,
     checklistWidth: INLINE_REVISION_CHECKLIST_WIDTH,
     chatWidth: INLINE_REVISION_CHAT_WIDTH,
     toolRegistry,
@@ -584,7 +556,6 @@ export function useInlineResumeRevision({
     open,
     close,
     reset: () => {
-      clearPersistedInlineRevisionSession(activeBranchId);
       reset();
     },
     prepareFinalize,

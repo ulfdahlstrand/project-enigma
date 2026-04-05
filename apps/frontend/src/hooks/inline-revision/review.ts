@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
+import { orpc } from "../../orpc-client";
 import {
   renderTextDiffReview,
   type TextDiffReviewValue,
@@ -63,6 +64,7 @@ type ResumeSkill = {
 
 type Params = {
   activeBranchId: string | null;
+  conversationId: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
@@ -74,7 +76,6 @@ type Params = {
   queryClient: QueryClient;
   suggestions: RevisionSuggestions | null;
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
-  persistSuggestions: (updater: (prev: RevisionSuggestions | null) => RevisionSuggestions | null) => void;
   saveVersion: (input: {
     branchId: string;
     title?: string;
@@ -91,6 +92,7 @@ type Params = {
 
 export function useInlineRevisionReview({
   activeBranchId,
+  conversationId,
   consultantTitle,
   presentation,
   summary,
@@ -102,7 +104,6 @@ export function useInlineRevisionReview({
   queryClient,
   suggestions,
   setSuggestions,
-  persistSuggestions,
   saveVersion,
   updateBranchAssignment,
   buildDraftPatchFromValues,
@@ -157,38 +158,34 @@ export function useInlineRevisionReview({
     }
 
     setSelectedSuggestionId(suggestionId);
-    const updater = (prev: SuggestionsState): SuggestionsState => {
-      if (!prev) {
-        return prev;
-      }
-
+    setSuggestions((prev) => {
+      if (!prev) return prev;
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
           item.id === suggestionId ? { ...item, status: "accepted" as const } : item,
         ),
       };
-    };
-    setSuggestions(updater);
-    persistSuggestions(updater);
+    });
+    if (conversationId) {
+      void orpc.resolveRevisionSuggestion({ conversationId, suggestionId, status: "accepted" });
+    }
   };
 
   const dismissSuggestion = (suggestionId: string) => {
     setSelectedSuggestionId(suggestionId);
-    const updater = (prev: SuggestionsState): SuggestionsState => {
-      if (!prev) {
-        return prev;
-      }
-
+    setSuggestions((prev) => {
+      if (!prev) return prev;
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
           item.id === suggestionId ? { ...item, status: "dismissed" as const } : item,
         ),
       };
-    };
-    setSuggestions(updater);
-    persistSuggestions(updater);
+    });
+    if (conversationId) {
+      void orpc.resolveRevisionSuggestion({ conversationId, suggestionId, status: "dismissed" });
+    }
   };
 
   const openSuggestionReview = (suggestionId: string) => {

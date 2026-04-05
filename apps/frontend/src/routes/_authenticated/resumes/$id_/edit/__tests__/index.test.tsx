@@ -9,8 +9,7 @@ const TEST_RESUME_ID = "resume-test-id-99";
 const mockNavigate = vi.fn();
 const mockOpenInlineRevision = vi.fn();
 const mockCloseInlineRevision = vi.fn();
-const mockReadPersistedInlineRevisionSession = vi.fn();
-let mockSearch: { branchId?: string; assistant?: "true" } = {};
+let mockSearch: { branchId?: string; assistant?: "true"; sourceBranchId?: string } = {};
 
 vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
   useInlineResumeRevision: () => {
@@ -50,11 +49,6 @@ vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
       mergeBranch: vi.fn(),
     };
   },
-}));
-
-vi.mock("../../../../../../hooks/inline-revision/storage", () => ({
-  readPersistedInlineRevisionSession: (...args: unknown[]) =>
-    mockReadPersistedInlineRevisionSession(...args),
 }));
 
 vi.mock("../../../../../../components/RouterButton", () => ({
@@ -166,8 +160,6 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockOpenInlineRevision.mockReset();
   mockCloseInlineRevision.mockReset();
-  mockReadPersistedInlineRevisionSession.mockReset();
-  mockReadPersistedInlineRevisionSession.mockReturnValue(null);
   mockGetResume.mockResolvedValue(TEST_RESUME);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
@@ -201,8 +193,8 @@ describe("/resumes/$id/edit", () => {
     });
   });
 
-  it("does not restart planning when assistant route opens a persisted revision branch session", async () => {
-    mockSearch = { branchId: "branch-revision-1", assistant: "true" };
+  it("does not call open() when sourceBranchId is in the URL (hook handles restoration)", async () => {
+    mockSearch = { branchId: "branch-revision-1", assistant: "true", sourceBranchId: MAIN_BRANCH.id };
     mockListResumeBranches.mockResolvedValue([
       MAIN_BRANCH,
       {
@@ -215,21 +207,15 @@ describe("/resumes/$id/edit", () => {
         createdAt: "2024-01-02T00:00:00Z",
       },
     ]);
-    mockReadPersistedInlineRevisionSession.mockReturnValue({
-      version: 2,
-      sourceBranchId: MAIN_BRANCH.id,
-      sourceBranchName: "main",
-      suggestions: null,
-    });
 
     renderPage();
 
     await screen.findAllByText(TEST_RESUME.title);
 
+    // When sourceBranchId is present, $id.tsx defers restoration to the hook — open() should not be called
     await waitFor(() => {
-      expect(mockReadPersistedInlineRevisionSession).toHaveBeenCalledWith("branch-revision-1");
+      expect(mockOpenInlineRevision).not.toHaveBeenCalled();
     });
-    expect(mockOpenInlineRevision).not.toHaveBeenCalled();
   });
 
   it("calls open and shows assistant when Assistant is clicked", async () => {
