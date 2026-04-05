@@ -1,8 +1,7 @@
 /**
  * Revision Workflow Engine
  *
- * Owns all revision-specific logic for `resume-revision-actions` and
- * `resume-revision-planning` conversations:
+ * Owns all revision-specific logic for `resume-revision-actions` conversations:
  *
  * - Helper predicates and message builders
  * - DB queries scoped to the revision domain
@@ -20,8 +19,6 @@ import type { Database } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
 import { setPendingDecision } from "./pending-decision.js";
 import {
-  extractToolCalls,
-  buildToolResultMessage,
   INTERNAL_AUTOSTART_PREFIX,
   INTERNAL_GUARDRAIL_PREFIX,
 } from "./tool-parsing.js";
@@ -31,7 +28,6 @@ import {
 } from "./tool-execution.js";
 import {
   deriveNextActionOrchestrationMessageFromWorkItems,
-  deriveNextPlanningOrchestrationMessage,
 } from "./action-orchestration.js";
 import { insertAIDelivery } from "./deliveries.js";
 import {
@@ -97,6 +93,7 @@ type ConversationRow = {
   created_by: string;
   is_closed: boolean;
   title: string | null;
+  pending_decision: string | null;
 };
 
 export interface RevisionWorkflowResult {
@@ -276,47 +273,6 @@ async function countAssignmentsForBranch(
     .execute();
 
   return rows.length;
-}
-
-function isExplicitBranchCreationConfirmation(message: string) {
-  const normalized = message.trim().toLowerCase();
-
-  return normalized === "ja"
-    || normalized === "ja tack"
-    || normalized === "ja, tack"
-    || normalized === "ja gör det"
-    || normalized === "ja, gör det"
-    || normalized === "gör det"
-    || normalized === "skapa den"
-    || normalized === "skapa den nu"
-    || normalized === "skapa en ny branch"
-    || normalized === "skapa en ny gren"
-    || normalized === "yes"
-    || normalized === "yes please"
-    || normalized === "do it"
-    || normalized === "create it"
-    || normalized === "create the branch";
-}
-
-function isExplicitBranchCreationRejection(message: string) {
-  const normalized = message.trim().toLowerCase();
-
-  return normalized === "nej"
-    || normalized === "nej tack"
-    || normalized === "nej, tack"
-    || normalized === "nej gör det inte"
-    || normalized === "nej, inte"
-    || normalized === "inte nu"
-    || normalized === "stanna här"
-    || normalized === "no"
-    || normalized === "no thanks"
-    || normalized === "don't do it"
-    || normalized === "do not create the branch";
-}
-
-function latestAssistantRequestedBranchCreation(messages: Array<{ role: string; content: string }>) {
-  const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
-  return latestAssistant ? messageAsksAboutBranchCreation(latestAssistant.content) : false;
 }
 
 function nextOpenWorkItem<T extends {
@@ -871,8 +827,7 @@ async function createRevisionBranchFromConversation(
 // ---------------------------------------------------------------------------
 
 /**
- * Runs the revision tool-call loop for a `resume-revision-actions` or
- * `resume-revision-planning` conversation.
+ * Runs the revision tool-call loop for a `resume-revision-actions` conversation.
  *
  * Receives the first OpenAI response (`firstAssistantMessage`) and the
  * pre-built `openAIMessages` array from the caller. Note: `openAIMessages`
@@ -974,15 +929,8 @@ export async function runRevisionWorkflow(
   ]);
   const assignmentQueueRequired = broadRevisionScope !== null;
 
-  // pendingDecisionAnswer comes from the Haiku classifier in message.ts and is the
-  // authoritative source when a pending_decision was set. Fall back to legacy keyword
-  // matching only for conversations that pre-date the pending_decision mechanism.
-  const branchCreationConfirmed =
-    pendingDecisionAnswer === "yes"
-    || (isExplicitBranchCreationConfirmation(userMessage) && latestAssistantRequestedBranchCreation(existingMessages));
-  const branchCreationRejected =
-    pendingDecisionAnswer === "no"
-    || (isExplicitBranchCreationRejection(userMessage) && latestAssistantRequestedBranchCreation(existingMessages));
+  const branchCreationConfirmed = pendingDecisionAnswer === "yes";
+  const branchCreationRejected = pendingDecisionAnswer === "no";
 
   // Track consecutive guardrail retries per work item to prevent infinite loops.
   const guardrailRetryCountByItemId = new Map<string, number>();
@@ -1016,7 +964,6 @@ export async function runRevisionWorkflow(
           }
         })
       : [];
-    const legacyToolCalls = !isRevisionConversation ? extractToolCalls(assistantContent) : [];
 
     const malformedToolCall = malformedRevisionToolCall as MalformedRevisionToolCall | null;
     if (isRevisionConversation && malformedToolCall !== null) {
@@ -1041,13 +988,10 @@ export async function runRevisionWorkflow(
       continue;
     }
 
-    let persistedWorkItems = isRevisionConversation
-      ? await listPersistedRevisionWorkItems(db, conversationId)
-      : [];
+    let persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
 
     if (
-      isRevisionConversation
-      && assignmentQueueRequired
+      assignmentQueueRequired
       && branchCreationRejected
       && persistedWorkItems.length === 0
     ) {
@@ -1615,193 +1559,52 @@ export async function runRevisionWorkflow(
       continue;
     }
 
-    const toolCalls = legacyToolCalls;
-    if (toolCalls.length === 0) {
-      const persistedWorkItems = isRevisionConversation
-        ? await listPersistedRevisionWorkItems(db, conversationId)
-        : [];
-      const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
+    persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
+    const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
 
-      // Branch creation questions are always blocking — the user must answer before any work.
-      // Set pending_decision so the next sendAIMessage call classifies the user's reply.
-      if (isRevisionConversation && !branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
+    // Branch creation questions are always blocking — the user must answer before any work.
+    // Set pending_decision so the next sendAIMessage call classifies the user's reply.
+    if (!branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
+      if (!assistantRow || assistantRow.content !== assistantContent) {
+        assistantRow = await persistAssistantMessage(assistantContent);
+      }
+      await setPendingDecision(db, conversationId, "branch_creation");
+      break;
+    }
+
+    if (isWaitingForRevisionScopeDecision(assistantContent)) {
+      if (!hasPendingWorkItems) {
+        // Model is genuinely done — all work items completed. Persist and stop.
         if (!assistantRow || assistantRow.content !== assistantContent) {
           assistantRow = await persistAssistantMessage(assistantContent);
         }
-        await setPendingDecision(db, conversationId, "branch_creation");
         break;
       }
+      // else: model asked a scope question prematurely while items remain.
+      // Suppress the message and fall through to inject the next orchestration prompt.
+      assistantRow = null;
+    }
 
-      if (isRevisionConversation && isWaitingForRevisionScopeDecision(assistantContent)) {
-        if (!hasPendingWorkItems) {
-          // Model is genuinely done — all work items completed. Persist and stop.
-          if (!assistantRow || assistantRow.content !== assistantContent) {
-            assistantRow = await persistAssistantMessage(assistantContent);
-          }
-          break;
-        }
-        // else: model asked a scope question prematurely while items remain.
-        // Suppress the message and fall through to inject the next orchestration prompt.
-        assistantRow = null;
-      }
-
-      if (isRevisionConversation && i === 0) {
-        const guardrailContent = `${INTERNAL_GUARDRAIL_PREFIX} ${REVISION_TOOL_GUARDRAIL_MESSAGE}`;
-        await insertAIDelivery(db, {
-          conversationId,
-          kind: "internal_message",
-          role: "user",
-          content: guardrailContent,
-        });
-        openAIMessages.push({ role: "user", content: guardrailContent });
-        assistantMessage = await callOpenAI(openAIMessages, revisionTools);
-        assistantContent = assistantMessage.content ?? "";
-        continue;
-      }
-
-      if (
-        isRevisionConversation
-        && hasPendingWorkItems
-        && (looksLikeRevisionReadyMessage(assistantContent) || isWaitingForRevisionScopeDecision(assistantContent))
-      ) {
-        assistantRow = null;
-      } else if (!assistantRow || assistantRow.content !== assistantContent) {
-        assistantRow = await persistAssistantMessage(assistantContent);
-      }
-
-      const updatedHistory = await db
-        .selectFrom("ai_messages")
-        .selectAll()
-        .where("conversation_id", "=", conversationId)
-        .orderBy("created_at", "asc")
-        .execute();
-
-      const orchestrationHistory = updatedHistory.map((message) => ({
-        role: message.role as "user" | "assistant",
-        content: message.content,
-      }));
-      let orchestrationMessage;
-      if (conversation.entity_type === "resume-revision-actions") {
-        const persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
-        const persistedAutomation = deriveNextActionOrchestrationMessageFromWorkItems(
-          persistedWorkItems.map((item) => ({
-            id: item.work_item_id,
-            title: item.title,
-            description: item.description,
-            section: item.section,
-            ...(item.assignment_id ? { assignmentId: item.assignment_id } : {}),
-            status: item.status,
-            ...(item.note ? { note: item.note } : {}),
-          })),
-        );
-
-        orchestrationMessage = persistedAutomation
-          ? { kind: "automation" as const, content: `${INTERNAL_AUTOSTART_PREFIX} ${persistedAutomation}` }
-          : null; // DB state is the single source of truth; do not fall back to legacy fenced-JSON reading
-      } else {
-        orchestrationMessage = deriveNextPlanningOrchestrationMessage(orchestrationHistory);
-      }
-
-      if (!orchestrationMessage) {
-        break;
-      }
-
-      await db
-        .insertInto("ai_message_deliveries")
-        .values({
-          conversation_id: conversationId,
-          ai_message_id: null,
-          kind: "internal_message",
-          role: "user",
-          content: orchestrationMessage.content,
-          tool_name: null,
-          payload: null,
-        })
-        .execute();
-
-      const nextMessages: Array<any> = [
-        { role: "system", content: conversation.system_prompt },
-        ...updatedHistory
-          .concat({
-            id: "internal-orchestration",
-            conversation_id: conversationId,
-            role: "user",
-            content: orchestrationMessage.content,
-            created_at: new Date(),
-          })
-          .slice(-maxHistoryMessages)
-          .map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-      ];
-
-      try {
-        assistantMessage = await callOpenAI(nextMessages, revisionTools);
-      } catch (error) {
-        const recovered = await failNextOpenRevisionWorkItem(
-          error instanceof Error ? error.message : "AI returned an empty response while processing the current work item.",
-        );
-        if (recovered) {
-          assistantMessage = { content: "" } as OpenAI.Chat.Completions.ChatCompletionMessage;
-          assistantContent = "";
-          continue;
-        }
-        throw error;
-      }
+    if (i === 0) {
+      const guardrailContent = `${INTERNAL_GUARDRAIL_PREFIX} ${REVISION_TOOL_GUARDRAIL_MESSAGE}`;
+      await insertAIDelivery(db, {
+        conversationId,
+        kind: "internal_message",
+        role: "user",
+        content: guardrailContent,
+      });
+      openAIMessages.push({ role: "user", content: guardrailContent });
+      assistantMessage = await callOpenAI(openAIMessages, revisionTools);
       assistantContent = assistantMessage.content ?? "";
-      if (isRevisionConversation && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-        continue;
-      }
-      if (assistantContent.trim().length === 0) {
-        const recovered = await failNextOpenRevisionWorkItem(
-          "AI returned an empty assistant message while processing the current work item.",
-        );
-        if (recovered) {
-          continue;
-        }
-      }
-      assistantRow = await persistAssistantMessage(assistantContent);
-
       continue;
     }
 
-    const toolCall = toolCalls[0]!;
-    if (!BACKEND_INSPECT_TOOLS.has(toolCall.toolName)) break;
+    if (hasPendingWorkItems && (looksLikeRevisionReadyMessage(assistantContent) || isWaitingForRevisionScopeDecision(assistantContent))) {
+      assistantRow = null;
+    } else if (!assistantRow || assistantRow.content !== assistantContent) {
+      assistantRow = await persistAssistantMessage(assistantContent);
+    }
 
-    logger.debug("Backend tool-call loop iteration", {
-      conversationId,
-      iteration: i,
-      toolName: toolCall.toolName,
-    });
-
-    const toolResult = await executeBackendInspectTool(
-      db,
-      conversation.entity_type,
-      conversation.entity_id,
-      toolCall,
-      { conversationId },
-    );
-
-    const toolResultContent = buildToolResultMessage(toolCall.toolName, toolResult);
-
-    await insertAIDelivery(db, {
-      conversationId,
-      kind: "tool_call",
-      role: "assistant",
-      toolName: toolCall.toolName,
-      payload: toolCall.input,
-    });
-    await insertAIDelivery(db, {
-      conversationId,
-      kind: "tool_result",
-      role: "user",
-      toolName: toolCall.toolName,
-      payload: toolResult,
-      content: toolResultContent,
-    });
-
-    // Reload full history for next OpenAI call
     const updatedHistory = await db
       .selectFrom("ai_messages")
       .selectAll()
@@ -1809,14 +1612,54 @@ export async function runRevisionWorkflow(
       .orderBy("created_at", "asc")
       .execute();
 
+    const persistedAutomation = deriveNextActionOrchestrationMessageFromWorkItems(
+      persistedWorkItems.map((item) => ({
+        id: item.work_item_id,
+        title: item.title,
+        description: item.description,
+        section: item.section,
+        ...(item.assignment_id ? { assignmentId: item.assignment_id } : {}),
+        status: item.status,
+        ...(item.note ? { note: item.note } : {}),
+      })),
+    );
+
+    const orchestrationMessage = persistedAutomation
+      ? { kind: "automation" as const, content: `${INTERNAL_AUTOSTART_PREFIX} ${persistedAutomation}` }
+      : null; // DB state is the single source of truth
+
+    if (!orchestrationMessage) {
+      break;
+    }
+
+    await db
+      .insertInto("ai_message_deliveries")
+      .values({
+        conversation_id: conversationId,
+        ai_message_id: null,
+        kind: "internal_message",
+        role: "user",
+        content: orchestrationMessage.content,
+        tool_name: null,
+        payload: null,
+      })
+      .execute();
+
     const nextMessages: Array<any> = [
       { role: "system", content: conversation.system_prompt },
-      ...updatedHistory.slice(-maxHistoryMessages).map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      })),
-      { role: "assistant", content: assistantContent },
-      { role: "user", content: toolResultContent },
+      ...updatedHistory
+        .concat({
+          id: "internal-orchestration",
+          conversation_id: conversationId,
+          role: "user",
+          content: orchestrationMessage.content,
+          created_at: new Date(),
+        })
+        .slice(-maxHistoryMessages)
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
     ];
 
     try {

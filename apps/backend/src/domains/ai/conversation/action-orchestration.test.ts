@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveNextActionOrchestrationMessage,
-  deriveNextPlanningOrchestrationMessage,
 } from "./action-orchestration.js";
 
 describe("deriveNextActionOrchestrationMessage", () => {
@@ -69,29 +68,3 @@ describe("deriveNextActionOrchestrationMessage", () => {
   });
 });
 
-describe("deriveNextPlanningOrchestrationMessage", () => {
-  it("returns a planning guardrail when the assistant replies in plain text before setting a plan", () => {
-    const result = deriveNextPlanningOrchestrationMessage([
-      {
-        role: "assistant",
-        content: "I think we should improve the CV in a few places.",
-      },
-    ]);
-
-    expect(result).toMatchObject({ kind: "guardrail" });
-    expect(result?.content).toContain("[[internal_guardrail]]");
-    expect(result?.content).toContain("set_revision_plan");
-  });
-
-  it("returns null once a revision plan has already been set", () => {
-    const result = deriveNextPlanningOrchestrationMessage([
-      {
-        role: "assistant",
-        content:
-          '```json\n{"type":"tool_call","toolName":"set_revision_plan","input":{"summary":"Plan","actions":[{"id":"action-1","title":"Review presentation","description":"Check presentation"}]}}\n```',
-      },
-    ]);
-
-    expect(result).toBeNull();
-  });
-});

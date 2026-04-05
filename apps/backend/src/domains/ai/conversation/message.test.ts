@@ -7,13 +7,16 @@ import type { Database } from "../../../db/types.js";
 import {
   sendAIMessage,
   createSendAIMessageHandler,
+} from "./message.js";
+import {
   requiresExplicitAssignmentWorkQueue,
   isWaitingForRevisionScopeDecision,
-} from "./message.js";
+} from "./revision-workflow-engine.js";
 import * as toolExecution from "./tool-execution.js";
 import * as revisionWorkItems from "./revision-work-items.js";
 import * as revisionSuggestions from "./revision-suggestions.js";
 import * as actionOrchestration from "./action-orchestration.js";
+import * as pendingDecisionModule from "./pending-decision.js";
 
 const CONV_ID = "550e8400-e29b-41d4-a716-446655440002";
 const ENTITY_ID = "550e8400-e29b-41d4-a716-446655440003";
@@ -426,6 +429,7 @@ const REVISION_CONVERSATION_ROW = {
   entity_id: BRANCH_ID,
   system_prompt: "You are a revision assistant.",
   is_closed: false,
+  pending_decision: null,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
 };
@@ -454,6 +458,7 @@ function buildRevisionDb({
   finalRow = FINAL_MSG_ROW as unknown,
   updatedHistoryMessages = [] as unknown[],
   persistedWorkItemsSequence = [] as unknown[],
+  conversationRow = REVISION_CONVERSATION_ROW as unknown,
 } = {}) {
   const executeTakeFirstOrThrow = vi.fn().mockResolvedValueOnce(userRow);
   for (const row of intermediateAssistantRows) {
@@ -511,7 +516,7 @@ function buildRevisionDb({
       return {
         selectAll: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            executeTakeFirst: vi.fn().mockResolvedValue(REVISION_CONVERSATION_ROW),
+            executeTakeFirst: vi.fn().mockResolvedValue(conversationRow),
             orderBy: vi.fn().mockReturnValue({ execute: vi.fn().mockResolvedValue([]) }),
           }),
         }),
@@ -655,7 +660,10 @@ describe("sendAIMessage — backend tool-call loop", () => {
       { content: "Kön är skapad." },
     ]);
 
+    vi.spyOn(pendingDecisionModule, "classifyDecision").mockResolvedValue("no");
+
     const db = buildRevisionDb({
+      conversationRow: { ...REVISION_CONVERSATION_ROW, pending_decision: "branch_creation" },
       existingMessages: [
         {
           id: "user-broad-request",

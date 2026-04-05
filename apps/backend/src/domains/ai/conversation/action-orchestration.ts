@@ -1,7 +1,6 @@
 import {
   INTERNAL_AUTOSTART_PREFIX,
   INTERNAL_GUARDRAIL_PREFIX,
-  extractToolCalls,
   extractJsonBlocks,
 } from "./tool-parsing.js";
 
@@ -30,13 +29,6 @@ type ActionWorkItemLike = {
   note?: string;
 };
 
-const PLANNING_GUARDRAIL_MESSAGE = [
-  "You must use the available tools for this stage.",
-  "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
-  "If the user's goal is broad, such as proofreading the whole CV, the plan must include multiple section-based actions and must not collapse to a single typo or a single section.",
-  "Do not continue with free-text execution updates until the plan has been created.",
-  "Return a tool call now.",
-].join(" ");
 
 const ACTION_GUARDRAIL_MESSAGE = [
   "You must use the available tools for this stage.",
@@ -355,44 +347,3 @@ export function deriveNextActionOrchestrationMessage(messages: ConversationMessa
   return { kind: "automation" as const, content: autoStartContent };
 }
 
-export function deriveNextPlanningOrchestrationMessage(messages: ConversationMessage[]) {
-  let hasPlan = false;
-
-  for (const message of messages) {
-    if (message.role !== "assistant") {
-      continue;
-    }
-
-    for (const parsed of extractJsonBlocks(message.content)) {
-      if (
-        typeof parsed === "object"
-        && parsed !== null
-        && (parsed as { type?: unknown }).type === "tool_call"
-        && (parsed as { toolName?: unknown }).toolName === "set_revision_plan"
-      ) {
-        hasPlan = true;
-      }
-    }
-  }
-
-  if (hasPlan) {
-    return null;
-  }
-
-  const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
-  if (!latestAssistantMessage) {
-    return null;
-  }
-
-  if (extractToolCalls(latestAssistantMessage.content).length > 0) {
-    return null;
-  }
-
-  const guardrailContent = `${INTERNAL_GUARDRAIL_PREFIX} ${PLANNING_GUARDRAIL_MESSAGE}`;
-  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
-  if (latestUserMessage === guardrailContent) {
-    return null;
-  }
-
-  return { kind: "guardrail" as const, content: guardrailContent };
-}

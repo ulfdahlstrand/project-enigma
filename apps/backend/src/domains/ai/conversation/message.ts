@@ -23,12 +23,8 @@ import {
   buildHelpMessage,
   buildExplainMessage,
   buildStatusMessage,
-  requiresExplicitAssignmentWorkQueue,
-  isWaitingForRevisionScopeDecision,
 } from "./revision-workflow-engine.js";
 import { classifyDecision, setPendingDecision } from "./pending-decision.js";
-
-export { requiresExplicitAssignmentWorkQueue, isWaitingForRevisionScopeDecision };
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -247,9 +243,6 @@ export async function sendAIMessage(
   }
 
   const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
-  const isRevisionOrPlanningConversation =
-    conversation.entity_type === "resume-revision-actions"
-    || conversation.entity_type === "resume-revision-planning";
 
   const revisionTools = isRevisionConversation ? buildRevisionOpenAITools() : undefined;
   let assistantMessage = await callOpenAI(openAIMessages, revisionTools);
@@ -292,7 +285,7 @@ export async function sendAIMessage(
   };
   let needsContinuation = false;
 
-  if (isRevisionOrPlanningConversation) {
+  if (isRevisionConversation) {
     // For revision conversations that return tool calls on the first response, the engine
     // handles persisting all messages. Otherwise, persist the initial response now and
     // pass it to the engine as a starting point.
