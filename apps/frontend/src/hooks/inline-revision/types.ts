@@ -1,10 +1,7 @@
 import type { MutableRefObject, RefObject } from "react";
 import type {
-  RevisionPlan,
-  RevisionSuggestions,
   RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
-import type { InlineRevisionStage } from "../../components/revision/inline-revision";
 
 export type DraftPatch = {
   consultantTitle?: string | null;
@@ -63,16 +60,6 @@ export type ResumeInspectionSnapshot = {
     startDate: string | null;
     endDate: string | null;
   }>;
-};
-
-export type PersistedInlineRevisionSession = {
-  version: 1;
-  sourceBranchId: string | null;
-  sourceBranchName: string | null;
-  stage: Extract<InlineRevisionStage, "actions" | "finalize">;
-  plan: RevisionPlan | null;
-  workItems: RevisionWorkItems | null;
-  suggestions: RevisionSuggestions | null;
 };
 
 export type PersistedToolCall = {

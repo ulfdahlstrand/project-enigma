@@ -6,6 +6,8 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/edit/")({
   validateSearch: z.object({
     branchId: z.string().optional(),
     assistant: z.enum(["true"]).optional(),
+    sourceBranchId: z.string().optional(),
+    sourceBranchName: z.string().optional(),
   }),
   component: ResumeEditPage,
 });

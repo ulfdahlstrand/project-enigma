@@ -47,6 +47,7 @@ import {
   getAIConversationHandler,
   listAIConversationsHandler,
   closeAIConversationHandler,
+  resolveRevisionSuggestionHandler,
 } from "./domains/ai/index.js";
 import {
   exportResumePdfHandler,
@@ -111,6 +112,7 @@ export const router = implement(contract).router({
   getAIConversation: getAIConversationHandler,
   listAIConversations: listAIConversationsHandler,
   closeAIConversation: closeAIConversationHandler,
+  resolveRevisionSuggestion: resolveRevisionSuggestionHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */

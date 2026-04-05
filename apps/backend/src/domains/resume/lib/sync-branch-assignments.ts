@@ -14,6 +14,18 @@ function isValidDateString(s: unknown): s is string {
   return !isNaN(d.getTime());
 }
 
+function normaliseAssignmentDescription(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  return typeof value === "string" ? value : "";
+}
+
 /**
  * Normalises AI-generated assignment content so it can be safely persisted.
  *
@@ -88,7 +100,7 @@ export async function syncBranchAssignmentsFromContent(
         assignment_id: a.assignmentId,
         client_name: a.clientName,
         role: a.role,
-        description: a.description,
+        description: normaliseAssignmentDescription(a.description),
         start_date: isValidDateString(a.startDate)
           ? new Date(a.startDate)
           : new Date(),

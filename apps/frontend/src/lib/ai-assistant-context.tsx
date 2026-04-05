@@ -20,14 +20,19 @@ export interface OpenAssistantOptions {
   title?: string;
   /** Hidden message sent to the AI on creation to trigger an opening greeting. Not shown in the UI. */
   kickoffMessage?: string;
+  /** Hidden autostart instruction sent right after conversation creation. */
+  autoStartMessage?: string;
   /** The original content being edited — shown as "before" in the diff dialog. */
   originalContent?: string;
   /** Optional tool registry available to the active AI chat session. */
   toolRegistry?: AIToolRegistry;
   /** Explicit execution context for any registered tools. */
   toolContext?: AIToolContext;
-  /** Called with the suggested text when the user clicks Apply in the diff dialog. */
-  onAccept: (suggested: string) => void;
+  /** Reopen a specific existing conversation instead of auto-creating one. */
+  initialConversationId?: string | null | undefined;
+  /** Called with the suggested text when the user clicks Apply in the diff dialog.
+   *  Omit when the assistant is opened in revision mode (suggestions are applied per-item). */
+  onAccept?: (suggested: string) => void;
 }
 
 interface AIAssistantState {
@@ -37,6 +42,7 @@ interface AIAssistantState {
   systemPrompt: string | null;
   conversationTitle: string | null;
   kickoffMessage: string | null;
+  autoStartMessage: string | null;
   originalContent: string | null;
   toolRegistry: AIToolRegistry | null;
   toolContext: AIToolContext | null;
@@ -72,6 +78,7 @@ const INITIAL_STATE: AIAssistantState = {
   systemPrompt: null,
   conversationTitle: null,
   kickoffMessage: null,
+  autoStartMessage: null,
   originalContent: null,
   toolRegistry: null,
   toolContext: null,
@@ -95,12 +102,13 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       systemPrompt: options.systemPrompt,
       conversationTitle: options.title ?? null,
       kickoffMessage: options.kickoffMessage ?? null,
+      autoStartMessage: options.autoStartMessage ?? null,
       originalContent: options.originalContent ?? null,
       toolRegistry: options.toolRegistry ?? null,
       toolContext: options.toolContext ?? null,
-      activeConversationId: null,
+      activeConversationId: options.initialConversationId ?? null,
       pendingSuggestion: null,
-      onAccept: options.onAccept,
+      onAccept: options.onAccept ?? null,
     });
   }, []);
 

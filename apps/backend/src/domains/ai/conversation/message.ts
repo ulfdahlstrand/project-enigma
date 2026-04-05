@@ -11,6 +11,20 @@ import {
   MIN_USER_MESSAGES_FOR_TITLE,
 } from "../lib/generate-title.js";
 import { logger } from "../../../infra/logger.js";
+import {
+  INTERNAL_AUTOSTART_PREFIX,
+  INTERNAL_GUARDRAIL_PREFIX,
+} from "./tool-parsing.js";
+import { insertAIDelivery } from "./deliveries.js";
+import { buildRevisionOpenAITools } from "./revision-tools.js";
+import {
+  runRevisionWorkflow,
+  detectConversationLanguage,
+  buildHelpMessage,
+  buildExplainMessage,
+  buildStatusMessage,
+} from "./revision-workflow-engine.js";
+import { classifyDecision, setPendingDecision } from "./pending-decision.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -38,6 +52,12 @@ export async function sendAIMessage(
     throw new ORPCError("NOT_FOUND", { message: "Conversation not found" });
   }
 
+  if (conversation.is_closed) {
+    throw new ORPCError("FAILED_PRECONDITION", {
+      message: "Conversation is closed",
+    });
+  }
+
   const existingMessages = await db
     .selectFrom("ai_messages")
     .selectAll()
@@ -50,19 +70,150 @@ export async function sendAIMessage(
     historyCount: existingMessages.length,
   });
 
-  // Persist the user message first
-  await db
-    .insertInto("ai_messages")
-    .values({
-      conversation_id: input.conversationId,
+  const isInternalUserMessage =
+    input.userMessage.startsWith(INTERNAL_AUTOSTART_PREFIX)
+    || input.userMessage.startsWith(INTERNAL_GUARDRAIL_PREFIX);
+
+  if (isInternalUserMessage) {
+    await insertAIDelivery(db, {
+      conversationId: input.conversationId,
+      kind: "internal_message",
       role: "user",
       content: input.userMessage,
-    })
-    .execute();
+    });
+  } else {
+    const userRow = await db
+      .insertInto("ai_messages")
+      .values({
+        conversation_id: input.conversationId,
+        role: "user",
+        content: input.userMessage,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await insertAIDelivery(db, {
+      conversationId: input.conversationId,
+      aiMessageId: userRow.id,
+      kind: "visible_message",
+      role: "user",
+      content: input.userMessage,
+    });
+  }
+
+  const trimmedUserMessage = input.userMessage.trim();
+  if (trimmedUserMessage === "/help" || trimmedUserMessage === "/status" || trimmedUserMessage === "/explain") {
+    const language = detectConversationLanguage(conversation.system_prompt);
+    const content = trimmedUserMessage === "/help"
+      ? buildHelpMessage(conversation.entity_type, language)
+      : trimmedUserMessage === "/explain"
+        ? await buildExplainMessage(db, {
+            conversationId: input.conversationId,
+            entityType: conversation.entity_type,
+            language,
+          })
+      : await buildStatusMessage(db, {
+          conversationId: input.conversationId,
+          entityType: conversation.entity_type,
+          language,
+        });
+
+    const assistantHelpRow = await db
+      .insertInto("ai_messages")
+      .values({
+        conversation_id: input.conversationId,
+        role: "assistant",
+        content,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await insertAIDelivery(db, {
+      conversationId: input.conversationId,
+      aiMessageId: assistantHelpRow.id,
+      kind: "visible_message",
+      role: "assistant",
+      content,
+    });
+
+    await db
+      .updateTable("ai_conversations")
+      .set({ updated_at: new Date() })
+      .where("id", "=", input.conversationId)
+      .execute();
+
+    return {
+      id: assistantHelpRow.id,
+      conversationId: assistantHelpRow.conversation_id,
+      role: assistantHelpRow.role as "assistant",
+      content: assistantHelpRow.content,
+      createdAt: assistantHelpRow.created_at.toISOString(),
+      needsContinuation: false,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pending decision gate
+  //
+  // When the conversation has a pending_decision, the model asked a blocking
+  // yes/no question. Classify the user's reply with a cheap model call before
+  // running the main workflow. If the answer is unclear, reply immediately and
+  // keep the lock in place so the user can try again.
+  // ---------------------------------------------------------------------------
+
+  let pendingDecisionAnswer: "yes" | "no" | null = null;
+
+  if (conversation.pending_decision && !isInternalUserMessage) {
+    const answer = await classifyDecision(openaiClient, input.userMessage);
+    const language = detectConversationLanguage(conversation.system_prompt);
+
+    if (answer === "unclear") {
+      const clarificationContent = language === "sv"
+        ? "Jag förstod inte riktigt — vänligen svara ja eller nej."
+        : "I didn't quite catch that — please answer yes or no.";
+
+      const clarificationRow = await db
+        .insertInto("ai_messages")
+        .values({
+          conversation_id: input.conversationId,
+          role: "assistant",
+          content: clarificationContent,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      await insertAIDelivery(db, {
+        conversationId: input.conversationId,
+        aiMessageId: clarificationRow.id,
+        kind: "visible_message",
+        role: "assistant",
+        content: clarificationContent,
+      });
+
+      await db
+        .updateTable("ai_conversations")
+        .set({ updated_at: new Date() })
+        .where("id", "=", input.conversationId)
+        .execute();
+
+      return {
+        id: clarificationRow.id,
+        conversationId: clarificationRow.conversation_id,
+        role: clarificationRow.role as "assistant",
+        content: clarificationRow.content,
+        createdAt: clarificationRow.created_at.toISOString(),
+        needsContinuation: false,
+      };
+    }
+
+    // Clear the lock — a definitive yes/no was given.
+    await setPendingDecision(db, input.conversationId, null);
+    pendingDecisionAnswer = answer;
+  }
 
   // Build message history for OpenAI (capped to avoid token limit issues)
   const history = existingMessages.slice(-MAX_HISTORY_MESSAGES);
-  const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+  const openAIMessages: Array<any> = [
     { role: "system", content: conversation.system_prompt },
     ...history.map((m) => ({
       role: m.role as "user" | "assistant",
@@ -71,29 +222,100 @@ export async function sendAIMessage(
     { role: "user", content: input.userMessage },
   ];
 
-  const response = await openaiClient.chat.completions.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: openAIMessages,
-  });
-
-  const assistantContent = response.choices[0]?.message?.content;
-  if (!assistantContent) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR", {
-      message: "AI returned empty response",
-    });
+  // Shared helper to call OpenAI and throw on empty response
+  async function callOpenAI(
+    messages: Array<any>,
+    tools?: Array<Record<string, unknown>>,
+  ): Promise<any> {
+    const response = await openaiClient.chat.completions.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages,
+      ...(tools ? { tools } : {}),
+    } as any);
+    const message = response.choices[0]?.message;
+    if (!message || ((!message.content || message.content.length === 0) && (!message.tool_calls || message.tool_calls.length === 0))) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "AI returned empty response",
+      });
+    }
+    return message;
   }
 
-  // Persist and return the assistant message
-  const assistantRow = await db
-    .insertInto("ai_messages")
-    .values({
-      conversation_id: input.conversationId,
+  const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
+
+  const revisionTools = isRevisionConversation ? buildRevisionOpenAITools() : undefined;
+  let assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+  let assistantContent = assistantMessage.content ?? "";
+
+  async function persistAssistantMessage(content: string) {
+    if (content.trim().length === 0) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "AI returned an empty assistant message during the revision workflow.",
+      });
+    }
+
+    const row = await db
+      .insertInto("ai_messages")
+      .values({
+        conversation_id: input.conversationId,
+        role: "assistant",
+        content,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await insertAIDelivery(db, {
+      conversationId: input.conversationId,
+      aiMessageId: row.id,
+      kind: "visible_message",
       role: "assistant",
-      content: assistantContent,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+      content,
+    });
+
+    return row;
+  }
+
+  let assistantRow: {
+    id: string;
+    conversation_id: string;
+    role: string;
+    content: string;
+    created_at: Date;
+  };
+  let needsContinuation = false;
+
+  if (isRevisionConversation) {
+    // For revision conversations that return tool calls on the first response, the engine
+    // handles persisting all messages. Otherwise, persist the initial response now and
+    // pass it to the engine as a starting point.
+    const hasInitialToolCalls =
+      isRevisionConversation
+      && assistantMessage.tool_calls
+      && assistantMessage.tool_calls.length > 0;
+    const initialAssistantRow = hasInitialToolCalls
+      ? null
+      : await persistAssistantMessage(assistantContent);
+
+    const result = await runRevisionWorkflow(db, {
+      conversationId: input.conversationId,
+      conversation,
+      userMessage: input.userMessage,
+      existingMessages,
+      openAIMessages,
+      firstAssistantMessage: assistantMessage,
+      initialAssistantRow,
+      callOpenAI,
+      persistAssistantMessage,
+      maxHistoryMessages: MAX_HISTORY_MESSAGES,
+      pendingDecisionAnswer,
+    });
+    assistantRow = result.assistantRow;
+    needsContinuation = result.needsContinuation;
+    assistantContent = assistantRow.content;
+  } else {
+    assistantRow = await persistAssistantMessage(assistantContent);
+  }
 
   logger.info("AI message responded", {
     conversationId: input.conversationId,
@@ -103,8 +325,8 @@ export async function sendAIMessage(
   });
 
   // Generate a title after the 2nd user message if none exists yet (fire-and-forget)
-  const userMessageCount = existingMessages.filter((m) => m.role === "user").length + 1;
-  if (userMessageCount >= MIN_USER_MESSAGES_FOR_TITLE && conversation.title === null) {
+  const userMessageCount = existingMessages.filter((m) => m.role === "user").length + (isInternalUserMessage ? 0 : 1);
+  if (userMessageCount >= MIN_USER_MESSAGES_FOR_TITLE && conversation.title === null && !isInternalUserMessage) {
     const allMessages = [
       ...existingMessages,
       { role: "user", content: input.userMessage },
@@ -138,6 +360,7 @@ export async function sendAIMessage(
     role: assistantRow.role as "assistant",
     content: assistantRow.content,
     createdAt: assistantRow.created_at.toISOString(),
+    needsContinuation,
   };
 }
 

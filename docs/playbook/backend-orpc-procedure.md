@@ -16,8 +16,8 @@ through the API.
 
 - **ADR-012** — Kysely is the sole database client. No raw SQL, no other ORMs.
 - **ADR-011** — Vitest is the sole test runner; co-located test files; DI via `vi.fn()`.
-- **`docs/arch/backend.md`** — Procedure pattern, Kysely instance, DB type conventions.
-- **`docs/arch/testing.md`** — Co-located tests, no `__tests__/` dirs, `vi.fn()` mocking.
+- **`docs/arch/backend/index.md`** — Procedure pattern, Kysely instance, DB type conventions.
+- **`docs/arch/testing/index.md`** — Co-located tests, no `__tests__/` dirs, `vi.fn()` mocking.
 
 **The `getDb()` lazy singleton is intentional.** `client.ts` exports a *getter*
 (`getDb()`), not a named `db` const, so that `DATABASE_URL` is never read at import time.
@@ -258,9 +258,11 @@ TypeScript source. If `dist/` is stale (e.g. you changed `employees.ts` but did 
 rebuild), `tsc --noEmit` and Vitest will silently use the old schema. Run
 `npm run build --workspace=packages/contracts` before any type or test check.
 
-### No `__tests__/` directories
-Per `docs/arch/testing.md`, test files must be co-located with their source files and
-named `<source-file>.test.ts`. Do not create a separate `__tests__/` directory.
+### Prefer co-located tests
+Per `docs/arch/testing/index.md`, tests should be kept close to the code they
+exercise and named `<source-file>.test.ts` when practical. The repo still
+contains legacy `__tests__/` directories, so follow the local pattern in the
+area you are modifying instead of moving files opportunistically.
 
 ### `types.ts` is maintained manually
 `apps/backend/src/db/types.ts` is the TypeScript source of truth for table shapes. It is
@@ -284,7 +286,7 @@ is a CLI script that runs migrations before any web server is started, this is f
 - [ ] `fetchEntity()` plain async function with default `db = getDb()` parameter
 - [ ] `list<Entity>Handler` and `createList<Entity>Handler(db)` factory exported from procedure file
 - [ ] `list<Entity>Handler` registered on router in `apps/backend/src/router.ts`
-- [ ] Co-located test file `<procedure>.test.ts` exists; no `__tests__/` dir used
+- [ ] Test file follows the local pattern for the area being changed and covers the new procedure
 - [ ] Test mocks Kysely fluent chain with `vi.fn()` and uses `call()` from `@orpc/server`
 - [ ] Test asserts `selectFrom('<table>')`, `selectAll()`, `execute()` were called
 - [ ] Test asserts resolved value equals mock rows (including empty-array edge case)

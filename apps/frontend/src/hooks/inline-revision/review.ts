@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
+import { orpc } from "../../orpc-client";
 import {
   renderTextDiffReview,
   type TextDiffReviewValue,
@@ -31,6 +32,7 @@ import type {
 } from "./types";
 
 type Suggestion = RevisionSuggestions["suggestions"][number];
+type SuggestionsState = RevisionSuggestions | null;
 type ReviewDialog =
   | {
       kind: "skills";
@@ -62,6 +64,7 @@ type ResumeSkill = {
 
 type Params = {
   activeBranchId: string | null;
+  conversationId: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
@@ -89,6 +92,7 @@ type Params = {
 
 export function useInlineRevisionReview({
   activeBranchId,
+  conversationId,
   consultantTitle,
   presentation,
   summary,
@@ -155,33 +159,33 @@ export function useInlineRevisionReview({
 
     setSelectedSuggestionId(suggestionId);
     setSuggestions((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
+      if (!prev) return prev;
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
-          item.id === suggestionId ? { ...item, status: "accepted" } : item,
+          item.id === suggestionId ? { ...item, status: "accepted" as const } : item,
         ),
       };
     });
+    if (conversationId) {
+      void orpc.resolveRevisionSuggestion({ conversationId, suggestionId, status: "accepted" });
+    }
   };
 
   const dismissSuggestion = (suggestionId: string) => {
     setSelectedSuggestionId(suggestionId);
     setSuggestions((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
+      if (!prev) return prev;
       return {
         ...prev,
         suggestions: prev.suggestions.map((item) =>
-          item.id === suggestionId ? { ...item, status: "dismissed" } : item,
+          item.id === suggestionId ? { ...item, status: "dismissed" as const } : item,
         ),
       };
     });
+    if (conversationId) {
+      void orpc.resolveRevisionSuggestion({ conversationId, suggestionId, status: "dismissed" });
+    }
   };
 
   const openSuggestionReview = (suggestionId: string) => {
@@ -195,6 +199,43 @@ export function useInlineRevisionReview({
     setReviewSuggestionId(null);
   };
 
+  const resolveAssignmentTarget = (suggestion: Suggestion) => {
+    if (suggestion.assignmentId) {
+      const directTarget = sectionRefs.assignmentItemRefs.current[suggestion.assignmentId];
+      if (directTarget) {
+        return directTarget;
+      }
+
+      const matchingAssignment = sortedAssignments.find((assignment) => {
+        const assignmentIdentityId = assignment.assignmentId ?? assignment.id;
+        return assignmentIdentityId === suggestion.assignmentId;
+      });
+      if (matchingAssignment) {
+        const assignmentIdentityId = matchingAssignment.assignmentId ?? matchingAssignment.id;
+        return sectionRefs.assignmentItemRefs.current[assignmentIdentityId] ?? null;
+      }
+    }
+
+    const haystack = [
+      suggestion.title,
+      suggestion.description,
+      suggestion.section,
+    ].join(" ").toLowerCase();
+
+    const matchingAssignment = sortedAssignments.find((assignment) => {
+      const client = assignment.clientName.toLowerCase();
+      const role = assignment.role.toLowerCase();
+      return haystack.includes(client) || haystack.includes(role);
+    });
+
+    if (!matchingAssignment) {
+      return null;
+    }
+
+    const assignmentIdentityId = matchingAssignment.assignmentId ?? matchingAssignment.id;
+    return sectionRefs.assignmentItemRefs.current[assignmentIdentityId] ?? null;
+  };
+
   const selectSuggestion = (suggestionId: string) => {
     const suggestion = suggestions?.suggestions.find((item) => item.id === suggestionId);
     if (!suggestion) {
@@ -204,13 +245,11 @@ export function useInlineRevisionReview({
     const section = suggestion.section.trim().toLowerCase();
     let target: HTMLElement | null = null;
 
-    if (suggestion.assignmentId) {
-      const assignmentTarget = sectionRefs.assignmentItemRefs.current[suggestion.assignmentId];
-      if (assignmentTarget) {
-        setSelectedSuggestionId(suggestionId);
-        assignmentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
+    const assignmentTarget = resolveAssignmentTarget(suggestion);
+    if (assignmentTarget) {
+      setSelectedSuggestionId(suggestionId);
+      assignmentTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
 
     if (section.includes("skills") || section.includes("kompetens")) {
@@ -305,6 +344,7 @@ export function useInlineRevisionReview({
     reviewDialog,
     hasUnsavedChanges,
     openSuggestionReview,
+    dismissSuggestion,
     selectSuggestion,
   };
 }

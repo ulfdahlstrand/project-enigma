@@ -15,7 +15,9 @@ const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
+const REVISION_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440032";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
+const REVISION_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440042";
 const SKILL_ID_1 = "550e8400-e29b-41d4-a716-446655440051";
 const SKILL_ID_2 = "550e8400-e29b-41d4-a716-446655440052";
 
@@ -76,6 +78,14 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRo
   const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
   const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
 
+  const branchExecuteTakeFirst = vi.fn().mockResolvedValue(undefined);
+  const branchWhere = vi.fn().mockReturnValue({ executeTakeFirst: branchExecuteTakeFirst });
+  const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
+
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue(undefined);
+  const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
+
   // Resume query chain with LEFT JOIN: leftJoin → select → where → executeTakeFirst
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
@@ -85,11 +95,23 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRo
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_skills") return { selectAll: skillsSelectAll };
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
+    if (table === "resume_branches") return { select: branchSelect };
+    if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
   });
 
   const db = { selectFrom } as unknown as Kysely<Database>;
-  return { db, selectFrom, resumeWhere, skillsWhere, skillsOrderBy, skillsExecute, resumeExecuteTakeFirst };
+  return {
+    db,
+    selectFrom,
+    resumeWhere,
+    skillsWhere,
+    skillsOrderBy,
+    skillsExecute,
+    resumeExecuteTakeFirst,
+    branchExecuteTakeFirst,
+    commitExecuteTakeFirst,
+  };
 }
 
 /** Builds a db mock that also handles the employee lookup (for consultant auth). */
@@ -109,6 +131,21 @@ function buildDbWithEmployeeLookup(
   const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
   const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
 
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue({
+    content: {
+      title: "Committed title",
+      consultantTitle: null,
+      presentation: [],
+      summary: "Committed summary",
+      highlightedItems: [],
+      language: "en",
+      skills: [],
+      assignments: [],
+    },
+  });
+  const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
+
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
   const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
@@ -122,6 +159,7 @@ function buildDbWithEmployeeLookup(
     if (table === "employees") return { select: empSelect };
     if (table === "resume_skills") return { selectAll: skillsSelectAll };
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
+    if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
   });
 
@@ -135,14 +173,35 @@ function buildDbWithEmployeeLookup(
 
 describe("getResume query function", () => {
   it("returns a resume with its skills array for an admin", async () => {
-    const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2], [HIGHLIGHTED_ITEM_ROW_1]);
+    const { db, commitExecuteTakeFirst } = buildDbMock(
+      RESUME_ROW,
+      [SKILL_ROW_1, SKILL_ROW_2],
+      [HIGHLIGHTED_ITEM_ROW_1]
+    );
+    commitExecuteTakeFirst.mockResolvedValue({
+      content: {
+        title: "Committed title",
+        consultantTitle: "Committed consultant",
+        presentation: ["Committed presentation"],
+        summary: "Committed summary",
+        highlightedItems: ["Committed highlight"],
+        language: "sv",
+        skills: [],
+        assignments: [],
+      },
+    });
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(result).toMatchObject({
       id: RESUME_ID,
       employeeId: EMPLOYEE_ID_1,
-      title: "Senior Backend Resume",
+      title: "Committed title",
+      consultantTitle: "Committed consultant",
+      presentation: ["Committed presentation"],
+      summary: "Committed summary",
+      highlightedItems: ["Committed highlight"],
+      language: "sv",
       isMain: true,
     });
     expect(result.skills).toHaveLength(2);
@@ -153,7 +212,7 @@ describe("getResume query function", () => {
       level: "expert",
       sortOrder: 0,
     });
-    expect(result.highlightedItems).toEqual(["Principal Engineer hos Acme"]);
+    expect(result.highlightedItems).toEqual(["Committed highlight"]);
   });
 
   it("returns highlighted items ordered by sort_order ascending", async () => {
@@ -223,6 +282,49 @@ describe("getResume query function", () => {
 
     await expect(getResume(db, MOCK_CONSULTANT_2, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
+    );
+  });
+
+  it("uses the selected branch snapshot when branchId is provided", async () => {
+    const { db, branchExecuteTakeFirst, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    branchExecuteTakeFirst.mockResolvedValue({
+      id: REVISION_BRANCH_ID,
+      resume_id: RESUME_ID,
+      head_commit_id: null,
+      forked_from_commit_id: REVISION_COMMIT_ID,
+    });
+    commitExecuteTakeFirst.mockResolvedValue({
+      content: {
+        title: "Branch title",
+        consultantTitle: "Branch consultant",
+        presentation: ["Branch presentation"],
+        summary: "Branch summary",
+        highlightedItems: ["Branch highlight"],
+        language: "en",
+        skills: [],
+        assignments: [],
+      },
+    });
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, REVISION_BRANCH_ID);
+
+    expect(result.title).toBe("Branch title");
+    expect(result.presentation).toEqual(["Branch presentation"]);
+    expect(result.summary).toBe("Branch summary");
+    expect(result.highlightedItems).toEqual(["Branch highlight"]);
+  });
+
+  it("throws NOT_FOUND when the requested branch does not belong to the resume", async () => {
+    const { db, branchExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    branchExecuteTakeFirst.mockResolvedValue({
+      id: REVISION_BRANCH_ID,
+      resume_id: "550e8400-e29b-41d4-a716-446655440099",
+      head_commit_id: null,
+      forked_from_commit_id: REVISION_COMMIT_ID,
+    });
+
+    await expect(getResume(db, MOCK_ADMIN, RESUME_ID, REVISION_BRANCH_ID)).rejects.toSatisfy(
+      (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
 });

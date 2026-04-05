@@ -18,6 +18,7 @@ const RETURNED_ROW = {
   system_prompt: "You are a helpful assistant.",
   title: null,
   is_closed: false,
+  pending_decision: null,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
 };
@@ -68,6 +69,7 @@ describe("createAIConversation", () => {
       systemPrompt: "You are a helpful assistant.",
       title: null,
       isClosed: false,
+      pendingDecision: null,
       createdAt: "2026-03-19T00:00:00.000Z",
       updatedAt: "2026-03-19T00:00:00.000Z",
     });

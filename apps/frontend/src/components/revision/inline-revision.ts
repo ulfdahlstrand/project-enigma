@@ -1,6 +1,6 @@
 import type { RevisionPlan, RevisionSuggestions, RevisionWorkItems } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
-export type InlineRevisionStage = "planning" | "actions" | "finalize";
+export type InlineRevisionStage = "revision" | "finalize";
 
 export const INLINE_REVISION_CHECKLIST_WIDTH = 300;
 export const INLINE_REVISION_CHAT_WIDTH = 360;
@@ -21,17 +21,15 @@ function slugifyInlineRevisionBranchLabel(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export function buildInlineRevisionBranchName(plan: RevisionPlan) {
-  const planLead =
-    slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
-    slugifyInlineRevisionBranchLabel(plan.summary);
+export function buildInlineRevisionBranchNameFromGoal(goal: string | null | undefined) {
+  const normalizedGoal = goal ? slugifyInlineRevisionBranchLabel(goal) : "";
 
-  if (!planLead) {
+  if (!normalizedGoal) {
     const timestamp = new Date().toISOString().slice(0, 16).replace(/[TZ:]/g, "-");
     return `revision/${timestamp}`;
   }
 
-  const branchName = `revision/${planLead}`;
+  const branchName = `revision/${normalizedGoal}`;
   return branchName.length > INLINE_REVISION_BRANCH_NAME_MAX_LENGTH
     ? `${branchName.slice(0, INLINE_REVISION_BRANCH_NAME_MAX_LENGTH - 1).trimEnd()}…`
     : branchName;
@@ -167,24 +165,6 @@ export function resolveRevisionWorkItems(
   };
 }
 
-export function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): RevisionWorkItems | null {
-  if (plan.actions.length === 0) {
-    return null;
-  }
-
-  return {
-    summary: plan.summary,
-    items: plan.actions.map((action, index) => ({
-      id: action.id || `work-item-${index + 1}`,
-      title: action.title,
-      description: action.description,
-      section: inferRevisionWorkItemSection(action),
-      assignmentId: action.assignmentId,
-      status: "pending" as const,
-    })),
-  };
-}
-
 export function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
   if (action.assignmentId) {
     return "assignment";
@@ -229,7 +209,18 @@ export function appendUniqueRevisionSuggestions(
     const existingIndex = nextSuggestions.findIndex((item) => item.id === suggestion.id);
 
     if (existingIndex >= 0) {
-      nextSuggestions[existingIndex] = suggestion;
+      const existingSuggestion = nextSuggestions[existingIndex];
+      if (!existingSuggestion) {
+        nextSuggestions.push(suggestion);
+        continue;
+      }
+      nextSuggestions[existingIndex] = {
+        ...suggestion,
+        status:
+          existingSuggestion.status !== "pending" && suggestion.status === "pending"
+            ? existingSuggestion.status
+            : suggestion.status,
+      };
     } else {
       nextSuggestions.push(suggestion);
     }
@@ -238,6 +229,77 @@ export function appendUniqueRevisionSuggestions(
   return {
     summary: incoming.summary || existing.summary,
     suggestions: nextSuggestions,
+  };
+}
+
+export function normalizeComparableText(value: string | null | undefined) {
+  return (value ?? "").replace(/\r\n/g, "\n").trim();
+}
+
+function normalizeSkillsSignature(
+  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+) {
+  return JSON.stringify(
+    [...skills]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((skill) => ({
+        name: skill.name.trim(),
+        level: skill.level ?? null,
+        category: skill.category ?? null,
+        sortOrder: skill.sortOrder,
+      })),
+  );
+}
+
+export function reconcileRevisionSuggestionsWithCurrentContent(
+  suggestions: RevisionSuggestions | null,
+  current: {
+    title: string;
+    consultantTitle: string | null;
+    presentation: string[];
+    summary: string | null;
+    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+    assignments: Array<{ id: string; description?: string }>;
+  },
+): RevisionSuggestions | null {
+  if (!suggestions) {
+    return null;
+  }
+
+  const currentSkillsSignature = normalizeSkillsSignature(current.skills);
+
+  return {
+    ...suggestions,
+    suggestions: suggestions.suggestions.map((suggestion) => {
+      if (suggestion.status === "dismissed") {
+        return suggestion;
+      }
+
+      const section = suggestion.section.trim().toLowerCase();
+      let isApplied = false;
+
+      if (suggestion.skills && suggestion.skills.length > 0) {
+        isApplied = normalizeSkillsSignature(suggestion.skills.map((skill) => ({
+          name: skill.name,
+          level: skill.level ?? null,
+          category: skill.category,
+          sortOrder: skill.sortOrder,
+        }))) === currentSkillsSignature;
+      } else if (suggestion.assignmentId) {
+        const assignment = current.assignments.find((item) => item.id === suggestion.assignmentId);
+        isApplied = normalizeComparableText(assignment?.description) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("consultant")) {
+        isApplied = normalizeComparableText(current.consultantTitle) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("presentation") || section.includes("profil") || section.includes("intro")) {
+        isApplied = normalizeComparableText(current.presentation.join("\n\n")) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("summary") || section.includes("sammanfatt")) {
+        isApplied = normalizeComparableText(current.summary) === normalizeComparableText(suggestion.suggestedText);
+      } else if (section.includes("title") || section.includes("titel")) {
+        isApplied = normalizeComparableText(current.title) === normalizeComparableText(suggestion.suggestedText);
+      }
+
+      return isApplied ? { ...suggestion, status: "accepted" as const } : suggestion;
+    }),
   };
 }
 

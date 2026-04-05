@@ -1,59 +1,43 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildInlineRevisionBranchName,
   buildInlineRevisionWorkItemAutomationMessage,
-  buildInlineRevisionWorkItemsFromPlan,
   resolveRevisionWorkItems,
 } from "./inline-revision";
 
 describe("inline revision work items", () => {
-  it("builds revision branch names with a revision/ prefix", () => {
-    expect(buildInlineRevisionBranchName({
-      summary: "Förbättra presentation",
-      actions: [
-        {
-          id: "action-1",
-          title: "Uppdatera Avla-uppdraget",
-          description: "Justera innehållet.",
-          status: "pending",
-        },
-      ],
-    })).toBe("revision/uppdatera-avla-uppdraget");
-  });
-
-  it("treats Swedish skill reordering actions as skills work", () => {
-    const workItems = buildInlineRevisionWorkItemsFromPlan({
+  it("treats Swedish skill reordering actions as broad skills work", () => {
+    const workItems = {
       summary: "Omorganisera färdigheter",
-      actions: [
+      items: [
         {
           id: "action-skills",
           title: "Omorganisera färdigheter",
           description: "Sortera om färdighetsgrupper och färdigheter för att framhäva projektledning.",
-          status: "pending",
+          section: "skills",
+          status: "pending" as const,
         },
       ],
-    });
+    };
 
-    expect(workItems?.items[0]?.section).toBe("skills");
     expect(buildInlineRevisionWorkItemAutomationMessage(workItems)?.message).toContain(
       "Then replace the current action-stage worklist with explicit skills work items using set_revision_work_items.",
     );
   });
 
   it("keeps section-specific text inspection for non-skills work", () => {
-    const workItems = buildInlineRevisionWorkItemsFromPlan({
+    const workItems = {
       summary: "Fix summary",
-      actions: [
+      items: [
         {
           id: "action-summary",
           title: "Review summary",
           description: "Fix the summary wording.",
-          status: "pending",
+          section: "summary",
+          status: "pending" as const,
         },
       ],
-    });
+    };
 
-    expect(workItems?.items[0]?.section).toBe("summary");
     expect(buildInlineRevisionWorkItemAutomationMessage(workItems)?.message).toContain(
       "Inspect the exact source text for section summary",
     );

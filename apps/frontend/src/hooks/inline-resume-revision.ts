@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,20 +12,19 @@ import {
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
   useFinaliseResumeBranch,
-  useForkResumeBranch,
 } from "./versioning";
 import { orpc } from "../orpc-client";
 import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
-  buildInlineRevisionBranchName,
-  buildInlineRevisionWorkItemsFromPlan,
-  type InlineRevisionStage,
+  appendUniqueRevisionSuggestions,
+  reconcileRevisionSuggestionsWithCurrentContent,
 } from "../components/revision/inline-revision";
-import { type RevisionPlan, type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
+import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
-import { deriveSuggestionsFromConversation } from "./inline-revision/conversation";
-import { clearPersistedInlineRevisionSession, readPersistedInlineRevisionSession, writePersistedInlineRevisionSession } from "./inline-revision/storage";
+import {
+  deriveWorkItemsFromConversation,
+} from "./inline-revision/conversation";
 import type { UseInlineResumeRevisionParams } from "./inline-revision/types";
 import { useInlineRevisionAssistant } from "./inline-revision/use-inline-revision-assistant";
 import { useInlineRevisionReview } from "./inline-revision/review";
@@ -64,23 +63,24 @@ export function useInlineResumeRevision({
     toolContext: assistantToolContext,
   } = useAIAssistantContext();
 
+  // Read URL search params (strict: false so this works from any route)
+  const { assistant: assistantMode, sourceBranchId: urlSourceBranchId, sourceBranchName: urlSourceBranchName } =
+    useSearch({ strict: false }) as {
+      assistant?: "true";
+      sourceBranchId?: string;
+      sourceBranchName?: string;
+    };
+
   const [isOpen, setIsOpen] = useState(false);
-  const [stage, setStage] = useState<InlineRevisionStage>("planning");
-  const [plan, setPlan] = useState<RevisionPlan | null>(null);
+  const [isFinalized, setIsFinalized] = useState(false);
   const [workItems, setWorkItems] = useState<RevisionWorkItems | null>(null);
   const [suggestions, setSuggestions] = useState<RevisionSuggestions | null>(null);
-  const [pendingActionBranchId, setPendingActionBranchId] = useState<string | null>(null);
   const [sourceBranchName, setSourceBranchName] = useState<string | null>(null);
   const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
-  const [planningSessionId, setPlanningSessionId] = useState<string | null>(null);
   const [isPreparingFinalize, setIsPreparingFinalize] = useState(false);
   const lastInlineRevisionBranchIdRef = useRef<string | null>(null);
-  const workItemsRef = useRef<RevisionWorkItems | null>(null);
   const restoredBranchIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    workItemsRef.current = workItems;
-  }, [workItems]);
+  const openingRevisionBranchIdRef = useRef<string | null>(null);
 
   const saveVersion = useMutation({
     mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
@@ -102,31 +102,38 @@ export function useInlineResumeRevision({
     },
   });
 
-  const closeInlineConversation = useCloseAIConversation("resume", resumeId);
-  const forkResumeBranch = useForkResumeBranch();
   const finaliseInlineRevision = useFinaliseResumeBranch();
+  const closeActionConversation = useCloseAIConversation(
+    "resume-revision-actions",
+    activeBranchId,
+  );
   const { data: existingActionConversations } = useAIConversations(
     activeBranchId && activeBranchId !== mainBranchId ? "resume-revision-actions" : null,
     activeBranchId && activeBranchId !== mainBranchId ? activeBranchId : null,
   );
-  const existingActionConversationId =
-    existingActionConversations?.conversations.at(-1)?.id ?? null;
-  const { data: existingActionConversation } = useAIConversation(existingActionConversationId);
+  const latestOpenActionConversationId =
+    [...(existingActionConversations?.conversations ?? [])]
+      .reverse()
+      .find((conversation) => !conversation.isClosed)?.id ?? null;
+  const { data: existingActionConversation } = useAIConversation(latestOpenActionConversationId);
+  const { data: activeAssistantConversation } = useAIConversation(assistantConversationId);
 
   useEffect(() => {
     if (isEditRoute) {
       return;
     }
 
-    const hasPersistedSession =
+    if (
       activeBranchId !== null &&
       activeBranchId !== mainBranchId &&
-      readPersistedInlineRevisionSession(activeBranchId) !== null;
-
-    if (!hasPersistedSession) {
-      setIsOpen(false);
+      assistantMode === "true"
+    ) {
+      // Still on view route — let the restore effect handle after navigation
+      return;
     }
-  }, [activeBranchId, isEditRoute, mainBranchId]);
+
+    setIsOpen(false);
+  }, [activeBranchId, assistantMode, isEditRoute, mainBranchId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -134,30 +141,26 @@ export function useInlineResumeRevision({
       return;
     }
 
-    if (stage === "planning") {
+    if (isFinalized) {
       lastInlineRevisionBranchIdRef.current = activeBranchId;
       return;
     }
 
     if (
       lastInlineRevisionBranchIdRef.current !== null &&
-      activeBranchId !== lastInlineRevisionBranchIdRef.current
+      activeBranchId !== lastInlineRevisionBranchIdRef.current &&
+      activeBranchId !== openingRevisionBranchIdRef.current
     ) {
       closeAssistant();
     }
 
     lastInlineRevisionBranchIdRef.current = activeBranchId;
-  }, [activeBranchId, closeAssistant, isOpen, stage]);
+  }, [activeBranchId, closeAssistant, isFinalized, isOpen]);
 
   const {
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
-    openActionAssistant,
-    openPlanning,
-    guardrail,
-    automation,
+    toolRegistry,
+    toolContext,
+    openRevisionAssistant,
   } = useInlineRevisionAssistant({
     resumeId,
     resumeInspectionSnapshot,
@@ -167,11 +170,6 @@ export function useInlineResumeRevision({
     summary,
     language: i18n.resolvedLanguage ?? i18n.language,
     t,
-    stage,
-    plan,
-    workItems,
-    workItemsRef,
-    setPlan,
     setWorkItems,
     setSuggestions,
     openAssistant,
@@ -181,15 +179,26 @@ export function useInlineResumeRevision({
     assistantToolRoute: assistantToolContext?.route,
   });
 
+  const openRevisionAssistantRef = useRef(openRevisionAssistant);
+  useLayoutEffect(() => {
+    openRevisionAssistantRef.current = openRevisionAssistant;
+  });
+
+  const handledBranchHandoffRef = useRef<string | null>(null);
+
   const {
     selectedSuggestionId,
     applyingSuggestionId,
     reviewDialog,
     hasUnsavedChanges,
     openSuggestionReview,
+    dismissSuggestion,
     selectSuggestion,
   } = useInlineRevisionReview({
     activeBranchId,
+    conversationId: assistantEntityType === "resume-revision-actions" && assistantEntityId === activeBranchId
+      ? assistantConversationId
+      : latestOpenActionConversationId,
     consultantTitle,
     presentation,
     summary,
@@ -206,104 +215,79 @@ export function useInlineResumeRevision({
     buildDraftPatchFromValues,
   });
 
-  useEffect(() => {
-    if (!pendingActionBranchId || !plan) {
+  const open = async () => {
+    if (!activeBranchId || isOpen) {
       return;
     }
 
-    if (activeBranchId !== pendingActionBranchId) {
-      return;
-    }
-
-    setStage("actions");
-    setPendingActionBranchId(null);
-    setWorkItems(buildInlineRevisionWorkItemsFromPlan(plan));
+    setIsOpen(true);
+    setIsFinalized(false);
+    setSourceBranchName(activeBranchName);
+    setSourceBranchId(activeBranchId);
+    setWorkItems(null);
     setSuggestions(null);
-    openActionAssistant(activeBranchId);
-  }, [
-    activeBranchId,
-    openActionAssistant,
-    pendingActionBranchId,
-    plan,
-  ]);
 
-  const startPlanning = () => {
-    const nextPlanningSessionId = planningSessionId ?? crypto.randomUUID();
-    if (!planningSessionId) {
-      setPlanningSessionId(nextPlanningSessionId);
+    // Persist session state in URL so page reloads restore the session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (navigate as any)({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        assistant: "true",
+        sourceBranchId: activeBranchId,
+        sourceBranchName: activeBranchName,
+      }),
+      replace: true,
+    });
+
+    try {
+      openRevisionAssistantRef.current({ branchId: activeBranchId });
+    } catch (error) {
+      setIsOpen(false);
+      setSourceBranchName(null);
+      setSourceBranchId(null);
+      setWorkItems(null);
+      setSuggestions(null);
+      throw error;
     }
-
-    setStage("planning");
-    openPlanning(nextPlanningSessionId);
   };
 
-  const openActions = async () => {
-    if (!plan || !baseCommitId) {
-      return;
-    }
-
-    if (assistantConversationId) {
-      await closeInlineConversation.mutateAsync({ conversationId: assistantConversationId });
-    }
-
-    const newBranch = await forkResumeBranch.mutateAsync({
-      fromCommitId: baseCommitId,
-      name: buildInlineRevisionBranchName(plan),
-      resumeId,
-    });
-
-    writePersistedInlineRevisionSession(newBranch.id, {
-      version: 1,
-      sourceBranchId: activeBranchId,
-      sourceBranchName: activeBranchName,
-      stage: "actions",
-      plan,
-      workItems: buildInlineRevisionWorkItemsFromPlan(plan),
-      suggestions: null,
-    });
-
-    setPendingActionBranchId(newBranch.id);
-    await navigate({
-      to: "/resumes/$id",
-      params: { id: resumeId },
-      search: { branchId: newBranch.id },
+  const clearUrlSessionParams = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (navigate as any)({
+      search: (prev: Record<string, unknown>) => {
+        const { assistant: _a, sourceBranchId: _s, sourceBranchName: _n, ...rest } = prev as {
+          assistant?: string;
+          sourceBranchId?: string;
+          sourceBranchName?: string;
+          [key: string]: unknown;
+        };
+        return rest;
+      },
       replace: true,
     });
   };
 
-  const open = () => {
-    setIsOpen(true);
-    setSourceBranchName(activeBranchName);
-    setSourceBranchId(activeBranchId);
-    setPlanningSessionId(crypto.randomUUID());
-    setPlan(null);
-    setWorkItems(null);
-    setSuggestions(null);
-    setPendingActionBranchId(null);
-    startPlanning();
-  };
-
   const reset = () => {
     setIsOpen(false);
-    setStage("planning");
-    setPlan(null);
+    setIsFinalized(false);
     setWorkItems(null);
     setSuggestions(null);
     setSourceBranchName(null);
     setSourceBranchId(null);
-    setPlanningSessionId(null);
-    setPendingActionBranchId(null);
     setIsPreparingFinalize(false);
     closeAssistant();
+    clearUrlSessionParams();
   };
 
   const close = () => {
     setIsOpen(false);
     hideDrawer();
+    clearUrlSessionParams();
   };
 
+  // Restore session from URL params when page loads with ?assistant=true
   useEffect(() => {
-    if (!activeBranchId || activeBranchId === mainBranchId) {
+    if (!activeBranchId || activeBranchId === mainBranchId || !isEditRoute) {
       restoredBranchIdRef.current = null;
       return;
     }
@@ -317,90 +301,173 @@ export function useInlineResumeRevision({
       return;
     }
 
-    const persistedSession = readPersistedInlineRevisionSession(activeBranchId);
-    if (!persistedSession) {
+    if (assistantMode !== "true") {
       restoredBranchIdRef.current = activeBranchId;
       return;
     }
 
-    restoredBranchIdRef.current = activeBranchId;
-    if (!isEditRoute) {
-      void navigate({
-        to: "/resumes/$id/edit",
-        params: { id: resumeId },
-        search: { branchId: activeBranchId, assistant: "true" },
-        replace: true,
-      });
+    // Wait for the conversation list to load before deciding whether to restore
+    if (existingActionConversations === undefined) {
       return;
     }
+
+    restoredBranchIdRef.current = activeBranchId;
 
     setIsOpen(true);
-    setStage(persistedSession.stage);
-    setPlan(persistedSession.plan);
-    setWorkItems(persistedSession.workItems);
-    setSuggestions(persistedSession.suggestions);
-    setSourceBranchId(persistedSession.sourceBranchId);
-    setSourceBranchName(persistedSession.sourceBranchName);
-    setPlanningSessionId(null);
-    setPendingActionBranchId(null);
-    setIsPreparingFinalize(false);
-    if (persistedSession.stage === "actions") {
-      openActionAssistant(activeBranchId);
-    } else {
-      hideDrawer();
-    }
-  }, [activeBranchId, hideDrawer, isEditRoute, isOpen, mainBranchId, navigate, openActionAssistant, resumeId]);
+    setIsFinalized(false);
+    setSuggestions(null);
+    setSourceBranchId(urlSourceBranchId ?? activeBranchId);
+    setSourceBranchName(urlSourceBranchName ?? activeBranchName);
+    setWorkItems(null);
 
-  useLayoutEffect(() => {
-    if (!activeBranchId || activeBranchId === mainBranchId || !isOpen) {
-      return;
-    }
-
-    if (stage !== "actions" && stage !== "finalize") {
-      return;
-    }
-
-    if (stage === "actions" && !workItems && !suggestions) {
-      return;
-    }
-
-    writePersistedInlineRevisionSession(activeBranchId, {
-      version: 1,
-      sourceBranchId,
-      sourceBranchName,
-      stage,
-      plan,
-      workItems,
-      suggestions,
+    const restoredConversationId = latestOpenActionConversationId ?? null;
+    const restoredKickoff = restoredConversationId === null ? null : undefined;
+    openRevisionAssistant({
+      branchId: activeBranchId,
+      kickoffMessage: restoredKickoff,
+      initialConversationId: restoredConversationId ?? undefined,
     });
   }, [
     activeBranchId,
+    assistantMode,
+    existingActionConversations,
+    isEditRoute,
     isOpen,
+    latestOpenActionConversationId,
     mainBranchId,
-    plan,
-    sourceBranchId,
-    sourceBranchName,
-    stage,
-    suggestions,
-    workItems,
+    openRevisionAssistant,
+    urlSourceBranchId,
+    urlSourceBranchName,
+    activeBranchName,
   ]);
 
   useEffect(() => {
-    if (!isOpen || stage !== "actions" || suggestions || !existingActionConversation) {
+    if (!isOpen || suggestions || !existingActionConversation) {
       return;
     }
 
-    const restoredSuggestions = deriveSuggestionsFromConversation(existingActionConversation.messages);
+    const restoredSuggestions = existingActionConversation.revisionSuggestions;
     if (restoredSuggestions) {
-      setSuggestions(restoredSuggestions);
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, restoredSuggestions));
     }
-  }, [existingActionConversation, isOpen, stage, suggestions]);
+  }, [existingActionConversation, isOpen, suggestions]);
+
+  useEffect(() => {
+    const currentConversation = activeAssistantConversation;
+    if (!isOpen || !currentConversation) {
+      return;
+    }
+
+    if (
+      activeBranchId &&
+      assistantEntityType === "resume-revision-actions" &&
+      assistantEntityId === activeBranchId
+    ) {
+      const derivedWorkItems = deriveWorkItemsFromConversation(currentConversation.messages);
+      if (derivedWorkItems) {
+        setWorkItems(derivedWorkItems);
+      }
+
+      const derivedSuggestions = currentConversation.revisionSuggestions;
+      if (derivedSuggestions) {
+        setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, derivedSuggestions));
+      }
+    }
+  }, [
+    activeAssistantConversation,
+    activeBranchId,
+    assistantEntityId,
+    assistantEntityType,
+    isOpen,
+  ]);
+
+  useEffect(() => {
+    if (!suggestions) {
+      return;
+    }
+
+    const reconciled = reconcileRevisionSuggestionsWithCurrentContent(suggestions, {
+      title: resumeTitle,
+      consultantTitle,
+      presentation,
+      summary,
+      skills,
+      assignments: sortedAssignments.map((assignment) => ({
+        id: assignment.assignmentId ?? assignment.id,
+        ...(assignment.description !== undefined ? { description: assignment.description } : {}),
+      })),
+    });
+
+    const didChange = JSON.stringify(reconciled) !== JSON.stringify(suggestions);
+    if (!didChange) {
+      return;
+    }
+
+    setSuggestions(reconciled);
+  }, [
+    consultantTitle,
+    presentation,
+    resumeTitle,
+    skills,
+    sortedAssignments,
+    suggestions,
+    summary,
+  ]);
+
+  useEffect(() => {
+    const branchHandoff = activeAssistantConversation?.latestBranchHandoff;
+    if (
+      !isOpen
+      || !assistantConversationId
+      || !branchHandoff
+      || handledBranchHandoffRef.current === branchHandoff.branchId
+    ) {
+      return;
+    }
+
+    handledBranchHandoffRef.current = branchHandoff.branchId;
+
+    openingRevisionBranchIdRef.current = branchHandoff.branchId;
+
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
+      queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
+      queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
+    ]).then(() =>
+      navigate({
+        to: "/resumes/$id/edit",
+        params: { id: resumeId },
+        search: {
+          branchId: branchHandoff.branchId,
+          assistant: "true",
+          sourceBranchId: activeBranchId ?? undefined,
+          sourceBranchName: activeBranchName,
+        },
+        replace: true,
+      }).then(() => {
+        openRevisionAssistantRef.current({
+          branchId: branchHandoff.branchId,
+          branchAlreadyCreated: true,
+          branchGoal: branchHandoff.goal,
+        });
+      })
+    ).finally(() => {
+      openingRevisionBranchIdRef.current = null;
+    });
+  }, [
+    activeAssistantConversation,
+    activeBranchId,
+    activeBranchName,
+    assistantConversationId,
+    isOpen,
+    navigate,
+    queryClient,
+    resumeId,
+  ]);
+
   const isReadyToFinalize =
-    (workItems?.items.length ?? 0) > 0 &&
-    (workItems?.items.every(
-      (item) => item.status === "completed" || item.status === "no_changes_needed",
-    ) ?? false) &&
-    (suggestions?.suggestions.every((suggestion) => suggestion.status !== "pending") ?? true);
+    (suggestions?.suggestions.length ?? 0) > 0 &&
+    (suggestions?.suggestions.every((s) => s.status !== "pending") ?? false);
 
   const prepareFinalize = async () => {
     if (!activeBranchId) {
@@ -417,7 +484,7 @@ export function useInlineResumeRevision({
         });
       }
 
-      setStage("finalize");
+      setIsFinalized(true);
       hideDrawer();
     } finally {
       setIsPreparingFinalize(false);
@@ -425,24 +492,31 @@ export function useInlineResumeRevision({
   };
 
   const finish = (action: "merge" | "keep") => {
-    if (!activeBranchId || !sourceBranchId) {
+    const currentSourceBranchId = sourceBranchId ?? urlSourceBranchId;
+    if (!activeBranchId || !currentSourceBranchId) {
       return;
     }
 
     finaliseInlineRevision.mutate(
       {
-        sourceBranchId,
+        sourceBranchId: currentSourceBranchId,
         revisionBranchId: activeBranchId,
         action,
       },
       {
         onSuccess: async (data) => {
-          clearPersistedInlineRevisionSession(activeBranchId);
+          if (assistantConversationId && !activeAssistantConversation?.isClosed) {
+            await closeActionConversation.mutateAsync({ conversationId: assistantConversationId });
+          }
+
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
             queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
             queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
-            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", sourceBranchId] }),
+            queryClient.invalidateQueries({
+              queryKey: ["listAIConversations", "resume-revision-actions", activeBranchId],
+            }),
+            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", currentSourceBranchId] }),
             queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", data.resultBranchId] }),
           ]);
 
@@ -463,39 +537,32 @@ export function useInlineResumeRevision({
 
   return {
     isOpen,
-    stage,
-    plan,
+    stage: isFinalized ? "finalize" as const : "revision" as const,
     workItems,
     suggestions: suggestions?.suggestions ?? [],
     selectedSuggestionId,
-    sourceBranchName: sourceBranchName ?? activeBranchName,
+    sourceBranchName: sourceBranchName ?? urlSourceBranchName ?? activeBranchName,
     checklistWidth: INLINE_REVISION_CHECKLIST_WIDTH,
     chatWidth: INLINE_REVISION_CHAT_WIDTH,
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
-    guardrail,
-    automation,
+    toolRegistry,
+    toolContext,
     applyingSuggestionId,
     isPreparingFinalize,
     isReadyToFinalize,
-    isMovingToActions:
-      pendingActionBranchId !== null || forkResumeBranch.isPending || closeInlineConversation.isPending,
+    isOpening: false,
     isMerging: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "merge",
     isKeeping: finaliseInlineRevision.isPending && finaliseInlineRevision.variables?.action === "keep",
     reviewDialog,
     open,
     close,
     reset: () => {
-      clearPersistedInlineRevisionSession(activeBranchId);
       reset();
     },
-    openActions,
     prepareFinalize,
-    backToActions: () => setStage("actions"),
+    backToRevision: () => setIsFinalized(false),
     selectSuggestion,
     openSuggestionReview,
+    dismissSuggestion,
     keepBranch: () => finish("keep"),
     mergeBranch: () => finish("merge"),
   };

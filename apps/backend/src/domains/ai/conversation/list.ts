@@ -26,6 +26,7 @@ export async function listAIConversations(
       systemPrompt: row.system_prompt,
       title: row.title,
       isClosed: row.is_closed,
+      pendingDecision: row.pending_decision,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     })),

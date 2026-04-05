@@ -42,8 +42,9 @@ export async function getResumeBranchHistoryGraph(
     .where("resume_branches.resume_id", "=", input.resumeId)
     .orderBy("resume_branches.created_at", "asc")
     .execute();
+  const activeBranchIds = new Set(branches.map((branch) => branch.id));
 
-  const commits = await db
+  const rawCommits = await db
     .selectFrom("resume_commits")
     .leftJoin("resume_commit_parents as rcp", (join) =>
       join
@@ -64,8 +65,12 @@ export async function getResumeBranchHistoryGraph(
     .where("resume_commits.resume_id", "=", input.resumeId)
     .orderBy("resume_commits.created_at", "asc")
     .execute();
+  const commits = rawCommits.filter(
+    (commit) => commit.branch_id !== null && activeBranchIds.has(commit.branch_id),
+  );
+  const commitIds = new Set(commits.map((commit) => commit.id));
 
-  const edges = await db
+  const rawEdges = await db
     .selectFrom("resume_commit_parents as rcp")
     .innerJoin("resume_commits as rc", "rc.id", "rcp.commit_id")
     .select([
@@ -77,6 +82,9 @@ export async function getResumeBranchHistoryGraph(
     .orderBy("rcp.commit_id", "asc")
     .orderBy("rcp.parent_order", "asc")
     .execute();
+  const edges = rawEdges.filter(
+    (edge) => commitIds.has(edge.commit_id) && commitIds.has(edge.parent_commit_id),
+  );
 
   return {
     branches: branches.map((branch) => ({

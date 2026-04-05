@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { sql, type Kysely } from "kysely";
 import type { Database } from "../db/types.js";
@@ -6,13 +6,12 @@ import { createDbFromConnectionString } from "../db/client.js";
 
 const MIGRATION_TABLES = new Set(["kysely_migration", "kysely_migration_lock"]);
 
-function ensureBackendEnvLoaded() {
-  if (process.env["DATABASE_URL"]) {
+function loadEnvFile(path: string) {
+  if (!existsSync(path)) {
     return;
   }
 
-  const envPath = resolve(process.cwd(), ".env");
-  const envContents = readFileSync(envPath, "utf8");
+  const envContents = readFileSync(path, "utf8");
 
   for (const line of envContents.split(/\r?\n/u)) {
     const trimmed = line.trim();
@@ -36,17 +35,33 @@ function ensureBackendEnvLoaded() {
   }
 }
 
-export function createIntegrationTestDb(connectionString = process.env["DATABASE_URL"]): Kysely<Database> {
+function ensureBackendEnvLoaded() {
+  loadEnvFile(resolve(process.cwd(), ".env.test"));
+  loadEnvFile(resolve(process.cwd(), ".env"));
+}
+
+function assertSafeTestDatabaseUrl(testConnectionString: string, appConnectionString: string | undefined) {
+  if (appConnectionString && testConnectionString === appConnectionString) {
+    throw new Error(
+      "[backend] TEST_DATABASE_URL must not match DATABASE_URL. " +
+        "Refusing to run integration tests against the application database."
+    );
+  }
+}
+
+export function createIntegrationTestDb(connectionString = process.env["TEST_DATABASE_URL"]): Kysely<Database> {
   ensureBackendEnvLoaded();
 
-  const resolvedConnectionString = connectionString ?? process.env["DATABASE_URL"];
+  const resolvedConnectionString = connectionString ?? process.env["TEST_DATABASE_URL"];
 
   if (!resolvedConnectionString) {
     throw new Error(
-      "[backend] DATABASE_URL environment variable is not set. " +
-        "Cannot create integration test database."
+      "[backend] TEST_DATABASE_URL environment variable is not set. " +
+        "Cannot create integration test database safely."
     );
   }
+
+  assertSafeTestDatabaseUrl(resolvedConnectionString, process.env["DATABASE_URL"]);
 
   return createDbFromConnectionString(resolvedConnectionString);
 }

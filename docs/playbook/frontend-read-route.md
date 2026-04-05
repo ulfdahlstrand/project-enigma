@@ -11,7 +11,7 @@ any new "list view" or "detail view" route in `@cv-tool/frontend`.
 
 ## Context / Background
 
-This pattern was established in Task #62 (the `/employee` route) and is the
+This pattern was established in Task #62 (the `/employees` route) and is the
 required integration pattern for all subsequent feature pages. It connects:
 
 - **TanStack Router** file-based routing (ADR-007) — one `.tsx` file per route
@@ -36,7 +36,7 @@ the `useQuery` hook, the MUI rendering, and all i18n calls. Tests are co-located
    silently fall back to raw keys unless you verify both files are updated.
 
 2. **oRPC procedures without an `.input()` schema accept `{}` as argument.** The
-   `listEmployees` contract is defined as `oc.output(schema)` with no `.input()`.
+  `listEmployees` contract is defined as `oc.output(schema)` with no `.input()`.
    Call it as `orpc.listEmployees({})` — passing an empty object is the safe
    pattern regardless of whether input is defined.
 
@@ -123,7 +123,7 @@ void i18n.use(initReactI18next).init({
 
 ### 5. Create the route file at `src/routes/<name>.tsx`
 
-Follow this exact structure — the `/employee` route is the reference implementation:
+Follow this exact structure — the `/employees` route is the reference implementation:
 
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
@@ -294,7 +294,7 @@ function renderPage() {
 
 > **Note:** No `RouterProvider` is needed in the render wrapper if the component
 > does not call any TanStack Router hooks (e.g. `useParams`, `useNavigate`).
-> The `/employee` route does not use router hooks, so the simpler wrapper was
+> The `/employees` route does not use router hooks, so the simpler wrapper was
 > sufficient. If your route uses router context, add a `RouterProvider` with a
 > test router or use the full custom render from `src/test-utils/render.tsx`.
 
@@ -395,4 +395,4 @@ Zero errors required before opening a PR.
 
 ## Reference Tasks
 
-- #62 — Build `/employee` frontend route that lists employees from the backend
+- #62 — Build `/employees` frontend route that lists employees from the backend

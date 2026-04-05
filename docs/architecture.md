@@ -24,11 +24,11 @@ Domain-specific details live in dedicated sub-documents under `docs/arch/`. **Do
 
 | File | Domain |
 |------|--------|
-| [`arch/frontend.md`](./arch/frontend.md) | UI, components, styling, routing, data-fetching, i18n |
-| [`arch/backend.md`](./arch/backend.md) | Server, API (oRPC), services, shared contracts, database client (Kysely) |
+| [`arch/frontend/index.md`](./arch/frontend/index.md) | Frontend index with links to smaller frontend docs |
+| [`arch/backend/index.md`](./arch/backend/index.md) | Backend index with links to smaller backend docs |
 | [`arch/data-model.md`](./arch/data-model.md) | Database, schema, migrations (Kysely Migrator) |
-| [`arch/testing.md`](./arch/testing.md) | Test framework, file conventions, coverage |
-| [`arch/infrastructure.md`](./arch/infrastructure.md) | Docker, Turborepo pipeline, CI/CD, environments, deployment |
+| [`arch/testing/index.md`](./arch/testing/index.md) | Testing index with links to smaller testing docs |
+| [`arch/infrastructure/index.md`](./arch/infrastructure/index.md) | Infrastructure index with links to smaller infra docs |
 
 ---
 
@@ -74,9 +74,9 @@ For full details per layer, see the relevant sub-document above.
 
 ### Directory Responsibilities (Summary)
 
-- **`apps/`** — Application code. Apps are deployed/run. See [`frontend.md`](./arch/frontend.md), [`backend.md`](./arch/backend.md).
+- **`apps/`** — Application code. Apps are deployed/run. See [`frontend`](./arch/frontend/index.md), [`backend`](./arch/backend/index.md).
 - **`packages/`** — Shared libraries consumed by apps. No business logic.
-- **`docker/`** — All Docker-related files. See [`infrastructure.md`](./arch/infrastructure.md).
+- **`docker/`** — All Docker-related files. See [`infrastructure`](./arch/infrastructure/index.md).
 - **`docs/`** — Architecture documentation and ADRs. Not consumed by application code.
 
 ---

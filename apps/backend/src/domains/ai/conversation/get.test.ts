@@ -17,6 +17,7 @@ const CONVERSATION_ROW = {
   system_prompt: "You are a CV expert.",
   title: null,
   is_closed: false,
+  pending_decision: null,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
 };
@@ -39,11 +40,8 @@ const MESSAGE_ROWS = [
 ];
 
 function buildDb(conversation: unknown, messages: unknown[]) {
-  let callCount = 0;
-  const selectFrom = vi.fn().mockImplementation(() => {
-    callCount++;
-    if (callCount === 1) {
-      // First call: fetch conversation
+  const selectFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === "ai_conversations") {
       return {
         selectAll: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -52,12 +50,38 @@ function buildDb(conversation: unknown, messages: unknown[]) {
         }),
       };
     }
-    // Second call: fetch messages
+    if (table === "ai_messages") {
+      return {
+        selectAll: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              execute: vi.fn().mockResolvedValue(messages),
+            }),
+          }),
+        }),
+      };
+    }
+    if (table === "ai_revision_suggestions") {
+      return {
+        selectAll: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              execute: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      };
+    }
+
     return {
-      selectAll: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockReturnValue({
-            execute: vi.fn().mockResolvedValue(messages),
+          where: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                executeTakeFirst: vi.fn().mockResolvedValue(undefined),
+              }),
+            }),
           }),
         }),
       }),
@@ -78,6 +102,7 @@ describe("getAIConversation", () => {
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]).toMatchObject({ role: "user", content: "Hello" });
     expect(result.messages[1]).toMatchObject({ role: "assistant", content: "Hi there!" });
+    expect(result.revisionSuggestions).toBeNull();
   });
 
   it("throws NOT_FOUND when conversation does not exist", async () => {

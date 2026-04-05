@@ -40,7 +40,7 @@ export function ResumeSkillsPage({
   return (
     <Box {...(sectionRef ? { ref: sectionRef } : {})} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
-        {isEditing && !isSnapshotMode ? (
+        {isEditing ? (
           <SkillsEditor
             resumeId={resumeId}
             skills={skills}

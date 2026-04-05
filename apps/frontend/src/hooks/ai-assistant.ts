@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "../orpc-client";
+import { INTERNAL_AUTOSTART_PREFIX } from "../components/ai-assistant/ai-message-parsing";
 
 // ---------------------------------------------------------------------------
 // Query key factories
@@ -55,16 +56,34 @@ export function useCreateAIConversation() {
   });
 }
 
+const MAX_AUTO_CONTINUATIONS = 30;
+
 export function useSendAIMessage(conversationId: string | null) {
   const queryClient = useQueryClient();
+
+  const continuePendingWorkItems = async (cid: string, depth: number): Promise<void> => {
+    if (depth >= MAX_AUTO_CONTINUATIONS) return;
+    const result = await orpc.sendAIMessage({
+      conversationId: cid,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} Continue processing the next pending revision work item.`,
+    });
+    void queryClient.invalidateQueries({ queryKey: aiConversationKey(cid) });
+    if (result.needsContinuation) {
+      await continuePendingWorkItems(cid, depth + 1);
+    }
+  };
+
   return useMutation({
     mutationFn: (input: { conversationId: string; userMessage: string }) =>
       orpc.sendAIMessage(input),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       if (conversationId) {
         void queryClient.invalidateQueries({
           queryKey: aiConversationKey(conversationId),
         });
+      }
+      if (data.needsContinuation) {
+        void continuePendingWorkItems(variables.conversationId, 0);
       }
     },
   });

@@ -7,6 +7,8 @@ import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { logger } from "../../../infra/logger.js";
+import { sendAIMessage } from "./message.js";
+import { INTERNAL_AUTOSTART_PREFIX } from "./tool-parsing.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 512;
@@ -14,7 +16,14 @@ const MAX_TOKENS = 512;
 export async function createAIConversation(
   db: Kysely<Database>,
   openaiClient: OpenAI,
-  input: { entityType: string; entityId: string; systemPrompt: string; title?: string | undefined; kickoffMessage?: string | undefined },
+  input: {
+    entityType: string;
+    entityId: string;
+    systemPrompt: string;
+    title?: string | undefined;
+    kickoffMessage?: string | undefined;
+    autoStartMessage?: string | undefined;
+  },
   userId: string
 ) {
   // Resume an existing open conversation for the same entity rather than
@@ -44,6 +53,7 @@ export async function createAIConversation(
       systemPrompt: existing.system_prompt,
       title: existing.title,
       isClosed: existing.is_closed,
+      pendingDecision: existing.pending_decision,
       createdAt: existing.created_at.toISOString(),
       updatedAt: existing.updated_at.toISOString(),
     };
@@ -102,6 +112,13 @@ export async function createAIConversation(
     });
   }
 
+  if (input.autoStartMessage) {
+    await sendAIMessage(db, openaiClient, {
+      conversationId: row.id,
+      userMessage: `${INTERNAL_AUTOSTART_PREFIX} ${input.autoStartMessage}`,
+    });
+  }
+
   return {
     id: row.id,
     createdBy: row.created_by,
@@ -110,6 +127,7 @@ export async function createAIConversation(
     systemPrompt: row.system_prompt,
     title: row.title,
     isClosed: row.is_closed,
+    pendingDecision: row.pending_decision,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };

@@ -9,6 +9,18 @@ import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/requ
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { getResumeCommitInputSchema, getResumeCommitOutputSchema } from "@cv-tool/contracts";
 
+function normaliseRichText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  return typeof value === "string" ? value : "";
+}
+
 function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitContent {
   return {
     ...content,
@@ -20,6 +32,7 @@ function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitConte
     assignments: Array.isArray(content.assignments)
       ? content.assignments.map((assignment) => ({
           ...assignment,
+          description: normaliseRichText(assignment.description),
           endDate: assignment.endDate ?? null,
           technologies: Array.isArray(assignment.technologies) ? assignment.technologies : [],
           keywords: assignment.keywords ?? null,

@@ -1,21 +1,18 @@
 import { useCallback } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
-  buildResumeRevisionActionPrompt,
-  buildResumeRevisionKickoff,
-  buildResumeRevisionPrompt,
+  buildUnifiedRevisionPrompt,
+  buildUnifiedRevisionKickoff,
+  buildUnifiedRevisionAutoStart,
 } from "../../components/ai-assistant/lib/build-resume-revision-prompt";
 import {
   appendUniqueRevisionSuggestions,
-  buildInlineRevisionWorkItemAutomationMessage,
   markWorkItemsCompletedFromSuggestions,
+  normalizeComparableText,
   resolveRevisionWorkItems,
-  type InlineRevisionStage,
 } from "../../components/revision/inline-revision";
 import { createResumeActionToolRegistry } from "../../lib/ai-tools/registries/resume-action-tools";
-import { createResumePlanningToolRegistry } from "../../lib/ai-tools/registries/resume-planning-tools";
 import type {
-  RevisionPlan,
   RevisionSuggestions,
   RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
@@ -32,11 +29,6 @@ type Params = {
   summary: string | null;
   language: string;
   t: (key: string) => string;
-  stage: InlineRevisionStage;
-  plan: RevisionPlan | null;
-  workItems: RevisionWorkItems | null;
-  workItemsRef: { current: RevisionWorkItems | null };
-  setPlan: Dispatch<SetStateAction<RevisionPlan | null>>;
   setWorkItems: Dispatch<SetStateAction<RevisionWorkItems | null>>;
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
   openAssistant: (params: OpenAssistantOptions) => void;
@@ -55,11 +47,6 @@ export function useInlineRevisionAssistant({
   summary,
   language,
   t,
-  stage,
-  plan,
-  workItems,
-  workItemsRef,
-  setPlan,
   setWorkItems,
   setSuggestions,
   openAssistant,
@@ -68,12 +55,42 @@ export function useInlineRevisionAssistant({
   assistantEntityId,
   assistantToolRoute,
 }: Params) {
-  const planningToolRegistry = createResumePlanningToolRegistry({
-    getResumeSnapshot: () => resumeInspectionSnapshot,
-    setRevisionPlan: setPlan,
-  });
+  const filterNoOpSuggestions = (incoming: RevisionSuggestions): RevisionSuggestions => {
+    const filteredSuggestions = incoming.suggestions.filter((suggestion) => {
+      const nextText = normalizeComparableText(suggestion.suggestedText);
+      const section = suggestion.section.trim().toLowerCase();
 
-  const actionToolRegistry = createResumeActionToolRegistry({
+      if (suggestion.assignmentId) {
+        const assignment = resumeInspectionSnapshot.assignments.find((item) => item.id === suggestion.assignmentId);
+        return normalizeComparableText(assignment?.description) !== nextText;
+      }
+
+      if (section.includes("title") || section.includes("titel")) {
+        return normalizeComparableText(resumeTitle) !== nextText;
+      }
+
+      if (section.includes("consultant")) {
+        return normalizeComparableText(consultantTitle) !== nextText;
+      }
+
+      if (section.includes("presentation") || section.includes("profil") || section.includes("intro")) {
+        return normalizeComparableText(presentation.join("\n\n")) !== nextText;
+      }
+
+      if (section.includes("summary") || section.includes("sammanfatt")) {
+        return normalizeComparableText(summary) !== nextText;
+      }
+
+      return true;
+    });
+
+    return {
+      ...incoming,
+      suggestions: filteredSuggestions,
+    };
+  };
+
+  const toolRegistry = createResumeActionToolRegistry({
     getResumeSnapshot: () => resumeInspectionSnapshot,
     setRevisionWorkItems: (incoming) => {
       setWorkItems((prev) => resolveRevisionWorkItems(prev, incoming));
@@ -98,51 +115,27 @@ export function useInlineRevisionAssistant({
       });
     },
     appendRevisionSuggestions: (incoming) => {
-      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
-      setSuggestions((prev) => {
-        const activeItems = (workItemsRef.current?.items ?? []).filter(
-          (item) => item.status !== "completed" && item.status !== "no_changes_needed",
-        );
-        const allowedIds = new Set(activeItems.map((item) => item.id));
-        const filteredIncoming = {
-          ...incoming,
-          suggestions: incoming.suggestions.filter((suggestion) => {
-            const workItemId = suggestion.id.split(":")[0] ?? suggestion.id;
-            if (allowedIds.size === 0 || allowedIds.has(workItemId)) {
-              return true;
-            }
+      const nextSuggestions = filterNoOpSuggestions(incoming);
+      if (nextSuggestions.suggestions.length === 0) {
+        return;
+      }
 
-            return activeItems.some((item) => {
-              if (suggestion.assignmentId && item.assignmentId) {
-                return item.assignmentId === suggestion.assignmentId;
-              }
-
-              return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
-            });
-          }),
-        };
-
-        if (filteredIncoming.suggestions.length === 0) {
-          return prev;
-        }
-
-        return appendUniqueRevisionSuggestions(prev, filteredIncoming);
-      });
+      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, nextSuggestions));
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, nextSuggestions));
     },
     setRevisionSuggestions: (incoming) => {
-      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, incoming));
-      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, incoming));
+      const nextSuggestions = filterNoOpSuggestions(incoming);
+      if (nextSuggestions.suggestions.length === 0) {
+        return;
+      }
+
+      setWorkItems((prev) => markWorkItemsCompletedFromSuggestions(prev, nextSuggestions));
+      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, nextSuggestions));
     },
   });
 
-  const planningToolContext: AIToolContext = {
-    route: "/_authenticated/resumes/$id/planning",
-    entityType: "resume",
-    entityId: resumeId,
-  };
-
-  const actionToolContext: AIToolContext = {
-    route: "/_authenticated/resumes/$id/actions",
+  const toolContext: AIToolContext = {
+    route: "/_authenticated/resumes/$id/revision",
     entityType: "resume",
     entityId: resumeId,
   };
@@ -151,11 +144,23 @@ export function useInlineRevisionAssistant({
     .filter(Boolean)
     .join("\n\n");
 
-  const openActionAssistant = useCallback((branchId: string) => {
+  const openRevisionAssistant = useCallback(({
+    branchId,
+    kickoffMessage,
+    initialConversationId,
+    branchAlreadyCreated,
+    branchGoal,
+  }: {
+    branchId: string;
+    kickoffMessage?: string | null | undefined;
+    initialConversationId?: string | null | undefined;
+    branchAlreadyCreated?: boolean | null | undefined;
+    branchGoal?: string | null | undefined;
+  }) => {
     if (
       assistantEntityType === "resume-revision-actions" &&
       assistantEntityId === branchId &&
-      assistantToolRoute === actionToolContext.route
+      assistantToolRoute === toolContext.route
     ) {
       hideDrawer();
       return;
@@ -164,18 +169,33 @@ export function useInlineRevisionAssistant({
     openAssistant({
       entityType: "resume-revision-actions",
       entityId: branchId,
-      title: t("revision.inline.actionsConversationTitle"),
-      systemPrompt: buildResumeRevisionActionPrompt(language),
+      title: t("revision.inline.conversationTitle"),
+      systemPrompt: buildUnifiedRevisionPrompt(language, {
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+      }),
+      kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff({
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+        branchGoal,
+      }),
+      ...(buildUnifiedRevisionAutoStart({
+        branchAlreadyCreated: branchAlreadyCreated ?? false,
+        branchGoal,
+      }) !== null
+        ? {
+            autoStartMessage: buildUnifiedRevisionAutoStart({
+              branchAlreadyCreated: branchAlreadyCreated ?? false,
+              branchGoal,
+            })!,
+          }
+        : {}),
+      initialConversationId,
       originalContent,
-      toolRegistry: actionToolRegistry,
-      toolContext: actionToolContext,
-      onAccept: () => {},
+      toolRegistry,
+      toolContext,
     });
 
     hideDrawer();
   }, [
-    actionToolContext,
-    actionToolRegistry,
     assistantEntityId,
     assistantEntityType,
     assistantToolRoute,
@@ -184,73 +204,13 @@ export function useInlineRevisionAssistant({
     openAssistant,
     originalContent,
     t,
+    toolContext,
+    toolRegistry,
   ]);
 
-  const openPlanning = (planningSessionId: string) => {
-    if (
-      assistantEntityType !== "resume-revision-planning" ||
-      assistantEntityId !== planningSessionId ||
-      assistantToolRoute !== planningToolContext.route
-    ) {
-      openAssistant({
-        entityType: "resume-revision-planning",
-        entityId: planningSessionId,
-        title: t("revision.inline.conversationTitle"),
-        systemPrompt: buildResumeRevisionPrompt(language),
-        kickoffMessage: buildResumeRevisionKickoff(),
-        originalContent,
-        toolRegistry: planningToolRegistry,
-        toolContext: planningToolContext,
-        onAccept: () => {},
-      });
-    }
-
-    hideDrawer();
-  };
-
-  const guardrail =
-    stage === "actions"
-      ? {
-          isSatisfied:
-            (workItems?.items.length ?? 0) > 0 &&
-            (workItems?.items.every(
-              (item) => item.status === "completed" || item.status === "no_changes_needed",
-            ) ?? false),
-          reminderMessage: [
-            "You must use the available tools for this stage.",
-            "Use the approved plan that was already provided in the kickoff context.",
-            "The approved work items already define the allowed scope for this action step.",
-            "Do not create extra work items or inspect assignments outside the approved plan.",
-            "After inspecting the source text for a work item, your next response must be a terminal tool call for that same work item.",
-            "Use set_assignment_suggestions or set_revision_suggestions if changes are needed, or mark_revision_work_item_no_changes_needed if none are needed.",
-            "Do not respond with plain text between inspect_assignment or inspect_resume_section and that terminal tool call.",
-            "Use inspect_assignment or inspect_resume_section to read exact source text for each work item.",
-            "For each work item, either create concrete suggestions or mark it as no changes needed.",
-            "Do not claim that changes are applied or complete until every work item has been handled.",
-            "Return a tool call now.",
-          ].join(" "),
-        }
-      : {
-          isSatisfied: plan !== null,
-          reminderMessage: [
-            "You must use the available tools for this stage.",
-            "Inspect the resume if needed and then create the agreed revision plan with set_revision_plan.",
-            "If the user's goal is broad, such as proofreading the whole CV, the plan must include multiple section-based actions and must not collapse to a single typo or a single section.",
-            "Do not continue with free-text execution updates until the plan has been created.",
-            "Return a tool call now.",
-          ].join(" "),
-        };
-
-  const automation = stage === "actions" ? buildInlineRevisionWorkItemAutomationMessage(workItems) : null;
-
   return {
-    planningToolRegistry,
-    actionToolRegistry,
-    planningToolContext,
-    actionToolContext,
-    openActionAssistant,
-    openPlanning,
-    guardrail,
-    automation,
+    toolRegistry,
+    toolContext,
+    openRevisionAssistant,
   };
 }

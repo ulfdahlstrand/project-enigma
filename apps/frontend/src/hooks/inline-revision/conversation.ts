@@ -1,9 +1,11 @@
 import {
-  appendUniqueRevisionSuggestions,
+  markWorkItemsCompletedFromSuggestions,
+  resolveRevisionWorkItems,
 } from "../../components/revision/inline-revision";
 import {
+  revisionWorkItemsSchema,
   normalizeRevisionSuggestionsInput,
-  type RevisionSuggestions,
+  type RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
 import type { PersistedToolCall } from "./types";
 
@@ -27,10 +29,10 @@ function extractPersistedToolCalls(text: string): PersistedToolCall[] {
   });
 }
 
-export function deriveSuggestionsFromConversation(
+export function deriveWorkItemsFromConversation(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-): RevisionSuggestions | null {
-  let nextSuggestions: RevisionSuggestions | null = null;
+): RevisionWorkItems | null {
+  let nextWorkItems: RevisionWorkItems | null = null;
 
   for (const message of messages) {
     if (message.role !== "assistant") {
@@ -38,9 +40,43 @@ export function deriveSuggestionsFromConversation(
     }
 
     for (const toolCall of extractPersistedToolCalls(message.content)) {
+      if (toolCall.toolName === "set_revision_work_items") {
+        try {
+          const incoming = revisionWorkItemsSchema.parse(toolCall.input);
+          nextWorkItems = resolveRevisionWorkItems(nextWorkItems, incoming);
+        } catch {
+          continue;
+        }
+      }
+
+      if (toolCall.toolName === "mark_revision_work_item_no_changes_needed") {
+        try {
+          const input = toolCall.input as { workItemId?: unknown; note?: unknown };
+          if (!nextWorkItems || typeof input?.workItemId !== "string") {
+            continue;
+          }
+
+          nextWorkItems = {
+            ...nextWorkItems,
+            items: nextWorkItems.items.map((item) =>
+              item.id === input.workItemId
+                ? {
+                    ...item,
+                    status: "no_changes_needed" as const,
+                    ...(typeof input.note === "string" ? { note: input.note } : {}),
+                  }
+                : item,
+            ),
+          };
+        } catch {
+          continue;
+        }
+      }
+
       if (toolCall.toolName === "set_revision_suggestions") {
         try {
-          nextSuggestions = normalizeRevisionSuggestionsInput(toolCall.input as never);
+          const normalized = normalizeRevisionSuggestionsInput(toolCall.input as never);
+          nextWorkItems = markWorkItemsCompletedFromSuggestions(nextWorkItems, normalized);
         } catch {
           continue;
         }
@@ -53,14 +89,14 @@ export function deriveSuggestionsFromConversation(
             summary?: string;
             suggestions: unknown[];
           };
-          const normalizedSuggestions = normalizeRevisionSuggestionsInput({
+          const normalized = normalizeRevisionSuggestionsInput({
             summary: input.summary,
             suggestions: input.suggestions,
           });
 
-          nextSuggestions = appendUniqueRevisionSuggestions(nextSuggestions, {
-            summary: normalizedSuggestions.summary,
-            suggestions: normalizedSuggestions.suggestions.map((suggestion) => ({
+          nextWorkItems = markWorkItemsCompletedFromSuggestions(nextWorkItems, {
+            summary: normalized.summary,
+            suggestions: normalized.suggestions.map((suggestion) => ({
               ...suggestion,
               id: `${input.workItemId}:${suggestion.id}`,
             })),
@@ -72,5 +108,5 @@ export function deriveSuggestionsFromConversation(
     }
   }
 
-  return nextSuggestions;
+  return nextWorkItems;
 }

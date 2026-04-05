@@ -25,7 +25,8 @@ import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEdi
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
-export const getResumeQueryKey = (id: string) => ["getResume", id] as const;
+export const getResumeQueryKey = (id: string, branchId?: string | null) =>
+  ["getResume", id, branchId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
@@ -44,17 +45,19 @@ export function ResumeDetailPage({
   const id = idParam!;
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId, assistant: assistantMode } =
+  const { branchId: selectedBranchId, assistant: assistantMode, sourceBranchId: urlSourceBranchId } =
     useSearch({ strict: false }) as any as {
       branchId?: string;
       assistant?: "true";
+      sourceBranchId?: string;
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const requestedBranchId = selectedBranchId ?? null;
 
   const { data: resume, isLoading, isError, error } = useQuery({
-    queryKey: getResumeQueryKey(id),
-    queryFn: () => orpc.getResume({ id }),
+    queryKey: getResumeQueryKey(id, requestedBranchId),
+    queryFn: () => orpc.getResume({ id, branchId: requestedBranchId ?? undefined }),
     retry: false,
   });
 
@@ -114,7 +117,7 @@ export function ResumeDetailPage({
     }) =>
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
     },
   });
 
@@ -122,7 +125,7 @@ export function ResumeDetailPage({
     mutationFn: () => orpc.deleteResume({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id) });
+      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
       void navigate({
         to: "/resumes",
         search: resume?.employeeId ? { employeeId: resume.employeeId } : {},
@@ -234,11 +237,18 @@ export function ResumeDetailPage({
     setDraftHighlightedItems(nextHighlightedItems);
   }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
-  const skills = snapshotContent?.skills
-    ? snapshotContent.skills.map((s) => ({ id: s.name, name: s.name, category: s.category ?? null, level: null as string | null, sortOrder: 0 }))
-    : (resume?.skills ?? []);
+  const snapshotSkills = snapshotContent?.skills
+    ? snapshotContent.skills.map((skill, index) => ({
+        id: `snapshot-skill-${index}-${skill.name}`,
+        name: skill.name,
+        category: skill.category ?? null,
+        level: skill.level ?? null,
+        sortOrder: skill.sortOrder ?? index,
+      }))
+    : null;
+  const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
   const hasSkills = skills.length > 0;
-  const showSkillsPage = hasSkills || (isEditing && !isSnapshotMode);
+  const showSkillsPage = hasSkills || isEditing;
   const hasAssignments = assignments.length > 0;
   const baseCommitId = activeBranch?.headCommitId ?? null;
   const buildDraftPatch = () => {
@@ -346,10 +356,18 @@ export function ResumeDetailPage({
   });
 
   useEffect(() => {
-    if (isEditRoute && assistantMode === "true" && !inlineRevision.isOpen) {
-      inlineRevision.open();
+    if (!isEditRoute || assistantMode !== "true" || inlineRevision.isOpen) {
+      return;
     }
-  }, [assistantMode, inlineRevision, isEditRoute]);
+
+    // Session restoration from URL params is handled inside useInlineResumeRevision.
+    // Only call open() for a fresh start when there is no sourceBranchId in the URL.
+    if (urlSourceBranchId) {
+      return;
+    }
+
+    inlineRevision.open();
+  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
@@ -423,18 +441,7 @@ export function ResumeDetailPage({
   };
 
   const handleOpenAssistant = () => {
-    if (isEditRoute) {
-      void navigate({
-        to: "/resumes/$id/edit",
-        params: { id },
-        search: {
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
-          assistant: "true",
-        },
-      });
-    }
-
-    inlineRevision.open();
+    void inlineRevision.open();
   };
 
   const handleCloseRevision = () => {

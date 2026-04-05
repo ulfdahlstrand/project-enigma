@@ -1,35 +1,57 @@
-import Box from "@mui/material/Box";
-import Divider from "@mui/material/Divider";
-import Typography from "@mui/material/Typography";
+import { useState, type SyntheticEvent } from "react";
 import { useTranslation } from "react-i18next";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+import AddIcon from "@mui/icons-material/Add";
 import { AIAssistantChat } from "../ai-assistant/AIAssistantChat";
+import { ConversationHistoryList } from "../ai-assistant/ConversationHistoryList";
 import type { AIToolContext, AIToolRegistry } from "../../lib/ai-tools/types";
-import type { InlineRevisionStage } from "./inline-revision";
+import { useAIAssistantContext } from "../../lib/ai-assistant-context";
+import { useAIConversation, useCloseAIConversation } from "../../hooks/ai-assistant";
 
 type InlineRevisionChatPanelProps = {
-  stage: InlineRevisionStage;
   toolRegistry: AIToolRegistry;
   toolContext: AIToolContext;
-  autoStartMessage?: string | null;
-  automation?: {
-    key: string;
-    message: string;
-  } | null;
-  guardrail: {
-    isSatisfied: boolean;
-    reminderMessage: string;
-  };
 };
 
+type TabValue = "chat" | "history";
+
 export function InlineRevisionChatPanel({
-  stage,
   toolRegistry,
   toolContext,
-  autoStartMessage,
-  automation,
-  guardrail,
 }: InlineRevisionChatPanelProps) {
   const { t } = useTranslation("common");
+  const {
+    entityType,
+    entityId,
+    activeConversationId,
+    setActiveConversationId,
+    selectHistoryConversation,
+  } = useAIAssistantContext();
+  const [activeTab, setActiveTab] = useState<TabValue>("chat");
+  const { data: activeConversation } = useAIConversation(activeConversationId);
+  const closeConversation = useCloseAIConversation(entityType, entityId);
+
+  const handleTabChange = (_event: SyntheticEvent, nextTab: TabValue) => {
+    setActiveTab(nextTab);
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    selectHistoryConversation(conversationId);
+    setActiveTab("chat");
+  };
+
+  const handleNewConversation = async () => {
+    if (activeConversationId && !activeConversation?.isClosed) {
+      await closeConversation.mutateAsync({ conversationId: activeConversationId });
+    }
+
+    setActiveConversationId(null);
+    setActiveTab("chat");
+  };
 
   return (
     <Box
@@ -40,24 +62,37 @@ export function InlineRevisionChatPanel({
         overflow: "hidden",
       }}
     >
-      <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", gap: 1 }}>
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h6">{t("revision.inline.chatTitle")}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {t("revision.inline.chatDescription")}
-          </Typography>
-        </Box>
+      <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
+        <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth">
+          <Tab label={t("aiAssistant.chatTab")} value="chat" />
+          <Tab label={t("aiAssistant.historyTab")} value="history" />
+        </Tabs>
       </Box>
-      <Divider />
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <AIAssistantChat
-          toolRegistry={toolRegistry}
-          toolContext={toolContext}
-          showApplyChanges={false}
-          autoStartMessage={autoStartMessage}
-          automation={automation}
-          guardrail={guardrail}
-        />
+        {activeTab === "chat" ? (
+          <AIAssistantChat
+            toolRegistry={toolRegistry}
+            toolContext={toolContext}
+            showApplyChanges={false}
+          />
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <Box sx={{ px: 2, pt: 1.5, pb: 1, flexShrink: 0 }}>
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => void handleNewConversation()}
+                size="small"
+                variant="outlined"
+                fullWidth
+              >
+                {t("aiAssistant.newConversation")}
+              </Button>
+            </Box>
+            <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
+              <ConversationHistoryList onSelectConversation={handleSelectConversation} />
+            </Box>
+          </Box>
+        )}
       </Box>
     </Box>
   );

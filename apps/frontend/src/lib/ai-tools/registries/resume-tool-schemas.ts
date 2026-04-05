@@ -81,6 +81,82 @@ const revisionSuggestionsInputShapeSchema = z.object({
   suggestions: z.array(z.union([revisionSuggestionSchema, legacyRevisionSuggestionSchema])),
 });
 
+function isGenericSuggestionTitle(title: string): boolean {
+  const normalized = title.trim().toLowerCase();
+  return (
+    normalized === "suggestion"
+    || /^suggestion \d+$/.test(normalized)
+    || normalized === "fix spelling"
+    || normalized === "spelling fix"
+    || normalized === "proofread"
+    || normalized === "review assignment"
+    || normalized === "review assignments"
+    || normalized === "fix assignment"
+    || normalized === "fix spelling in assignment"
+    || normalized === "fix spelling in assignments"
+    || normalized === "assignment correction"
+    || normalized === "fix typo"
+    || normalized === "review section"
+  );
+}
+
+function buildSuggestionTitleContext(raw: {
+  section?: string | undefined;
+  description?: string | undefined;
+  assignmentId?: string | undefined;
+  suggestedText?: string | undefined;
+}) {
+  const description = raw.description?.trim() ?? "";
+  const section = raw.section?.trim() ?? "";
+
+  const assignmentMatch =
+    description.match(/\bfor\s+(.+?)(?:\s+assignment|\s+uppdrag|\.)/i)
+    ?? description.match(/\bin\s+(.+?)(?:\s+assignment|\s+uppdrag|\.)/i)
+    ?? description.match(/\bhos\s+(.+?)(?:\.|,|$)/i);
+  const assignmentContext = assignmentMatch?.[1]?.trim();
+  if (assignmentContext) {
+    return assignmentContext.replace(/^the\s+/i, "");
+  }
+
+  if (section) {
+    return section;
+  }
+
+  const suggestedText = raw.suggestedText?.trim();
+  if (suggestedText) {
+    return excerpt(suggestedText, 48);
+  }
+
+  if (raw.assignmentId) {
+    return `assignment ${raw.assignmentId.slice(0, 8)}`;
+  }
+
+  return null;
+}
+
+function contextualizeSuggestionTitle(raw: {
+  title: string;
+  section?: string | undefined;
+  description?: string | undefined;
+  assignmentId?: string | undefined;
+  suggestedText?: string | undefined;
+}) {
+  if (!isGenericSuggestionTitle(raw.title)) {
+    return raw.title;
+  }
+
+  const context = buildSuggestionTitleContext(raw);
+  if (!context) {
+    return raw.title;
+  }
+
+  if ((raw.section ?? "").trim().toLowerCase() === "assignment") {
+    return `Fix assignment: ${context}`;
+  }
+
+  return `Revise ${context}`;
+}
+
 export function normalizeRevisionSuggestionsInput(input: unknown): RevisionSuggestions {
   const parsed = revisionSuggestionsInputShapeSchema.parse(input);
 
@@ -88,7 +164,16 @@ export function normalizeRevisionSuggestionsInput(input: unknown): RevisionSugge
     summary: parsed.summary ?? "Suggested revision actions",
     suggestions: parsed.suggestions.map((suggestion, index) => {
       if ("suggestedText" in suggestion) {
-        return suggestion;
+        return {
+          ...suggestion,
+          title: contextualizeSuggestionTitle({
+            title: suggestion.title,
+            section: suggestion.section,
+            description: suggestion.description,
+            assignmentId: suggestion.assignmentId,
+            suggestedText: suggestion.suggestedText,
+          }),
+        };
       }
 
       const fallbackTitle = suggestion.title ?? `Suggestion ${index + 1}`;
@@ -97,7 +182,17 @@ export function normalizeRevisionSuggestionsInput(input: unknown): RevisionSugge
 
       return {
         id: `suggestion-${index + 1}`,
-        title: fallbackTitle,
+        title: contextualizeSuggestionTitle({
+          title: fallbackTitle,
+          section: suggestion.location,
+          description:
+            suggestion.description ??
+            (sourceText
+              ? `Replace "${sourceText}" with the proposed correction.`
+              : "Review and apply the proposed correction."),
+          assignmentId: suggestion.assignmentId,
+          suggestedText: proposedText,
+        }),
         description:
           suggestion.description ??
           (sourceText

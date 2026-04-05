@@ -47,7 +47,7 @@ interface ResumeEditWorkspaceProps {
   certifications: string[];
   languages: string[];
   isSnapshotMode: boolean;
-  getResumeQueryKey: (id: string) => readonly ["getResume", string];
+  getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
   fabTop: number;
   onImprovePresentationAccept: (improved: string) => void;
   hasAssignments: boolean;
@@ -126,18 +126,15 @@ export function ResumeEditWorkspace({
               stage={inlineRevision.stage}
               sourceBranchName={inlineRevision.sourceBranchName}
               branchName={activeBranchName}
-              plan={inlineRevision.plan}
-              workItems={inlineRevision.workItems}
               suggestions={inlineRevision.suggestions}
               selectedSuggestionId={inlineRevision.selectedSuggestionId}
               onSelectSuggestion={inlineRevision.selectSuggestion}
               onReviewSuggestion={inlineRevision.openSuggestionReview}
-              onMoveToActions={() => void inlineRevision.openActions()}
-              isMovingToActions={inlineRevision.isMovingToActions}
+              onDismissSuggestion={inlineRevision.dismissSuggestion}
               onMoveToFinalize={() => void inlineRevision.prepareFinalize()}
               isReadyToFinalize={inlineRevision.isReadyToFinalize}
               isPreparingFinalize={inlineRevision.isPreparingFinalize}
-              onBackToActions={inlineRevision.backToActions}
+              onBackToRevision={inlineRevision.backToRevision}
             />
           </Box>
         </Slide>
@@ -196,20 +193,8 @@ export function ResumeEditWorkspace({
             }}
           >
             <InlineRevisionChatPanel
-              stage={inlineRevision.stage}
-              toolRegistry={
-                inlineRevision.stage === "actions"
-                  ? inlineRevision.actionToolRegistry
-                  : inlineRevision.planningToolRegistry
-              }
-              toolContext={
-                inlineRevision.stage === "actions"
-                  ? inlineRevision.actionToolContext
-                  : inlineRevision.planningToolContext
-              }
-              autoStartMessage={null}
-              automation={inlineRevision.automation}
-              guardrail={inlineRevision.guardrail}
+              toolRegistry={inlineRevision.toolRegistry}
+              toolContext={inlineRevision.toolContext}
             />
           </Box>
         </Slide>
