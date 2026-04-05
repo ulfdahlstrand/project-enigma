@@ -23,7 +23,6 @@ import {
 import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import {
-  deriveSuggestionsFromConversation,
   deriveWorkItemsFromConversation,
 } from "./inline-revision/conversation";
 import {
@@ -361,9 +360,7 @@ export function useInlineResumeRevision({
       return;
     }
 
-    const restoredSuggestions =
-      existingActionConversation.revisionSuggestions
-      ?? deriveSuggestionsFromConversation(existingActionConversation.messages);
+    const restoredSuggestions = existingActionConversation.revisionSuggestions;
     if (restoredSuggestions) {
       setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, restoredSuggestions));
     }
@@ -385,9 +382,7 @@ export function useInlineResumeRevision({
         setWorkItems(derivedWorkItems);
       }
 
-      const derivedSuggestions =
-        currentConversation.revisionSuggestions
-        ?? deriveSuggestionsFromConversation(currentConversation.messages);
+      const derivedSuggestions = currentConversation.revisionSuggestions;
       if (derivedSuggestions) {
         setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, derivedSuggestions));
       }

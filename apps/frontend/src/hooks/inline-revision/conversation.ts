@@ -1,5 +1,4 @@
 import {
-  appendUniqueRevisionSuggestions,
   markWorkItemsCompletedFromSuggestions,
   resolveRevisionWorkItems,
 } from "../../components/revision/inline-revision";
@@ -8,7 +7,6 @@ import {
   revisionWorkItemsSchema,
   normalizeRevisionSuggestionsInput,
   type RevisionPlan,
-  type RevisionSuggestions,
   type RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
 import type { PersistedToolCall } from "./types";
@@ -31,54 +29,6 @@ function extractPersistedToolCalls(text: string): PersistedToolCall[] {
 
     return [];
   });
-}
-
-export function deriveSuggestionsFromConversation(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-): RevisionSuggestions | null {
-  let nextSuggestions: RevisionSuggestions | null = null;
-
-  for (const message of messages) {
-    if (message.role !== "assistant") {
-      continue;
-    }
-
-    for (const toolCall of extractPersistedToolCalls(message.content)) {
-      if (toolCall.toolName === "set_revision_suggestions") {
-        try {
-          nextSuggestions = normalizeRevisionSuggestionsInput(toolCall.input as never);
-        } catch {
-          continue;
-        }
-      }
-
-      if (toolCall.toolName === "set_assignment_suggestions") {
-        try {
-          const input = toolCall.input as {
-            workItemId: string;
-            summary?: string;
-            suggestions: unknown[];
-          };
-          const normalizedSuggestions = normalizeRevisionSuggestionsInput({
-            summary: input.summary,
-            suggestions: input.suggestions,
-          });
-
-          nextSuggestions = appendUniqueRevisionSuggestions(nextSuggestions, {
-            summary: normalizedSuggestions.summary,
-            suggestions: normalizedSuggestions.suggestions.map((suggestion) => ({
-              ...suggestion,
-              id: `${input.workItemId}:${suggestion.id}`,
-            })),
-          });
-        } catch {
-          continue;
-        }
-      }
-    }
-  }
-
-  return nextSuggestions;
 }
 
 export function derivePlanFromConversation(

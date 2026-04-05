@@ -240,6 +240,11 @@ function nextOpenWorkItem<T extends {
   return items.find((item) => item.status === "pending" || item.status === "in_progress") ?? null;
 }
 
+interface MalformedRevisionToolCall {
+  toolName: string;
+  error: string;
+}
+
 function isSuggestionTargetingPendingSection(
   nextPendingItem: {
     work_item_id: string;
@@ -980,19 +985,56 @@ export async function sendAIMessage(
       && latestAssistantRequestedBranchCreation(existingMessages);
 
     for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
+      let malformedRevisionToolCall: MalformedRevisionToolCall | null = null;
       const revisionToolCalls = isRevisionConversation
-        ? (assistantMessage.tool_calls ?? []).map((toolCall: any) => ({
-            // OpenAI SDK narrows this poorly across tool variants; the revision
-            // path only sends function tools.
-            id: toolCall.id,
-            toolName: toolCall.function.name,
-            input: parseRevisionToolArguments(
-              toolCall.function.name,
-              toolCall.function.arguments ?? "{}",
-            ),
-          }))
+        ? (assistantMessage.tool_calls ?? []).flatMap((toolCall: any) => {
+            try {
+              return [{
+                // OpenAI SDK narrows this poorly across tool variants; the revision
+                // path only sends function tools.
+                id: toolCall.id,
+                toolName: toolCall.function.name,
+                input: parseRevisionToolArguments(
+                  toolCall.function.name,
+                  toolCall.function.arguments ?? "{}",
+                ),
+              }];
+            } catch (error) {
+              malformedRevisionToolCall = {
+                toolName:
+                  typeof toolCall?.function?.name === "string"
+                    ? toolCall.function.name
+                    : "unknown_tool",
+                error: error instanceof Error ? error.message : "Invalid tool arguments",
+              };
+              return [];
+            }
+          })
         : [];
       const legacyToolCalls = !isRevisionConversation ? extractToolCalls(assistantContent) : [];
+
+      const malformedToolCall = malformedRevisionToolCall as MalformedRevisionToolCall | null;
+      if (isRevisionConversation && malformedToolCall !== null) {
+        logger.warn("AI revision tool arguments could not be parsed", {
+          conversationId: input.conversationId,
+          toolName: malformedToolCall.toolName,
+          error: malformedToolCall.error,
+        });
+
+        const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} Your previous tool call for ${malformedToolCall.toolName} had invalid JSON arguments (${malformedToolCall.error}). Return the same tool again with valid JSON arguments that match the tool schema. Do not answer with plain text.`;
+
+        await insertAIDelivery(db, {
+          conversationId: input.conversationId,
+          kind: "internal_message",
+          role: "user",
+          content: enforcementContent,
+        });
+
+        openAIMessages.push({ role: "user", content: enforcementContent });
+        assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+        assistantContent = assistantMessage.content ?? "";
+        continue;
+      }
 
       if (isRevisionConversation && revisionToolCalls.length > 0) {
         if (branchCreationConfirmed) {

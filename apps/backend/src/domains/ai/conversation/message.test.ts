@@ -593,6 +593,68 @@ describe("sendAIMessage — backend tool-call loop", () => {
     vi.restoreAllMocks();
   });
 
+  it("recovers from malformed revision tool arguments instead of throwing", async () => {
+    const writeToolContent =
+      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review","items":[]}}\n```';
+
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-bad-write",
+          type: "function",
+          function: {
+            name: "set_revision_work_items",
+            arguments: "{\"summary\":\"Review\",\"items\":[{\"id\":\"w-1\",\"title\":\"Broken\"}",
+          },
+        }],
+      },
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-good-write",
+          type: "function",
+          function: {
+            name: "set_revision_work_items",
+            arguments: "{\"summary\":\"Review\",\"items\":[]}",
+          },
+        }],
+      },
+      { content: "Work items are now ready for review." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const writeToolRow = {
+      id: "msg-write-after-retry",
+      conversation_id: CONV_ID,
+      role: "assistant",
+      content: writeToolContent,
+      created_at: new Date(),
+    };
+    const db = buildRevisionDb({
+      intermediateAssistantRows: [writeToolRow],
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Work items are now ready for review.",
+      },
+    });
+
+    const persistSpy = vi
+      .spyOn(revisionWorkItems, "persistRevisionToolCallWorkItems")
+      .mockResolvedValue(true);
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "Run the write tool.",
+    });
+
+    expect(result.content).toBe("Work items are now ready for review.");
+    expect(persistSpy).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledTimes(3);
+
+    vi.restoreAllMocks();
+  });
+
   it("auto-resumes from persisted pending work items when chat history has no fresh tool call", async () => {
     const openai = buildOpenAISequence([
       { content: "Jag tittar på det." },
