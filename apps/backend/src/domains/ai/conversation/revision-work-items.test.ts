@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { applyRevisionToolCallToWorkItems } from "./revision-work-items.js";
+import {
+  applyRevisionToolCallToWorkItems,
+  buildAutomaticBroadRevisionWorkItems,
+} from "./revision-work-items.js";
 
 describe("applyRevisionToolCallToWorkItems", () => {
   it("replaces the current work-item state from set_revision_work_items", () => {
@@ -98,6 +101,28 @@ describe("applyRevisionToolCallToWorkItems", () => {
       work_item_id: "work-item-1",
       status: "no_changes_needed",
       note: "Already good.",
+    });
+  });
+
+  it("builds automatic broad work items for the whole resume", () => {
+    const items = buildAutomaticBroadRevisionWorkItems("whole_resume", [
+      {
+        assignmentId: "assignment-1",
+        clientName: "Payer",
+        role: "Developer",
+      },
+    ]);
+
+    expect(items.map((item) => item.section)).toEqual([
+      "title",
+      "consultantTitle",
+      "presentation",
+      "summary",
+      "assignment",
+    ]);
+    expect(items[4]).toMatchObject({
+      assignmentId: "assignment-1",
+      title: "Review assignment: Payer",
     });
   });
 });

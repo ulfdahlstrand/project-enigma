@@ -393,6 +393,14 @@ describe("isWaitingForRevisionScopeDecision", () => {
       )
     ).toBe(true);
   });
+
+  it("returns true for branch questions phrased as 'do it now' after mentioning a revision branch", () => {
+    expect(
+      isWaitingForRevisionScopeDecision(
+        "För att hantera rättstavningen i hela CV:t föreslår jag att vi skapar en dedikerad revisionsgren. Vill du att jag gör det nu?"
+      )
+    ).toBe(true);
+  });
 });
 
 describe("latest branch confirmation handling", () => {
@@ -441,9 +449,11 @@ const FINAL_MSG_ROW = {
  */
 function buildRevisionDb({
   userRow = USER_MSG_ROW as unknown,
+  existingMessages = [] as unknown[],
   intermediateAssistantRows = [] as unknown[],
   finalRow = FINAL_MSG_ROW as unknown,
   updatedHistoryMessages = [] as unknown[],
+  persistedWorkItemsSequence = [] as unknown[],
 } = {}) {
   const executeTakeFirstOrThrow = vi.fn().mockResolvedValueOnce(userRow);
   for (const row of intermediateAssistantRows) {
@@ -461,7 +471,40 @@ function buildRevisionDb({
   }));
 
   let selectFromCallIndex = 0;
-  const selectFrom = vi.fn().mockImplementation(() => {
+  const selectFrom = vi.fn().mockImplementation((table?: string) => {
+    if (table === "ai_message_deliveries") {
+      return {
+        select: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                executeTakeFirst: vi.fn().mockResolvedValue(undefined),
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+
+    if (table === "ai_revision_work_items") {
+      const execute = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          persistedWorkItemsSequence.length > 0
+            ? persistedWorkItemsSequence.shift()
+            : [],
+        ),
+      );
+      return {
+        selectAll: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              execute,
+            }),
+          }),
+        }),
+      };
+    }
+
     const i = selectFromCallIndex++;
     if (i === 0) {
       // Conversation lookup
@@ -480,7 +523,9 @@ function buildRevisionDb({
         where: vi.fn().mockReturnValue({
           executeTakeFirst: vi.fn().mockResolvedValue(null),
           orderBy: vi.fn().mockReturnValue({
-            execute: vi.fn().mockResolvedValue(updatedHistoryMessages),
+            execute: vi.fn().mockResolvedValue(
+              i === 1 ? existingMessages : updatedHistoryMessages,
+            ),
           }),
         }),
       }),
@@ -490,6 +535,9 @@ function buildRevisionDb({
   const updateTable = vi.fn().mockReturnValue({
     set: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          execute: vi.fn().mockResolvedValue(undefined),
+        }),
         execute: vi.fn().mockResolvedValue(undefined),
       }),
     }),
@@ -530,6 +578,125 @@ describe("sendAIMessage — backend tool-call loop", () => {
     expect(result.content).toBe(FINAL_MSG_ROW.content);
     expect(toolExecution.executeBackendInspectTool).toHaveBeenCalledOnce();
     expect(create).toHaveBeenCalledTimes(2);
+
+    vi.restoreAllMocks();
+  });
+
+  it("autogenerates broad work items after list_resume_assignments", async () => {
+    vi.spyOn(toolExecution, "executeBackendInspectTool").mockResolvedValue({
+      ok: true,
+      output: {
+        totalAssignments: 2,
+        assignments: [
+          {
+            assignmentId: "assignment-1",
+            clientName: "Payer",
+            role: "Developer",
+          },
+          {
+            assignmentId: "assignment-2",
+            clientName: "Assessio",
+            role: "Consultant",
+          },
+        ],
+      },
+    });
+
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-list-assignments",
+          type: "function",
+          function: {
+            name: "list_resume_assignments",
+            arguments: "{}",
+          },
+        }],
+      },
+      { content: "Kön är skapad." },
+    ]);
+
+    const db = buildRevisionDb({
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Kön är skapad.",
+      },
+    });
+
+    const replaceSpy = vi.spyOn(revisionWorkItems, "replacePersistedRevisionWorkItems").mockResolvedValue();
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "fixa rättstavning i hela cvt",
+    });
+
+    expect(result.content).toBe("Kön är skapad.");
+    expect(replaceSpy).toHaveBeenCalledOnce();
+    expect(replaceSpy).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        conversationId: CONV_ID,
+        branchId: BRANCH_ID,
+        items: expect.arrayContaining([
+          expect.objectContaining({ section: "presentation" }),
+          expect.objectContaining({ section: "assignment", assignmentId: "assignment-1" }),
+          expect.objectContaining({ section: "assignment", assignmentId: "assignment-2" }),
+        ]),
+      }),
+    );
+
+    vi.restoreAllMocks();
+  });
+
+  it("autogenerates broad work items after the user rejects branch creation", async () => {
+    const openai = buildOpenAISequence([
+      { content: "Jag fortsätter med arbetskön." },
+      { content: "Kön är skapad." },
+    ]);
+
+    const db = buildRevisionDb({
+      existingMessages: [
+        {
+          id: "user-broad-request",
+          conversation_id: CONV_ID,
+          role: "user",
+          content: "jag vill fixa rättstavning i hela cvt",
+          created_at: new Date(),
+        },
+        {
+          id: "assistant-branch-question",
+          conversation_id: CONV_ID,
+          role: "assistant",
+          content: "Eftersom din förfrågan gäller flera avsnitt i CV:t rekommenderar jag att vi skapar en dedikerad revisionsgren för detta. Vill du att jag skapar den grenen nu?",
+          created_at: new Date(),
+        },
+      ],
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Kön är skapad.",
+      },
+    } as never);
+
+    const replaceAutoSpy = vi
+      .spyOn(revisionWorkItems, "replacePersistedAutomaticBroadRevisionWorkItems")
+      .mockResolvedValue([
+        {
+          id: "section-presentation",
+          title: "Review presentation",
+          description: "Check the presentation text for the requested revision goal.",
+          section: "presentation",
+          status: "pending",
+        },
+      ] as never);
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "nej",
+    });
+
+    expect(result.content).toBe("Kön är skapad.");
+    expect(replaceAutoSpy.mock.calls.length).toBeGreaterThan(0);
 
     vi.restoreAllMocks();
   });
@@ -650,6 +817,72 @@ describe("sendAIMessage — backend tool-call loop", () => {
 
     expect(result.content).toBe("Work items are now ready for review.");
     expect(persistSpy).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledTimes(3);
+
+    vi.restoreAllMocks();
+  });
+
+  it("requires work items before narrow revision suggestions are accepted", async () => {
+    const writeToolContent =
+      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review presentation","items":[{"id":"work-item-1","title":"Review presentation","description":"Check the presentation text.","section":"presentation","status":"pending"}]}}\n```';
+
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-bad-suggestion",
+          type: "function",
+          function: {
+            name: "set_revision_suggestions",
+            arguments: "{\"summary\":\"Fix presentation\",\"suggestions\":[{\"id\":\"s-1\",\"title\":\"Fix presentation\",\"description\":\"Correct a typo.\",\"section\":\"presentation\",\"suggestedText\":\"Updated presentation\",\"status\":\"pending\"}]}",
+          },
+        }],
+      },
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-good-work-item",
+          type: "function",
+          function: {
+            name: "set_revision_work_items",
+            arguments: "{\"summary\":\"Review presentation\",\"items\":[{\"id\":\"work-item-1\",\"title\":\"Review presentation\",\"description\":\"Check the presentation text.\",\"section\":\"presentation\",\"status\":\"pending\"}]}",
+          },
+        }],
+      },
+      { content: "Work item created." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const writeToolRow = {
+      id: "msg-write-after-queue-guardrail",
+      conversation_id: CONV_ID,
+      role: "assistant",
+      content: writeToolContent,
+      created_at: new Date(),
+    };
+    const db = buildRevisionDb({
+      intermediateAssistantRows: [writeToolRow],
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Work item created.",
+      },
+    });
+
+    const persistWorkItemsSpy = vi
+      .spyOn(revisionWorkItems, "persistRevisionToolCallWorkItems")
+      .mockResolvedValue(true);
+    const persistSuggestionsSpy = vi
+      .spyOn(revisionSuggestions, "persistRevisionToolCallSuggestions")
+      .mockResolvedValue(false);
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "fixa stavfel i presentationen",
+    });
+
+    expect(result.content).toBe("Work item created.");
+    expect(persistWorkItemsSpy).toHaveBeenCalledOnce();
+    expect(persistSuggestionsSpy).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledTimes(3);
 
     vi.restoreAllMocks();
@@ -781,6 +1014,85 @@ describe("sendAIMessage — backend tool-call loop", () => {
     expect(result.content).toBe(waitingRow.content);
     expect(create).toHaveBeenCalledTimes(1);
     expect(executeSpy).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it("throws instead of persisting an empty assistant message after a revision loop step", async () => {
+    vi.spyOn(toolExecution, "executeBackendInspectTool").mockResolvedValue({
+      ok: true,
+      output: { section: "presentation", text: "Current text" },
+    });
+
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-inspect",
+          type: "function",
+          function: {
+            name: "inspect_resume_section",
+            arguments: "{\"section\":\"presentation\"}",
+          },
+        }],
+      },
+      { content: "" },
+    ]);
+
+    const db = buildRevisionDb();
+
+    await expect(
+      sendAIMessage(db, openai, {
+        conversationId: CONV_ID,
+        userMessage: "fixa stavfel i presentationen",
+      })
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it("passes revision tools to the follow-up OpenAI call after a backend inspect step", async () => {
+    vi.spyOn(toolExecution, "executeBackendInspectTool").mockResolvedValue({
+      ok: true,
+      output: { section: "presentation", text: "Current text" },
+    });
+
+    const openai = buildOpenAISequence([
+      {
+        content: [
+          "Tool execution requested.",
+          "```json",
+          JSON.stringify({
+            type: "tool_call",
+            toolName: "inspect_resume_section",
+            input: { section: "presentation" },
+          }),
+          "```",
+        ].join("\n"),
+      },
+      { content: "Jag har granskat presentationen." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const db = buildRevisionDb({
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Jag har granskat presentationen.",
+      },
+    });
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "fixa stavfel i presentationen",
+    });
+
+    expect(result.content).toBe("Jag har granskat presentationen.");
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[1]?.[0]).toMatchObject({
+      tools: expect.any(Array),
+    });
 
     vi.restoreAllMocks();
   });

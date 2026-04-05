@@ -6,6 +6,7 @@ import type {
   NewAIRevisionSuggestion,
 } from "../../../db/types.js";
 import { parseRevisionToolArguments } from "./revision-tools.js";
+import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
 
 type SuggestionToolName =
   | "set_assignment_suggestions"
@@ -27,6 +28,13 @@ type PersistedSuggestion = Pick<
   | "payload"
   | "resolved_at"
 >;
+
+type PersistedWorkItem = {
+  work_item_id: string;
+  section: string;
+  assignment_id: string | null;
+  status: string;
+};
 
 type SuggestionInput = {
   id: string;
@@ -62,6 +70,7 @@ function resolvedAtForStatus(status: AIRevisionSuggestionStatus) {
 function normalizeSuggestionRows(
   toolName: SuggestionToolName,
   input: unknown,
+  currentWorkItems: PersistedWorkItem[],
 ): Array<PersistedSuggestion> {
   const parsed = parseRevisionToolArguments(toolName, JSON.stringify(input)) as {
     summary?: string;
@@ -80,9 +89,23 @@ function normalizeSuggestionRows(
     }
 
     const status = normalizeStatus(suggestion.status);
-    const suggestionId = workItemId ? `${workItemId}:${suggestion.id}` : suggestion.id;
+    const matchedWorkItemId =
+      workItemId
+      ?? currentWorkItems.find((item) => {
+        if (item.status === "completed" || item.status === "no_changes_needed") {
+          return false;
+        }
+
+        if (suggestion.assignmentId && item.assignment_id) {
+          return item.assignment_id === suggestion.assignmentId;
+        }
+
+        return item.section.trim().toLowerCase() === suggestion.section.trim().toLowerCase();
+      })?.work_item_id
+      ?? null;
+    const suggestionId = matchedWorkItemId ? `${matchedWorkItemId}:${suggestion.id}` : suggestion.id;
     return [{
-      work_item_id: workItemId,
+      work_item_id: matchedWorkItemId,
       suggestion_id: suggestionId,
       summary: parsed.summary ?? null,
       title: suggestion.title,
@@ -190,6 +213,7 @@ export async function persistRevisionToolCallSuggestions(
   }
 
   const currentSuggestions = await listPersistedRevisionSuggestions(db, input.conversationId);
+  const currentWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
   const nextSuggestions = mergeSuggestions(
     currentSuggestions.map((suggestion) => ({
       work_item_id: suggestion.work_item_id,
@@ -206,7 +230,16 @@ export async function persistRevisionToolCallSuggestions(
       payload: suggestion.payload,
       resolved_at: suggestion.resolved_at,
     })),
-    normalizeSuggestionRows(input.toolName, input.toolCallInput),
+    normalizeSuggestionRows(
+      input.toolName,
+      input.toolCallInput,
+      currentWorkItems.map((item) => ({
+        work_item_id: item.work_item_id,
+        section: item.section,
+        assignment_id: item.assignment_id,
+        status: item.status,
+      })),
+    ),
   );
 
   await db

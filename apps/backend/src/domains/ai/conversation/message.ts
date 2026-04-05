@@ -33,7 +33,12 @@ import {
   parseRevisionToolArguments,
 } from "./revision-tools.js";
 import { persistRevisionToolCallWorkItems } from "./revision-work-items.js";
-import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import {
+  buildAutomaticBroadRevisionWorkItems,
+  listPersistedRevisionWorkItems,
+  replacePersistedRevisionWorkItems,
+  replacePersistedAutomaticBroadRevisionWorkItems,
+} from "./revision-work-items.js";
 import {
   listPersistedRevisionSuggestions,
   persistRevisionToolCallSuggestions,
@@ -98,6 +103,18 @@ export function requiresExplicitAssignmentWorkQueue(messages: string[]) {
 
 function messageAsksAboutBranchCreation(content: string) {
   const normalized = normalizeScopeMessage(content);
+  const mentionsBranchContext =
+    normalized.includes("branch")
+    || normalized.includes("gren")
+    || normalized.includes("revisionsgren")
+    || normalized.includes("revision branch");
+  const asksToDoItNow =
+    normalized.includes("gör det nu")
+    || normalized.includes("ska jag göra det")
+    || normalized.includes("vill du att jag gör det")
+    || normalized.includes("do it now")
+    || normalized.includes("want me to do it");
+
   return normalized.includes("skapa den nu")
     || normalized.includes("skapa en ny branch")
     || normalized.includes("skapa en ny gren")
@@ -105,6 +122,7 @@ function messageAsksAboutBranchCreation(content: string) {
     || normalized.includes("ska vi skapa")
     || normalized.includes("vill du att vi skapar")
     || normalized.includes("vill du att jag skapar")
+    || (mentionsBranchContext && asksToDoItNow)
     || normalized.includes("create it now")
     || normalized.includes("create a new branch")
     || normalized.includes("should we create");
@@ -191,6 +209,12 @@ function parseRevisionWorkItemsFromInput(input: unknown) {
   });
 }
 
+function isTerminalRevisionResolutionTool(toolName: string) {
+  return toolName === "set_revision_suggestions"
+    || toolName === "set_assignment_suggestions"
+    || toolName === "mark_revision_work_item_no_changes_needed";
+}
+
 async function countAssignmentsForBranch(
   db: Kysely<Database>,
   branchId: string,
@@ -222,6 +246,22 @@ function isExplicitBranchCreationConfirmation(message: string) {
     || normalized === "do it"
     || normalized === "create it"
     || normalized === "create the branch";
+}
+
+function isExplicitBranchCreationRejection(message: string) {
+  const normalized = message.trim().toLowerCase();
+
+  return normalized === "nej"
+    || normalized === "nej tack"
+    || normalized === "nej, tack"
+    || normalized === "nej gör det inte"
+    || normalized === "nej, gör det inte"
+    || normalized === "inte nu"
+    || normalized === "stanna här"
+    || normalized === "no"
+    || normalized === "no thanks"
+    || normalized === "don't do it"
+    || normalized === "do not create the branch";
 }
 
 function latestAssistantRequestedBranchCreation(messages: Array<{ role: string; content: string }>) {
@@ -942,6 +982,12 @@ export async function sendAIMessage(
   } | null = null;
 
   async function persistAssistantMessage(content: string) {
+    if (content.trim().length === 0) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "AI returned an empty assistant message during the revision workflow.",
+      });
+    }
+
     const row = await db
       .insertInto("ai_messages")
       .values({
@@ -963,6 +1009,42 @@ export async function sendAIMessage(
     return row;
   }
 
+  let recoveredFromRevisionWorkflowFailure = false;
+
+  async function failNextOpenRevisionWorkItem(errorMessage: string) {
+    if (!isRevisionConversation) {
+      return false;
+    }
+
+    const persistedWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+    const currentItem = nextOpenWorkItem(persistedWorkItems);
+    if (!currentItem) {
+      return false;
+    }
+
+    await db
+      .updateTable("ai_revision_work_items")
+      .set({
+        status: "failed",
+        attempt_count: currentItem.attempt_count + 1,
+        last_error: errorMessage,
+        updated_at: new Date(),
+      })
+      .where("conversation_id", "=", input.conversationId)
+      .where("work_item_id", "=", currentItem.work_item_id)
+      .execute();
+
+    await insertAIDelivery(db, {
+      conversationId: input.conversationId,
+      kind: "internal_message",
+      role: "user",
+      content: `${INTERNAL_GUARDRAIL_PREFIX} Work item ${currentItem.work_item_id} failed and has been marked as failed. Reason: ${errorMessage}. Continue with the next pending work item now. Do not retry the failed item in this turn.`,
+    });
+
+    recoveredFromRevisionWorkflowFailure = true;
+    return true;
+  }
+
   if (!isRevisionConversation || !assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
     assistantRow = await persistAssistantMessage(assistantContent);
   }
@@ -982,6 +1064,9 @@ export async function sendAIMessage(
     const assignmentQueueRequired = broadRevisionScope !== null;
     const branchCreationConfirmed =
       isExplicitBranchCreationConfirmation(input.userMessage)
+      && latestAssistantRequestedBranchCreation(existingMessages);
+    const branchCreationRejected =
+      isExplicitBranchCreationRejection(input.userMessage)
       && latestAssistantRequestedBranchCreation(existingMessages);
 
     for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
@@ -1036,6 +1121,25 @@ export async function sendAIMessage(
         continue;
       }
 
+      let persistedWorkItems = isRevisionConversation
+        ? await listPersistedRevisionWorkItems(db, input.conversationId)
+        : [];
+
+      if (
+        isRevisionConversation
+        && assignmentQueueRequired
+        && branchCreationRejected
+        && persistedWorkItems.length === 0
+      ) {
+        await replacePersistedAutomaticBroadRevisionWorkItems(db, {
+          conversationId: input.conversationId,
+          branchId: conversation.entity_id,
+          scope: broadRevisionScope ?? "all_assignments",
+        });
+
+        persistedWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+      }
+
       if (isRevisionConversation && revisionToolCalls.length > 0) {
         if (branchCreationConfirmed) {
           const isAllowedBranchStep =
@@ -1059,12 +1163,11 @@ export async function sendAIMessage(
           }
         }
 
-        const persistedWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
         const assignmentsAlreadyListed = assignmentQueueRequired
           ? await hasListedAssignmentsForConversation(db, input.conversationId)
           : false;
 
-        if (assignmentQueueRequired && !branchCreationConfirmed && persistedWorkItems.length === 0) {
+        if (assignmentQueueRequired && !branchCreationConfirmed && !branchCreationRejected && persistedWorkItems.length === 0) {
           const currentToolNames = revisionToolCalls.map(
             (toolCall: { toolName: string }) => toolCall.toolName,
           );
@@ -1122,6 +1225,29 @@ export async function sendAIMessage(
               assistantContent = assistantMessage.content ?? "";
               continue;
             }
+          }
+        }
+
+        if (!branchCreationConfirmed && persistedWorkItems.length === 0) {
+          const currentToolNames = revisionToolCalls.map(
+            (toolCall: { toolName: string }) => toolCall.toolName,
+          );
+          const isTryingToResolveWithoutQueue = currentToolNames.some(isTerminalRevisionResolutionTool);
+
+          if (isTryingToResolveWithoutQueue) {
+            const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} Before you resolve any revision step with suggestions or no-changes-needed, you must first create explicit work items with set_revision_work_items for the current scope. If you still need analysis first, use the appropriate inspect tool, then return set_revision_work_items. Do not emit suggestions yet.`;
+
+            await insertAIDelivery(db, {
+              conversationId: input.conversationId,
+              kind: "internal_message",
+              role: "user",
+              content: enforcementContent,
+            });
+
+            openAIMessages.push({ role: "user", content: enforcementContent });
+            assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+            assistantContent = assistantMessage.content ?? "";
+            continue;
           }
         }
 
@@ -1209,6 +1335,103 @@ export async function sendAIMessage(
                   : { ok: false, error: toolResult.error ?? "Tool execution failed" },
               ),
             });
+
+            if (
+              toolCall.toolName === "list_resume_assignments"
+              && toolResult.ok
+              && assignmentQueueRequired
+              && persistedWorkItems.length === 0
+            ) {
+              const assignments = (
+                typeof toolResult.output === "object"
+                && toolResult.output !== null
+                && Array.isArray((toolResult.output as { assignments?: unknown[] }).assignments)
+                  ? (toolResult.output as { assignments: unknown[] }).assignments
+                  : []
+              ).flatMap((assignment) => {
+                if (typeof assignment !== "object" || assignment === null) {
+                  return [];
+                }
+
+                const row = assignment as Record<string, unknown>;
+                if (
+                  typeof row.assignmentId !== "string"
+                  || typeof row.clientName !== "string"
+                  || typeof row.role !== "string"
+                ) {
+                  return [];
+                }
+
+                return [{
+                  assignmentId: row.assignmentId,
+                  clientName: row.clientName,
+                  role: row.role,
+                }];
+              });
+
+              const autogeneratedItems = buildAutomaticBroadRevisionWorkItems(
+                broadRevisionScope ?? "all_assignments",
+                assignments,
+              );
+
+              await replacePersistedRevisionWorkItems(db, {
+                conversationId: input.conversationId,
+                branchId: conversation.entity_id,
+                items: autogeneratedItems,
+              });
+
+              const autogeneratedToolInput = {
+                summary:
+                  broadRevisionScope === "whole_resume"
+                    ? "Review all in-scope resume sections and assignments"
+                    : "Review all assignments",
+                items: autogeneratedItems,
+              };
+
+              await insertAIDelivery(db, {
+                conversationId: input.conversationId,
+                kind: "tool_call",
+                role: "assistant",
+                toolName: "set_revision_work_items",
+                payload: {
+                  id: `backend-auto-work-items-${input.conversationId}`,
+                  input: autogeneratedToolInput,
+                  autogenerated: true,
+                },
+              });
+
+              await insertAIDelivery(db, {
+                conversationId: input.conversationId,
+                kind: "tool_result",
+                role: "tool",
+                toolName: "set_revision_work_items",
+                payload: { ok: true, output: { persisted: true, autogenerated: true } },
+                content: JSON.stringify({ persisted: true, autogenerated: true }),
+              });
+
+              persistedToolCalls.push({
+                toolName: "set_revision_work_items",
+                input: autogeneratedToolInput,
+              });
+
+              openAIMessages.push({
+                role: "assistant",
+                content: assistantMessage.content ?? "",
+                tool_calls: [{
+                  id: `backend-auto-work-items-${toolCall.id}`,
+                  type: "function",
+                  function: {
+                    name: "set_revision_work_items",
+                    arguments: JSON.stringify(autogeneratedToolInput),
+                  },
+                }],
+              });
+              openAIMessages.push({
+                role: "tool",
+                tool_call_id: `backend-auto-work-items-${toolCall.id}`,
+                content: JSON.stringify({ ok: true, output: { persisted: true, autogenerated: true } }),
+              });
+            }
             continue;
           }
 
@@ -1473,8 +1696,31 @@ export async function sendAIMessage(
             })),
         ];
 
-        assistantMessage = await callOpenAI(nextMessages, revisionTools);
+        try {
+          assistantMessage = await callOpenAI(nextMessages, revisionTools);
+        } catch (error) {
+          const recovered = await failNextOpenRevisionWorkItem(
+            error instanceof Error ? error.message : "AI returned an empty response while processing the current work item.",
+          );
+          if (recovered) {
+            assistantMessage = { content: "" } as OpenAI.Chat.Completions.ChatCompletionMessage;
+            assistantContent = "";
+            continue;
+          }
+          throw error;
+        }
         assistantContent = assistantMessage.content ?? "";
+        if (isRevisionConversation && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+          continue;
+        }
+        if (assistantContent.trim().length === 0) {
+          const recovered = await failNextOpenRevisionWorkItem(
+            "AI returned an empty assistant message while processing the current work item.",
+          );
+          if (recovered) {
+            continue;
+          }
+        }
         assistantRow = await persistAssistantMessage(assistantContent);
 
         continue;
@@ -1533,13 +1779,41 @@ export async function sendAIMessage(
         { role: "user", content: toolResultContent },
       ];
 
-      assistantMessage = await callOpenAI(nextMessages);
+      try {
+        assistantMessage = await callOpenAI(nextMessages, revisionTools);
+      } catch (error) {
+        const recovered = await failNextOpenRevisionWorkItem(
+          error instanceof Error ? error.message : "AI returned an empty response while processing the current work item.",
+        );
+        if (recovered) {
+          assistantMessage = { content: "" } as OpenAI.Chat.Completions.ChatCompletionMessage;
+          assistantContent = "";
+          continue;
+        }
+        throw error;
+      }
       assistantContent = assistantMessage.content ?? "";
+      if (isRevisionConversation && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        continue;
+      }
+      if (assistantContent.trim().length === 0) {
+        const recovered = await failNextOpenRevisionWorkItem(
+          "AI returned an empty assistant message while processing the current work item.",
+        );
+        if (recovered) {
+          continue;
+        }
+      }
       assistantRow = await persistAssistantMessage(assistantContent);
     }
   }
 
   if (!assistantRow) {
+    if (isRevisionConversation && recoveredFromRevisionWorkflowFailure && assistantContent.trim().length === 0) {
+      assistantContent = detectConversationLanguage(conversation.system_prompt) === "sv"
+        ? "Jag fortsätter med nästa del av revisionen. Ett delsteg fastnade och markerades som misslyckat."
+        : "I am continuing with the next part of the revision. One work item got stuck and was marked as failed.";
+    }
     assistantRow = await persistAssistantMessage(assistantContent);
   }
 
