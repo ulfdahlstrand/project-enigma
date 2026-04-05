@@ -4,6 +4,7 @@ import type {
   AIRevisionSuggestionStatus,
   Database,
   NewAIRevisionSuggestion,
+  ResumeCommitContent,
 } from "../../../db/types.js";
 import { parseRevisionToolArguments } from "./revision-tools.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
@@ -11,6 +12,14 @@ import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
 type SuggestionToolName =
   | "set_assignment_suggestions"
   | "set_revision_suggestions";
+
+type OriginalTextMap = {
+  title: string | null;
+  consultantTitle: string | null;
+  presentation: string | null;
+  summary: string | null;
+  assignments: Map<string, string>;
+};
 
 type PersistedSuggestion = Pick<
   AIRevisionSuggestion,
@@ -48,6 +57,63 @@ type SuggestionInput = {
   status?: string;
 };
 
+async function fetchOriginalTexts(
+  db: Kysely<Database>,
+  branchId: string,
+): Promise<OriginalTextMap> {
+  const branch = await db
+    .selectFrom("resume_branches")
+    .select(["head_commit_id", "forked_from_commit_id"])
+    .where("id", "=", branchId)
+    .executeTakeFirst();
+
+  const commitId = branch?.head_commit_id ?? branch?.forked_from_commit_id ?? null;
+  let content: ResumeCommitContent | null = null;
+
+  if (commitId) {
+    const commit = await db
+      .selectFrom("resume_commits")
+      .select("content")
+      .where("id", "=", commitId)
+      .executeTakeFirst();
+    content = commit?.content ?? null;
+  }
+
+  const rawAssignments = await db
+    .selectFrom("branch_assignments")
+    .select(["assignment_id", "description"])
+    .where("branch_id", "=", branchId)
+    .execute();
+
+  const assignments = new Map<string, string>();
+  for (const a of rawAssignments) {
+    assignments.set(a.assignment_id, a.description);
+  }
+
+  return {
+    title: content?.title ?? null,
+    consultantTitle: content?.consultantTitle ?? null,
+    presentation: content?.presentation ? content.presentation.join("\n\n") : null,
+    summary: content?.summary ?? null,
+    assignments,
+  };
+}
+
+function getOriginalText(
+  originalTexts: OriginalTextMap,
+  section: string,
+  assignmentId: string | undefined,
+): string | null {
+  if (section === "title") return originalTexts.title;
+  if (section === "consultantTitle") return originalTexts.consultantTitle;
+  if (section === "presentation") return originalTexts.presentation;
+  if (section === "summary") return originalTexts.summary;
+  if (section === "assignment" && assignmentId) {
+    return originalTexts.assignments.get(assignmentId) ?? null;
+  }
+  return null;
+}
+
 function normalizeStatus(status: string | undefined): AIRevisionSuggestionStatus {
   if (
     status === "pending"
@@ -71,6 +137,7 @@ function normalizeSuggestionRows(
   toolName: SuggestionToolName,
   input: unknown,
   currentWorkItems: PersistedWorkItem[],
+  originalTexts: OriginalTextMap,
 ): Array<PersistedSuggestion> {
   const parsed = parseRevisionToolArguments(toolName, JSON.stringify(input)) as {
     summary?: string;
@@ -85,6 +152,11 @@ function normalizeSuggestionRows(
 
   return parsed.suggestions.flatMap((suggestion) => {
     if (suggestion.suggestedText.trim().length === 0) {
+      return [];
+    }
+
+    const originalText = getOriginalText(originalTexts, suggestion.section, suggestion.assignmentId);
+    if (originalText !== null && suggestion.suggestedText.trim() === originalText.trim()) {
       return [];
     }
 
@@ -213,8 +285,11 @@ export async function persistRevisionToolCallSuggestions(
     return { saved: false, incomingCount: 0 };
   }
 
-  const currentSuggestions = await listPersistedRevisionSuggestions(db, input.conversationId);
-  const currentWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+  const [currentSuggestions, currentWorkItems, originalTexts] = await Promise.all([
+    listPersistedRevisionSuggestions(db, input.conversationId),
+    listPersistedRevisionWorkItems(db, input.conversationId),
+    fetchOriginalTexts(db, input.branchId),
+  ]);
   const incoming = normalizeSuggestionRows(
     input.toolName,
     input.toolCallInput,
@@ -224,6 +299,7 @@ export async function persistRevisionToolCallSuggestions(
       assignment_id: item.assignment_id,
       status: item.status,
     })),
+    originalTexts,
   );
   const nextSuggestions = mergeSuggestions(
     currentSuggestions.map((suggestion) => ({

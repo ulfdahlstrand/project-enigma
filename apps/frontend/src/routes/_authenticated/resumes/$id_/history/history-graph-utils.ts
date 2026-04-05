@@ -82,9 +82,32 @@ export function computeGraphLayout(
     const existing = childBranchesByForkCommitId.get(branch.forkedFromCommitId) ?? [];
     childBranchesByForkCommitId.set(branch.forkedFromCommitId, [...existing, branch]);
   });
+
+  // Group all children by their PARENT BRANCH (not by exact fork commit) so that
+  // siblings forked from different commits of the same parent are sorted together.
+  const childBranchesByParentBranchId = new Map<string, GraphBranch[]>();
+  sortedBranches.forEach((branch) => {
+    if (!branch.forkedFromCommitId) return;
+    const parentBranchId = commitsById.get(branch.forkedFromCommitId)?.branchId;
+    if (!parentBranchId) return;
+    const existing = childBranchesByParentBranchId.get(parentBranchId) ?? [];
+    childBranchesByParentBranchId.set(parentBranchId, [...existing, branch]);
+  });
   const rootBranches = sortedBranches.filter(
     (branch) => !branch.forkedFromCommitId || !commitsById.has(branch.forkedFromCommitId),
   );
+
+  // Merged branch IDs: branches whose head commit is a merge-source (parentOrder > 0).
+  // Used to sort non-merged siblings before merged ones so they get lower column numbers.
+  const mergedBranchIds = new Set<string>();
+  for (const e of graphEdges) {
+    if (e.parentOrder > 0) {
+      const mergedCommit = commitsById.get(e.parentCommitId);
+      if (mergedCommit?.branchId) {
+        mergedBranchIds.add(mergedCommit.branchId);
+      }
+    }
+  }
 
   const orderedBranchIds: string[] = [];
   const visitedBranchIds = new Set<string>();
@@ -93,11 +116,16 @@ export function computeGraphLayout(
     if (visitedBranchIds.has(branchId)) return;
     visitedBranchIds.add(branchId);
     orderedBranchIds.push(branchId);
-    const branchCommits = branchCommitsByBranchId.get(branchId) ?? [];
-    branchCommits.forEach((commit) => {
-      const childBranches = childBranchesByForkCommitId.get(commit.id) ?? [];
-      childBranches.forEach((childBranch) => pushBranchAndChildren(childBranch.id));
+    // Use parent-branch grouping so siblings forked from different commits of
+    // the same parent are sorted together. Merged children come first so the
+    // greedy column algorithm assigns them lower column numbers (closer to base).
+    const allChildren = childBranchesByParentBranchId.get(branchId) ?? [];
+    const sortedChildren = [...allChildren].sort((a, b) => {
+      const aMerged = mergedBranchIds.has(a.id) ? 0 : 1; // merged=0, non-merged=1
+      const bMerged = mergedBranchIds.has(b.id) ? 0 : 1;
+      return aMerged - bMerged;
     });
+    sortedChildren.forEach((childBranch) => pushBranchAndChildren(childBranch.id));
   }
 
   rootBranches.forEach((branch) => pushBranchAndChildren(branch.id));
@@ -150,8 +178,17 @@ export function computeGraphLayout(
     }
     const [topRow, bottomRow] = range;
 
-    // Find the lowest column where this branch's interval doesn't overlap any existing one
-    let col = 0;
+    // Enforce: a child branch must be to the right of its parent branch.
+    // Start the column search from parentCol + 1 so child is never placed at
+    // the same column or to the left of the branch it was forked from.
+    const parentBranchId = branch.forkedFromCommitId
+      ? (commitsById.get(branch.forkedFromCommitId)?.branchId ?? null)
+      : null;
+    const parentCol = parentBranchId !== null ? (branchIndexById.get(parentBranchId) ?? null) : null;
+    const minCol = parentCol !== null ? parentCol + 1 : 0;
+
+    // Find the lowest column >= minCol where this branch's interval doesn't overlap any existing one
+    let col = minCol;
     while (true) {
       const intervals = columnIntervals[col] ?? [];
       const hasOverlap = intervals.some(([iTop, iBottom]) => topRow <= iBottom && iTop <= bottomRow);
@@ -165,11 +202,64 @@ export function computeGraphLayout(
     branchIndexById.set(branch.id, col);
   });
 
-  // Branches that share a column get the same color — visually they form one "lane"
+  // Build branch row ranges for adjacency detection
+  const branchRowRanges = new Map<string, [number, number]>();
+  orderedBranches.forEach((branch) => {
+    const range = getBranchRowRange(branch);
+    if (range) branchRowRanges.set(branch.id, range);
+  });
+
+  // Two branches are color-adjacent if they are visually connected or side-by-side:
+  //   (a) parent–child fork relationship, or
+  //   (b) neighboring columns (|col diff| ≤ 1) with overlapping row ranges
+  const colorAdjacency = new Map<string, Set<string>>();
+  const addColorAdjacency = (a: string, b: string): void => {
+    if (!colorAdjacency.has(a)) colorAdjacency.set(a, new Set());
+    if (!colorAdjacency.has(b)) colorAdjacency.set(b, new Set());
+    colorAdjacency.get(a)!.add(b);
+    colorAdjacency.get(b)!.add(a);
+  };
+
+  orderedBranches.forEach((branch) => {
+    if (!branch.forkedFromCommitId) return;
+    const parentBranchId = commitsById.get(branch.forkedFromCommitId)?.branchId;
+    if (parentBranchId) addColorAdjacency(branch.id, parentBranchId);
+  });
+
+  orderedBranches.forEach((branchA, i) => {
+    const colA = branchIndexById.get(branchA.id) ?? 0;
+    const rangeA = branchRowRanges.get(branchA.id);
+    if (!rangeA) return;
+    for (let j = i + 1; j < orderedBranches.length; j++) {
+      const branchB = orderedBranches[j]!;
+      const colB = branchIndexById.get(branchB.id) ?? 0;
+      if (Math.abs(colA - colB) > 1) continue;
+      const rangeB = branchRowRanges.get(branchB.id);
+      if (!rangeB) continue;
+      const [topA, bottomA] = rangeA;
+      const [topB, bottomB] = rangeB;
+      if (topA <= bottomB && topB <= bottomA) addColorAdjacency(branchA.id, branchB.id);
+    }
+  });
+
+  // Greedy graph coloring: assign each branch the smallest color index not
+  // used by any of its color-adjacent (already-colored) neighbors.
+  const branchColorIndexById = new Map<string, number>();
+  orderedBranches.forEach((branch) => {
+    const usedIndices = new Set<number>();
+    for (const neighborId of colorAdjacency.get(branch.id) ?? []) {
+      const neighborIndex = branchColorIndexById.get(neighborId);
+      if (neighborIndex !== undefined) usedIndices.add(neighborIndex);
+    }
+    let colorIndex = 0;
+    while (usedIndices.has(colorIndex)) colorIndex++;
+    branchColorIndexById.set(branch.id, colorIndex);
+  });
+
   const branchColorById = new Map(
     orderedBranches.map((branch) => {
-      const col = branchIndexById.get(branch.id) ?? 0;
-      return [branch.id, treeBranchColors[col % treeBranchColors.length]!];
+      const colorIndex = branchColorIndexById.get(branch.id) ?? 0;
+      return [branch.id, treeBranchColors[colorIndex % treeBranchColors.length]!];
     }),
   );
 
