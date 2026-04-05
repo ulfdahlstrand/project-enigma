@@ -56,7 +56,7 @@ export function useCreateAIConversation() {
   });
 }
 
-const MAX_AUTO_CONTINUATIONS = 10;
+const MAX_AUTO_CONTINUATIONS = 30;
 
 export function useSendAIMessage(conversationId: string | null) {
   const queryClient = useQueryClient();

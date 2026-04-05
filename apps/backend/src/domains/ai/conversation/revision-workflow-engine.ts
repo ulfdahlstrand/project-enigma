@@ -1792,7 +1792,11 @@ export async function runRevisionWorkflow(
   let needsContinuation = false;
   if (isRevisionConversation) {
     const remainingItems = await listPersistedRevisionWorkItems(db, conversationId);
-    needsContinuation = nextOpenWorkItem(remainingItems) !== null;
+    const hasOpenItems = nextOpenWorkItem(remainingItems) !== null;
+    // Do not ask the frontend to continue when the model is waiting for user input —
+    // that would cause the continuation loop to spin until the budget is exhausted.
+    const waitingForUser = isWaitingForRevisionScopeDecision(assistantRow?.content ?? "");
+    needsContinuation = hasOpenItems && !waitingForUser;
   }
 
   return { assistantRow, needsContinuation };
