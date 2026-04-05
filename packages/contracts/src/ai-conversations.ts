@@ -101,7 +101,14 @@ export const sendAIMessageInputSchema = z.object({
   userMessage: z.string().min(1).max(10000),
 });
 
-export const sendAIMessageOutputSchema = aiMessageSchema;
+export const sendAIMessageOutputSchema = aiMessageSchema.extend({
+  /**
+   * True when the backend loop exhausted its iteration budget but there are still
+   * pending revision work items. The frontend should post a silent continuation
+   * message immediately so the workflow progresses without user interaction.
+   */
+  needsContinuation: z.boolean(),
+});
 
 export type SendAIMessageInput = z.infer<typeof sendAIMessageInputSchema>;
 export type SendAIMessageOutput = z.infer<typeof sendAIMessageOutputSchema>;

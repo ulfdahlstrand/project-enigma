@@ -22,7 +22,6 @@ import {
   executeBackendInspectTool,
 } from "./tool-execution.js";
 import {
-  deriveNextActionOrchestrationMessage,
   deriveNextActionOrchestrationMessageFromWorkItems,
   deriveNextPlanningOrchestrationMessage,
 } from "./action-orchestration.js";
@@ -927,6 +926,7 @@ export async function sendAIMessage(
       role: assistantHelpRow.role as "assistant",
       content: assistantHelpRow.content,
       createdAt: assistantHelpRow.created_at.toISOString(),
+      needsContinuation: false,
     };
   }
 
@@ -1679,7 +1679,7 @@ export async function sendAIMessage(
 
           orchestrationMessage = persistedAutomation
             ? { kind: "automation" as const, content: `${INTERNAL_AUTOSTART_PREFIX} ${persistedAutomation}` }
-            : deriveNextActionOrchestrationMessage(orchestrationHistory);
+            : null; // DB state is the single source of truth; do not fall back to legacy fenced-JSON reading
         } else {
           orchestrationMessage = deriveNextPlanningOrchestrationMessage(orchestrationHistory);
         }
@@ -1880,12 +1880,22 @@ export async function sendAIMessage(
     .where("id", "=", input.conversationId)
     .execute();
 
+  // Signal the frontend to post a silent continuation message when there are still
+  // pending revision work items. This avoids requiring the user to manually prompt
+  // the backend to resume processing after the loop budget is exhausted.
+  let needsContinuation = false;
+  if (isRevisionConversation) {
+    const remainingItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+    needsContinuation = nextOpenWorkItem(remainingItems) !== null;
+  }
+
   return {
     id: assistantRow.id,
     conversationId: assistantRow.conversation_id,
     role: assistantRow.role as "assistant",
     content: assistantRow.content,
     createdAt: assistantRow.created_at.toISOString(),
+    needsContinuation,
   };
 }
 
