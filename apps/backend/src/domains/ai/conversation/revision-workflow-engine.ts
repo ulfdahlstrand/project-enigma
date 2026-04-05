@@ -58,7 +58,8 @@ import { forkResumeBranch } from "../../resume/branch/fork.js";
 // Maximum number of backend tool-call iterations per sendAIMessage invocation.
 // Broad revisions with many work items require many iterations (inspect + suggest per item).
 // A CV with 27 assignments + 4 sections = 31 items × ~2 iterations = ~62 minimum.
-export const MAX_BACKEND_TOOL_LOOPS = 40;
+// Use 80 to allow a single backend invocation to cover the full queue for large CVs.
+export const MAX_BACKEND_TOOL_LOOPS = 80;
 
 const REVISION_TOOL_GUARDRAIL_MESSAGE = [
   "You must use the available tools for this revision request.",
@@ -1052,6 +1053,14 @@ export async function runRevisionWorkflow(
     }
 
     if (isRevisionConversation && revisionToolCalls.length > 0) {
+      // If the model is asking about branch creation in its text content but has not yet
+      // received an explicit user confirmation, do not process any tool calls. Show the
+      // branch question to the user and wait for their answer before continuing.
+      if (!branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
+        assistantRow = await persistAssistantMessage(assistantContent);
+        break;
+      }
+
       if (branchCreationConfirmed) {
         const isAllowedBranchStep =
           revisionToolCalls.length === 1
@@ -1202,6 +1211,62 @@ export async function runRevisionWorkflow(
             continue;
           }
         }
+      }
+
+      // Guard: for section-level targets (presentation, summary, title, consultantTitle)
+      // the model must emit exactly ONE suggestion per work item — not one per paragraph.
+      const splitSectionCall = revisionToolCalls.find((tc: { toolName: string; input?: unknown }) => {
+        if (tc.toolName !== "set_revision_suggestions") return false;
+        const suggestions = (
+          typeof tc.input === "object"
+          && tc.input !== null
+          && Array.isArray((tc.input as { suggestions?: unknown }).suggestions)
+            ? (tc.input as { suggestions: Array<{ section?: string }> }).suggestions
+            : []
+        );
+        const sectionCounts: Record<string, number> = {};
+        for (const s of suggestions) {
+          const section = s.section ?? "";
+          if (section && section !== "skills" && section !== "assignment") {
+            sectionCounts[section] = (sectionCounts[section] ?? 0) + 1;
+          }
+        }
+        return Object.values(sectionCounts).some((count) => count > 1);
+      });
+
+      if (splitSectionCall) {
+        const suggestions = (
+          typeof splitSectionCall.input === "object"
+          && splitSectionCall.input !== null
+          && Array.isArray((splitSectionCall.input as { suggestions?: unknown }).suggestions)
+            ? (splitSectionCall.input as { suggestions: Array<{ section?: string }> }).suggestions
+            : []
+        );
+        const sectionCounts: Record<string, number> = {};
+        for (const s of suggestions) {
+          const section = s.section ?? "";
+          if (section && section !== "skills" && section !== "assignment") {
+            sectionCounts[section] = (sectionCounts[section] ?? 0) + 1;
+          }
+        }
+        const offendingSections = Object.entries(sectionCounts)
+          .filter(([_, count]) => count > 1)
+          .map(([section, count]) => `${section} (${count} suggestions)`)
+          .join(", ");
+
+        const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} Your set_revision_suggestions call splits the following sections across multiple suggestions: ${offendingSections}. Section-level targets (title, consultantTitle, presentation, summary) must have exactly ONE suggestion per work item. Merge all paragraphs or fragments into a single suggestedText containing the complete replacement text for the whole section. Return the corrected set_revision_suggestions call now.`;
+
+        await insertAIDelivery(db, {
+          conversationId,
+          kind: "internal_message",
+          role: "user",
+          content: enforcementContent,
+        });
+
+        openAIMessages.push({ role: "user", content: enforcementContent });
+        assistantMessage = await callOpenAI(openAIMessages, revisionTools);
+        assistantContent = assistantMessage.content ?? "";
+        continue;
       }
 
       const persistedToolCalls: Array<{ toolName: string; input?: unknown }> = [];
@@ -1548,11 +1613,25 @@ export async function runRevisionWorkflow(
         : [];
       const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
 
-      if (isRevisionConversation && isWaitingForRevisionScopeDecision(assistantContent)) {
+      // Branch creation questions are always blocking — the user must answer before any work.
+      if (isRevisionConversation && !branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
         if (!assistantRow || assistantRow.content !== assistantContent) {
           assistantRow = await persistAssistantMessage(assistantContent);
         }
         break;
+      }
+
+      if (isRevisionConversation && isWaitingForRevisionScopeDecision(assistantContent)) {
+        if (!hasPendingWorkItems) {
+          // Model is genuinely done — all work items completed. Persist and stop.
+          if (!assistantRow || assistantRow.content !== assistantContent) {
+            assistantRow = await persistAssistantMessage(assistantContent);
+          }
+          break;
+        }
+        // else: model asked a scope question prematurely while items remain.
+        // Suppress the message and fall through to inject the next orchestration prompt.
+        assistantRow = null;
       }
 
       if (isRevisionConversation && i === 0) {
@@ -1572,15 +1651,11 @@ export async function runRevisionWorkflow(
       if (
         isRevisionConversation
         && hasPendingWorkItems
-        && looksLikeRevisionReadyMessage(assistantContent)
+        && (looksLikeRevisionReadyMessage(assistantContent) || isWaitingForRevisionScopeDecision(assistantContent))
       ) {
         assistantRow = null;
       } else if (!assistantRow || assistantRow.content !== assistantContent) {
         assistantRow = await persistAssistantMessage(assistantContent);
-      }
-
-      if (conversation.entity_type === "resume-revision-actions" && isWaitingForRevisionScopeDecision(assistantContent)) {
-        break;
       }
 
       const updatedHistory = await db

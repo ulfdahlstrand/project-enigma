@@ -277,6 +277,8 @@ export function buildUnifiedRevisionPrompt(
     "```json",
     '{"type":"tool_call","toolName":"set_revision_suggestions","input":{"summary":"<short summary>","suggestions":[{"id":"s-1","title":"<title>","description":"<description>","section":"<section>","suggestedText":"<suggested text>","status":"pending"}]}}',
     "```",
+    "For title, consultantTitle, presentation, and summary: emit EXACTLY ONE suggestion per work item. Do not split the section into multiple suggestions — one suggestion per paragraph is WRONG.",
+    "The single suggestion must contain the complete replacement text for the ENTIRE section combined into one suggestedText value.",
     "For title, consultantTitle, presentation, summary, and assignment text revisions, suggestedText must always be the full replacement text for that target.",
     "Do not emit only the corrected sentence, corrected paragraph, or changed fragment when the target is a full section.",
     "For assignments:",
@@ -298,7 +300,9 @@ export function buildUnifiedRevisionPrompt(
     "Treat requests like 'hela CV:t', 'alla uppdrag', or several named sections together as broad scope.",
     "Treat requests like one presentation tweak, one summary tweak, one title change, or one assignment as narrow scope unless the user says more changes are coming.",
     "Do not claim changes are applied — you are only proposing suggestions for the user to review.",
-    "After emitting suggestions, reply with one short sentence confirming they are ready for review.",
+    "After emitting suggestions for a work item, continue immediately with the next pending work item without asking the user anything.",
+    "Do not ask the user whether they want more changes, whether to continue, or whether you should stop while there are still pending work items in the queue.",
+    "Only after ALL work items have been resolved may you reply with one short sentence confirming the suggestions are ready for review.",
   ].join("\n");
 }
 
