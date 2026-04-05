@@ -1446,12 +1446,38 @@ export async function runRevisionWorkflow(
           toolCallInput: toolCall.input,
         });
 
-        await persistRevisionToolCallSuggestions(db, {
+        const suggestionResult = await persistRevisionToolCallSuggestions(db, {
           conversationId,
           branchId: conversation.entity_id,
           toolName: toolCall.toolName,
           toolCallInput: toolCall.input,
         });
+
+        // If the model called set_assignment_suggestions but every suggestion was invalid
+        // (e.g. empty suggestedText), the work item was still marked completed. Correct it
+        // to no_changes_needed so the UI shows an accurate terminal state.
+        if (
+          toolCall.toolName === "set_assignment_suggestions"
+          && suggestionResult.saved
+          && suggestionResult.incomingCount === 0
+        ) {
+          const workItemId =
+            typeof toolCall.input === "object"
+            && toolCall.input !== null
+            && "workItemId" in toolCall.input
+            && typeof (toolCall.input as { workItemId?: unknown }).workItemId === "string"
+              ? (toolCall.input as { workItemId: string }).workItemId
+              : null;
+
+          if (workItemId) {
+            await persistRevisionToolCallWorkItems(db, {
+              conversationId,
+              branchId: conversation.entity_id,
+              toolName: "mark_revision_work_item_no_changes_needed",
+              toolCallInput: { workItemId },
+            });
+          }
+        }
 
         if (!persisted) {
           frontendToolCalls.push({

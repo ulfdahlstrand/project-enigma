@@ -88,7 +88,8 @@ function normalizeSuggestionRows(
       return [];
     }
 
-    const status = normalizeStatus(suggestion.status);
+    // Always start as pending — the model must not pre-accept or pre-dismiss its own suggestions.
+    const status: AIRevisionSuggestionStatus = "pending";
     const matchedWorkItemId =
       workItemId
       ?? currentWorkItems.find((item) => {
@@ -207,13 +208,23 @@ export async function persistRevisionToolCallSuggestions(
     toolName: string;
     toolCallInput: unknown;
   },
-) {
+): Promise<{ saved: boolean; incomingCount: number }> {
   if (!isPersistedRevisionSuggestionTool(input.toolName)) {
-    return false;
+    return { saved: false, incomingCount: 0 };
   }
 
   const currentSuggestions = await listPersistedRevisionSuggestions(db, input.conversationId);
   const currentWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+  const incoming = normalizeSuggestionRows(
+    input.toolName,
+    input.toolCallInput,
+    currentWorkItems.map((item) => ({
+      work_item_id: item.work_item_id,
+      section: item.section,
+      assignment_id: item.assignment_id,
+      status: item.status,
+    })),
+  );
   const nextSuggestions = mergeSuggestions(
     currentSuggestions.map((suggestion) => ({
       work_item_id: suggestion.work_item_id,
@@ -230,16 +241,7 @@ export async function persistRevisionToolCallSuggestions(
       payload: suggestion.payload,
       resolved_at: suggestion.resolved_at,
     })),
-    normalizeSuggestionRows(
-      input.toolName,
-      input.toolCallInput,
-      currentWorkItems.map((item) => ({
-        work_item_id: item.work_item_id,
-        section: item.section,
-        assignment_id: item.assignment_id,
-        status: item.status,
-      })),
-    ),
+    incoming,
   );
 
   await db
@@ -247,14 +249,12 @@ export async function persistRevisionToolCallSuggestions(
     .where("conversation_id", "=", input.conversationId)
     .execute();
 
-  if (nextSuggestions.length === 0) {
-    return true;
+  if (nextSuggestions.length > 0) {
+    await db
+      .insertInto("ai_revision_suggestions")
+      .values(toInsertableRows(input.conversationId, input.branchId, nextSuggestions))
+      .execute();
   }
 
-  await db
-    .insertInto("ai_revision_suggestions")
-    .values(toInsertableRows(input.conversationId, input.branchId, nextSuggestions))
-    .execute();
-
-  return true;
+  return { saved: true, incomingCount: incoming.length };
 }

@@ -85,7 +85,7 @@ describe("persistRevisionToolCallSuggestions", () => {
       },
     });
 
-    expect(result).toBe(true);
+    expect(result.saved).toBe(true);
     expect(insertedRows).toHaveLength(1);
     expect(insertedRows[0]?.[0]).toMatchObject({
       work_item_id: "work-item-1",
