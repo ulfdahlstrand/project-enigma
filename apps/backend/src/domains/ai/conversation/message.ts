@@ -1589,10 +1589,10 @@ export async function sendAIMessage(
           });
         }
 
-        if (persistedToolCalls.length > 0) {
-          const persistedContent = buildLegacyAssistantToolCallContent(persistedToolCalls);
-          assistantRow = await persistAssistantMessage(persistedContent);
-        }
+        // persistedToolCalls are internal DB-side operations — no need to store them
+        // as a visible fenced-JSON message. The model's follow-up text response (next
+        // iteration) will be the user-visible message. If the loop exhausts before that,
+        // the empty-content fallback at the end of sendAIMessage produces a safe placeholder.
 
         if (branchHandoffCreated) {
           break;
