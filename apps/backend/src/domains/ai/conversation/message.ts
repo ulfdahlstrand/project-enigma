@@ -49,8 +49,10 @@ const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
 // Limit history sent to OpenAI to avoid exceeding context window
 const MAX_HISTORY_MESSAGES = 20;
-// Maximum number of backend tool-call iterations per sendAIMessage invocation
-const MAX_BACKEND_TOOL_LOOPS = 8;
+// Maximum number of backend tool-call iterations per sendAIMessage invocation.
+// Broad revisions with many work items require many iterations (inspect + suggest per item).
+// A CV with 27 assignments + 4 sections = 31 items × ~2 iterations = ~62 minimum.
+const MAX_BACKEND_TOOL_LOOPS = 40;
 const REVISION_TOOL_GUARDRAIL_MESSAGE = [
   "You must use the available tools for this revision request.",
   "Inspect the exact source text you need and then emit concrete revision suggestions.",
@@ -1069,6 +1071,9 @@ export async function sendAIMessage(
       isExplicitBranchCreationRejection(input.userMessage)
       && latestAssistantRequestedBranchCreation(existingMessages);
 
+    // Track consecutive guardrail retries per work item to prevent infinite loops.
+    const guardrailRetryCountByItemId = new Map<string, number>();
+
     for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
       let malformedRevisionToolCall: MalformedRevisionToolCall | null = null;
       const revisionToolCalls = isRevisionConversation
@@ -1259,6 +1264,23 @@ export async function sendAIMessage(
               && isAllowedToolCallForPendingWorkItem(revisionToolCalls[0]!, nextPendingItem);
 
             if (!isAllowedStep) {
+              const retries = (guardrailRetryCountByItemId.get(nextPendingItem.work_item_id) ?? 0) + 1;
+              guardrailRetryCountByItemId.set(nextPendingItem.work_item_id, retries);
+
+              if (retries > 3) {
+                logger.warn("Revision work item guardrail loop detected, failing item", {
+                  conversationId: input.conversationId,
+                  workItemId: nextPendingItem.work_item_id,
+                  retries,
+                });
+                await failNextOpenRevisionWorkItem(
+                  `Guardrail loop: model called wrong tool ${retries} times for this work item.`,
+                );
+                assistantMessage = { content: "" } as OpenAI.Chat.Completions.ChatCompletionMessage;
+                assistantContent = "";
+                continue;
+              }
+
               const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} ${buildPendingWorkItemGuardrailMessage(nextPendingItem)}`;
 
               await insertAIDelivery(db, {
@@ -1809,10 +1831,14 @@ export async function sendAIMessage(
   }
 
   if (!assistantRow) {
-    if (isRevisionConversation && recoveredFromRevisionWorkflowFailure && assistantContent.trim().length === 0) {
-      assistantContent = detectConversationLanguage(conversation.system_prompt) === "sv"
-        ? "Jag fortsätter med nästa del av revisionen. Ett delsteg fastnade och markerades som misslyckat."
-        : "I am continuing with the next part of the revision. One work item got stuck and was marked as failed.";
+    if (isRevisionConversation && assistantContent.trim().length === 0) {
+      assistantContent = recoveredFromRevisionWorkflowFailure
+        ? (detectConversationLanguage(conversation.system_prompt) === "sv"
+            ? "Jag fortsätter med nästa del av revisionen. Ett delsteg fastnade och markerades som misslyckat."
+            : "I am continuing with the next part of the revision. One work item got stuck and was marked as failed.")
+        : (detectConversationLanguage(conversation.system_prompt) === "sv"
+            ? "Jag fortsätter med revisionen."
+            : "Continuing the revision.");
     }
     assistantRow = await persistAssistantMessage(assistantContent);
   }
