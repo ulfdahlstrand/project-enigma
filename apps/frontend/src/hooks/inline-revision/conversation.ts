@@ -3,10 +3,8 @@ import {
   resolveRevisionWorkItems,
 } from "../../components/revision/inline-revision";
 import {
-  revisionPlanSchema,
   revisionWorkItemsSchema,
   normalizeRevisionSuggestionsInput,
-  type RevisionPlan,
   type RevisionWorkItems,
 } from "../../lib/ai-tools/registries/resume-tool-schemas";
 import type { PersistedToolCall } from "./types";
@@ -29,32 +27,6 @@ function extractPersistedToolCalls(text: string): PersistedToolCall[] {
 
     return [];
   });
-}
-
-export function derivePlanFromConversation(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-): RevisionPlan | null {
-  let nextPlan: RevisionPlan | null = null;
-
-  for (const message of messages) {
-    if (message.role !== "assistant") {
-      continue;
-    }
-
-    for (const toolCall of extractPersistedToolCalls(message.content)) {
-      if (toolCall.toolName !== "set_revision_plan") {
-        continue;
-      }
-
-      try {
-        nextPlan = revisionPlanSchema.parse(toolCall.input);
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  return nextPlan;
 }
 
 export function deriveWorkItemsFromConversation(

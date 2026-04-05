@@ -8,6 +8,7 @@ import {
 import {
   appendUniqueRevisionSuggestions,
   markWorkItemsCompletedFromSuggestions,
+  normalizeComparableText,
   resolveRevisionWorkItems,
 } from "../../components/revision/inline-revision";
 import { createResumeActionToolRegistry } from "../../lib/ai-tools/registries/resume-action-tools";
@@ -54,9 +55,6 @@ export function useInlineRevisionAssistant({
   assistantEntityId,
   assistantToolRoute,
 }: Params) {
-  const normalizeComparableText = (value: string | null | undefined) =>
-    (value ?? "").replace(/\r\n/g, "\n").trim();
-
   const filterNoOpSuggestions = (incoming: RevisionSuggestions): RevisionSuggestions => {
     const filteredSuggestions = incoming.suggestions.filter((suggestion) => {
       const nextText = normalizeComparableText(suggestion.suggestedText);

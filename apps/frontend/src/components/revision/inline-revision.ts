@@ -35,15 +35,6 @@ export function buildInlineRevisionBranchNameFromGoal(goal: string | null | unde
     : branchName;
 }
 
-export function buildInlineRevisionBranchName(plan?: RevisionPlan | null) {
-  const planLead = plan
-    ? slugifyInlineRevisionBranchLabel(plan.actions[0]?.title ?? "") ||
-      slugifyInlineRevisionBranchLabel(plan.summary)
-    : "";
-
-  return buildInlineRevisionBranchNameFromGoal(planLead);
-}
-
 export function buildInlineRevisionSuggestionCommitTitle(
   suggestion: RevisionSuggestions["suggestions"][number],
 ) {
@@ -174,24 +165,6 @@ export function resolveRevisionWorkItems(
   };
 }
 
-export function buildInlineRevisionWorkItemsFromPlan(plan: RevisionPlan): RevisionWorkItems | null {
-  if (plan.actions.length === 0) {
-    return null;
-  }
-
-  return {
-    summary: plan.summary,
-    items: plan.actions.map((action, index) => ({
-      id: action.id || `work-item-${index + 1}`,
-      title: action.title,
-      description: action.description,
-      section: inferRevisionWorkItemSection(action),
-      assignmentId: action.assignmentId,
-      status: "pending" as const,
-    })),
-  };
-}
-
 export function inferRevisionWorkItemSection(action: RevisionPlan["actions"][number]): string {
   if (action.assignmentId) {
     return "assignment";
@@ -259,7 +232,7 @@ export function appendUniqueRevisionSuggestions(
   };
 }
 
-function normalizeComparableText(value: string | null | undefined) {
+export function normalizeComparableText(value: string | null | undefined) {
   return (value ?? "").replace(/\r\n/g, "\n").trim();
 }
 
