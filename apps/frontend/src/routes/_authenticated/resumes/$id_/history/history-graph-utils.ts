@@ -103,7 +103,7 @@ export function computeGraphLayout(
   for (const e of graphEdges) {
     if (e.parentOrder > 0) {
       const mergedCommit = commitsById.get(e.parentCommitId);
-      if (mergedCommit) {
+      if (mergedCommit?.branchId) {
         mergedBranchIds.add(mergedCommit.branchId);
       }
     }
