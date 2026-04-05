@@ -18,6 +18,7 @@ import type { Kysely } from "kysely";
 import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
+import { setPendingDecision } from "./pending-decision.js";
 import {
   extractToolCalls,
   buildToolResultMessage,
@@ -896,6 +897,8 @@ export async function runRevisionWorkflow(
     callOpenAI: (messages: Array<any>, tools?: Array<Record<string, unknown>>) => Promise<any>;
     persistAssistantMessage: (content: string) => Promise<AssistantRow>;
     maxHistoryMessages: number;
+    /** Classified answer to a pending yes/no decision, or null if none was pending. */
+    pendingDecisionAnswer: "yes" | "no" | null;
   },
 ): Promise<RevisionWorkflowResult> {
   const {
@@ -907,6 +910,7 @@ export async function runRevisionWorkflow(
     callOpenAI,
     persistAssistantMessage,
     maxHistoryMessages,
+    pendingDecisionAnswer,
   } = context;
 
   const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
@@ -969,12 +973,16 @@ export async function runRevisionWorkflow(
     userMessage,
   ]);
   const assignmentQueueRequired = broadRevisionScope !== null;
+
+  // pendingDecisionAnswer comes from the Haiku classifier in message.ts and is the
+  // authoritative source when a pending_decision was set. Fall back to legacy keyword
+  // matching only for conversations that pre-date the pending_decision mechanism.
   const branchCreationConfirmed =
-    isExplicitBranchCreationConfirmation(userMessage)
-    && latestAssistantRequestedBranchCreation(existingMessages);
+    pendingDecisionAnswer === "yes"
+    || (isExplicitBranchCreationConfirmation(userMessage) && latestAssistantRequestedBranchCreation(existingMessages));
   const branchCreationRejected =
-    isExplicitBranchCreationRejection(userMessage)
-    && latestAssistantRequestedBranchCreation(existingMessages);
+    pendingDecisionAnswer === "no"
+    || (isExplicitBranchCreationRejection(userMessage) && latestAssistantRequestedBranchCreation(existingMessages));
 
   // Track consecutive guardrail retries per work item to prevent infinite loops.
   const guardrailRetryCountByItemId = new Map<string, number>();
@@ -1058,6 +1066,7 @@ export async function runRevisionWorkflow(
       // branch question to the user and wait for their answer before continuing.
       if (!branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
         assistantRow = await persistAssistantMessage(assistantContent);
+        await setPendingDecision(db, conversationId, "branch_creation");
         break;
       }
 
@@ -1429,7 +1438,7 @@ export async function runRevisionWorkflow(
         }
 
         if (toolCall.toolName === "create_revision_branch") {
-          if (!isExplicitBranchCreationConfirmation(userMessage)) {
+          if (!branchCreationConfirmed) {
             const toolResult = {
               ok: false,
               error: "Branch creation requires an explicit user confirmation first.",
@@ -1614,10 +1623,12 @@ export async function runRevisionWorkflow(
       const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
 
       // Branch creation questions are always blocking — the user must answer before any work.
+      // Set pending_decision so the next sendAIMessage call classifies the user's reply.
       if (isRevisionConversation && !branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
         if (!assistantRow || assistantRow.content !== assistantContent) {
           assistantRow = await persistAssistantMessage(assistantContent);
         }
+        await setPendingDecision(db, conversationId, "branch_creation");
         break;
       }
 

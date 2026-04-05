@@ -26,6 +26,7 @@ import {
   requiresExplicitAssignmentWorkQueue,
   isWaitingForRevisionScopeDecision,
 } from "./revision-workflow-engine.js";
+import { classifyDecision, setPendingDecision } from "./pending-decision.js";
 
 export { requiresExplicitAssignmentWorkQueue, isWaitingForRevisionScopeDecision };
 
@@ -155,6 +156,65 @@ export async function sendAIMessage(
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // Pending decision gate
+  //
+  // When the conversation has a pending_decision, the model asked a blocking
+  // yes/no question. Classify the user's reply with a cheap model call before
+  // running the main workflow. If the answer is unclear, reply immediately and
+  // keep the lock in place so the user can try again.
+  // ---------------------------------------------------------------------------
+
+  let pendingDecisionAnswer: "yes" | "no" | null = null;
+
+  if (conversation.pending_decision && !isInternalUserMessage) {
+    const answer = await classifyDecision(openaiClient, input.userMessage);
+    const language = detectConversationLanguage(conversation.system_prompt);
+
+    if (answer === "unclear") {
+      const clarificationContent = language === "sv"
+        ? "Jag förstod inte riktigt — vänligen svara ja eller nej."
+        : "I didn't quite catch that — please answer yes or no.";
+
+      const clarificationRow = await db
+        .insertInto("ai_messages")
+        .values({
+          conversation_id: input.conversationId,
+          role: "assistant",
+          content: clarificationContent,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      await insertAIDelivery(db, {
+        conversationId: input.conversationId,
+        aiMessageId: clarificationRow.id,
+        kind: "visible_message",
+        role: "assistant",
+        content: clarificationContent,
+      });
+
+      await db
+        .updateTable("ai_conversations")
+        .set({ updated_at: new Date() })
+        .where("id", "=", input.conversationId)
+        .execute();
+
+      return {
+        id: clarificationRow.id,
+        conversationId: clarificationRow.conversation_id,
+        role: clarificationRow.role as "assistant",
+        content: clarificationRow.content,
+        createdAt: clarificationRow.created_at.toISOString(),
+        needsContinuation: false,
+      };
+    }
+
+    // Clear the lock — a definitive yes/no was given.
+    await setPendingDecision(db, input.conversationId, null);
+    pendingDecisionAnswer = answer;
+  }
+
   // Build message history for OpenAI (capped to avoid token limit issues)
   const history = existingMessages.slice(-MAX_HISTORY_MESSAGES);
   const openAIMessages: Array<any> = [
@@ -255,6 +315,7 @@ export async function sendAIMessage(
       callOpenAI,
       persistAssistantMessage,
       maxHistoryMessages: MAX_HISTORY_MESSAGES,
+      pendingDecisionAnswer,
     });
     assistantRow = result.assistantRow;
     needsContinuation = result.needsContinuation;

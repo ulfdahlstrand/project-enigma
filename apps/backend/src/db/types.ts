@@ -249,6 +249,7 @@ export interface AIConversationTable {
   system_prompt: Generated<string>;
   title: string | null;
   is_closed: Generated<boolean>;
+  pending_decision: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

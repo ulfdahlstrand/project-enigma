@@ -53,6 +53,7 @@ export async function createAIConversation(
       systemPrompt: existing.system_prompt,
       title: existing.title,
       isClosed: existing.is_closed,
+      pendingDecision: existing.pending_decision,
       createdAt: existing.created_at.toISOString(),
       updatedAt: existing.updated_at.toISOString(),
     };
@@ -126,6 +127,7 @@ export async function createAIConversation(
     systemPrompt: row.system_prompt,
     title: row.title,
     isClosed: row.is_closed,
+    pendingDecision: row.pending_decision,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };

@@ -115,6 +115,7 @@ export async function getAIConversation(
     systemPrompt: conversation.system_prompt,
     title: conversation.title,
     isClosed: conversation.is_closed,
+    pendingDecision: conversation.pending_decision,
     createdAt: conversation.created_at.toISOString(),
     updatedAt: conversation.updated_at.toISOString(),
     messages: messages.map((m) => ({

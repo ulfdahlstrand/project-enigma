@@ -17,6 +17,7 @@ const CONVERSATION_ROW = {
   system_prompt: "You are a CV expert.",
   title: null,
   is_closed: false,
+  pending_decision: null,
   created_at: new Date("2026-03-19T00:00:00.000Z"),
   updated_at: new Date("2026-03-19T00:00:00.000Z"),
 };

@@ -14,6 +14,7 @@ export const aiConversationSchema = z.object({
   systemPrompt: z.string(),
   title: z.string().nullable(),
   isClosed: z.boolean(),
+  pendingDecision: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
