@@ -868,8 +868,7 @@ export async function runRevisionWorkflow(
     pendingDecisionAnswer,
   } = context;
 
-  const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
-  const revisionTools = isRevisionConversation ? buildRevisionOpenAITools() : undefined;
+  const revisionTools = buildRevisionOpenAITools();
 
   let assistantMessage = context.firstAssistantMessage;
   let assistantContent: string = assistantMessage.content ?? "";
@@ -884,10 +883,6 @@ export async function runRevisionWorkflow(
   // Returns true if a work item was found and marked; false if the queue is empty.
   // -------------------------------------------------------------------------
   async function failNextOpenRevisionWorkItem(errorMessage: string): Promise<boolean> {
-    if (!isRevisionConversation) {
-      return false;
-    }
-
     const persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
     const currentItem = nextOpenWorkItem(persistedWorkItems);
     if (!currentItem) {
@@ -941,32 +936,30 @@ export async function runRevisionWorkflow(
 
   for (let i = 0; i < MAX_BACKEND_TOOL_LOOPS; i++) {
     let malformedRevisionToolCall: MalformedRevisionToolCall | null = null;
-    const revisionToolCalls = isRevisionConversation
-      ? (assistantMessage.tool_calls ?? []).flatMap((toolCall: any) => {
-          try {
-            return [{
-              id: toolCall.id,
-              toolName: toolCall.function.name,
-              input: parseRevisionToolArguments(
-                toolCall.function.name,
-                toolCall.function.arguments ?? "{}",
-              ),
-            }];
-          } catch (error) {
-            malformedRevisionToolCall = {
-              toolName:
-                typeof toolCall?.function?.name === "string"
-                  ? toolCall.function.name
-                  : "unknown_tool",
-              error: error instanceof Error ? error.message : "Invalid tool arguments",
-            };
-            return [];
-          }
-        })
-      : [];
+    const revisionToolCalls = (assistantMessage.tool_calls ?? []).flatMap((toolCall: any) => {
+      try {
+        return [{
+          id: toolCall.id,
+          toolName: toolCall.function.name,
+          input: parseRevisionToolArguments(
+            toolCall.function.name,
+            toolCall.function.arguments ?? "{}",
+          ),
+        }];
+      } catch (error) {
+        malformedRevisionToolCall = {
+          toolName:
+            typeof toolCall?.function?.name === "string"
+              ? toolCall.function.name
+              : "unknown_tool",
+          error: error instanceof Error ? error.message : "Invalid tool arguments",
+        };
+        return [];
+      }
+    });
 
     const malformedToolCall = malformedRevisionToolCall as MalformedRevisionToolCall | null;
-    if (isRevisionConversation && malformedToolCall !== null) {
+    if (malformedToolCall !== null) {
       logger.warn("AI revision tool arguments could not be parsed", {
         conversationId,
         toolName: malformedToolCall.toolName,
@@ -1004,7 +997,7 @@ export async function runRevisionWorkflow(
       persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
     }
 
-    if (isRevisionConversation && revisionToolCalls.length > 0) {
+    if (revisionToolCalls.length > 0) {
       // If the model is asking about branch creation in its text content but has not yet
       // received an explicit user confirmation, do not process any tool calls. Show the
       // branch question to the user and wait for their answer before continuing.
@@ -1676,7 +1669,7 @@ export async function runRevisionWorkflow(
       throw error;
     }
     assistantContent = assistantMessage.content ?? "";
-    if (isRevisionConversation && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+    if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
       continue;
     }
     if (assistantContent.trim().length === 0) {
@@ -1699,7 +1692,7 @@ export async function runRevisionWorkflow(
   // -------------------------------------------------------------------------
 
   if (!assistantRow) {
-    if (isRevisionConversation && assistantContent.trim().length === 0) {
+    if (assistantContent.trim().length === 0) {
       assistantContent = recoveredFromRevisionWorkflowFailure
         ? (detectConversationLanguage(conversation.system_prompt) === "sv"
             ? "Jag fortsätter med nästa del av revisionen. Ett delsteg fastnade och markerades som misslyckat."
@@ -1718,15 +1711,12 @@ export async function runRevisionWorkflow(
   // still pending work items after the loop budget is exhausted.
   // -------------------------------------------------------------------------
 
-  let needsContinuation = false;
-  if (isRevisionConversation) {
-    const remainingItems = await listPersistedRevisionWorkItems(db, conversationId);
-    const hasOpenItems = nextOpenWorkItem(remainingItems) !== null;
-    // Do not ask the frontend to continue when the model is waiting for user input —
-    // that would cause the continuation loop to spin until the budget is exhausted.
-    const waitingForUser = isWaitingForRevisionScopeDecision(assistantRow?.content ?? "");
-    needsContinuation = hasOpenItems && !waitingForUser;
-  }
+  const remainingItems = await listPersistedRevisionWorkItems(db, conversationId);
+  const hasOpenItems = nextOpenWorkItem(remainingItems) !== null;
+  // Do not ask the frontend to continue when the model is waiting for user input —
+  // that would cause the continuation loop to spin until the budget is exhausted.
+  const waitingForUser = isWaitingForRevisionScopeDecision(assistantRow?.content ?? "");
+  const needsContinuation = hasOpenItems && !waitingForUser;
 
   return { assistantRow, needsContinuation };
 }

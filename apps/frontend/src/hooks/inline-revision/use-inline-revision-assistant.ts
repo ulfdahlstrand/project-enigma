@@ -192,7 +192,6 @@ export function useInlineRevisionAssistant({
       originalContent,
       toolRegistry,
       toolContext,
-      onAccept: () => {},
     });
 
     hideDrawer();

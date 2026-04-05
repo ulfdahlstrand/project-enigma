@@ -30,8 +30,9 @@ export interface OpenAssistantOptions {
   toolContext?: AIToolContext;
   /** Reopen a specific existing conversation instead of auto-creating one. */
   initialConversationId?: string | null | undefined;
-  /** Called with the suggested text when the user clicks Apply in the diff dialog. */
-  onAccept: (suggested: string) => void;
+  /** Called with the suggested text when the user clicks Apply in the diff dialog.
+   *  Omit when the assistant is opened in revision mode (suggestions are applied per-item). */
+  onAccept?: (suggested: string) => void;
 }
 
 interface AIAssistantState {
@@ -107,7 +108,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       toolContext: options.toolContext ?? null,
       activeConversationId: options.initialConversationId ?? null,
       pendingSuggestion: null,
-      onAccept: options.onAccept,
+      onAccept: options.onAccept ?? null,
     });
   }, []);
 
