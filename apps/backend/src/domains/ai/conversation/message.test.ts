@@ -702,9 +702,6 @@ describe("sendAIMessage — backend tool-call loop", () => {
   });
 
   it("persists work-item write tools and continues the loop", async () => {
-    const writeToolContent =
-      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review","items":[]}}\n```';
-
     const openai = buildOpenAISequence([
       {
         content: null,
@@ -721,15 +718,7 @@ describe("sendAIMessage — backend tool-call loop", () => {
     ]);
     const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    const writeToolRow = {
-      id: "msg-write",
-      conversation_id: CONV_ID,
-      role: "assistant",
-      content: writeToolContent,
-      created_at: new Date(),
-    };
     const db = buildRevisionDb({
-      intermediateAssistantRows: [writeToolRow],
       finalRow: {
         ...FINAL_MSG_ROW,
         content: "Work items are now ready for review.",
@@ -761,9 +750,6 @@ describe("sendAIMessage — backend tool-call loop", () => {
   });
 
   it("recovers from malformed revision tool arguments instead of throwing", async () => {
-    const writeToolContent =
-      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review","items":[]}}\n```';
-
     const openai = buildOpenAISequence([
       {
         content: null,
@@ -791,15 +777,7 @@ describe("sendAIMessage — backend tool-call loop", () => {
     ]);
     const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    const writeToolRow = {
-      id: "msg-write-after-retry",
-      conversation_id: CONV_ID,
-      role: "assistant",
-      content: writeToolContent,
-      created_at: new Date(),
-    };
     const db = buildRevisionDb({
-      intermediateAssistantRows: [writeToolRow],
       finalRow: {
         ...FINAL_MSG_ROW,
         content: "Work items are now ready for review.",
@@ -823,9 +801,6 @@ describe("sendAIMessage — backend tool-call loop", () => {
   });
 
   it("requires work items before narrow revision suggestions are accepted", async () => {
-    const writeToolContent =
-      '```json\n{"type":"tool_call","toolName":"set_revision_work_items","input":{"summary":"Review presentation","items":[{"id":"work-item-1","title":"Review presentation","description":"Check the presentation text.","section":"presentation","status":"pending"}]}}\n```';
-
     const openai = buildOpenAISequence([
       {
         content: null,
@@ -853,15 +828,7 @@ describe("sendAIMessage — backend tool-call loop", () => {
     ]);
     const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    const writeToolRow = {
-      id: "msg-write-after-queue-guardrail",
-      conversation_id: CONV_ID,
-      role: "assistant",
-      content: writeToolContent,
-      created_at: new Date(),
-    };
     const db = buildRevisionDb({
-      intermediateAssistantRows: [writeToolRow],
       finalRow: {
         ...FINAL_MSG_ROW,
         content: "Work item created.",
