@@ -410,8 +410,14 @@ export const contract = oc.router({
     .route({ method: "DELETE", path: "/resume-skills/{id}" })
     .input(deleteResumeSkillInputSchema)
     .output(deleteResumeSkillOutputSchema),
-  createAssignment: oc.input(createAssignmentInputSchema).output(createAssignmentOutputSchema),
-  deleteAssignment: oc.input(deleteAssignmentInputSchema).output(deleteAssignmentOutputSchema),
+  createAssignment: oc
+    .route({ method: "POST", path: "/employees/{employeeId}/assignments" })
+    .input(createAssignmentInputSchema)
+    .output(createAssignmentOutputSchema),
+  deleteAssignment: oc
+    .route({ method: "DELETE", path: "/assignments/{id}" })
+    .input(deleteAssignmentInputSchema)
+    .output(deleteAssignmentOutputSchema),
   listEducation: oc
     .route({ method: "GET", path: "/employees/{employeeId}/education" })
     .input(listEducationInputSchema)
