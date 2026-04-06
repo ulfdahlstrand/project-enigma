@@ -1,5 +1,4 @@
 import Box from "@mui/material/Box";
-import { ImprovePresentationFab } from "../ai-assistant/ImprovePresentationFab";
 import { ResumeAssignmentsPage } from "./ResumeAssignmentsPage";
 import { ResumeCoverPage } from "./ResumeCoverPage";
 import { ResumeSkillsPage } from "./ResumeSkillsPage";
@@ -49,9 +48,7 @@ interface ResumeDocumentCanvasProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
-  showImprovePresentationFab: boolean;
   fabTop: number;
-  onImprovePresentationAccept: (improved: string) => void;
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];
@@ -102,9 +99,7 @@ export function ResumeDocumentCanvas({
   languages,
   isSnapshotMode,
   getResumeQueryKey,
-  showImprovePresentationFab,
   fabTop,
-  onImprovePresentationAccept,
   hasAssignments,
   assignmentsPage,
   assignments,
@@ -178,17 +173,6 @@ export function ResumeDocumentCanvas({
           resumeId={resumeId}
           queryKey={getResumeQueryKey(resumeId, activeBranchId)}
           sectionRef={skillsSectionRef}
-        />
-      )}
-
-      {showImprovePresentationFab && presentation.length > 0 && (
-        <ImprovePresentationFab
-          resumeId={resumeId}
-          presentation={presentation}
-          consultantTitle={consultantTitle}
-          employeeName={employeeName}
-          top={fabTop}
-          onAccept={onImprovePresentationAccept}
         />
       )}
 

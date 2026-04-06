@@ -455,10 +455,6 @@ export function ResumeDetailPage({
     inlineRevision.reset();
   };
 
-  const handleOpenAssistant = () => {
-    void inlineRevision.open();
-  };
-
   const handleCloseRevision = () => {
     if (isEditRoute) {
       void navigate({
@@ -494,7 +490,6 @@ export function ResumeDetailPage({
           search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
-      onOpenAiHelp={handleOpenAssistant}
       onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
@@ -567,13 +562,6 @@ export function ResumeDetailPage({
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           fabTop={fabTop}
-          onImprovePresentationAccept={(improved) => {
-            const paragraphs = improved
-              .split(/\n\n+/)
-              .map((p) => p.trim())
-              .filter(Boolean);
-            updateResume.mutate({ presentation: paragraphs });
-          }}
           hasAssignments={hasAssignments}
           assignmentsPage={assignmentsPage}
           assignments={editableAssignments}

@@ -84,9 +84,7 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
             onDraftPresentationChange={() => {}}
             onDraftSummaryChange={() => {}}
             onDraftHighlightedItemsChange={() => {}}
-            showImprovePresentationFab={false}
             fabTop={0}
-            onImprovePresentationAccept={() => {}}
             showAssignmentsToggleFab={true}
             newAssignmentId={null}
             onAutoEditConsumed={() => {}}
