@@ -23,8 +23,6 @@ const NEW_RESUME_ROW = {
   summary: null,
   language: "en",
   is_main: false,
-  consultant_title: null,
-  presentation: [],
   created_at: new Date("2025-03-01T00:00:00.000Z"),
   updated_at: new Date("2025-03-01T00:00:00.000Z"),
 };

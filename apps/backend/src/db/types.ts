@@ -36,8 +36,6 @@ export interface ResumeTable {
   id: Generated<string>;
   employee_id: string;
   title: string;
-  consultant_title: string | null;
-  presentation: Generated<string[]>;
   summary: string | null;
   language: Generated<string>;
   is_main: Generated<boolean>;

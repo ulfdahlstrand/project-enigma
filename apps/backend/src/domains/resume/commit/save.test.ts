@@ -25,8 +25,6 @@ const BRANCH_ROW = {
   head_commit_id: null,
   employee_id: EMPLOYEE_ID_1,
   title: "Senior Engineer",
-  consultant_title: null,
-  presentation: ["Experienced engineer"],
   summary: "Strong backend focus",
   language: "en",
 };
@@ -311,7 +309,12 @@ describe("saveResumeVersion", () => {
 
   it("allows setting consultantTitle to null via override", async () => {
     const { db, insertValues } = buildDbMock({
-      branchRow: { ...BRANCH_ROW, consultant_title: "Old Title" },
+      headCommitRow: {
+        content: {
+          ...INSERTED_COMMIT.content,
+          consultantTitle: "Old Title",
+        },
+      },
     });
 
     await saveResumeVersion(db, MOCK_ADMIN, {
