@@ -16,6 +16,60 @@ import type { saveResumeVersionInputSchema, saveResumeVersionOutputSchema } from
 type SaveResumeVersionInput = z.infer<typeof saveResumeVersionInputSchema>;
 type SaveResumeVersionOutput = z.infer<typeof saveResumeVersionOutputSchema>;
 
+function equalsByJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function joinNaturalLanguage(parts: string[]): string {
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+}
+
+function summarizeCommitChanges(
+  baseContent: ResumeCommitContent,
+  nextContent: ResumeCommitContent
+): { title: string; description: string } {
+  const changedAreas: string[] = [];
+
+  if (!equalsByJson(baseContent.consultantTitle, nextContent.consultantTitle)) {
+    changedAreas.push("consultant title");
+  }
+  if (!equalsByJson(baseContent.presentation, nextContent.presentation)) {
+    changedAreas.push("presentation");
+  }
+  if (!equalsByJson(baseContent.summary, nextContent.summary)) {
+    changedAreas.push("summary");
+  }
+  if (!equalsByJson(baseContent.highlightedItems, nextContent.highlightedItems)) {
+    changedAreas.push("highlights");
+  }
+  if (
+    !equalsByJson(baseContent.skillGroups, nextContent.skillGroups)
+    || !equalsByJson(baseContent.skills, nextContent.skills)
+  ) {
+    changedAreas.push("skills");
+  }
+  if (!equalsByJson(baseContent.assignments, nextContent.assignments)) {
+    changedAreas.push("assignments");
+  }
+
+  if (changedAreas.length === 0) {
+    return {
+      title: "Save resume version",
+      description: "Saved the current resume snapshot without content changes.",
+    };
+  }
+
+  const areaList = joinNaturalLanguage(changedAreas);
+
+  return {
+    title: `Update ${areaList}`,
+    description: `Updated ${areaList}.`,
+  };
+}
+
 /**
  * Creates an immutable snapshot (commit) of the current state of a resume
  * branch. Advances the branch's head_commit_id to the new commit.
@@ -166,6 +220,11 @@ export async function saveResumeVersion(
     })),
   };
 
+  const generatedMetadata = summarizeCommitChanges(baseContent, content);
+  const title = input.title?.trim() || input.message?.trim() || generatedMetadata.title;
+  const description = input.description?.trim() || generatedMetadata.description;
+  const message = input.message?.trim() || title;
+
   // Atomically insert commit and update branch HEAD
   const commit = await db.transaction().execute(async (trx) => {
     const newCommit = await trx
@@ -174,9 +233,9 @@ export async function saveResumeVersion(
         resume_id: branch.resume_id,
         branch_id: input.branchId,
         content: JSON.stringify(content),
-        title: input.title ?? input.message ?? "",
-        description: input.description ?? "",
-        message: input.message ?? "",
+        title,
+        description,
+        message,
         created_by: user.id,
       })
       .returningAll()

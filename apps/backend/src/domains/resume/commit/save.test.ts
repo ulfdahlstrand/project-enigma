@@ -212,7 +212,40 @@ describe("saveResumeVersion", () => {
     await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "" })
+      expect.objectContaining({
+        title: "Update skills and assignments",
+        message: "Update skills and assignments",
+        description: "Updated skills and assignments.",
+      })
+    );
+  });
+
+  it("generates summary metadata for scalar content changes when message is omitted", async () => {
+    const { db, insertValues } = buildDbMock({
+      headCommitRow: {
+        content: {
+          ...INSERTED_COMMIT.content,
+          presentation: ["Old presentation"],
+          summary: "Old summary",
+        },
+      },
+      skillGroupRows: [],
+      skillRows: [],
+      assignmentRows: [],
+    });
+
+    await saveResumeVersion(db, MOCK_ADMIN, {
+      branchId: BRANCH_ID,
+      presentation: ["New presentation"],
+      summary: "New summary",
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Update presentation and summary",
+        message: "Update presentation and summary",
+        description: "Updated presentation and summary.",
+      })
     );
   });
 
