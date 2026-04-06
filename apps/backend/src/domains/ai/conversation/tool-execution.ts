@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
+import { withSpan } from "../../../infra/tracing.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
 
@@ -325,6 +326,12 @@ export async function executeBackendInspectTool(
   toolCall: ToolCallPayload,
   options?: { conversationId?: string },
 ): Promise<{ ok: boolean; output?: unknown; error?: string }> {
+  return withSpan("ai.revision.execute_backend_inspect_tool", {
+    "ai.tool.name": toolCall.toolName,
+    "ai.entity_type": entityType,
+    "ai.branch.id": entityId,
+    ...(options?.conversationId ? { "ai.conversation.id": options.conversationId } : {}),
+  }, async () => {
   if (entityType !== "resume-revision-actions") {
     return {
       ok: false,
@@ -381,4 +388,5 @@ export async function executeBackendInspectTool(
     default:
       return { ok: false, error: `Unknown inspect tool: ${toolCall.toolName}` };
   }
+  });
 }

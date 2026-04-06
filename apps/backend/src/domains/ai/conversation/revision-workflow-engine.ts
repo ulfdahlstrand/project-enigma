@@ -17,6 +17,7 @@ import type { Kysely } from "kysely";
 import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
+import { withSpan } from "../../../infra/tracing.js";
 import { setPendingDecision } from "./pending-decision.js";
 import {
   INTERNAL_AUTOSTART_PREFIX,
@@ -856,6 +857,10 @@ export async function runRevisionWorkflow(
     pendingDecisionAnswer: "yes" | "no" | null;
   },
 ): Promise<RevisionWorkflowResult> {
+  return withSpan("ai.revision.run_workflow", {
+    "ai.conversation.id": context.conversationId,
+    "ai.branch.id": context.conversation.entity_id,
+  }, async () => {
   const {
     conversationId,
     conversation,
@@ -1719,4 +1724,5 @@ export async function runRevisionWorkflow(
   const needsContinuation = hasOpenItems && !waitingForUser;
 
   return { assistantRow, needsContinuation };
+  });
 }

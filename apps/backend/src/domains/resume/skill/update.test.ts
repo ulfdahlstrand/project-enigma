@@ -80,7 +80,7 @@ describe("updateResumeSkill (core function)", () => {
 
     expect(result).toEqual({
       id: "550e8400-e29b-41d4-a716-446655440010",
-      cvId: "550e8400-e29b-41d4-a716-446655440020",
+      resumeId: "550e8400-e29b-41d4-a716-446655440020",
       name: "Go",
       level: "Intermediate",
       category: "Backend",

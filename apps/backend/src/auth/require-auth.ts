@@ -1,7 +1,10 @@
 import { ORPCError } from "@orpc/server";
 import type { User } from "../db/types.js";
 
-export type AuthContext = { user: User | null };
+export type AuthContext = {
+  user: User | null;
+  requestId?: string;
+};
 /** Alias for User — used in CV procedures for clarity. */
 export type AuthUser = User;
 /** Alias for AuthContext — used in CV procedure handlers. */

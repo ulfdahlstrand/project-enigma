@@ -118,7 +118,7 @@ function EmployeeDetailPage() {
   });
 
   const deleteEducationMutation = useMutation({
-    mutationFn: (educationId: string) => orpc.deleteEducation({ id: educationId }),
+    mutationFn: (educationId: string) => orpc.deleteEducation({ employeeId: id, id: educationId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: educationQueryKey });
     },

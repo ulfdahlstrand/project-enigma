@@ -207,7 +207,7 @@ describe("getResume query function", () => {
     expect(result.skills).toHaveLength(2);
     expect(result.skills[0]).toMatchObject({
       id: SKILL_ID_1,
-      cvId: RESUME_ID,
+      resumeId: RESUME_ID,
       name: "TypeScript",
       level: "expert",
       sortOrder: 0,

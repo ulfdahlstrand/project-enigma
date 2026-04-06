@@ -96,7 +96,7 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
       name: string;
       category: string | null;
       sortOrder?: number;
-    }) => orpc.createResumeSkill({ cvId: resumeId, name, category, sortOrder }),
+    }) => orpc.createResumeSkill({ resumeId, name, category, sortOrder }),
     onSuccess: async () => {
       setAddingToCategory(null);
       setNewSkillName("");

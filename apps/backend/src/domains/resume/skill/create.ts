@@ -13,7 +13,7 @@ export async function createResumeSkill(db: Kysely<Database>, input: Input) {
   const row = await db
     .insertInto("resume_skills")
     .values({
-      cv_id: input.cvId,
+      cv_id: input.resumeId,
       name: input.name,
       level: input.level ?? null,
       category: input.category ?? null,
@@ -24,7 +24,7 @@ export async function createResumeSkill(db: Kysely<Database>, input: Input) {
 
   return {
     id: row.id,
-    cvId: row.cv_id,
+    resumeId: row.cv_id,
     name: row.name,
     level: row.level,
     category: row.category,

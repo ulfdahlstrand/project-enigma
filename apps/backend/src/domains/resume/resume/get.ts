@@ -128,7 +128,7 @@ export async function getResume(
     updatedAt: resumeRow.updated_at,
     skills: skillRows.map((s) => ({
       id: s.id,
-      cvId: s.cv_id,
+      resumeId: s.cv_id,
       name: s.name,
       level: s.level,
       category: s.category,

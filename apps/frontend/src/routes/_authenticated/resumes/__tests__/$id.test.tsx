@@ -125,8 +125,8 @@ const TEST_RESUME = {
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
   skills: [
-    { id: "skill-1", cvId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
-    { id: "skill-2", cvId: TEST_RESUME_ID, name: "React", level: "Advanced", category: "Frontend", sortOrder: 2 },
+    { id: "skill-1", resumeId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
+    { id: "skill-2", resumeId: TEST_RESUME_ID, name: "React", level: "Advanced", category: "Frontend", sortOrder: 2 },
   ],
 };
 
