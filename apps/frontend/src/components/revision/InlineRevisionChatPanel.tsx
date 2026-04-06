@@ -32,7 +32,9 @@ export function InlineRevisionChatPanel({
     selectHistoryConversation,
   } = useAIAssistantContext();
   const [activeTab, setActiveTab] = useState<TabValue>("chat");
-  const { data: activeConversation } = useAIConversation(activeConversationId);
+  const { data: activeConversation } = useAIConversation(activeConversationId, {
+    pollingEnabled: activeTab === "chat",
+  });
   const closeConversation = useCloseAIConversation(entityType, entityId);
 
   const handleTabChange = (_event: SyntheticEvent, nextTab: TabValue) => {

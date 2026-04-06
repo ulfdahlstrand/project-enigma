@@ -16,14 +16,25 @@ export const aiConversationsKey = (entityType: string, entityId: string) =>
 // Query hooks
 // ---------------------------------------------------------------------------
 
-export function useAIConversation(conversationId: string | null) {
+export interface UseAIConversationOptions {
+  enabled?: boolean;
+  pollingEnabled?: boolean;
+}
+
+export function useAIConversation(
+  conversationId: string | null,
+  options: UseAIConversationOptions = {},
+) {
+  const isEnabled = Boolean(conversationId) && (options.enabled ?? true);
+  const isPollingEnabled = isEnabled && (options.pollingEnabled ?? true);
+
   return useQuery({
     queryKey: aiConversationKey(conversationId ?? ""),
     queryFn: () => orpc.getAIConversation({ conversationId: conversationId! }),
-    enabled: Boolean(conversationId),
-    refetchInterval: conversationId ? 1500 : false,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    enabled: isEnabled,
+    refetchInterval: isPollingEnabled ? 1500 : false,
+    refetchIntervalInBackground: isPollingEnabled,
+    refetchOnWindowFocus: isPollingEnabled,
   });
 }
 

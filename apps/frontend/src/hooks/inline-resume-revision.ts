@@ -115,8 +115,14 @@ export function useInlineResumeRevision({
     [...(existingActionConversations?.conversations ?? [])]
       .reverse()
       .find((conversation) => !conversation.isClosed)?.id ?? null;
-  const { data: existingActionConversation } = useAIConversation(latestOpenActionConversationId);
-  const { data: activeAssistantConversation } = useAIConversation(assistantConversationId);
+  const { data: existingActionConversation } = useAIConversation(latestOpenActionConversationId, {
+    enabled: isOpen,
+    pollingEnabled: isOpen,
+  });
+  const { data: activeAssistantConversation } = useAIConversation(assistantConversationId, {
+    enabled: isOpen,
+    pollingEnabled: isOpen,
+  });
 
   useEffect(() => {
     if (isEditRoute) {
