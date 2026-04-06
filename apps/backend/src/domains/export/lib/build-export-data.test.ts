@@ -17,12 +17,10 @@ const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 const RESUME_ROW = {
   id: RESUME_ID,
   employee_id: EMPLOYEE_ID,
-  consultant_title: null,
-  presentation: ["I build things"],
   summary: null,
   language: "en",
-  title: "Engineer",
-  is_main: true,
+  head_commit_id: COMMIT_ID,
+  forked_from_commit_id: null,
 };
 
 const EMPLOYEE_ROW = {
@@ -111,7 +109,7 @@ function buildDbMock(opts: {
     assignmentRows = ASSIGNMENT_ROWS,
     educationRows = EDUCATION_ROWS,
     highlightedItemRows = HIGHLIGHTED_ITEM_ROWS,
-    commitRow = null,
+    commitRow = COMMIT_ROW,
     resolveEmployeeId = null,
   } = opts;
 
@@ -142,6 +140,7 @@ function buildDbMock(opts: {
   });
   const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
   const resumeSelectAll = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   // Commit chain
   const commitExec = vi.fn().mockResolvedValue(commitRow === null ? undefined : commitRow);
@@ -182,6 +181,7 @@ function buildDbMock(opts: {
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelectDispatch };
     if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
+    if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
     if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
@@ -208,6 +208,8 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.resumeId).toBe(RESUME_ID);
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
+    expect(result.consultantTitle).toBe("Tech Lead");
+    expect(result.presentation).toEqual(["Expert consultant"]);
     expect(result.skills).toHaveLength(1);
     expect(result.assignments).toHaveLength(1);
     expect(result.education).toHaveLength(1);

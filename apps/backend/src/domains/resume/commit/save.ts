@@ -50,8 +50,6 @@ export async function saveResumeVersion(
       "rb.head_commit_id",
       "r.employee_id",
       "r.title",
-      "r.consultant_title",
-      "r.presentation",
       "r.summary",
       "r.language",
     ])
@@ -76,8 +74,8 @@ export async function saveResumeVersion(
 
   const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
       title: branch.title,
-      consultantTitle: branch.consultant_title,
-      presentation: branch.presentation ?? [],
+      consultantTitle: null,
+      presentation: [],
       summary: branch.summary,
       highlightedItems: [],
       language: branch.language,

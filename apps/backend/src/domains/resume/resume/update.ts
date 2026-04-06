@@ -1,7 +1,6 @@
 import { implement } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
-import { sql } from "kysely";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
@@ -9,6 +8,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { updateResumeInputSchema, updateResumeOutputSchema } from "@cv-tool/contracts";
+import { upsertBranchContentFromLive } from "../lib/upsert-branch-content-from-live.js";
 
 // ---------------------------------------------------------------------------
 // updateResume — query logic
@@ -38,10 +38,14 @@ export async function updateResume(
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   // Ownership check for consultants: fetch the resume's employee_id first
+  let mainBranchId: string | null = null;
   if (ownerEmployeeId !== null) {
     const existing = await db
-      .selectFrom("resumes")
-      .select("employee_id")
+      .selectFrom("resumes as r")
+      .leftJoin("resume_branches as rb", (join) =>
+        join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
+      )
+      .select(["r.employee_id", "rb.id as branch_id"])
       .where("id", "=", input.id)
       .executeTakeFirst();
 
@@ -51,27 +55,30 @@ export async function updateResume(
     if (existing.employee_id !== ownerEmployeeId) {
       throw new ORPCError("FORBIDDEN");
     }
+    mainBranchId = existing.branch_id ?? null;
+  } else {
+    const existing = await db
+      .selectFrom("resume_branches")
+      .select("id")
+      .where("resume_id", "=", input.id)
+      .where("is_main", "=", true)
+      .executeTakeFirst();
+    mainBranchId = existing?.id ?? null;
   }
 
   const set: {
     title?: string;
-    consultant_title?: string | null;
-    presentation?: string[];
     summary?: string | null;
     language?: string;
     is_main?: boolean;
   } = {};
 
   if (input.title !== undefined) set.title = input.title;
-  if (input.consultantTitle !== undefined) set.consultant_title = input.consultantTitle;
-  if (input.presentation !== undefined) {
-    set.presentation = sql`${JSON.stringify(input.presentation)}::jsonb` as unknown as string[];
-  }
   if (input.summary !== undefined) set.summary = input.summary;
   if (input.language !== undefined) set.language = input.language;
   if (input.isMain !== undefined) set.is_main = input.isMain;
 
-  const row = await db.transaction().execute(async (trx) => {
+  const { updatedResume, branchContent } = await db.transaction().execute(async (trx) => {
     const updatedResume = await trx
       .updateTable("resumes")
       .set(set)
@@ -107,10 +114,20 @@ export async function updateResume(
       }
     }
 
-    return updatedResume;
+    const nextBranchContent = mainBranchId !== null
+      ? await upsertBranchContentFromLive(trx, {
+        resumeId: input.id,
+        branchId: mainBranchId,
+        userId: user.id,
+        ...(input.consultantTitle !== undefined ? { consultantTitle: input.consultantTitle } : {}),
+        ...(input.presentation !== undefined ? { presentation: input.presentation } : {}),
+      })
+      : null;
+
+    return { updatedResume, branchContent: nextBranchContent };
   });
 
-  if (row === undefined) {
+  if (updatedResume === undefined) {
     throw new ORPCError("NOT_FOUND");
   }
 
@@ -122,17 +139,17 @@ export async function updateResume(
     .execute();
 
   return {
-    id: row.id,
-    employeeId: row.employee_id,
-    title: row.title,
-    consultantTitle: row.consultant_title,
-    presentation: row.presentation ?? [],
-    summary: row.summary,
+    id: updatedResume.id,
+    employeeId: updatedResume.employee_id,
+    title: updatedResume.title,
+    consultantTitle: branchContent?.consultantTitle ?? null,
+    presentation: branchContent?.presentation ?? [],
+    summary: updatedResume.summary,
     highlightedItems: highlightedItemRows.map((item) => item.text),
-    language: row.language,
-    isMain: row.is_main,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    language: updatedResume.language,
+    isMain: updatedResume.is_main,
+    createdAt: updatedResume.created_at,
+    updatedAt: updatedResume.updated_at,
   };
 }
 

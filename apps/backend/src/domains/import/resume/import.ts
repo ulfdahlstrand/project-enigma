@@ -1,12 +1,13 @@
 import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
-import { sql, type Kysely } from "kysely";
+import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { parsePeriod } from "../lib/parse-period.js";
 import type { importCvInputSchema } from "@cv-tool/contracts";
+import { upsertBranchContentFromLive } from "../../resume/lib/upsert-branch-content-from-live.js";
 
 type ImportCvInput = z.infer<typeof importCvInputSchema>;
 
@@ -16,7 +17,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
 
   // ---------------------------------------------------------------------------
   // 1. Resolve or create the main resume
-  //    - If a main resume exists: update consultant_title and presentation
+  //    - If a main resume exists: keep using it
   //    - If none exists: create one (is_main=true) with data from the CV JSON
   // ---------------------------------------------------------------------------
 
@@ -33,34 +34,17 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
 
   if (existingMainResume) {
     resumeId = existingMainResume.id;
-    const resumeUpdates: Array<Promise<unknown>> = [];
-    if (consultant.title) {
-      resumeUpdates.push(
-        db
-          .updateTable("resumes")
-          .set({ consultant_title: consultant.title, language })
-          .where("id", "=", resumeId)
-          .execute()
-      );
-    }
-    if (consultant.presentation.length > 0) {
-      resumeUpdates.push(
-        db
-          .updateTable("resumes")
-          .set({ presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[] })
-          .where("id", "=", resumeId)
-          .execute()
-      );
-    }
-    await Promise.all(resumeUpdates);
+    await db
+      .updateTable("resumes")
+      .set({ language })
+      .where("id", "=", resumeId)
+      .execute();
   } else {
     const newResume = await db
       .insertInto("resumes")
       .values({
         employee_id: employeeId,
         title: `${consultant.name} CV`,
-        consultant_title: consultant.title || null,
-        presentation: sql`${JSON.stringify(consultant.presentation)}::jsonb` as unknown as string[],
         language,
         is_main: true,
       })
@@ -261,6 +245,14 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       }
     }
   }
+
+  await upsertBranchContentFromLive(db, {
+    resumeId,
+    branchId: mainBranch.id,
+    userId: null,
+    consultantTitle: consultant.title || null,
+    presentation: consultant.presentation,
+  });
 
   return {
     resumeCreated,

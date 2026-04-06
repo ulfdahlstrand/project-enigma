@@ -2,7 +2,7 @@ import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database } from "../../../db/types.js";
+import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
@@ -47,8 +47,6 @@ export async function listResumes(
       "r.id",
       "r.employee_id",
       "r.title",
-      "r.consultant_title",
-      "r.presentation",
       "r.summary",
       "r.language",
       "r.is_main",
@@ -75,13 +73,24 @@ export async function listResumes(
   }
 
   const rows = await query.execute();
+  const headCommitIds = [...new Set(rows.map((row) => row.head_commit_id).filter((id): id is string => id !== null))];
+  const commitRows = headCommitIds.length > 0
+    ? await db
+        .selectFrom("resume_commits")
+        .select(["id", "content"])
+        .where("id", "in", headCommitIds)
+        .execute()
+    : [];
+  const contentByCommitId = new Map(
+    commitRows.map((row) => [row.id, row.content as ResumeCommitContent]),
+  );
 
   return rows.map((row) => ({
     id: row.id,
     employeeId: row.employee_id,
     title: row.title,
-    consultantTitle: row.consultant_title,
-    presentation: row.presentation ?? [],
+    consultantTitle: row.head_commit_id ? (contentByCommitId.get(row.head_commit_id)?.consultantTitle ?? null) : null,
+    presentation: row.head_commit_id ? (contentByCommitId.get(row.head_commit_id)?.presentation ?? []) : [],
     summary: row.summary,
     highlightedItems: [],
     language: row.language,
