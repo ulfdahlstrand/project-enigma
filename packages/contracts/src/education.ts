@@ -48,5 +48,8 @@ export const createEducationOutputSchema = educationSchema;
 // deleteEducation
 // ---------------------------------------------------------------------------
 
-export const deleteEducationInputSchema = z.object({ id: z.string().uuid() });
+export const deleteEducationInputSchema = z.object({
+  employeeId: z.string().uuid(),
+  id: z.string().uuid(),
+});
 export const deleteEducationOutputSchema = z.object({ deleted: z.literal(true) });

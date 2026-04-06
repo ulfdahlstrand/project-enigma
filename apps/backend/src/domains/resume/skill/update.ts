@@ -29,7 +29,7 @@ export async function updateResumeSkill(db: Kysely<Database>, input: Input) {
 
   return {
     id: row.id,
-    cvId: row.cv_id,
+    resumeId: row.cv_id,
     name: row.name,
     level: row.level,
     category: row.category,

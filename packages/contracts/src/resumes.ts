@@ -12,7 +12,7 @@ import { z } from "zod";
 
 export const resumeSkillSchema = z.object({
   id: z.string().uuid(),
-  cvId: z.string().uuid(),
+  resumeId: z.string().uuid(),
   name: z.string(),
   level: z.string().nullable(),
   category: z.string().nullable(),
@@ -116,7 +116,7 @@ export const deleteResumeOutputSchema = z.object({ deleted: z.literal(true) });
 // ---------------------------------------------------------------------------
 
 export const createResumeSkillInputSchema = z.object({
-  cvId: z.string().uuid(),
+  resumeId: z.string().uuid(),
   name: z.string().min(1),
   level: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
