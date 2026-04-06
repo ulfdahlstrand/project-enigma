@@ -172,6 +172,9 @@
       "ai": {
         "improvePresentation": "Improve presentation with AI"
       },
+      "zoomLabel": "Zoom",
+      "zoomOutLabel": "Zoom out",
+      "zoomInLabel": "Zoom in",
       "assignmentToggleFull": "Show full assignment details",
       "assignmentToggleSummary": "Show compact assignment list",
       "assignmentTechnologies": "Technologies",

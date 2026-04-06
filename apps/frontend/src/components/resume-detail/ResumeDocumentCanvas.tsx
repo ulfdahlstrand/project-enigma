@@ -21,6 +21,7 @@ type Assignment = {
 };
 
 interface ResumeDocumentCanvasProps {
+  zoom: number;
   resumeId: string;
   resumeTitle: string;
   language: string | null;
@@ -73,6 +74,7 @@ interface ResumeDocumentCanvasProps {
 }
 
 export function ResumeDocumentCanvas({
+  zoom,
   resumeId,
   resumeTitle,
   language,
@@ -132,6 +134,8 @@ export function ResumeDocumentCanvas({
         flexDirection: "column",
         alignItems: "center",
         gap: 3,
+        zoom,
+        transformOrigin: "top center",
       }}
     >
       <ResumeCoverPage

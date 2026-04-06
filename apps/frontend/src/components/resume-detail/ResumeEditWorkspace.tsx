@@ -4,7 +4,9 @@ import type { MutableRefObject, RefObject } from "react";
 import { FinalReview } from "../revision/FinalReview";
 import { InlineRevisionChatPanel } from "../revision/InlineRevisionChatPanel";
 import { InlineRevisionChecklist } from "../revision/InlineRevisionChecklist";
+import { useResumeDocumentZoom } from "../../hooks/useResumeDocumentZoom";
 import { ResumeDocumentCanvas } from "./ResumeDocumentCanvas";
+import { ResumeDocumentZoomControl } from "./ResumeDocumentZoomControl";
 
 type Assignment = {
   id: string;
@@ -76,6 +78,8 @@ export function ResumeEditWorkspace({
   activeBranchName,
   ...props
 }: ResumeEditWorkspaceProps) {
+  const { zoom, setZoom, minZoom, maxZoom, defaultZoom } = useResumeDocumentZoom();
+
   return (
     <Box
       sx={{
@@ -149,6 +153,8 @@ export function ResumeEditWorkspace({
             overflow: inlineRevision.isOpen ? "auto" : "hidden",
             px: inlineRevision.isOpen ? { xs: 2, md: 3 } : 0,
             py: inlineRevision.isOpen ? 4 : 0,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           {inlineRevision.stage === "finalize" ? (
@@ -162,12 +168,20 @@ export function ResumeEditWorkspace({
           ) : (
             <ResumeDocumentCanvas
               {...props}
+              zoom={zoom}
               activeBranchId={activeBranchId}
               isEditing={true}
               showImprovePresentationFab={!inlineRevision.isOpen && !props.isSnapshotMode}
               showAssignmentsToggleFab={!inlineRevision.isOpen}
             />
           )}
+          <ResumeDocumentZoomControl
+            zoom={zoom}
+            onZoomChange={setZoom}
+            minZoom={minZoom}
+            maxZoom={maxZoom}
+            defaultZoom={defaultZoom}
+          />
         </Box>
 
         <Slide

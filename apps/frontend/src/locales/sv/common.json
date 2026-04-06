@@ -172,6 +172,9 @@
       "ai": {
         "improvePresentation": "Förbättra presentation med AI"
       },
+      "zoomLabel": "Zoom",
+      "zoomOutLabel": "Zooma ut",
+      "zoomInLabel": "Zooma in",
       "assignmentToggleFull": "Visa fullständiga uppdragsdetaljer",
       "assignmentToggleSummary": "Visa kompakt uppdragslista",
       "assignmentTechnologies": "Teknologier",
