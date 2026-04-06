@@ -49,7 +49,8 @@ export type ResumeInspectionSnapshot = {
   language: string | null | undefined;
   presentation: string[];
   summary: string | null;
-  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  skillGroups: Array<{ name: string; sortOrder: number }>;
+  skills: Array<{ groupId?: string; name: string; category: string | null; sortOrder: number }>;
   assignments: Array<{
     id: string;
     clientName: string;
@@ -81,7 +82,8 @@ export type UseInlineResumeRevisionParams = {
   presentation: string[];
   summary: string | null;
   highlightedItems: string[];
-  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  skillGroups: Array<{ name: string; sortOrder: number }>;
+  skills: Array<{ groupId?: string; name: string; category: string | null; sortOrder: number }>;
   sortedAssignments: ResumeAssignmentLike[];
   resumeInspectionSnapshot: ResumeInspectionSnapshot;
   sectionRefs: RevisionSectionRefs;

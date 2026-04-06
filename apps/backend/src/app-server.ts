@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { inspect } from "node:util";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/node";
 import { onError } from "@orpc/server";
@@ -24,6 +25,38 @@ import {
 
 export type AppContext = { user: User | null };
 
+function buildErrorMeta(error: unknown) {
+  if (error instanceof Error) {
+    const candidate = error as Error & {
+      cause?: unknown;
+      issues?: unknown;
+      code?: unknown;
+      status?: unknown;
+    };
+
+    return {
+      error: error.message,
+      ...(error.stack ? { stack: error.stack } : {}),
+      ...(candidate.code !== undefined ? { code: candidate.code } : {}),
+      ...(candidate.status !== undefined ? { status: candidate.status } : {}),
+      ...(candidate.cause !== undefined
+        ? { cause: inspect(candidate.cause, { depth: 6, breakLength: 120 }) }
+        : {}),
+      ...(candidate.issues !== undefined
+        ? { issues: inspect(candidate.issues, { depth: 6, breakLength: 120 }) }
+        : {}),
+      errorType: error.constructor.name,
+      errorInspect: inspect(error, { depth: 6, breakLength: 120 }),
+    };
+  }
+
+  return {
+    error: String(error),
+    errorType: typeof error,
+    errorInspect: inspect(error, { depth: 6, breakLength: 120 }),
+  };
+}
+
 export async function createAppServer() {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],
@@ -38,9 +71,7 @@ export async function createAppServer() {
     plugins: [new CORSPlugin()],
     interceptors: [
       onError((error) => {
-        logger.error("Unhandled backend error", {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.error("Unhandled backend error", buildErrorMeta(error));
       }),
     ],
   });
@@ -111,12 +142,23 @@ export async function createAppServer() {
       requestLogging.setOperationName(requestLogging.path);
       const user = await resolveUser(getDb(), req.headers["authorization"] ?? "", req.headers["cookie"]);
       requestLogging.setUserId(user?.id ?? null);
-      const result = await handler.handle(req, res, {
-        context: {
-          user,
+      let result;
+      try {
+        result = await handler.handle(req, res, {
+          context: {
+            user,
+            requestId: requestLogging.requestId,
+          },
+        });
+      } catch (error) {
+        logger.error("Backend request handler crashed", {
           requestId: requestLogging.requestId,
-        },
-      });
+          method: req.method ?? "UNKNOWN",
+          path: requestLogging.path,
+          ...buildErrorMeta(error),
+        });
+        throw error;
+      }
 
       if (!result.matched) {
         res.statusCode = 404;

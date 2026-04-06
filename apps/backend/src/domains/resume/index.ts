@@ -3,6 +3,8 @@ export { getResumeHandler } from "./resume/get.js";
 export { listResumesHandler } from "./resume/list.js";
 export { updateResumeHandler } from "./resume/update.js";
 export { deleteResumeHandler } from "./resume/delete.js";
+export { createResumeSkillGroupHandler } from "./skill-group/create.js";
+export { updateResumeSkillGroupHandler } from "./skill-group/update.js";
 export { createResumeSkillHandler } from "./skill/create.js";
 export { updateResumeSkillHandler } from "./skill/update.js";
 export { deleteResumeSkillHandler } from "./skill/delete.js";

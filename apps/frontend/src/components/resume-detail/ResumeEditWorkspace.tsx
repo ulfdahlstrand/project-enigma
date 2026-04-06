@@ -42,7 +42,8 @@ interface ResumeEditWorkspaceProps {
   onDraftHighlightedItemsChange: (value: string) => void;
   showSkillsPage: boolean;
   skillsPage: number | null;
-  skills: Array<{ id: string; name: string; category: string | null; sortOrder?: number; level?: string | null }>;
+  skillGroups: Array<{ id: string; resumeId: string; name: string; sortOrder: number }>;
+  skills: Array<{ id: string; groupId: string; name: string; category: string | null; sortOrder?: number }>;
   degrees: string[];
   certifications: string[];
   languages: string[];

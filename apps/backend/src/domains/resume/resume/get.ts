@@ -99,11 +99,38 @@ export async function getResume(
   }
 
   const skillRows = await db
-    .selectFrom("resume_skills")
-    .selectAll()
-    .where("cv_id", "=", id)
-    .orderBy("sort_order", "asc")
+    .selectFrom("resume_skills as rs")
+    .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
+    .select([
+      "rs.id",
+      "rs.resume_id",
+      "rs.group_id",
+      "rs.name",
+      "rs.sort_order",
+      "rsg.name as group_name",
+      "rsg.sort_order as group_sort_order",
+    ])
+    .where("rs.resume_id", "=", id)
+    .orderBy("rsg.sort_order", "asc")
+    .orderBy("rs.sort_order", "asc")
     .execute();
+
+  const liveSkillGroups = skillRows.reduce<Array<{
+    id: string;
+    resumeId: string;
+    name: string;
+    sortOrder: number;
+  }>>((acc, row) => {
+    if (acc.some((group) => group.id === row.group_id)) {
+      return acc;
+    }
+    return [...acc, {
+      id: row.group_id,
+      resumeId: row.resume_id,
+      name: row.group_name,
+      sortOrder: row.group_sort_order,
+    }];
+  }, []);
 
   const highlightedItemRows = await db
     .selectFrom("resume_highlighted_items")
@@ -126,12 +153,13 @@ export async function getResume(
     headCommitId: resumeRow.head_commit_id ?? null,
     createdAt: resumeRow.created_at,
     updatedAt: resumeRow.updated_at,
+    skillGroups: liveSkillGroups,
     skills: skillRows.map((s) => ({
       id: s.id,
-      resumeId: s.cv_id,
+      resumeId: s.resume_id,
+      groupId: s.group_id,
       name: s.name,
-      level: s.level,
-      category: s.category,
+      category: s.group_name,
       sortOrder: s.sort_order,
     })),
   };

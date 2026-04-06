@@ -39,19 +39,21 @@ const RESUME_ROW = {
 
 const SKILL_ROW_1 = {
   id: SKILL_ID_1,
-  cv_id: RESUME_ID,
+  resume_id: RESUME_ID,
+  group_id: "550e8400-e29b-41d4-a716-446655440061",
   name: "TypeScript",
-  level: "expert",
-  category: "languages",
+  group_name: "languages",
+  group_sort_order: 0,
   sort_order: 0,
 };
 
 const SKILL_ROW_2 = {
   id: SKILL_ID_2,
-  cv_id: RESUME_ID,
+  resume_id: RESUME_ID,
+  group_id: "550e8400-e29b-41d4-a716-446655440062",
   name: "Node.js",
-  level: "advanced",
-  category: "runtimes",
+  group_name: "runtimes",
+  group_sort_order: 1,
   sort_order: 1,
 };
 
@@ -67,11 +69,13 @@ const HIGHLIGHTED_ITEM_ROW_2 = { text: "Tech Lead hos Beta" };
  * and the skills query that getResume performs.
  */
 function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRows: unknown[] = []) {
-  // Skills query chain: selectAll → where → orderBy → execute
+  // Skills query chain: innerJoin -> select -> where -> orderBy -> orderBy -> execute
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
-  const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
+  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
+  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
+  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
 
   const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
   const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
@@ -93,7 +97,7 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRo
   const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "resume_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
     if (table === "resume_branches") return { select: branchSelect };
     if (table === "resume_commits") return { select: commitSelect };
@@ -106,7 +110,8 @@ function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRo
     selectFrom,
     resumeWhere,
     skillsWhere,
-    skillsOrderBy,
+    skillsOrderBy1,
+    skillsOrderBy2,
     skillsExecute,
     resumeExecuteTakeFirst,
     branchExecuteTakeFirst,
@@ -122,9 +127,11 @@ function buildDbWithEmployeeLookup(
   highlightedItemRows: unknown[] = [],
 ) {
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
-  const skillsSelectAll = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
+  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
+  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
+  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
 
   const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
   const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
@@ -139,6 +146,7 @@ function buildDbWithEmployeeLookup(
       summary: "Committed summary",
       highlightedItems: [],
       language: "en",
+      skillGroups: [],
       skills: [],
       assignments: [],
     },
@@ -157,7 +165,7 @@ function buildDbWithEmployeeLookup(
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "resume_skills") return { selectAll: skillsSelectAll };
+    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
     if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
@@ -186,7 +194,14 @@ describe("getResume query function", () => {
         summary: "Committed summary",
         highlightedItems: ["Committed highlight"],
         language: "sv",
-        skills: [],
+        skillGroups: [
+          { name: "languages", sortOrder: 0 },
+          { name: "runtimes", sortOrder: 1 },
+        ],
+        skills: [
+          { name: "TypeScript", category: "languages", sortOrder: 0 },
+          { name: "Node.js", category: "runtimes", sortOrder: 1 },
+        ],
         assignments: [],
       },
     });
@@ -206,12 +221,16 @@ describe("getResume query function", () => {
     });
     expect(result.skills).toHaveLength(2);
     expect(result.skills[0]).toMatchObject({
-      id: SKILL_ID_1,
       resumeId: RESUME_ID,
       name: "TypeScript",
-      level: "expert",
+      category: "languages",
       sortOrder: 0,
     });
+    expect(result.skills[0]?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    expect(result.skillGroups).toEqual([
+      expect.objectContaining({ name: "languages", sortOrder: 0 }),
+      expect.objectContaining({ name: "runtimes", sortOrder: 1 }),
+    ]);
     expect(result.highlightedItems).toEqual(["Committed highlight"]);
   });
 
@@ -254,11 +273,12 @@ describe("getResume query function", () => {
   });
 
   it("orders skills by sort_order ascending", async () => {
-    const { db, skillsOrderBy } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
+    const { db, skillsOrderBy1, skillsOrderBy2 } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
 
     await getResume(db, MOCK_ADMIN, RESUME_ID);
 
-    expect(skillsOrderBy).toHaveBeenCalledWith("sort_order", "asc");
+    expect(skillsOrderBy1).toHaveBeenCalledWith("rsg.sort_order", "asc");
+    expect(skillsOrderBy2).toHaveBeenCalledWith("rs.sort_order", "asc");
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
@@ -301,6 +321,7 @@ describe("getResume query function", () => {
         summary: "Branch summary",
         highlightedItems: ["Branch highlight"],
         language: "en",
+        skillGroups: [],
         skills: [],
         assignments: [],
       },

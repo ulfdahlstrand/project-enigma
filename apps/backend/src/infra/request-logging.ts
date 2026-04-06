@@ -15,19 +15,6 @@ function parseRequestUrl(url: string | undefined) {
   };
 }
 
-function formatLocalRequestLogLine(input: {
-  ip: string | null;
-  method: string;
-  url: string | undefined;
-  statusCode: number;
-  durationMs: number;
-  requestId: string;
-}) {
-  const requestTarget = input.url ?? "/";
-
-  return `${input.ip ?? "-"} - - "${input.method} ${requestTarget}" ${input.statusCode} ${input.durationMs}ms req=${input.requestId}`;
-}
-
 export type RequestLoggingContext = {
   requestId: string;
   path: string;
@@ -55,10 +42,6 @@ export function beginRequestLogging(
   res: ServerResponse,
 ): RequestLoggingContext {
   const isProduction = process.env["NODE_ENV"] === "production";
-  const requestedFormat = (
-    process.env["BACKEND_LOG_FORMAT"] ?? (isProduction ? "json" : "pretty")
-  ).toLowerCase();
-  const useLocalClfLogging = !isProduction && requestedFormat === "pretty";
   const includeUserAgent = isProduction;
   const startedAt = Date.now();
   httpLogger(req, res);
@@ -76,17 +59,15 @@ export function beginRequestLogging(
   let operationName: string | null = null;
   let loggedCompletion = false;
 
-  if (!useLocalClfLogging) {
-    logger.info("HTTP request received", {
-      requestId,
-      method,
-      path,
-      ...(queryKeys.length > 0 ? { queryKeys } : {}),
-      ip,
-      ...(includeUserAgent && userAgent ? { userAgent } : {}),
-      ...(contentLength !== null && Number.isFinite(contentLength) ? { contentLength } : {}),
-    });
-  }
+  logger.info("HTTP request received", {
+    requestId,
+    method,
+    path,
+    ...(queryKeys.length > 0 ? { queryKeys } : {}),
+    ip,
+    ...(includeUserAgent && userAgent ? { userAgent } : {}),
+    ...(contentLength !== null && Number.isFinite(contentLength) ? { contentLength } : {}),
+  });
 
   const logCompletion = (event: "finish" | "close") => {
     if (loggedCompletion) {
@@ -94,18 +75,6 @@ export function beginRequestLogging(
     }
 
     loggedCompletion = true;
-
-    if (useLocalClfLogging) {
-      baseLogger.info(formatLocalRequestLogLine({
-        ip,
-        method,
-        url: req.url,
-        statusCode: res.statusCode,
-        durationMs: Date.now() - startedAt,
-        requestId,
-      }));
-      return;
-    }
 
     logger.info("HTTP request completed", {
       requestId,

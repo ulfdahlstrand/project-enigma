@@ -17,7 +17,7 @@ type DraftDependencies = {
   presentation: string[];
   summary: string | null;
   highlightedItems: string[];
-  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+  skills: Array<{ groupId?: string; name: string; category: string | null; sortOrder: number }>;
   sortedAssignments: ResumeAssignmentLike[];
 };
 
@@ -172,11 +172,11 @@ export async function applySuggestionToSkills(
   suggestion: Suggestion,
   deps: {
     activeBranchId: string | null;
-    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+    skills: Array<{ groupId?: string; name: string; category: string | null; sortOrder: number }>;
     saveVersion: (input: {
       branchId: string;
       title: string;
-      skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+      skills: Array<{ name: string; category: string | null; sortOrder: number }>;
     }) => Promise<unknown>;
     buildCommitMessage: (suggestion: Suggestion) => string;
   },
@@ -187,15 +187,9 @@ export async function applySuggestionToSkills(
   }
 
   const currentSkillGroups = groupSkillsByCategory(deps.skills);
-  const currentSkillsByName = new Map(
-    deps.skills.map((skill) => [skill.name.trim().toLowerCase(), skill]),
-  );
   let nextSkills = hydratedSuggestion.skills.map((skill) => {
-    const currentSkill = currentSkillsByName.get(skill.name.trim().toLowerCase());
-
     return {
       name: skill.name,
-      level: skill.level ?? currentSkill?.level ?? null,
       category: skill.category,
       sortOrder: skill.sortOrder,
     };

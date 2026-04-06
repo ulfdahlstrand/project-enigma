@@ -1,22 +1,8 @@
-/**
- * Tests for updateResumeSkill handler.
- *
- * Acceptance criteria:
- *   - Updates name, level, and category when all are provided
- *   - Allows partial updates (only name, only level, only category)
- *   - Sets level/category to null when passed as null
- *   - Throws NOT_FOUND when the skill id does not exist
- *   - Requires auth (throws when no context)
- */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError, call } from "@orpc/server";
 import { updateResumeSkill, createUpdateResumeSkillHandler } from "./update.js";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
-
-// ---------------------------------------------------------------------------
-// Auth mock
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../auth/require-auth.js", () => ({
   requireAuth: vi.fn(),
@@ -25,41 +11,42 @@ vi.mock("../../../auth/require-auth.js", () => ({
 import { requireAuth } from "../../../auth/require-auth.js";
 const mockRequireAuth = requireAuth as ReturnType<typeof vi.fn>;
 
-// ---------------------------------------------------------------------------
-// DB mock helpers
-// ---------------------------------------------------------------------------
-
-function makeRow(overrides: Partial<{
-  id: string;
-  cv_id: string;
-  name: string;
-  level: string | null;
-  category: string | null;
-  sort_order: number;
-}> = {}) {
+function makeRow(
+  overrides: Partial<{
+    id: string;
+    resume_id: string;
+    group_id: string;
+    name: string;
+    sort_order: number;
+  }> = {},
+) {
   return {
     id: "550e8400-e29b-41d4-a716-446655440010",
-    cv_id: "550e8400-e29b-41d4-a716-446655440020",
+    resume_id: "550e8400-e29b-41d4-a716-446655440020",
+    group_id: "550e8400-e29b-41d4-a716-446655440030",
     name: "TypeScript",
-    level: "Expert",
-    category: "Languages",
     sort_order: 0,
     ...overrides,
   };
 }
 
-function buildDb(row: ReturnType<typeof makeRow> | undefined) {
+function buildDb(row: ReturnType<typeof makeRow> | undefined, group = { name: "Languages", sort_order: 2 }) {
   const executeTakeFirst = vi.fn().mockResolvedValue(row);
-  const returning = vi.fn().mockReturnValue({ executeTakeFirst });
   const where = vi.fn().mockReturnValue({ returningAll: () => ({ executeTakeFirst }) });
   const set = vi.fn().mockReturnValue({ where });
   const updateTable = vi.fn().mockReturnValue({ set });
-  return { updateTable } as unknown as Kysely<Database>;
-}
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+  const groupExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(group);
+  const groupWhere = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: groupExecuteTakeFirstOrThrow });
+  const groupSelect = vi.fn().mockReturnValue({ where: groupWhere });
+
+  const selectFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === "resume_skill_groups") return { select: groupSelect };
+    throw new Error(`Unexpected table: ${table}`);
+  });
+
+  return { updateTable, selectFrom } as unknown as Kysely<Database>;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -67,24 +54,24 @@ beforeEach(() => {
 });
 
 describe("updateResumeSkill (core function)", () => {
-  it("updates all fields when provided", async () => {
-    const row = makeRow({ name: "Go", level: "Intermediate", category: "Backend" });
-    const db = buildDb(row);
+  it("updates provided fields and returns the current group-backed category", async () => {
+    const row = makeRow({ name: "Go", group_id: "550e8400-e29b-41d4-a716-446655440031", sort_order: 5 });
+    const db = buildDb(row, { name: "Backend", sort_order: 1 });
 
     const result = await updateResumeSkill(db, {
-      id: "550e8400-e29b-41d4-a716-446655440010",
+      id: row.id,
       name: "Go",
-      level: "Intermediate",
-      category: "Backend",
+      groupId: row.group_id,
+      sortOrder: 5,
     });
 
     expect(result).toEqual({
-      id: "550e8400-e29b-41d4-a716-446655440010",
-      resumeId: "550e8400-e29b-41d4-a716-446655440020",
+      id: row.id,
+      resumeId: row.resume_id,
+      groupId: row.group_id,
       name: "Go",
-      level: "Intermediate",
       category: "Backend",
-      sortOrder: 0,
+      sortOrder: 5,
     });
   });
 
@@ -92,26 +79,16 @@ describe("updateResumeSkill (core function)", () => {
     const row = makeRow({ name: "Rust" });
     const db = buildDb(row);
 
-    const result = await updateResumeSkill(db, { id: "550e8400-e29b-41d4-a716-446655440010", name: "Rust" });
+    const result = await updateResumeSkill(db, { id: row.id, name: "Rust" });
 
     expect(result.name).toBe("Rust");
-  });
-
-  it("sets level to null when passed as null", async () => {
-    const row = makeRow({ level: null });
-    const db = buildDb(row);
-
-    const result = await updateResumeSkill(db, { id: "550e8400-e29b-41d4-a716-446655440010", level: null });
-
-    expect(result.level).toBeNull();
+    expect(result.category).toBe("Languages");
   });
 
   it("throws NOT_FOUND when skill does not exist", async () => {
     const db = buildDb(undefined);
 
-    await expect(
-      updateResumeSkill(db, { id: "non-existent", name: "Anything" })
-    ).rejects.toThrow(ORPCError);
+    await expect(updateResumeSkill(db, { id: "non-existent", name: "Anything" })).rejects.toThrow(ORPCError);
   });
 });
 
@@ -121,7 +98,7 @@ describe("updateResumeSkillHandler (oRPC handler)", () => {
     const db = buildDb(row);
     const handler = createUpdateResumeSkillHandler(db);
 
-    await call(handler, { id: "550e8400-e29b-41d4-a716-446655440010", name: "TypeScript" }, { context: { user: { id: "u1" } } });
+    await call(handler, { id: row.id, name: "TypeScript" }, { context: { user: { id: "u1" } } });
 
     expect(mockRequireAuth).toHaveBeenCalledOnce();
   });
@@ -133,8 +110,6 @@ describe("updateResumeSkillHandler (oRPC handler)", () => {
     });
     const handler = createUpdateResumeSkillHandler(db);
 
-    await expect(
-      call(handler, { id: "550e8400-e29b-41d4-a716-446655440010", name: "TypeScript" }, { context: {} })
-    ).rejects.toThrow(ORPCError);
+    await expect(call(handler, { id: "550e8400-e29b-41d4-a716-446655440010", name: "TypeScript" }, { context: {} })).rejects.toThrow(ORPCError);
   });
 });

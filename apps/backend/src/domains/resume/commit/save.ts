@@ -81,16 +81,31 @@ export async function saveResumeVersion(
       summary: branch.summary,
       highlightedItems: [],
       language: branch.language,
+      skillGroups: [],
       skills: [],
       assignments: [],
   };
 
   // Fetch skills for this resume
-  const skillRows = await db
-    .selectFrom("resume_skills")
-    .select(["name", "level", "category", "sort_order"])
-    .where("cv_id", "=", branch.resume_id)
+  const skillGroups = await db
+    .selectFrom("resume_skill_groups")
+    .select(["id", "name", "sort_order"])
+    .where("resume_id", "=", branch.resume_id)
     .orderBy("sort_order", "asc")
+    .execute();
+
+  const skillRows = await db
+    .selectFrom("resume_skills as rs")
+    .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
+    .select([
+      "rs.name",
+      "rs.sort_order",
+      "rs.group_id",
+      "rsg.name as category",
+    ])
+    .where("rs.resume_id", "=", branch.resume_id)
+    .orderBy("rsg.sort_order", "asc")
+    .orderBy("rs.sort_order", "asc")
     .execute();
 
   // Fetch assignments linked to this branch — all content is now in branch_assignments.
@@ -124,11 +139,18 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skills: input.skills ?? skillRows.map((s) => ({
+    skillGroups: input.skillGroups ?? skillGroups.map((group) => ({
+      name: group.name,
+      sortOrder: group.sort_order,
+    })),
+    skills: (input.skills ?? skillRows.map((s) => ({
       name: s.name,
-      level: s.level,
       category: s.category,
       sortOrder: s.sort_order,
+    }))).map((skill) => ({
+      name: skill.name,
+      category: skill.category,
+      sortOrder: skill.sortOrder,
     })),
     assignments: assignmentRows.map((a) => ({
       assignmentId: a.assignment_id,

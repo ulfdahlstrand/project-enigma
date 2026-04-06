@@ -23,7 +23,7 @@ export interface ExportData {
   presentation: string[];
   summary: string | null | undefined;
   highlightedItems: string[];
-  skills: Array<{ name: string; category: string | null; level: string | null }>;
+  skills: Array<{ name: string; category: string | null }>;
   assignments: Array<{
     role: string;
     client_name: string;
@@ -73,10 +73,12 @@ async function buildFromLive(
       .orderBy("ba.start_date", "desc")
       .execute(),
     db
-      .selectFrom("resume_skills")
-      .selectAll()
-      .where("cv_id", "=", resumeId)
-      .orderBy("sort_order", "asc")
+      .selectFrom("resume_skills as rs")
+      .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
+      .select(["rs.name", "rs.sort_order", "rsg.name as category", "rsg.sort_order as group_sort_order"])
+      .where("rs.resume_id", "=", resumeId)
+      .orderBy("rsg.sort_order", "asc")
+      .orderBy("rs.sort_order", "asc")
       .execute(),
     db
       .selectFrom("education")
@@ -103,7 +105,6 @@ async function buildFromLive(
     skills: skills.map((s) => ({
       name: s.name,
       category: s.category,
-      level: s.level,
     })),
     assignments: sortAssignments(
       assignments.map((a) => ({
@@ -179,7 +180,6 @@ async function buildFromSnapshot(
     skills: content.skills.map((s) => ({
       name: s.name,
       category: s.category,
-      level: s.level,
     })),
     assignments: sortAssignments(
       content.assignments.map((a) => ({

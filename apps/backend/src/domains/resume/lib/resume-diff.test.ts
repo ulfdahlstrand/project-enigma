@@ -8,7 +8,6 @@ import type { ResumeCommitContent } from "@cv-tool/contracts";
 
 const BASE_SKILL = {
   name: "TypeScript",
-  level: "Expert",
   category: "Languages",
   sortOrder: 1,
 };
@@ -34,6 +33,7 @@ const base: ResumeCommitContent = {
   presentation: ["I am a consultant"],
   summary: null,
   language: "en",
+  skillGroups: [{ name: "Languages", sortOrder: 0 }],
   skills: [BASE_SKILL],
   assignments: [BASE_ASSIGNMENT],
 };
@@ -113,7 +113,6 @@ describe("diffResumeCommits — skill changes", () => {
   it("detects added skill", () => {
     const newSkill = {
       name: "Go",
-      level: null,
       category: null,
       sortOrder: 2,
     };
@@ -138,16 +137,16 @@ describe("diffResumeCommits — skill changes", () => {
     expect(ts?.after).toBeUndefined();
   });
 
-  it("detects modified skill (level change)", () => {
+  it("detects modified skill (sort order change)", () => {
     const head: ResumeCommitContent = {
       ...base,
-      skills: [{ ...BASE_SKILL, level: "Senior" }],
+      skills: [{ ...BASE_SKILL, sortOrder: 2 }],
     };
     const result = diffResumeCommits(base, head);
     const ts = result.skills.find((s) => s.name === "TypeScript");
     expect(ts?.status).toBe("modified");
-    expect(ts?.before?.level).toBe("Expert");
-    expect(ts?.after?.level).toBe("Senior");
+    expect(ts?.before?.sortOrder).toBe(1);
+    expect(ts?.after?.sortOrder).toBe(2);
   });
 
   it("marks skill as unchanged when nothing changed", () => {

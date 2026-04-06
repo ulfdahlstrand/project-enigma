@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import type { RefObject } from "react";
 import { ResumeDocumentPage } from "./ResumeDocumentPage";
 import { ResumeSkillsPageContent } from "./ResumeSkillsPageContent";
-import { SkillsEditor, type SkillRow } from "../SkillsEditor";
+import { SkillsEditor, type SkillGroupRow, type SkillRow } from "../SkillsEditor";
 
 interface ResumeSkillsPageProps {
   title: string;
@@ -10,6 +10,7 @@ interface ResumeSkillsPageProps {
   page: number;
   totalPages: number;
   employeeName: string;
+  skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   degrees: string[];
   certifications: string[];
@@ -27,6 +28,7 @@ export function ResumeSkillsPage({
   page,
   totalPages,
   employeeName,
+  skillGroups,
   skills,
   degrees,
   certifications,
@@ -43,6 +45,7 @@ export function ResumeSkillsPage({
         {isEditing ? (
           <SkillsEditor
             resumeId={resumeId}
+            skillGroups={skillGroups}
             skills={skills}
             queryKey={queryKey}
           />

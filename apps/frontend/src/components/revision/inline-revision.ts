@@ -237,14 +237,13 @@ export function normalizeComparableText(value: string | null | undefined) {
 }
 
 function normalizeSkillsSignature(
-  skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>,
+  skills: Array<{ name: string; category: string | null; sortOrder: number }>,
 ) {
   return JSON.stringify(
     [...skills]
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((skill) => ({
         name: skill.name.trim(),
-        level: skill.level ?? null,
         category: skill.category ?? null,
         sortOrder: skill.sortOrder,
       })),
@@ -258,7 +257,7 @@ export function reconcileRevisionSuggestionsWithCurrentContent(
     consultantTitle: string | null;
     presentation: string[];
     summary: string | null;
-    skills: Array<{ name: string; level: string | null; category: string | null; sortOrder: number }>;
+    skills: Array<{ name: string; category: string | null; sortOrder: number }>;
     assignments: Array<{ id: string; description?: string }>;
   },
 ): RevisionSuggestions | null {
@@ -281,7 +280,6 @@ export function reconcileRevisionSuggestionsWithCurrentContent(
       if (suggestion.skills && suggestion.skills.length > 0) {
         isApplied = normalizeSkillsSignature(suggestion.skills.map((skill) => ({
           name: skill.name,
-          level: skill.level ?? null,
           category: skill.category,
           sortOrder: skill.sortOrder,
         }))) === currentSkillsSignature;

@@ -2,8 +2,8 @@ import type { SkillsReviewValue } from "../../components/revision/SkillsReviewCo
 import type { RevisionSuggestions } from "../../lib/ai-tools/registries/resume-tool-schemas";
 
 type SkillLike = {
+  groupId?: string;
   name: string;
-  level: string | null;
   category: string | null;
   sortOrder: number;
 };
@@ -265,7 +265,6 @@ export function buildSkillsReviewValue(
   const suggestedGroups = groupSkillsByCategory(
     suggestion.skills.map((skill) => ({
       name: skill.name,
-      level: skill.level ?? null,
       category: skill.category,
       sortOrder: skill.sortOrder,
     })),

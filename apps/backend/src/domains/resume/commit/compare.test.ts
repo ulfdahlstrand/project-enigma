@@ -30,7 +30,8 @@ const BASE_CONTENT = {
   presentation: ["I build things"],
   summary: null,
   language: "en",
-  skills: [{ name: "TypeScript", level: "Expert", category: null, sortOrder: 1 }],
+  skillGroups: [],
+  skills: [{ name: "TypeScript", category: null, sortOrder: 1 }],
   assignments: [],
 };
 
@@ -38,8 +39,8 @@ const HEAD_CONTENT = {
   ...BASE_CONTENT,
   title: "Senior Engineer",
   skills: [
-    { name: "TypeScript", level: "Expert", category: null, sortOrder: 1 },
-    { name: "Go", level: null, category: null, sortOrder: 2 },
+    { name: "TypeScript", category: null, sortOrder: 1 },
+    { name: "Go", category: null, sortOrder: 2 },
   ],
 };
 

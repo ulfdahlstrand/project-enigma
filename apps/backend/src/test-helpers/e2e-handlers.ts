@@ -218,15 +218,30 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     .execute();
 
   const skillsToCreate = body.skills ?? [];
+  const skillGroups = new Map<string, string>();
   for (const [index, skill] of skillsToCreate.entries()) {
+    const groupName = skill.category?.trim() || "Other";
+    let groupId = skillGroups.get(groupName);
+    if (!groupId) {
+      groupId = randomUUID();
+      skillGroups.set(groupName, groupId);
+      await db
+        .insertInto("resume_skill_groups")
+        .values({
+          id: groupId,
+          resume_id: resume.id,
+          name: groupName,
+          sort_order: skill.sortOrder ?? index,
+        })
+        .execute();
+    }
     await db
       .insertInto("resume_skills")
       .values({
         id: randomUUID(),
-        cv_id: resume.id,
+        resume_id: resume.id,
+        group_id: groupId,
         name: skill.name ?? `Skill ${index + 1}`,
-        category: skill.category ?? null,
-        level: skill.level ?? null,
         sort_order: skill.sortOrder ?? index,
       })
       .execute();

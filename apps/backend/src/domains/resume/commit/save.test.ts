@@ -32,9 +32,16 @@ const BRANCH_ROW = {
 };
 
 const SKILL_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440061",
+  group_id: "550e8400-e29b-41d4-a716-446655440071",
   name: "TypeScript",
-  level: "expert",
   category: "languages",
+  sort_order: 0,
+};
+
+const SKILL_GROUP_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440071",
+  name: "languages",
   sort_order: 0,
 };
 
@@ -65,7 +72,8 @@ const INSERTED_COMMIT = {
     summary: "Strong backend focus",
     highlightedItems: [],
     language: "en",
-    skills: [{ name: "TypeScript", level: "expert", category: "languages", sortOrder: 0 }],
+    skillGroups: [{ name: "languages", sortOrder: 0 }],
+    skills: [{ name: "TypeScript", category: "languages", sortOrder: 0 }],
     assignments: [],
   },
   message: "My version",
@@ -82,6 +90,7 @@ const INSERTED_COMMIT = {
 function buildDbMock(opts: {
   branchRow?: unknown;
   headCommitRow?: unknown;
+  skillGroupRows?: unknown[];
   skillRows?: unknown[];
   assignmentRows?: unknown[];
   insertedCommit?: unknown;
@@ -90,6 +99,7 @@ function buildDbMock(opts: {
   const {
     branchRow = BRANCH_ROW,
     headCommitRow = { content: INSERTED_COMMIT.content },
+    skillGroupRows = [SKILL_GROUP_ROW],
     skillRows = [SKILL_ROW],
     assignmentRows = [ASSIGNMENT_ROW],
     insertedCommit = INSERTED_COMMIT,
@@ -112,11 +122,19 @@ function buildDbMock(opts: {
   const headCommitWhere = vi.fn().mockReturnValue({ executeTakeFirst: headCommitExecuteTakeFirst });
   const headCommitSelect = vi.fn().mockReturnValue({ where: headCommitWhere });
 
+  // Skill groups query
+  const skillGroupsExecute = vi.fn().mockResolvedValue(skillGroupRows);
+  const skillGroupsOrderBy = vi.fn().mockReturnValue({ execute: skillGroupsExecute });
+  const skillGroupsWhere = vi.fn().mockReturnValue({ orderBy: skillGroupsOrderBy });
+  const skillGroupsSelect = vi.fn().mockReturnValue({ where: skillGroupsWhere });
+
   // Skills query
   const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
+  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
+  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
+  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
 
   // Assignments query — joins assignments table for soft-delete filter (two where calls)
   const assignmentsExecute = vi.fn().mockResolvedValue(assignmentRows);
@@ -158,7 +176,8 @@ function buildDbMock(opts: {
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_commits") return { select: headCommitSelect };
-    if (table === "resume_skills") return { select: skillsSelect };
+    if (table === "resume_skill_groups") return { select: skillGroupsSelect };
+    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
     // resume_branches join
     return { innerJoin: branchInnerJoin };
@@ -207,8 +226,9 @@ describe("saveResumeVersion", () => {
     const callArg = insertValues.mock.calls[0][0];
     const content = JSON.parse(callArg.content);
 
+    expect(content.skillGroups).toEqual([{ name: "languages", sortOrder: 0 }]);
     expect(content.skills).toHaveLength(1);
-    expect(content.skills[0]).toMatchObject({ name: "TypeScript", level: "expert" });
+    expect(content.skills[0]).toMatchObject({ name: "TypeScript", category: "languages" });
     expect(content.assignments).toHaveLength(1);
     expect(content.assignments[0]).toMatchObject({
       assignmentId: ASSIGNMENT_ID,
@@ -277,15 +297,15 @@ describe("saveResumeVersion", () => {
     await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,
       skills: [
-        { name: "Team leadership", level: null, category: "Management", sortOrder: 0 },
-        { name: "Stakeholder management", level: null, category: "Management", sortOrder: 1 },
+        { name: "Team leadership", category: "Management", sortOrder: 0 },
+        { name: "Stakeholder management", category: "Management", sortOrder: 1 },
       ],
     });
 
     const content = JSON.parse(insertValues.mock.calls[0][0].content);
     expect(content.skills).toEqual([
-      { name: "Team leadership", level: null, category: "Management", sortOrder: 0 },
-      { name: "Stakeholder management", level: null, category: "Management", sortOrder: 1 },
+      { name: "Team leadership", category: "Management", sortOrder: 0 },
+      { name: "Stakeholder management", category: "Management", sortOrder: 1 },
     ]);
   });
 

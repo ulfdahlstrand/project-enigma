@@ -43,7 +43,7 @@ function buildHtml(data: {
   presentation: string[];
   summary: string | null | undefined;
   highlightedItems: string[];
-  skills: Array<{ name: string; category: string | null; level: string | null }>;
+  skills: Array<{ name: string; category: string | null }>;
   assignments: Array<{
     role: string;
     client_name: string;

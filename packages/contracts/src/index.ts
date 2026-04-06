@@ -36,6 +36,7 @@ export {
 export type { Employee } from "./employees.js";
 
 export {
+  resumeSkillGroupSchema,
   resumeSkillSchema,
   resumeSchema,
   resumeWithSkillsSchema,
@@ -49,6 +50,10 @@ export {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
+  createResumeSkillGroupInputSchema,
+  createResumeSkillGroupOutputSchema,
+  updateResumeSkillGroupInputSchema,
+  updateResumeSkillGroupOutputSchema,
   createResumeSkillInputSchema,
   createResumeSkillOutputSchema,
   updateResumeSkillInputSchema,
@@ -56,7 +61,7 @@ export {
   deleteResumeSkillInputSchema,
   deleteResumeSkillOutputSchema,
 } from "./resumes.js";
-export type { ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
+export type { ResumeSkillGroup, ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
 export {
   assignmentSchema,

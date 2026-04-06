@@ -10,11 +10,18 @@ import { z } from "zod";
 // plain-JS Date instances from Kysely or serialised strings from JSON.
 // ---------------------------------------------------------------------------
 
-export const resumeSkillSchema = z.object({
+export const resumeSkillGroupSchema = z.object({
   id: z.string().uuid(),
   resumeId: z.string().uuid(),
   name: z.string(),
-  level: z.string().nullable(),
+  sortOrder: z.number(),
+});
+
+export const resumeSkillSchema = z.object({
+  id: z.string().uuid(),
+  resumeId: z.string().uuid(),
+  groupId: z.string().uuid(),
+  name: z.string(),
   category: z.string().nullable(),
   sortOrder: z.number(),
 });
@@ -38,6 +45,7 @@ export const resumeSchema = z.object({
 });
 
 export const resumeWithSkillsSchema = resumeSchema.extend({
+  skillGroups: z.array(resumeSkillGroupSchema),
   skills: z.array(resumeSkillSchema),
 });
 
@@ -112,14 +120,43 @@ export const deleteResumeInputSchema = z.object({ id: z.string().uuid() });
 export const deleteResumeOutputSchema = z.object({ deleted: z.literal(true) });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// createResumeSkillGroup schemas
+// ---------------------------------------------------------------------------
+
+export const createResumeSkillGroupInputSchema = z.object({
+  resumeId: z.string().uuid(),
+  name: z.string().min(1),
+  sortOrder: z.number().int().optional(),
+});
+
+export const createResumeSkillGroupOutputSchema = resumeSkillGroupSchema;
+
+// ---------------------------------------------------------------------------
+// updateResumeSkillGroup schemas
+// ---------------------------------------------------------------------------
+
+export const updateResumeSkillGroupInputSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().min(1).optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .refine(
+    (d) => d.name !== undefined || d.sortOrder !== undefined,
+    { message: "At least one field must be provided" },
+  );
+
+export const updateResumeSkillGroupOutputSchema = resumeSkillGroupSchema;
+
+// ---------------------------------------------------------------------------
 // createResumeSkill schemas
 // ---------------------------------------------------------------------------
 
 export const createResumeSkillInputSchema = z.object({
   resumeId: z.string().uuid(),
+  groupId: z.string().uuid(),
   name: z.string().min(1),
-  level: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
 });
 
@@ -133,15 +170,13 @@ export const updateResumeSkillInputSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string().min(1).optional(),
-    level: z.string().nullable().optional(),
-    category: z.string().nullable().optional(),
+    groupId: z.string().uuid().optional(),
     sortOrder: z.number().int().optional(),
   })
   .refine(
     (d) =>
       d.name !== undefined ||
-      d.level !== undefined ||
-      d.category !== undefined ||
+      d.groupId !== undefined ||
       d.sortOrder !== undefined,
     { message: "At least one field must be provided" }
   );
@@ -160,5 +195,6 @@ export const deleteResumeSkillOutputSchema = z.object({ deleted: z.literal(true)
 // ---------------------------------------------------------------------------
 
 export type ResumeSkill = z.infer<typeof resumeSkillSchema>;
+export type ResumeSkillGroup = z.infer<typeof resumeSkillGroupSchema>;
 export type Resume = z.infer<typeof resumeSchema>;
 export type ResumeWithSkills = z.infer<typeof resumeWithSkillsSchema>;

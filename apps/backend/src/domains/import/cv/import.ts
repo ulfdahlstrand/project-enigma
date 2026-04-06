@@ -224,9 +224,10 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   // ---------------------------------------------------------------------------
 
   if (cvJson.skills) {
-    await db.deleteFrom("resume_skills").where("cv_id", "=", resumeId).execute();
+    await db.deleteFrom("resume_skills").where("resume_id", "=", resumeId).execute();
+    await db.deleteFrom("resume_skill_groups").where("resume_id", "=", resumeId).execute();
 
-    let skillOrder = 0;
+    let groupOrder = 0;
     for (const [category, value] of Object.entries(cvJson.skills)) {
       const names: string[] = Array.isArray(value)
         ? (value as unknown[]).filter((v): v is string => typeof v === "string")
@@ -234,17 +235,29 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         ? [value]
         : [];
 
+      const group = await db
+        .insertInto("resume_skill_groups")
+        .values({
+          resume_id: resumeId,
+          name: category,
+          sort_order: groupOrder++,
+        })
+        .returning(["id"])
+        .executeTakeFirstOrThrow();
+
+      let skillOrder = 0;
       for (const name of names) {
         if (!name.trim()) continue;
         await db
           .insertInto("resume_skills")
           .values({
-            cv_id: resumeId,
+            resume_id: resumeId,
+            group_id: group.id,
             name: name.trim(),
-            category,
-            sort_order: skillOrder++,
+            sort_order: skillOrder,
           })
           .execute();
+        skillOrder += 1;
       }
     }
   }
