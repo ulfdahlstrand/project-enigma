@@ -11,6 +11,7 @@ import {
   MIN_USER_MESSAGES_FOR_TITLE,
 } from "../lib/generate-title.js";
 import { logger } from "../../../infra/logger.js";
+import { withSpan } from "../../../infra/tracing.js";
 import {
   INTERNAL_AUTOSTART_PREFIX,
   INTERNAL_GUARDRAIL_PREFIX,
@@ -36,6 +37,10 @@ export async function sendAIMessage(
   openaiClient: OpenAI,
   input: { conversationId: string; userMessage: string }
 ) {
+  return withSpan("ai.conversation.send_message", {
+    "ai.conversation.id": input.conversationId,
+    "ai.user_message.length": input.userMessage.length,
+  }, async () => {
   logger.info("AI message received", {
     conversationId: input.conversationId,
     userMessageLength: input.userMessage.length,
@@ -362,6 +367,7 @@ export async function sendAIMessage(
     createdAt: assistantRow.created_at.toISOString(),
     needsContinuation,
   };
+  });
 }
 
 export const sendAIMessageHandler = implement(contract.sendAIMessage).handler(
