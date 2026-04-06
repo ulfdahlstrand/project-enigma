@@ -15,6 +15,32 @@ This logic lives primarily under:
 Frontend history and compare UIs are clients of this model, not the source of
 truth.
 
+### Assignment Identity vs Branch Content
+
+Assignments are intentionally modeled in two layers:
+
+- `assignments`
+  employee-owned identity rows with stable IDs
+- `branch_assignments`
+  branch-scoped editable content for a given assignment identity
+
+This split exists so the same assignment can be tracked across multiple resume
+branches with one stable `assignmentId`, while still allowing each branch to
+change:
+
+- description text
+- ordering
+- highlight state
+- inclusion/removal
+
+In other words:
+
+- identity belongs to the employee
+- representation belongs to the branch
+
+That model supports future diffing, merge logic, and AI revision tracking
+without relying on fuzzy text matching.
+
 ## AI Conversation and Assistant Orchestration
 
 The backend also owns persisted AI conversations and is the intended home for

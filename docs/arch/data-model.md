@@ -160,3 +160,23 @@ Every table should include:
 ## Schema
 
 > Schema details will be documented here as data model features are implemented.
+
+### Assignment Modeling
+
+Assignments are intentionally split into:
+
+- `assignments`
+  stable identity rows tied to an employee
+- `branch_assignments`
+  branch-specific editable content for that identity
+
+Why:
+
+- the same assignment needs one stable ID across branches
+- each branch must still be free to vary text, highlight state, and ordering
+
+This means an assignment is not stored as a single flat resume-owned row.
+Instead, the model separates:
+
+- canonical identity
+- branch-specific representation
