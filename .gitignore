@@ -37,6 +37,9 @@ playwright-report/
 test-results/
 .playwright/
 
+# Local tracing/debug logs
+.logs/
+
 # Flower orchestrator runtime data
 .flower/
 .claude/worktrees/

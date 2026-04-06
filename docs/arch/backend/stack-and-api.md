@@ -83,3 +83,19 @@ The root contract file:
 
 is the composition point. It re-exports shared schemas and types, and combines
 the domain route groups into the final `contract`.
+
+## Local Logging
+
+For local tracing and debugging, the backend can write logs to a file:
+
+- `.logs/backend.log`
+
+This path is git-ignored and intended for local use only. The default local
+development setup writes to this file unless `BACKEND_LOG_FILE` is set to an
+empty value.
+
+To follow the backend log stream live:
+
+```bash
+tail -f .logs/backend.log
+```
