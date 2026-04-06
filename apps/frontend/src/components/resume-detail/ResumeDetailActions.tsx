@@ -53,7 +53,13 @@ interface ResumeDetailActionsProps {
 type ExportFormat = "pdf" | "docx" | "markdown";
 const EXPORT_OPTIONS: ExportFormat[] = ["pdf", "docx", "markdown"];
 
-function ExportSplitButton({ resumeId }: { resumeId: string }) {
+function ExportSplitButton({
+  resumeId,
+  commitId,
+}: {
+  resumeId: string;
+  commitId?: string | null;
+}) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<ExportFormat>("pdf");
@@ -61,9 +67,10 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
 
   async function triggerDownload(format: ExportFormat): Promise<void> {
     const { orpc } = await import("../../orpc-client");
+    const exportInput = commitId ? { resumeId, commitId } : { resumeId };
 
     if (format === "pdf") {
-      const result = await orpc.exportResumePdf({ resumeId });
+      const result = await orpc.exportResumePdf(exportInput);
       const bytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
@@ -73,7 +80,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
       a.click();
       URL.revokeObjectURL(url);
     } else if (format === "docx") {
-      const result = await orpc.exportResumeDocx({ resumeId });
+      const result = await orpc.exportResumeDocx(exportInput);
       const bytes = Uint8Array.from(atob(result.docx), (c) => c.charCodeAt(0));
       const blob = new Blob([bytes], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -85,7 +92,7 @@ function ExportSplitButton({ resumeId }: { resumeId: string }) {
       a.click();
       URL.revokeObjectURL(url);
     } else {
-      const result = await orpc.exportResumeMarkdown({ resumeId });
+      const result = await orpc.exportResumeMarkdown(exportInput);
       const blob = new Blob([result.markdown], { type: "text/markdown" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -262,7 +269,7 @@ export function ResumeDetailActions({
             </>
           ) : (
             <>
-              <ExportSplitButton resumeId={resumeId} />
+            <ExportSplitButton resumeId={resumeId} commitId={baseCommitId} />
               <EditButton onEdit={onEdit} />
             </>
           )}
