@@ -56,8 +56,8 @@ type ReviewDialog =
     };
 
 type ResumeSkill = {
+  groupId?: string;
   name: string;
-  level: string | null;
   category: string | null;
   sortOrder: number;
 };
@@ -76,15 +76,15 @@ type Params = {
   queryClient: QueryClient;
   suggestions: RevisionSuggestions | null;
   setSuggestions: Dispatch<SetStateAction<RevisionSuggestions | null>>;
-  saveVersion: (input: {
-    branchId: string;
-    title?: string;
-    message?: string;
-    consultantTitle?: string | null;
-    presentation?: string[];
-    summary?: string | null;
-    highlightedItems?: string[];
-    skills?: ResumeSkill[];
+    saveVersion: (input: {
+      branchId: string;
+      title?: string;
+      message?: string;
+      consultantTitle?: string | null;
+      presentation?: string[];
+      summary?: string | null;
+      highlightedItems?: string[];
+      skills?: ResumeSkill[];
   }) => Promise<unknown>;
   updateBranchAssignment: (input: { id: string; description: string }) => Promise<unknown>;
   buildDraftPatchFromValues: (title: string, presentation: string, summary: string) => unknown;

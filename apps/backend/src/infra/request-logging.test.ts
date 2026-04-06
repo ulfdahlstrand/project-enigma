@@ -2,7 +2,6 @@ import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { beginRequestLogging } from "./request-logging.js";
-import { baseLogger } from "./logger-core.js";
 import { logger } from "./logger.js";
 
 function buildRequest() {
@@ -47,8 +46,8 @@ describe("beginRequestLogging", () => {
     vi.unstubAllEnvs();
   });
 
-  it("logs a CLF-like line in local pretty mode", () => {
-    const infoSpy = vi.spyOn(baseLogger, "info").mockImplementation(() => baseLogger);
+  it("logs structured request start and completion in local pretty mode", () => {
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => undefined);
     const req = buildRequest();
     const res = buildResponse();
 
@@ -59,10 +58,25 @@ describe("beginRequestLogging", () => {
     res.emit("finish");
 
     expect(res.getHeader("x-request-id")).toBe("req-123");
-    expect(infoSpy).toHaveBeenCalledTimes(1);
+    expect(infoSpy).toHaveBeenCalledTimes(2);
     expect(infoSpy).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining("\"POST /rpc/sendAIMessage?debug=true&trace=1\" 200"),
+      "HTTP request received",
+      expect.objectContaining({
+        requestId: "req-123",
+        method: "POST",
+        path: "/rpc/sendAIMessage",
+      }),
+    );
+    expect(infoSpy).toHaveBeenNthCalledWith(
+      2,
+      "HTTP request completed",
+      expect.objectContaining({
+        requestId: "req-123",
+        operationName: "sendAIMessage",
+        userId: "user-1",
+        statusCode: 200,
+      }),
     );
   });
 
@@ -113,7 +127,7 @@ describe("beginRequestLogging", () => {
   });
 
   it("does not log completion twice if both finish and close fire", () => {
-    const infoSpy = vi.spyOn(baseLogger, "info").mockImplementation(() => baseLogger);
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => undefined);
     const req = buildRequest();
     const res = buildResponse();
 
@@ -122,6 +136,6 @@ describe("beginRequestLogging", () => {
     res.emit("finish");
     res.emit("close");
 
-    expect(infoSpy).toHaveBeenCalledTimes(1);
+    expect(infoSpy).toHaveBeenCalledTimes(2);
   });
 });

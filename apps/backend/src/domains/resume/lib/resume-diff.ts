@@ -85,7 +85,6 @@ function diffSkills(
       entries.push({ status: "removed", name, before: b });
     } else {
       const changed =
-        b.level !== h.level ||
         b.category !== h.category ||
         b.sortOrder !== h.sortOrder;
       entries.push(

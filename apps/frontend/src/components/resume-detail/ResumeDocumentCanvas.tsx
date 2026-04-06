@@ -3,7 +3,7 @@ import { ImprovePresentationFab } from "../ai-assistant/ImprovePresentationFab";
 import { ResumeAssignmentsPage } from "./ResumeAssignmentsPage";
 import { ResumeCoverPage } from "./ResumeCoverPage";
 import { ResumeSkillsPage } from "./ResumeSkillsPage";
-import type { SkillRow } from "../SkillsEditor";
+import type { SkillGroupRow, SkillRow } from "../SkillsEditor";
 import type { AssignmentRow as EditorAssignmentRow } from "../AssignmentEditor";
 import type { MutableRefObject, RefObject } from "react";
 
@@ -41,7 +41,8 @@ interface ResumeDocumentCanvasProps {
   onDraftHighlightedItemsChange: (value: string) => void;
   showSkillsPage: boolean;
   skillsPage: number | null;
-  skills: Array<{ id: string; name: string; category: string | null; sortOrder?: number; level?: string | null }>;
+  skillGroups: SkillGroupRow[];
+  skills: Array<{ id: string; groupId: string; name: string; category: string | null; sortOrder?: number }>;
   degrees: string[];
   certifications: string[];
   languages: string[];
@@ -92,6 +93,7 @@ export function ResumeDocumentCanvas({
   onDraftHighlightedItemsChange,
   showSkillsPage,
   skillsPage,
+  skillGroups,
   skills,
   degrees,
   certifications,
@@ -162,6 +164,7 @@ export function ResumeDocumentCanvas({
           page={skillsPage}
           totalPages={totalPages}
           employeeName={employeeName}
+          skillGroups={skillGroups}
           skills={skills as SkillRow[]}
           degrees={degrees}
           certifications={certifications}
@@ -169,7 +172,7 @@ export function ResumeDocumentCanvas({
           isEditing={isEditing}
           isSnapshotMode={isSnapshotMode}
           resumeId={resumeId}
-          queryKey={getResumeQueryKey(resumeId)}
+          queryKey={getResumeQueryKey(resumeId, activeBranchId)}
           sectionRef={skillsSectionRef}
         />
       )}

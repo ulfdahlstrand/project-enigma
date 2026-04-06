@@ -1,85 +1,113 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "../orpc-client";
-import type { SkillRow } from "../components/SkillsEditor";
+import type { SkillGroupRow, SkillRow } from "../components/SkillsEditor";
 
-// ---------------------------------------------------------------------------
-// Sorting helper
-// ---------------------------------------------------------------------------
+type SkillCategoryRow = {
+  id: string;
+  category: string;
+  sortOrder: number;
+  skills: SkillRow[];
+};
 
-export function sortCategories(grouped: Record<string, SkillRow[]>): [string, SkillRow[]][] {
-  return Object.entries(grouped).sort(([a, aSkills], [b, bSkills]) => {
-    const minA = Math.min(...aSkills.map((s) => s.sortOrder));
-    const minB = Math.min(...bSkills.map((s) => s.sortOrder));
-    if (minA !== minB) return minA - minB;
-    if (a === "") return 1;
-    if (b === "") return -1;
-    return a.localeCompare(b);
-  });
-}
-
-export function getNextSkillSortOrder(
-  sortedCategories: [string, SkillRow[]][],
-  category: string,
-): number {
-  const categoryIndex = sortedCategories.findIndex(([name]) => name === category);
-
-  if (categoryIndex === -1) {
-    const maxSortOrder = sortedCategories.flatMap(([, skills]) => skills).reduce(
+export function getNextSkillSortOrder(groups: SkillCategoryRow[], groupId: string): number {
+  const group = groups.find((candidate) => candidate.id === groupId);
+  if (!group) {
+    const maxSortOrder = groups.flatMap((candidate) => candidate.skills).reduce(
       (max, skill) => Math.max(max, skill.sortOrder),
       -1,
     );
-    return Math.max(maxSortOrder + 1, sortedCategories.length * 1000);
+    return maxSortOrder + 1;
   }
 
-  const categorySkills = sortedCategories[categoryIndex]![1];
-  const maxSortOrderInCategory = categorySkills.reduce(
-    (max, skill) => Math.max(max, skill.sortOrder),
-    -1,
-  );
-  return Math.max(maxSortOrderInCategory + 1, categoryIndex * 1000 + categorySkills.length);
+  return group.skills.reduce((max, skill) => Math.max(max, skill.sortOrder), -1) + 1;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+function buildSkillGroups(skillGroups: SkillGroupRow[], skills: SkillRow[]): SkillCategoryRow[] {
+  const groups = new Map<string, SkillCategoryRow>();
+
+  for (const group of skillGroups) {
+    groups.set(group.id, {
+      id: group.id,
+      category: group.name.trim(),
+      sortOrder: group.sortOrder,
+      skills: [],
+    });
+  }
+
+  for (const skill of skills) {
+    const existing = groups.get(skill.groupId);
+    if (existing) {
+      existing.skills.push(skill);
+      existing.category = skill.category?.trim() || existing.category;
+      continue;
+    }
+
+    groups.set(skill.groupId, {
+      id: skill.groupId,
+      category: skill.category?.trim() || "",
+      sortOrder: Number.MAX_SAFE_INTEGER,
+      skills: [skill],
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      skills: [...group.skills].sort((a, b) => a.sortOrder - b.sortOrder),
+    }))
+    .sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      if (a.category === "") return 1;
+      if (b.category === "") return -1;
+      return a.category.localeCompare(b.category);
+    });
+}
 
 interface UseSkillsEditorParams {
   resumeId: string;
+  skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
 }
 
-export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorParams) {
+export function useSkillsEditor({ resumeId, skillGroups, skills, queryKey }: UseSkillsEditorParams) {
   const queryClient = useQueryClient();
 
   const [view, setView] = useState<"detail" | "list">("detail");
-
-  // Inline skill name edit (detail view)
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-
-  // Add skill to an existing category
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [newSkillName, setNewSkillName] = useState("");
-
-  // Add a brand-new category
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategorySkillName, setNewCategorySkillName] = useState("");
-
-  // Reorder pending state (list view)
   const [isReordering, setIsReordering] = useState(false);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
+    ]);
+  };
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name, sortOrder }: { id: string; name?: string; sortOrder?: number }) =>
-      orpc.updateResumeSkill({ id, name, sortOrder }),
+    mutationFn: ({ id, name, sortOrder, groupId }: {
+      id: string;
+      name?: string;
+      sortOrder?: number;
+      groupId?: string;
+    }) => orpc.updateResumeSkill({ id, name, sortOrder, groupId }),
     onSuccess: async () => {
       setEditingSkillId(null);
       await invalidate();
     },
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: ({ id, name, sortOrder }: { id: string; name?: string; sortOrder?: number }) =>
+      orpc.updateResumeSkillGroup({ id, name, sortOrder }),
+    onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
@@ -88,15 +116,8 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
   });
 
   const addMutation = useMutation({
-    mutationFn: ({
-      name,
-      category,
-      sortOrder,
-    }: {
-      name: string;
-      category: string | null;
-      sortOrder?: number;
-    }) => orpc.createResumeSkill({ resumeId, name, category, sortOrder }),
+    mutationFn: ({ name, groupId, sortOrder }: { name: string; groupId: string; sortOrder?: number }) =>
+      orpc.createResumeSkill({ resumeId, groupId, name, sortOrder }),
     onSuccess: async () => {
       setAddingToCategory(null);
       setNewSkillName("");
@@ -107,18 +128,17 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
     },
   });
 
-  // Derived data
-  const grouped = skills.reduce<Record<string, SkillRow[]>>((acc, skill) => {
-    const key = skill.category?.trim() || "";
-    return { ...acc, [key]: [...(acc[key] ?? []), skill] };
-  }, {});
+  const addGroupMutation = useMutation({
+    mutationFn: ({ name, sortOrder }: { name: string; sortOrder: number }) =>
+      orpc.createResumeSkillGroup({ resumeId, name, sortOrder }),
+    onSuccess: invalidate,
+  });
 
-  const sortedCategories = sortCategories(grouped);
+  const sortedCategories = buildSkillGroups(skillGroups, skills);
   const mid = Math.ceil(sortedCategories.length / 2);
   const leftCategories = sortedCategories.slice(0, mid);
   const rightCategories = sortedCategories.slice(mid);
 
-  // Handlers
   const startEditing = (skill: SkillRow) => {
     setEditingSkillId(skill.id);
     setEditName(skill.name);
@@ -128,26 +148,37 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
     if (editName.trim()) updateMutation.mutate({ id, name: editName.trim() });
   };
 
-  const startAddingToCategory = (cat: string) => {
-    setAddingToCategory(cat);
+  const startAddingToCategory = (groupId: string) => {
+    setAddingToCategory(groupId);
     setNewSkillName("");
   };
 
-  const commitAddToCategory = (cat: string) => {
+  const commitAddToCategory = (groupId: string) => {
     if (!newSkillName.trim()) return;
     addMutation.mutate({
       name: newSkillName.trim(),
-      category: cat || null,
-      sortOrder: getNextSkillSortOrder(sortedCategories, cat),
+      groupId,
+      sortOrder: getNextSkillSortOrder(sortedCategories, groupId),
     });
   };
 
-  const commitAddCategory = () => {
+  const commitAddCategory = async () => {
     if (!newCategoryName.trim() || !newCategorySkillName.trim()) return;
+
+    const nextGroupSortOrder = sortedCategories.reduce(
+      (max, group) => Math.max(max, group.sortOrder),
+      -1,
+    ) + 1;
+
+    const group = await addGroupMutation.mutateAsync({
+      name: newCategoryName.trim(),
+      sortOrder: nextGroupSortOrder,
+    });
+
     addMutation.mutate({
       name: newCategorySkillName.trim(),
-      category: newCategoryName.trim(),
-      sortOrder: getNextSkillSortOrder(sortedCategories, newCategoryName.trim()),
+      groupId: group.id,
+      sortOrder: 0,
     });
   };
 
@@ -160,17 +191,12 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
     reordered[index] = reordered[swapIndex]!;
     reordered[swapIndex] = temp;
 
-    const updates: { id: string; sortOrder: number }[] = [];
-    reordered.forEach(([, catSkills], catIndex) => {
-      catSkills.forEach((skill, skillIndex) => {
-        updates.push({ id: skill.id, sortOrder: catIndex * 1000 + skillIndex });
-      });
-    });
-
     setIsReordering(true);
     try {
       await Promise.all(
-        updates.map(({ id, sortOrder }) => orpc.updateResumeSkill({ id, sortOrder }))
+        reordered.map((group, groupIndex) =>
+          orpc.updateResumeSkillGroup({ id: group.id, sortOrder: groupIndex }),
+        ),
       );
       await invalidate();
     } finally {
@@ -188,7 +214,7 @@ export function useSkillsEditor({ resumeId, skills, queryKey }: UseSkillsEditorP
     newCategoryName, setNewCategoryName,
     newCategorySkillName, setNewCategorySkillName,
     isReordering,
-    updateMutation, deleteMutation, addMutation,
+    updateMutation, updateGroupMutation, deleteMutation, addMutation, addGroupMutation,
     sortedCategories, leftCategories, rightCategories,
     startEditing, commitEdit,
     startAddingToCategory, commitAddToCategory, commitAddCategory,

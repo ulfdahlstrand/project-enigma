@@ -38,7 +38,6 @@ export type RevisionWorkItems = z.infer<typeof revisionWorkItemsSchema>;
 
 const revisionSuggestionSkillSchema = z.object({
   name: z.string().min(1),
-  level: z.string().nullable().optional(),
   category: z.string().nullable(),
   sortOrder: z.number(),
 });
@@ -216,9 +215,14 @@ export const revisionSuggestionsInputSchema = revisionSuggestionsInputShapeSchem
 // ---------------------------------------------------------------------------
 
 export interface ResumeSkillSnapshot {
+  groupId?: string;
   name: string;
-  level: string | null;
   category: string | null;
+  sortOrder: number;
+}
+
+export interface ResumeSkillGroupSnapshot {
+  name: string;
   sortOrder: number;
 }
 
@@ -241,6 +245,7 @@ export interface ResumeInspectionSnapshot {
   language: string | null | undefined;
   presentation: string[];
   summary: string | null;
+  skillGroups: ResumeSkillGroupSnapshot[];
   skills: ResumeSkillSnapshot[];
   assignments: ResumeAssignmentSnapshot[];
 }
@@ -257,7 +262,7 @@ export function excerpt(text: string, maxLength = 280): string {
   return `${trimmed.slice(0, maxLength)}…`;
 }
 
-export function groupSkills(skills: ResumeSkillSnapshot[]) {
+export function groupSkills(skills: ResumeSkillSnapshot[], skillGroups: ResumeSkillGroupSnapshot[] = []) {
   const grouped = skills.reduce<Record<string, { names: string[]; sortOrders: number[] }>>((acc, skill) => {
     const category = skill.category?.trim() || "Other";
     const current = acc[category] ?? { names: [], sortOrders: [] };
@@ -270,12 +275,14 @@ export function groupSkills(skills: ResumeSkillSnapshot[]) {
     };
   }, {});
 
+  const groupOrder = new Map(skillGroups.map((group) => [group.name.trim() || "Other", group.sortOrder]));
+
   return Object.entries(grouped)
     .map(([category, value]) => ({
       category,
       names: value.names.slice(0, 12),
       total: value.names.length,
-      minSortOrder: Math.min(...value.sortOrders),
+      minSortOrder: groupOrder.get(category) ?? Math.min(...value.sortOrders),
     }))
     .sort((a, b) => a.minSortOrder - b.minSortOrder);
 }
@@ -284,7 +291,7 @@ export function buildInspectResumeResult(
   snapshot: ResumeInspectionSnapshot,
   includeAssignments: boolean,
 ) {
-  const groupedSkills = groupSkills(snapshot.skills);
+  const groupedSkills = groupSkills(snapshot.skills, snapshot.skillGroups);
   const compactAssignments = snapshot.assignments.slice(0, 8).map((assignment) => ({
     id: assignment.id,
     clientName: assignment.clientName,

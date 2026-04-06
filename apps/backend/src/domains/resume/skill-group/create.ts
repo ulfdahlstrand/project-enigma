@@ -5,41 +5,32 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
-import type { createResumeSkillInputSchema } from "@cv-tool/contracts";
+import type { createResumeSkillGroupInputSchema } from "@cv-tool/contracts";
 
-type Input = z.infer<typeof createResumeSkillInputSchema>;
+type Input = z.infer<typeof createResumeSkillGroupInputSchema>;
 
-export async function createResumeSkill(db: Kysely<Database>, input: Input) {
+export async function createResumeSkillGroup(db: Kysely<Database>, input: Input) {
   const row = await db
-    .insertInto("resume_skills")
+    .insertInto("resume_skill_groups")
     .values({
       resume_id: input.resumeId,
-      group_id: input.groupId,
       name: input.name,
       sort_order: input.sortOrder ?? 0,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  const group = await db
-    .selectFrom("resume_skill_groups")
-    .select(["name", "sort_order"])
-    .where("id", "=", row.group_id)
-    .executeTakeFirstOrThrow();
-
   return {
     id: row.id,
     resumeId: row.resume_id,
-    groupId: row.group_id,
     name: row.name,
-    category: group.name,
     sortOrder: row.sort_order,
   };
 }
 
-export const createResumeSkillHandler = implement(contract.createResumeSkill).handler(
+export const createResumeSkillGroupHandler = implement(contract.createResumeSkillGroup).handler(
   async ({ input, context }) => {
     requireAuth(context as AuthContext);
-    return createResumeSkill(getDb(), input);
-  }
+    return createResumeSkillGroup(getDb(), input);
+  },
 );

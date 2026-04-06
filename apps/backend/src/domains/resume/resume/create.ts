@@ -80,6 +80,7 @@ export async function createResume(
       summary: newResume.summary,
       highlightedItems: [],
       language,
+      skillGroups: [],
       skills: [],
       assignments: [],
     });
@@ -120,6 +121,7 @@ export async function createResume(
     headCommitId: branch.head_commit_id,
     createdAt: resume.created_at,
     updatedAt: resume.updated_at,
+    skillGroups: [],
     skills: [],
   };
 }

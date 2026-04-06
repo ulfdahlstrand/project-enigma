@@ -1,5 +1,9 @@
 import { oc } from "@orpc/contract";
 import {
+  createResumeSkillGroupInputSchema,
+  createResumeSkillGroupOutputSchema,
+  updateResumeSkillGroupInputSchema,
+  updateResumeSkillGroupOutputSchema,
   listResumesInputSchema,
   listResumesOutputSchema,
   getResumeInputSchema,
@@ -39,6 +43,14 @@ export const resumeRoutes = {
     .route({ method: "DELETE", path: "/resumes/{id}" })
     .input(deleteResumeInputSchema)
     .output(deleteResumeOutputSchema),
+  createResumeSkillGroup: oc
+    .route({ method: "POST", path: "/resumes/{resumeId}/skill-groups" })
+    .input(createResumeSkillGroupInputSchema)
+    .output(createResumeSkillGroupOutputSchema),
+  updateResumeSkillGroup: oc
+    .route({ method: "PATCH", path: "/resume-skill-groups/{id}" })
+    .input(updateResumeSkillGroupInputSchema)
+    .output(updateResumeSkillGroupOutputSchema),
   createResumeSkill: oc
     .route({ method: "POST", path: "/resumes/{resumeId}/skills" })
     .input(createResumeSkillInputSchema)

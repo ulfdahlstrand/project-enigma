@@ -240,13 +240,20 @@ export function ResumeDetailPage({
   const snapshotSkills = snapshotContent?.skills
     ? snapshotContent.skills.map((skill, index) => ({
         id: `snapshot-skill-${index}-${skill.name}`,
+        groupId: `snapshot-group-${skill.category ?? "other"}`,
         name: skill.name,
         category: skill.category ?? null,
-        level: skill.level ?? null,
         sortOrder: skill.sortOrder ?? index,
       }))
     : null;
   const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
+  const snapshotSkillGroups = snapshotContent?.skillGroups?.map((group, index) => ({
+    id: `snapshot-group-${index}-${group.name}`,
+    resumeId: id,
+    name: group.name,
+    sortOrder: group.sortOrder,
+  })) ?? null;
+  const skillGroups = isEditing ? (resume?.skillGroups ?? []) : (snapshotSkillGroups ?? (resume?.skillGroups ?? []));
   const hasSkills = skills.length > 0;
   const showSkillsPage = hasSkills || isEditing;
   const hasAssignments = assignments.length > 0;
@@ -275,9 +282,13 @@ export function ResumeDetailPage({
     language,
     presentation,
     summary,
+    skillGroups: skillGroups.map((group) => ({
+      name: group.name,
+      sortOrder: group.sortOrder,
+    })),
     skills: skills.map((skill) => ({
+      groupId: skill.groupId,
       name: skill.name,
-      level: skill.level ?? null,
       category: skill.category ?? null,
       sortOrder: skill.sortOrder ?? 0,
     })),
@@ -322,9 +333,13 @@ export function ResumeDetailPage({
     presentation,
     summary,
     highlightedItems,
+    skillGroups: skillGroups.map((group) => ({
+      name: group.name,
+      sortOrder: group.sortOrder,
+    })),
     skills: skills.map((skill) => ({
+      groupId: skill.groupId,
       name: skill.name,
-      level: skill.level ?? null,
       category: skill.category ?? null,
       sortOrder: skill.sortOrder ?? 0,
     })),
@@ -544,6 +559,7 @@ export function ResumeDetailPage({
           onDraftHighlightedItemsChange={setDraftHighlightedItems}
           showSkillsPage={showSkillsPage}
           skillsPage={skillsPage}
+          skillGroups={skillGroups}
           skills={skills}
           degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
           certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
@@ -589,6 +605,7 @@ export function ResumeDetailPage({
           highlightedItems={highlightedItems}
           showSkillsPage={showSkillsPage}
           skillsPage={skillsPage}
+          skillGroups={skillGroups}
           skills={skills}
           degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
           certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}

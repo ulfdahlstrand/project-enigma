@@ -36,20 +36,28 @@ import {
 export interface SkillRow {
   id: string;
   name: string;
-  level: string | null;
+  groupId: string;
   category: string | null;
+  sortOrder: number;
+}
+
+export interface SkillGroupRow {
+  id: string;
+  resumeId: string;
+  name: string;
   sortOrder: number;
 }
 
 interface SkillsEditorProps {
   resumeId: string;
+  skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
 }
 
-export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) {
+export function SkillsEditor({ resumeId, skillGroups, skills, queryKey }: SkillsEditorProps) {
   const { t } = useTranslation("common");
-  const editor = useSkillsEditor({ resumeId, skills, queryKey });
+  const editor = useSkillsEditor({ resumeId, skillGroups, skills, queryKey });
   const pageTopOffset = RESUME_PAGE_HEADER_HEIGHT + RESUME_PAGE_VERTICAL_PADDING;
 
   // ---------------------------------------------------------------------------
@@ -99,7 +107,7 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
     );
   };
 
-  const renderAddSkillInput = (cat: string) => (
+  const renderAddSkillInput = (groupId: string) => (
     <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", width: "100%", mt: 0.5 }}>
       <TextField
         value={editor.newSkillName}
@@ -108,7 +116,7 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
         autoFocus
         placeholder={t("resume.edit.skillNameLabel")}
         onKeyDown={(e) => {
-          if (e.key === "Enter") editor.commitAddToCategory(cat);
+          if (e.key === "Enter") editor.commitAddToCategory(groupId);
           if (e.key === "Escape") editor.setAddingToCategory(null);
         }}
         sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5 } }}
@@ -116,7 +124,7 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
       <IconButton
         size="small"
         color="primary"
-        onClick={() => editor.commitAddToCategory(cat)}
+        onClick={() => editor.commitAddToCategory(groupId)}
         disabled={!editor.newSkillName.trim() || editor.addMutation.isPending}
       >
         <CheckIcon sx={{ fontSize: 16 }} />
@@ -127,8 +135,8 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
     </Box>
   );
 
-  const renderCategoryBlock = (cat: string, catSkills: SkillRow[]) => (
-    <Box key={cat} sx={{ mb: 2.5, minWidth: 0 }}>
+  const renderCategoryBlock = (groupId: string, cat: string, catSkills: SkillRow[]) => (
+    <Box key={groupId} sx={{ mb: 2.5, minWidth: 0 }}>
       <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
         <Typography
           variant="caption"
@@ -137,14 +145,14 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
           {(cat || t("resume.detail.skillsHeading")).toUpperCase()}
         </Typography>
         <Tooltip title={t("resume.edit.skillAddButton")}>
-          <IconButton size="small" onClick={() => editor.startAddingToCategory(cat)} sx={{ p: 0.25 }}>
+          <IconButton size="small" onClick={() => editor.startAddingToCategory(groupId)} sx={{ p: 0.25 }}>
             <AddIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
       </Box>
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
         {catSkills.map(renderSkill)}
-        {editor.addingToCategory === cat && renderAddSkillInput(cat)}
+        {editor.addingToCategory === groupId && renderAddSkillInput(groupId)}
       </Box>
     </Box>
   );
@@ -239,8 +247,8 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
           </Box>
         )}
         <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {editor.sortedCategories.map(([cat, catSkills], index) => (
-            <Box key={cat}>
+          {editor.sortedCategories.map((group, index) => (
+            <Box key={group.id}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1, opacity: editor.isReordering ? 0.5 : 1 }}>
                 <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 24, color: "text.disabled" }}>
                   {index + 1}
@@ -250,11 +258,11 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
                     variant="caption"
                     sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                   >
-                    {(cat || t("resume.detail.skillsHeading")).toUpperCase()}
+                    {(group.category || t("resume.detail.skillsHeading")).toUpperCase()}
                   </Typography>
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                  {t("resume.edit.skillsCount", { count: catSkills.length })}
+                  {t("resume.edit.skillsCount", { count: group.skills.length })}
                 </Typography>
                 <Box sx={{ display: "flex" }}>
                   <IconButton
@@ -308,10 +316,10 @@ export function SkillsEditor({ resumeId, skills, queryKey }: SkillsEditorProps) 
       ) : (
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start", mb: 2 }}>
           <Box sx={{ minWidth: 0 }}>
-            {editor.leftCategories.map(([cat, catSkills]) => renderCategoryBlock(cat, catSkills))}
+            {editor.leftCategories.map((group) => renderCategoryBlock(group.id, group.category, group.skills))}
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            {editor.rightCategories.map(([cat, catSkills]) => renderCategoryBlock(cat, catSkills))}
+            {editor.rightCategories.map((group) => renderCategoryBlock(group.id, group.category, group.skills))}
           </Box>
         </Box>
       )}

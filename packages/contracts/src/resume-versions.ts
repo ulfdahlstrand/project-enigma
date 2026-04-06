@@ -14,9 +14,13 @@ import { z } from "zod";
 // Commit content — the JSONB snapshot shape
 // ---------------------------------------------------------------------------
 
+export const resumeCommitSkillGroupSchema = z.object({
+  name: z.string(),
+  sortOrder: z.number(),
+});
+
 export const resumeCommitSkillSchema = z.object({
   name: z.string(),
-  level: z.string().nullable(),
   category: z.string().nullable(),
   sortOrder: z.number(),
 });
@@ -43,6 +47,7 @@ export const resumeCommitContentSchema = z.object({
   summary: z.string().nullable(),
   highlightedItems: z.array(z.string()).default([]),
   language: z.string(),
+  skillGroups: z.array(resumeCommitSkillGroupSchema).default([]),
   skills: z.array(resumeCommitSkillSchema),
   assignments: z.array(resumeCommitAssignmentSchema),
 });
@@ -119,6 +124,7 @@ export const saveResumeVersionInputSchema = z.object({
   presentation: z.array(z.string()).optional(),
   summary: z.string().nullable().optional(),
   highlightedItems: z.array(z.string()).optional(),
+  skillGroups: z.array(resumeCommitSkillGroupSchema).optional(),
   skills: z.array(resumeCommitSkillSchema).optional(),
 });
 

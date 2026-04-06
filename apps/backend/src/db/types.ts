@@ -49,12 +49,22 @@ export type Resume = Selectable<ResumeTable>;
 export type NewResume = Insertable<ResumeTable>;
 export type ResumeUpdate = Updateable<ResumeTable>;
 
+export interface ResumeSkillGroupTable {
+  id: Generated<string>;
+  resume_id: string;
+  name: string;
+  sort_order: Generated<number>;
+}
+
+export type ResumeSkillGroup = Selectable<ResumeSkillGroupTable>;
+export type NewResumeSkillGroup = Insertable<ResumeSkillGroupTable>;
+export type ResumeSkillGroupUpdate = Updateable<ResumeSkillGroupTable>;
+
 export interface ResumeSkillTable {
   id: Generated<string>;
-  cv_id: string;
+  resume_id: string;
+  group_id: string;
   name: string;
-  level: string | null;
-  category: string | null;
   sort_order: Generated<number>;
 }
 
@@ -116,9 +126,12 @@ export interface ResumeCommitContent {
   summary: string | null;
   highlightedItems: string[];
   language: string;
+  skillGroups: Array<{
+    name: string;
+    sortOrder: number;
+  }>;
   skills: Array<{
     name: string;
-    level: string | null;
     category: string | null;
     sortOrder: number;
   }>;
@@ -374,6 +387,7 @@ export interface Database {
   users: UserTable;
   resumes: ResumeTable;
   resume_skills: ResumeSkillTable;
+  resume_skill_groups: ResumeSkillGroupTable;
   resume_commits: ResumeCommitTable;
   resume_commit_parents: ResumeCommitParentTable;
   resume_branches: ResumeBranchTable;

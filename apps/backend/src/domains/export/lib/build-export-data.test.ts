@@ -32,7 +32,7 @@ const EMPLOYEE_ROW = {
 };
 
 const SKILL_ROWS = [
-  { name: "TypeScript", category: "Languages", level: "Expert", sort_order: 1 },
+  { name: "TypeScript", category: "Languages", sort_order: 1 },
 ];
 
 const ASSIGNMENT_ROWS = [
@@ -64,7 +64,8 @@ const COMMIT_CONTENT = {
   summary: "Great at coding",
   highlightedItems: ["Lead hos Beta Inc"],
   language: "sv",
-  skills: [{ name: "Go", level: null, category: null, sortOrder: 1 }],
+  skillGroups: [],
+  skills: [{ name: "Go", category: null, sortOrder: 1 }],
   assignments: [
     {
       assignmentId: "550e8400-e29b-41d4-a716-446655440051",
@@ -149,9 +150,11 @@ function buildDbMock(opts: {
 
   // Skills chain
   const skillsExec = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy = vi.fn().mockReturnValue({ execute: skillsExec });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy });
+  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExec });
+  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
+  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
   const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
+  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
 
   // Assignments chain — two innerJoins (resume_branches + assignments), three wheres, two orderBys
   const assignExec = vi.fn().mockResolvedValue(assignmentRows);
@@ -180,7 +183,7 @@ function buildDbMock(opts: {
     if (table === "employees") return { select: empSelectDispatch };
     if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
     if (table === "resume_commits") return { select: commitSelect };
-    if (table === "resume_skills") return { selectAll: skillsSelect };
+    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
     if (table === "education") return { selectAll: eduSelectAll };
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
