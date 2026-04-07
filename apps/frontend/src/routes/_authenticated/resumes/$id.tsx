@@ -242,22 +242,53 @@ export function ResumeDetailPage({
     setDraftHighlightedItems(nextHighlightedItems);
   }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
+  const snapshotSkillGroupDefs = snapshotContent
+    ? (() => {
+        const explicitGroups = snapshotContent.skillGroups.map((group, index) => ({
+          key: group.name.trim() || `__other__${index}`,
+          name: group.name.trim(),
+          sortOrder: group.sortOrder,
+        }));
+        const seen = new Set(explicitGroups.map((group) => group.key));
+        const fallbackGroups = snapshotContent.skills.reduce<Array<{ key: string; name: string; sortOrder: number }>>((acc, skill, index) => {
+          const name = skill.category?.trim() || "";
+          const key = name || "__other__";
+          if (seen.has(key)) {
+            return acc;
+          }
+          seen.add(key);
+          return [...acc, {
+            key,
+            name,
+            sortOrder: explicitGroups.length + index,
+          }];
+        }, []);
+
+        return [...explicitGroups, ...fallbackGroups];
+      })()
+    : null;
+
+  const snapshotSkillGroups = snapshotSkillGroupDefs?.map((group) => ({
+    id: `snapshot-group-${group.key}`,
+    resumeId: id,
+    name: group.name,
+    sortOrder: group.sortOrder,
+  })) ?? null;
+
+  const snapshotGroupIdByName = new Map(
+    (snapshotSkillGroupDefs ?? []).map((group) => [group.name, `snapshot-group-${group.key}`]),
+  );
+
   const snapshotSkills = snapshotContent?.skills
     ? snapshotContent.skills.map((skill, index) => ({
         id: `snapshot-skill-${index}-${skill.name}`,
-        groupId: `snapshot-group-${skill.category ?? "other"}`,
+        groupId: snapshotGroupIdByName.get(skill.category?.trim() || "") ?? "snapshot-group-__other__",
         name: skill.name,
         category: skill.category ?? null,
         sortOrder: skill.sortOrder ?? index,
       }))
     : null;
   const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
-  const snapshotSkillGroups = snapshotContent?.skillGroups?.map((group, index) => ({
-    id: `snapshot-group-${index}-${group.name}`,
-    resumeId: id,
-    name: group.name,
-    sortOrder: group.sortOrder,
-  })) ?? null;
   const skillGroups = isEditing ? (resume?.skillGroups ?? []) : (snapshotSkillGroups ?? (resume?.skillGroups ?? []));
   const hasSkills = skills.length > 0;
   const showSkillsPage = hasSkills || isEditing;
