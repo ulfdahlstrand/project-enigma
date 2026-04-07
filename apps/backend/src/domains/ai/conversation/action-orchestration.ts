@@ -182,8 +182,9 @@ function buildNextWorkItemAutomationMessage(workItems: ActionWorkItem[] | null) 
           ? [
               "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only.",
               "If this work item still covers skills broadly, replace it with more explicit skills work items using set_revision_work_items before creating suggestions.",
-              "If this work item names a specific skills group, reorder only the skills inside that group.",
-              'Treat phrases like "<group> group ordering" as internal ordering within that named group, not as reordering the groups themselves.',
+              "If this work item names a specific skills group, revise only the skills inside that group.",
+              "That may include spelling fixes, wording corrections, or internal ordering changes within that named group.",
+              'Treat phrases like "<group> group ordering" as changes within that named group, not as reordering the groups themselves.',
               "Do not reorder the overall group order unless this work item explicitly asks for that.",
               "Do not move skills between groups.",
             ].join(" ")
@@ -346,4 +347,3 @@ export function deriveNextActionOrchestrationMessage(messages: ConversationMessa
 
   return { kind: "automation" as const, content: autoStartContent };
 }
-
