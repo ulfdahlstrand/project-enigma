@@ -52,6 +52,13 @@ describe("Criterion 1 — employeeSchema exported from @cv-tool/contracts with r
     expect(shape.email).toBeInstanceOf(z.ZodString);
   });
 
+  it("employeeSchema has field: profileImageDataUrl (nullable string)", () => {
+    const shape = employeeSchema.shape;
+    expect(shape).toHaveProperty("profileImageDataUrl");
+    expect(shape.profileImageDataUrl.safeParse(null).success).toBe(true);
+    expect(shape.profileImageDataUrl.safeParse("data:image/png;base64,abc").success).toBe(true);
+  });
+
   it("employeeSchema has field: created_at (accepts string)", () => {
     const shape = employeeSchema.shape;
     expect(shape).toHaveProperty("created_at");
@@ -88,6 +95,7 @@ describe("Criterion 1 — employeeSchema exported from @cv-tool/contracts with r
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "Alice Smith",
       email: "alice@example.com",
+      profileImageDataUrl: null,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -99,6 +107,7 @@ describe("Criterion 1 — employeeSchema exported from @cv-tool/contracts with r
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "Alice Smith",
       email: "alice@example.com",
+      profileImageDataUrl: null,
       created_at: "2025-01-01T00:00:00.000Z",
       updated_at: "2025-01-01T00:00:00.000Z",
     });
@@ -125,6 +134,7 @@ describe("Criterion 2 — listEmployeesOutputSchema is z.array(employeeSchema)",
         id: "550e8400-e29b-41d4-a716-446655440001",
         name: "Alice",
         email: "alice@example.com",
+        profileImageDataUrl: null,
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -138,6 +148,7 @@ describe("Criterion 2 — listEmployeesOutputSchema is z.array(employeeSchema)",
         id: "550e8400-e29b-41d4-a716-446655440001",
         name: "Alice",
         email: "alice@example.com",
+        profileImageDataUrl: null,
         created_at: "2025-01-01T00:00:00.000Z",
         updated_at: "2025-01-01T00:00:00.000Z",
       },
