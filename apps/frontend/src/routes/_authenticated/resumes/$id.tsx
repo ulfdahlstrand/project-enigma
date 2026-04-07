@@ -455,6 +455,10 @@ export function ResumeDetailPage({
     inlineRevision.reset();
   };
 
+  const handleOpenAssistant = () => {
+    void inlineRevision.open();
+  };
+
   const handleCloseRevision = () => {
     if (isEditRoute) {
       void navigate({
@@ -490,6 +494,7 @@ export function ResumeDetailPage({
           search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
+      onOpenAiHelp={handleOpenAssistant}
       onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
