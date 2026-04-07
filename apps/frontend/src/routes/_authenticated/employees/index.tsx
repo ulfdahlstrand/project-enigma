@@ -9,7 +9,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo } from "react";
-import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -24,6 +23,7 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import SearchIcon from "@mui/icons-material/Search";
+import { ConsultantAvatar } from "../../../components/ConsultantAvatar";
 import { orpc } from "../../../orpc-client";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
@@ -34,15 +34,6 @@ export const LIST_EMPLOYEES_QUERY_KEY = ["listEmployees"] as const;
 export const Route = createFileRoute("/_authenticated/employees/")({
   component: EmployeePage,
 });
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((part) => part[0] ?? "")
-    .join("")
-    .toUpperCase();
-}
 
 function EmployeePage() {
   const { t } = useTranslation("common");
@@ -129,9 +120,12 @@ function EmployeePage() {
                       }
                     >
                       <TableCell>
-                        <Avatar sx={{ width: 32, height: 32, fontSize: 13 }}>
-                          {getInitials(employee.name)}
-                        </Avatar>
+                        <ConsultantAvatar
+                          name={employee.name}
+                          profileImageDataUrl={employee.profileImageDataUrl}
+                          size={32}
+                          fontSize={13}
+                        />
                       </TableCell>
                       <TableCell>{employee.name}</TableCell>
                       <TableCell>{employee.email}</TableCell>

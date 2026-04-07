@@ -21,17 +21,33 @@ import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 export async function updateEmployee(
   db: Kysely<Database>,
   id: string,
-  updates: { name?: string; email?: string }
+  updates: {
+    name?: string;
+    email?: string;
+    profileImageDataUrl?: string | null;
+    profileImageOriginalDataUrl?: string | null;
+  }
 ): Promise<{
   id: string;
   name: string;
   email: string;
+  profileImageDataUrl: string | null;
+  profileImageOriginalDataUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }> {
-  const set: { name?: string; email?: string } = {};
+  const set: {
+    name?: string;
+    email?: string;
+    profile_image_data_url?: string | null;
+    profile_image_original_data_url?: string | null;
+  } = {};
   if (updates.name !== undefined) set.name = updates.name;
   if (updates.email !== undefined) set.email = updates.email;
+  if (updates.profileImageDataUrl !== undefined) set.profile_image_data_url = updates.profileImageDataUrl;
+  if (updates.profileImageOriginalDataUrl !== undefined) {
+    set.profile_image_original_data_url = updates.profileImageOriginalDataUrl;
+  }
 
   const row = await db
     .updateTable("employees")
@@ -48,6 +64,8 @@ export async function updateEmployee(
     id: row.id,
     name: row.name,
     email: row.email,
+    profileImageDataUrl: row.profile_image_data_url,
+    profileImageOriginalDataUrl: row.profile_image_original_data_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -63,6 +81,10 @@ export const updateEmployeeHandler = implement(contract.updateEmployee).handler(
     return updateEmployee(getDb(), input.id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
+      ...(input.profileImageDataUrl !== undefined && { profileImageDataUrl: input.profileImageDataUrl }),
+      ...(input.profileImageOriginalDataUrl !== undefined && {
+        profileImageOriginalDataUrl: input.profileImageOriginalDataUrl,
+      }),
     });
   }
 );

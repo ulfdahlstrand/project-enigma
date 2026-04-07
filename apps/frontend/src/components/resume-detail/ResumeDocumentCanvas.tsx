@@ -26,6 +26,7 @@ interface ResumeDocumentCanvasProps {
   language: string | null;
   totalPages: number;
   employeeName: string;
+  profileImageDataUrl: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
@@ -77,6 +78,7 @@ export function ResumeDocumentCanvas({
   language,
   totalPages,
   employeeName,
+  profileImageDataUrl,
   consultantTitle,
   presentation,
   summary,
@@ -139,6 +141,7 @@ export function ResumeDocumentCanvas({
         page={1}
         totalPages={totalPages}
         employeeName={employeeName}
+        profileImageDataUrl={profileImageDataUrl}
         consultantTitle={consultantTitle}
         presentation={presentation}
         summary={summary}

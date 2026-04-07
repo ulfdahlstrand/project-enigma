@@ -33,11 +33,13 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { orpc } from "../../../orpc-client";
+import { ConsultantAvatar } from "../../../components/ConsultantAvatar";
 import RouterButton from "../../../components/RouterButton";
 import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../components/feedback";
+import { prepareProfileImages } from "../../../lib/profile-image";
 
 export const getEmployeeQueryKey = (id: string) =>
   ["getEmployee", id] as const;
@@ -71,6 +73,8 @@ function EmployeeDetailPage() {
   const [newEntryValue, setNewEntryValue] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
+  const [profileImageDataUrl, setProfileImageDataUrl] = useState<string | null>(null);
+  const [profileImageOriginalDataUrl, setProfileImageOriginalDataUrl] = useState<string | null>(null);
 
   const {
     data: employee,
@@ -95,12 +99,22 @@ function EmployeeDetailPage() {
   });
 
   useEffect(() => {
-    if (employee) reset({ name: employee.name, email: employee.email });
+    if (employee) {
+      reset({ name: employee.name, email: employee.email });
+      setProfileImageDataUrl(employee.profileImageDataUrl);
+      setProfileImageOriginalDataUrl(employee.profileImageOriginalDataUrl);
+    }
   }, [employee, reset]);
 
   const mutation = useMutation({
     mutationFn: (input: EditEmployeeFormValues) =>
-      orpc.updateEmployee({ id, name: input.name.trim(), email: input.email.trim() }),
+      orpc.updateEmployee({
+        id,
+        name: input.name.trim(),
+        email: input.email.trim(),
+        profileImageDataUrl,
+        profileImageOriginalDataUrl,
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       await queryClient.invalidateQueries({ queryKey: LIST_EMPLOYEES_QUERY_KEY });
@@ -136,6 +150,13 @@ function EmployeeDetailPage() {
   const commitAdd = (type: EducationType) => {
     if (!newEntryValue.trim()) return;
     createEducationMutation.mutate({ type, value: newEntryValue.trim() });
+  };
+
+  const handleProfileImageSelected = async (file: File | null) => {
+    if (!file) return;
+    const nextImages = await prepareProfileImages(file);
+    setProfileImageDataUrl(nextImages.displayDataUrl);
+    setProfileImageOriginalDataUrl(nextImages.originalDataUrl);
   };
 
   if (isLoading) return <LoadingState label={t("employee.detail.loading")} />;
@@ -204,6 +225,39 @@ function EmployeeDetailPage() {
         <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {/* Left — identity form */}
         <Box sx={{ width: 560, flexShrink: 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, mb: 3 }}>
+            <ConsultantAvatar
+              name={employee?.name ?? ""}
+              profileImageDataUrl={profileImageDataUrl}
+              size={120}
+              fontSize={36}
+            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Button variant="outlined" component="label">
+                {t("employee.detail.uploadProfileImageButton")}
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    void handleProfileImageSelected(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </Button>
+              <Button
+                variant="text"
+                color="inherit"
+                disabled={!profileImageDataUrl}
+                onClick={() => {
+                  setProfileImageDataUrl(null);
+                  setProfileImageOriginalDataUrl(null);
+                }}
+              >
+                {t("employee.detail.removeProfileImageButton")}
+              </Button>
+            </Box>
+          </Box>
           <Box
             id="employee-identity-form"
             component="form"

@@ -14,6 +14,7 @@ export const employeeSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   email: z.string(),
+  profileImageDataUrl: z.string().nullable(),
   created_at: z.union([z.string(), z.date()]),
   updated_at: z.union([z.string(), z.date()]),
 });
@@ -35,6 +36,8 @@ export const getEmployeeOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
+  profileImageDataUrl: z.string().nullable(),
+  profileImageOriginalDataUrl: z.string().nullable(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
@@ -52,6 +55,8 @@ export const createEmployeeOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
+  profileImageDataUrl: z.string().nullable(),
+  profileImageOriginalDataUrl: z.string().nullable(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
@@ -65,9 +70,15 @@ export const updateEmployeeInputSchema = z
     id: z.string().uuid(),
     name: z.string().optional(),
     email: z.string().email().optional(),
+    profileImageDataUrl: z.string().nullable().optional(),
+    profileImageOriginalDataUrl: z.string().nullable().optional(),
   })
   .refine(
-    (data) => data.name !== undefined || data.email !== undefined,
+    (data) =>
+      data.name !== undefined
+      || data.email !== undefined
+      || data.profileImageDataUrl !== undefined
+      || data.profileImageOriginalDataUrl !== undefined,
     { message: "At least one field must be provided" }
   );
 
@@ -75,6 +86,8 @@ export const updateEmployeeOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
+  profileImageDataUrl: z.string().nullable(),
+  profileImageOriginalDataUrl: z.string().nullable(),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });

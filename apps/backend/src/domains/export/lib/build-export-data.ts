@@ -18,6 +18,7 @@ export interface ExportData {
   employeeId: string;
   name: string;
   email: string | null | undefined;
+  profileImageDataUrl: string | null;
   consultantTitle: string;
   language: string;
   presentation: string[];
@@ -69,7 +70,7 @@ async function buildFromLive(
   const [employee, assignments, skills, education, highlightedItems, commitRow] = await Promise.all([
     db
       .selectFrom("employees")
-      .select(["id", "name", "email"])
+      .select(["id", "name", "email", "profile_image_data_url"])
       .where("id", "=", employeeId)
       .executeTakeFirst(),
     db
@@ -117,6 +118,7 @@ async function buildFromLive(
   return {
     name: employee?.name ?? "Unknown",
     email: employee?.email,
+    profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
     language: resume.language ?? "en",
     presentation: content?.presentation ?? [],
@@ -167,7 +169,7 @@ async function buildFromSnapshot(
       .executeTakeFirst(),
     db
       .selectFrom("employees")
-      .select(["id", "name", "email"])
+      .select(["id", "name", "email", "profile_image_data_url"])
       .where("id", "=", employeeId)
       .executeTakeFirst(),
     db
@@ -192,6 +194,7 @@ async function buildFromSnapshot(
   return {
     name: employee?.name ?? "Unknown",
     email: employee?.email,
+    profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content.consultantTitle ?? "",
     language: content.language,
     presentation: content.presentation,

@@ -18,6 +18,8 @@ const FIXED_UPDATED_EMPLOYEE = {
   id: VALID_UUID,
   name: "Alice Updated",
   email: "alice-updated@example.com",
+  profile_image_data_url: "data:image/png;base64,display",
+  profile_image_original_data_url: "data:image/png;base64,original",
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-03-01T00:00:00.000Z"),
 };
@@ -49,6 +51,8 @@ describe("updateEmployee", () => {
       id: FIXED_UPDATED_EMPLOYEE.id,
       name: FIXED_UPDATED_EMPLOYEE.name,
       email: FIXED_UPDATED_EMPLOYEE.email,
+      profileImageDataUrl: FIXED_UPDATED_EMPLOYEE.profile_image_data_url,
+      profileImageOriginalDataUrl: FIXED_UPDATED_EMPLOYEE.profile_image_original_data_url,
       createdAt: FIXED_UPDATED_EMPLOYEE.created_at,
       updatedAt: FIXED_UPDATED_EMPLOYEE.updated_at,
     });

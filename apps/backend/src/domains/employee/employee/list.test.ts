@@ -40,6 +40,8 @@ describe("listEmployees procedure", () => {
         id: "550e8400-e29b-41d4-a716-446655440001",
         name: "Alice Smith",
         email: "alice@example.com",
+        profile_image_data_url: null,
+        profile_image_original_data_url: null,
         created_at: new Date("2025-01-01T00:00:00.000Z"),
         updated_at: new Date("2025-01-01T00:00:00.000Z"),
       },
@@ -47,6 +49,8 @@ describe("listEmployees procedure", () => {
         id: "550e8400-e29b-41d4-a716-446655440002",
         name: "Bob Jones",
         email: "bob@example.com",
+        profile_image_data_url: null,
+        profile_image_original_data_url: null,
         created_at: new Date("2025-01-02T00:00:00.000Z"),
         updated_at: new Date("2025-01-02T00:00:00.000Z"),
       },
@@ -66,7 +70,24 @@ describe("listEmployees procedure", () => {
     expect(execute).toHaveBeenCalledTimes(1);
 
     // Assert: the resolved value equals the mock rows
-    expect(result).toEqual(mockRows);
+    expect(result).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440001",
+        name: "Alice Smith",
+        email: "alice@example.com",
+        profileImageDataUrl: null,
+        created_at: new Date("2025-01-01T00:00:00.000Z"),
+        updated_at: new Date("2025-01-01T00:00:00.000Z"),
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440002",
+        name: "Bob Jones",
+        email: "bob@example.com",
+        profileImageDataUrl: null,
+        created_at: new Date("2025-01-02T00:00:00.000Z"),
+        updated_at: new Date("2025-01-02T00:00:00.000Z"),
+      },
+    ]);
   });
 
   it("returns an empty array when there are no employees", async () => {

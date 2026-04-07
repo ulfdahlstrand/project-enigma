@@ -34,10 +34,32 @@ export const PDF_CSS = `
 
 
   /* Cover page */
-  .cover-section { padding-top: 288px; }
+  .cover-section { padding-top: 112px; }
+  .cover-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .cover-header-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .profile-image-wrap {
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+  }
+  .profile-image {
+    width: 132px;
+    height: 132px;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+  }
 
   /* Cover page — typography */
-  .name-h1 { font-family: "Josefin Sans", sans-serif; font-size: 28pt; font-weight: 700; line-height: 1.1; margin-bottom: 6px; }
+  .name-h1 { font-family: "Josefin Sans", sans-serif; font-size: 28pt; font-weight: 700; line-height: 1.1; margin-bottom: 0; }
   .title-h3 { font-family: "Josefin Sans", sans-serif; font-size: 22pt; font-weight: 700; color: #111; margin-bottom: 20px; }
   .contact { font-size: 9pt; color: #555; margin-bottom: 16px; }
   .presentation { font-size: 10pt; line-height: 1.6; text-align: justify; margin-bottom: 8px; }

@@ -24,6 +24,8 @@ export async function createEmployee(
   id: string;
   name: string;
   email: string;
+  profileImageDataUrl: string | null;
+  profileImageOriginalDataUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }> {
@@ -37,6 +39,8 @@ export async function createEmployee(
     id: row.id,
     name: row.name,
     email: row.email,
+    profileImageDataUrl: row.profile_image_data_url,
+    profileImageOriginalDataUrl: row.profile_image_original_data_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

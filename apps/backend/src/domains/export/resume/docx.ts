@@ -26,6 +26,7 @@ import {
   WidthType,
   BorderStyle,
   SectionType,
+  VerticalAlign,
 } from "docx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -61,19 +62,18 @@ const SZ_XS   = 16;  //  8 pt
 // Spacing helper: points → twips (1 pt = 20 twips)
 const SP = (pt: number) => pt * 20;
 
-// PDF cover top space: 112px page-margin + 288px section padding → ≈ 228 pt
-// (Puppeteer renders at 96 dpi: px / 96 × 72 = pt)
-const COVER_TOP_SPACING = SP(228);
+// Cover top spacing tuned to match the resume view / PDF export more closely.
+const COVER_TOP_SPACING = SP(84);
 
 // ---------------------------------------------------------------------------
 // Styled paragraph helpers — each mirrors a CSS class in pdf-styles.ts
 // ---------------------------------------------------------------------------
 
 /** .name-h1 — 28 pt Calibri bold, large top space to mirror PDF cover padding */
-function nameH1(text: string): Paragraph {
+function nameH1(text: string, spacingBefore = COVER_TOP_SPACING): Paragraph {
   return new Paragraph({
     children: [new TextRun({ text, font: F_HEAD, size: SZ_NAME, bold: true, color: C_DARK })],
-    spacing: { before: COVER_TOP_SPACING, after: SP(6) },
+    spacing: { before: spacingBefore, after: SP(6) },
   });
 }
 
@@ -366,6 +366,85 @@ function buildFooter(): Footer {
   });
 }
 
+function parseDataUrlImage(dataUrl: string): { data: Buffer; type: "png" | "jpg" | "gif" | "bmp" } | null {
+  const match = dataUrl.match(/^data:(image\/png|image\/jpeg|image\/jpg|image\/gif|image\/bmp);base64,(.+)$/);
+  if (!match) return null;
+
+  const mime = match[1];
+  const base64 = match[2] ?? "";
+  const type = mime === "image/png"
+    ? "png"
+    : mime === "image/gif"
+      ? "gif"
+      : mime === "image/bmp"
+        ? "bmp"
+        : "jpg";
+
+  return {
+    type,
+    data: Buffer.from(base64, "base64"),
+  };
+}
+
+function buildCoverHeader(params: {
+  name: string;
+  profileImage: { data: Buffer; type: "png" | "jpg" | "gif" | "bmp" } | null;
+}): Table {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: NO_BORDER,
+      bottom: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+      insideHorizontal: NO_BORDER,
+      insideVertical: NO_BORDER,
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 78, type: WidthType.PERCENTAGE },
+            verticalAlign: VerticalAlign.BOTTOM,
+            borders: {
+              top: NO_BORDER,
+              bottom: NO_BORDER,
+              left: NO_BORDER,
+              right: NO_BORDER,
+            },
+            children: [nameH1(params.name, COVER_TOP_SPACING)],
+          }),
+          new TableCell({
+            width: { size: 22, type: WidthType.PERCENTAGE },
+            verticalAlign: VerticalAlign.BOTTOM,
+            borders: {
+              top: NO_BORDER,
+              bottom: NO_BORDER,
+              left: NO_BORDER,
+              right: NO_BORDER,
+            },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: COVER_TOP_SPACING, after: 0 },
+                children: params.profileImage
+                  ? [
+                      new ImageRun({
+                        type: params.profileImage.type,
+                        data: params.profileImage.data,
+                        transformation: { width: 132, height: 132 },
+                      }),
+                    ]
+                  : [],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Core export logic
 // ---------------------------------------------------------------------------
@@ -378,7 +457,7 @@ export async function exportResumeDocx(
 ): Promise<{ docx: string; filename: string; referenceId: string }> {
   const data = await buildExportData(db, user, resumeId, commitId);
 
-  const { name, consultantTitle, language, presentation, summary, highlightedItems, skills, assignments, education } = data;
+  const { name, consultantTitle, language, profileImageDataUrl, presentation, summary, highlightedItems, skills, assignments, education } = data;
   const t = getPdfTranslations(language);
 
   // ---------------------------------------------------------------------------
@@ -387,8 +466,9 @@ export async function exportResumeDocx(
   // ---------------------------------------------------------------------------
 
   const coverChildren: Array<Paragraph | Table> = [];
+  const profileImage = profileImageDataUrl ? parseDataUrlImage(profileImageDataUrl) : null;
 
-  coverChildren.push(nameH1(name));
+  coverChildren.push(buildCoverHeader({ name, profileImage }));
   if (consultantTitle) coverChildren.push(titleH3(consultantTitle));
 
   for (const para of presentation) {

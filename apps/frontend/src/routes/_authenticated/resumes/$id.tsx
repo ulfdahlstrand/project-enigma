@@ -673,6 +673,7 @@ export function ResumeDetailPage({
           language={language ?? null}
           totalPages={totalPages}
           employeeName={employee?.name ?? ""}
+          profileImageDataUrl={employee?.profileImageDataUrl ?? null}
           consultantTitle={consultantTitle}
           presentation={presentation}
           summary={summary}
@@ -723,6 +724,7 @@ export function ResumeDetailPage({
           language={language ?? null}
           totalPages={totalPages}
           employeeName={employee?.name ?? ""}
+          profileImageDataUrl={employee?.profileImageDataUrl ?? null}
           consultantTitle={consultantTitle}
           presentation={presentation}
           summary={summary}

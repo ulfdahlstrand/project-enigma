@@ -27,6 +27,7 @@ const EMPLOYEE_ROW = {
   id: EMPLOYEE_ID,
   name: "Alice Smith",
   email: "alice@example.com",
+  profile_image_data_url: "data:image/png;base64,display",
 };
 
 const SKILL_ROWS = [
@@ -205,6 +206,7 @@ describe("buildExportData — live path (no commitId)", () => {
 
     expect(result.name).toBe("Alice Smith");
     expect(result.email).toBe("alice@example.com");
+    expect(result.profileImageDataUrl).toBe("data:image/png;base64,display");
     expect(result.resumeId).toBe(RESUME_ID);
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
@@ -256,6 +258,7 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
     const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID);
 
     expect(result.commitId).toBe(COMMIT_ID);
+    expect(result.profileImageDataUrl).toBe("data:image/png;base64,display");
     expect(result.language).toBe("sv");
     expect(result.consultantTitle).toBe("Tech Lead");
     expect(result.skills).toHaveLength(1);

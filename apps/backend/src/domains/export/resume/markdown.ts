@@ -24,7 +24,7 @@ export async function exportResumeMarkdown(
 ): Promise<{ markdown: string; filename: string; referenceId: string }> {
   const data = await buildExportData(db, user, resumeId, commitId);
 
-  const { name, email, consultantTitle, language, presentation, summary, highlightedItems, skills, assignments, education } = data;
+  const { name, email, consultantTitle, language, profileImageDataUrl, presentation, summary, highlightedItems, skills, assignments, education } = data;
   const t = getPdfTranslations(language);
   const exportedAt = new Date().toISOString();
   const filename = `${slug(name)}-${language}-cv.md`;
@@ -59,6 +59,10 @@ export async function exportResumeMarkdown(
     lines.push(`## ${consultantTitle}`);
   }
   lines.push("");
+  if (profileImageDataUrl) {
+    lines.push(`<img src="${profileImageDataUrl}" alt="${name}" width="132" height="132" style="border-radius: 50%; object-fit: cover;" />`);
+    lines.push("");
+  }
 
 
   // --- Presentation ---
