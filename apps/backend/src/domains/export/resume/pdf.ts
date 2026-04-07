@@ -40,6 +40,7 @@ function buildHtml(data: {
   name: string;
   consultantTitle: string;
   email: string | null | undefined;
+  profileImageDataUrl: string | null;
   presentation: string[];
   summary: string | null | undefined;
   highlightedItems: string[];
@@ -167,7 +168,12 @@ ${PDF_FONT_LINKS}
 <body>
   <!-- Page 1: Cover -->
   <div class="section section-break cover-section">
-    <h1 class="name-h1">${escapeHtml(data.name)}</h1>
+    <div class="cover-header">
+      <div class="cover-header-text">
+        <h1 class="name-h1">${escapeHtml(data.name)}</h1>
+      </div>
+      ${data.profileImageDataUrl ? `<div class="profile-image-wrap"><img class="profile-image" src="${data.profileImageDataUrl}" alt="${escapeHtml(data.name)}" /></div>` : ""}
+    </div>
     ${data.consultantTitle ? `<h3 class="title-h3">${escapeHtml(data.consultantTitle)}</h3>` : ""}
     ${presentationHtml}
     ${(() => {
@@ -220,6 +226,7 @@ export async function exportResumePdf(
     language,
     consultantTitle: data.consultantTitle,
     email: data.email,
+    profileImageDataUrl: data.profileImageDataUrl,
     presentation: data.presentation,
     summary: data.summary,
     highlightedItems: data.highlightedItems,
