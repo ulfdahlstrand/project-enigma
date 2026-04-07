@@ -14,6 +14,8 @@ export interface EmployeeTable {
   id: Generated<string>;
   name: string;
   email: string;
+  profile_image_data_url: string | null;
+  profile_image_original_data_url: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

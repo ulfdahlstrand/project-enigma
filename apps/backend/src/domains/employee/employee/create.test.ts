@@ -15,6 +15,8 @@ const FIXED_NEW_EMPLOYEE = {
   id: "550e8400-e29b-41d4-a716-446655440002",
   name: "Alice",
   email: "alice@example.com",
+  profile_image_data_url: null,
+  profile_image_original_data_url: null,
   created_at: new Date("2025-02-01T00:00:00.000Z"),
   updated_at: new Date("2025-02-01T00:00:00.000Z"),
 };
@@ -46,6 +48,8 @@ describe("createEmployee", () => {
       id: FIXED_NEW_EMPLOYEE.id,
       name: FIXED_NEW_EMPLOYEE.name,
       email: FIXED_NEW_EMPLOYEE.email,
+      profileImageDataUrl: null,
+      profileImageOriginalDataUrl: null,
       createdAt: FIXED_NEW_EMPLOYEE.created_at,
       updatedAt: FIXED_NEW_EMPLOYEE.updated_at,
     });

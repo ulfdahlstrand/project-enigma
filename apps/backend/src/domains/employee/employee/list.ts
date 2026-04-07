@@ -27,7 +27,10 @@ export async function fetchEmployees(
   db: Kysely<Database> = getDb()
 ): Promise<ListEmployeesOutput> {
   const rows = await db.selectFrom("employees").selectAll().execute();
-  return listEmployeesOutputSchema.parse(rows);
+  return listEmployeesOutputSchema.parse(rows.map((row) => ({
+    ...row,
+    profileImageDataUrl: row.profile_image_data_url,
+  })));
 }
 
 // ---------------------------------------------------------------------------
