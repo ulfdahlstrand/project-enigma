@@ -4,9 +4,7 @@ import type { MutableRefObject, RefObject } from "react";
 import { FinalReview } from "../revision/FinalReview";
 import { InlineRevisionChatPanel } from "../revision/InlineRevisionChatPanel";
 import { InlineRevisionChecklist } from "../revision/InlineRevisionChecklist";
-import { useResumeDocumentZoom } from "../../hooks/useResumeDocumentZoom";
 import { ResumeDocumentCanvas } from "./ResumeDocumentCanvas";
-import { ResumeDocumentZoomControl } from "./ResumeDocumentZoomControl";
 
 type Assignment = {
   id: string;
@@ -69,45 +67,51 @@ interface ResumeEditWorkspaceProps {
   skillsSectionRef: RefObject<HTMLDivElement | null>;
   assignmentsSectionRef: RefObject<HTMLDivElement | null>;
   assignmentItemRefs: MutableRefObject<Record<string, HTMLElement | null>>;
+  zoom: number;
+  showSuggestionsPanel: boolean;
+  showChatPanel: boolean;
 }
 
 export function ResumeEditWorkspace({
   inlineRevision,
   activeBranchId,
   activeBranchName,
+  zoom,
+  showSuggestionsPanel,
+  showChatPanel,
   ...props
 }: ResumeEditWorkspaceProps) {
-  const { zoom, setZoom, minZoom, maxZoom, defaultZoom } = useResumeDocumentZoom();
+  const showRevisionShell = inlineRevision.isOpen;
 
   return (
     <Box
       sx={{
         bgcolor: "background.default",
-        minHeight: inlineRevision.isOpen ? 0 : "calc(100vh - 56px)",
-        height: inlineRevision.isOpen ? "auto" : undefined,
-        flex: inlineRevision.isOpen ? 1 : undefined,
-        py: inlineRevision.isOpen ? 0 : 4,
-        px: inlineRevision.isOpen ? 0 : { xs: 2, md: 3 },
+        minHeight: showRevisionShell ? 0 : "calc(100vh - 56px)",
+        height: showRevisionShell ? "auto" : undefined,
+        flex: showRevisionShell ? 1 : undefined,
+        py: showRevisionShell ? 0 : 4,
+        px: showRevisionShell ? 0 : { xs: 2, md: 3 },
         display: "flex",
         flexDirection: "column",
-        overflow: inlineRevision.isOpen ? "hidden" : undefined,
+        overflow: showRevisionShell ? "hidden" : undefined,
       }}
     >
       <Box
         sx={{
           width: "100%",
-          flex: inlineRevision.isOpen ? 1 : "0 0 auto",
-          minHeight: inlineRevision.isOpen ? 0 : undefined,
+          flex: showRevisionShell ? 1 : "0 0 auto",
+          minHeight: showRevisionShell ? 0 : undefined,
           display: "flex",
           flexDirection: { xs: "column", lg: "row" },
           alignItems: "stretch",
           justifyContent: "center",
-          gap: inlineRevision.isOpen ? 0 : 3,
-          overflow: inlineRevision.isOpen ? "hidden" : "visible",
+          gap: showRevisionShell ? 0 : 3,
+          overflow: showRevisionShell ? "hidden" : "visible",
         }}
       >
         <Slide
-          in={inlineRevision.isOpen}
+          in={showRevisionShell && showSuggestionsPanel}
           direction="right"
           mountOnEnter
           unmountOnExit
@@ -148,10 +152,10 @@ export function ResumeEditWorkspace({
             flex: "1 1 auto",
             order: { xs: 2, lg: 1 },
             minWidth: 0,
-            minHeight: inlineRevision.isOpen ? 0 : undefined,
-            overflow: inlineRevision.isOpen ? "auto" : "hidden",
-            px: inlineRevision.isOpen ? { xs: 2, md: 3 } : 0,
-            py: inlineRevision.isOpen ? 4 : 0,
+            minHeight: showRevisionShell ? 0 : undefined,
+            overflow: showRevisionShell ? "auto" : "hidden",
+            px: showRevisionShell ? { xs: 2, md: 3 } : 0,
+            py: showRevisionShell ? 4 : 0,
             display: "flex",
             flexDirection: "column",
           }}
@@ -170,20 +174,13 @@ export function ResumeEditWorkspace({
               zoom={zoom}
               activeBranchId={activeBranchId}
               isEditing={true}
-              showAssignmentsToggleFab={!inlineRevision.isOpen}
+              showAssignmentsToggleFab={!showRevisionShell}
             />
           )}
-          <ResumeDocumentZoomControl
-            zoom={zoom}
-            onZoomChange={setZoom}
-            minZoom={minZoom}
-            maxZoom={maxZoom}
-            defaultZoom={defaultZoom}
-          />
         </Box>
 
         <Slide
-          in={inlineRevision.isOpen && inlineRevision.stage !== "finalize"}
+          in={showRevisionShell && showChatPanel && inlineRevision.stage !== "finalize"}
           direction="left"
           mountOnEnter
           unmountOnExit

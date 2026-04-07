@@ -29,9 +29,10 @@ interface VariantSwitcherProps {
   resumeId: string;
   /** ID of the currently active branch. */
   currentBranchId: string | null | undefined;
+  compact?: boolean;
 }
 
-export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherProps) {
+export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: VariantSwitcherProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { data: branches } = useResumeBranches(resumeId);
@@ -88,11 +89,11 @@ export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherPr
 
   return (
     <>
-      <FormControl size="small" sx={{ minWidth: 180 }}>
-        <InputLabel>{t("resume.variantSwitcher.label")}</InputLabel>
+      <FormControl size="small" sx={{ minWidth: compact ? 160 : 180 }}>
+        {!compact ? <InputLabel>{t("resume.variantSwitcher.label")}</InputLabel> : null}
         <Select
           value={currentBranchId ?? ""}
-          label={t("resume.variantSwitcher.label")}
+          {...(!compact ? { label: t("resume.variantSwitcher.label") } : {})}
           onChange={(e) => {
             const val = e.target.value;
             if (val === CREATE_VALUE) {
@@ -111,6 +112,8 @@ export function VariantSwitcher({ resumeId, currentBranchId }: VariantSwitcherPr
               });
             }
           }}
+          displayEmpty={compact}
+          {...(compact ? { sx: { bgcolor: "transparent" } } : {})}
         >
           <MenuItem value={CREATE_VALUE}>
             <Box sx={{ fontStyle: "italic", color: "text.primary", fontSize: "0.875rem" }}>

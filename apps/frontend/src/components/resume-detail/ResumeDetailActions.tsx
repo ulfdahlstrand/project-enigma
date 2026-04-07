@@ -34,7 +34,6 @@ interface ResumeDetailActionsProps {
   isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
-  isRevisionOpen: boolean;
   baseCommitId: string | null;
   isSaving: boolean;
   canSaveAsNewVersion: boolean;
@@ -42,7 +41,7 @@ interface ResumeDetailActionsProps {
   onSaveAsNewVersion: (name: string) => Promise<void>;
   onEdit: () => void;
   onOpenAiHelp: () => void;
-  onCloseRevision: () => void;
+  onExitEdit: () => void;
   onDeleteResume: () => void;
   isDeletePending: boolean;
   isDeleteError: boolean;
@@ -164,7 +163,6 @@ export function ResumeDetailActions({
   isEditRoute,
   isSnapshotMode,
   isEditing,
-  isRevisionOpen,
   baseCommitId,
   isSaving,
   canSaveAsNewVersion,
@@ -172,7 +170,7 @@ export function ResumeDetailActions({
   onSaveAsNewVersion,
   onEdit,
   onOpenAiHelp,
-  onCloseRevision,
+  onExitEdit,
   onDeleteResume,
   isDeletePending,
   isDeleteError,
@@ -232,7 +230,7 @@ export function ResumeDetailActions({
 
   return (
     <>
-      {isRevisionOpen ? (
+      {isEditing ? (
         <>
           <ResumeSaveSplitButton
             onSaveCurrent={onSaveCurrent}
@@ -240,47 +238,25 @@ export function ResumeDetailActions({
             canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
             isPending={isSaving}
           />
-          <Button variant="outlined" onClick={onCloseRevision}>
-            {t("revision.inline.closeButton")}
+          <Button variant="outlined" onClick={onOpenAiHelp}>
+            {t("revision.inline.aiHelpButton")}
           </Button>
-          <IconButton
-            aria-label={t("resume.detail.moreActionsLabel")}
-            onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
-          >
-            <MoreVertIcon />
-          </IconButton>
+          <Button variant="outlined" onClick={onExitEdit}>
+            {t("resume.edit.backButton")}
+          </Button>
         </>
       ) : (
         <>
-          {isEditing ? (
-            <>
-              <ResumeSaveSplitButton
-                onSaveCurrent={onSaveCurrent}
-                onSaveAsNewVersion={onSaveAsNewVersion}
-                canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
-                isPending={isSaving}
-              />
-              <Button variant="outlined" onClick={onOpenAiHelp}>
-                {t("revision.inline.aiHelpButton")}
-              </Button>
-              <Button variant="outlined" onClick={onCloseRevision}>
-                {t("resume.edit.backButton")}
-              </Button>
-            </>
-          ) : (
-            <>
-            <ExportSplitButton resumeId={resumeId} commitId={baseCommitId} />
-              <EditButton onEdit={onEdit} />
-            </>
-          )}
-          <IconButton
-            aria-label={t("resume.detail.moreActionsLabel")}
-            onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
-          >
-            <MoreVertIcon />
-          </IconButton>
+          <ExportSplitButton resumeId={resumeId} commitId={baseCommitId} />
+          <EditButton onEdit={onEdit} />
         </>
       )}
+      <IconButton
+        aria-label={t("resume.detail.moreActionsLabel")}
+        onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
+      >
+        <MoreVertIcon />
+      </IconButton>
 
       {sharedMoreMenu}
 

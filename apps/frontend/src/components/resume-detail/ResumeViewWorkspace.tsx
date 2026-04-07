@@ -1,8 +1,6 @@
 import Box from "@mui/material/Box";
 import type { MutableRefObject, RefObject } from "react";
-import { useResumeDocumentZoom } from "../../hooks/useResumeDocumentZoom";
 import { ResumeDocumentCanvas } from "./ResumeDocumentCanvas";
-import { ResumeDocumentZoomControl } from "./ResumeDocumentZoomControl";
 
 type Assignment = {
   id: string;
@@ -48,11 +46,10 @@ interface ResumeViewWorkspaceProps {
   assignmentsSectionRef: RefObject<HTMLDivElement | null>;
   assignmentItemRefs: MutableRefObject<Record<string, HTMLElement | null>>;
   activeBranchId: string | null;
+  zoom: number;
 }
 
 export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
-  const { zoom, setZoom, minZoom, maxZoom, defaultZoom } = useResumeDocumentZoom();
-
   return (
     <Box
       sx={{
@@ -74,7 +71,7 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
         <Box sx={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden" }}>
           <ResumeDocumentCanvas
             {...props}
-            zoom={zoom}
+            zoom={props.zoom}
             isEditing={false}
             draftTitle=""
             draftPresentation=""
@@ -94,13 +91,6 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
             assignmentsFabTop={0}
           />
         </Box>
-        <ResumeDocumentZoomControl
-          zoom={zoom}
-          onZoomChange={setZoom}
-          minZoom={minZoom}
-          maxZoom={maxZoom}
-          defaultZoom={defaultZoom}
-        />
       </Box>
     </Box>
   );

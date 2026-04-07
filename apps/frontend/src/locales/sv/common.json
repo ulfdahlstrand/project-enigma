@@ -502,6 +502,7 @@
       "suggestionsTitle": "Föreslagna revideringar",
       "suggestionCount": "{{count}} förslag",
       "reviewSuggestion": "Granska",
+      "suggestionsButton": "Förslag",
       "approveSuggestion": "Godkänn förslag",
       "reviewLater": "Granska senare",
       "reviewDialogTitle": "Granska ändringsförslag",

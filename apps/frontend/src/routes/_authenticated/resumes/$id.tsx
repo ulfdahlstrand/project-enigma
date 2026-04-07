@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
+import { useResumeDocumentZoom } from "../../../hooks/useResumeDocumentZoom";
 import {
   resumeBranchHistoryGraphKey,
   resumeBranchesKey,
@@ -22,6 +23,7 @@ import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDet
 import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
 import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/ResumeRevisionReviewDialog";
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
+import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
@@ -53,6 +55,7 @@ export function ResumeDetailPage({
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { zoom, setZoom, minZoom, maxZoom } = useResumeDocumentZoom();
   const requestedBranchId = selectedBranchId ?? null;
 
   const { data: resume, isLoading, isError, error } = useQuery({
@@ -166,6 +169,8 @@ export function ResumeDetailPage({
   const { data: recentCommits = [] } = useResumeCommits(activeBranchId ?? mainBranchId ?? "");
 
   const [showFullAssignments, setShowFullAssignments] = useState(true);
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const coverSectionRef = useRef<HTMLDivElement>(null);
@@ -381,8 +386,19 @@ export function ResumeDetailPage({
       return;
     }
 
+    setShowSuggestionsPanel(true);
+    setShowChatPanel(true);
     inlineRevision.open();
   }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
+
+  useEffect(() => {
+    if (inlineRevision.isOpen) {
+      return;
+    }
+
+    setShowSuggestionsPanel(false);
+    setShowChatPanel(false);
+  }, [inlineRevision.isOpen]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
@@ -456,7 +472,77 @@ export function ResumeDetailPage({
   };
 
   const handleOpenAssistant = () => {
+    setShowSuggestionsPanel(true);
+    setShowChatPanel(true);
     void inlineRevision.open();
+  };
+
+  const handleToggleAssistant = () => {
+    if (!isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+      return;
+    }
+
+    if (!inlineRevision.isOpen) {
+      setShowSuggestionsPanel(false);
+      setShowChatPanel(true);
+      void inlineRevision.open();
+      return;
+    }
+
+    if (showSuggestionsPanel) {
+      setShowChatPanel((current) => !current);
+      return;
+    }
+
+    setShowChatPanel((current) => {
+      const next = !current;
+      if (!next) {
+        inlineRevision.close();
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSuggestions = () => {
+    if (!isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+      return;
+    }
+
+    if (!inlineRevision.isOpen) {
+      setShowSuggestionsPanel(true);
+      setShowChatPanel(false);
+      void inlineRevision.open();
+      return;
+    }
+
+    if (showChatPanel) {
+      setShowSuggestionsPanel((current) => !current);
+      return;
+    }
+
+    setShowSuggestionsPanel((current) => {
+      const next = !current;
+      if (!next) {
+        inlineRevision.close();
+      }
+      return next;
+    });
   };
 
   const handleCloseRevision = () => {
@@ -468,6 +554,8 @@ export function ResumeDetailPage({
       });
     }
 
+    setShowSuggestionsPanel(false);
+    setShowChatPanel(false);
     inlineRevision.close();
   };
 
@@ -479,7 +567,6 @@ export function ResumeDetailPage({
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
-      isRevisionOpen={inlineRevision.isOpen}
       baseCommitId={baseCommitId}
       isSaving={updateResume.isPending || saveVersion.isPending || forkResumeBranch.isPending}
       canSaveAsNewVersion={baseCommitId !== null}
@@ -495,7 +582,7 @@ export function ResumeDetailPage({
         });
       }}
       onOpenAiHelp={handleOpenAssistant}
-      onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
+      onExitEdit={handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
       isDeleteError={deleteResume.isError}
@@ -526,13 +613,9 @@ export function ResumeDetailPage({
         ]}
         chip={(
           <ResumeHeaderChip
-            isRevisionOpen={inlineRevision.isOpen}
-            activeBranchName={activeBranchName}
-            language={language ?? null}
             revisionModeLabel={t("revision.inline.modeChip")}
           />
         )}
-        centerContent={<VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />}
         actions={toolbarActions}
       />
       {isEditRoute ? (
@@ -584,6 +667,9 @@ export function ResumeDetailPage({
           skillsSectionRef={skillsSectionRef}
           assignmentsSectionRef={assignmentsSectionRef}
           assignmentItemRefs={assignmentItemRefs}
+          zoom={zoom}
+          showSuggestionsPanel={showSuggestionsPanel}
+          showChatPanel={showChatPanel}
         />
       ) : (
         <ResumeViewWorkspace
@@ -617,8 +703,22 @@ export function ResumeDetailPage({
           assignmentsSectionRef={assignmentsSectionRef}
           assignmentItemRefs={assignmentItemRefs}
           activeBranchId={activeBranchId}
+          zoom={zoom}
         />
       )}
+      <ResumeStatusBar
+        resumeId={id}
+        activeBranchId={activeBranchId}
+        language={language ?? null}
+        zoom={zoom}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
+        onZoomChange={setZoom}
+        isSuggestionsOpen={inlineRevision.isOpen && showSuggestionsPanel}
+        onToggleSuggestions={handleToggleSuggestions}
+        isAiOpen={inlineRevision.isOpen && showChatPanel && inlineRevision.stage !== "finalize"}
+        onToggleAi={handleToggleAssistant}
+      />
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
     </Box>
   );

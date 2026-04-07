@@ -502,6 +502,7 @@
       "suggestionsTitle": "Suggested revisions",
       "suggestionCount": "{{count}} suggestions",
       "reviewSuggestion": "Review",
+      "suggestionsButton": "Suggestions",
       "approveSuggestion": "Approve suggestion",
       "reviewLater": "Review later",
       "reviewDialogTitle": "Review suggested change",
