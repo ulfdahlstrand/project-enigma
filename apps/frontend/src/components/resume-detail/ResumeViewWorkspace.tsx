@@ -21,6 +21,7 @@ interface ResumeViewWorkspaceProps {
   language: string | null;
   totalPages: number;
   employeeName: string;
+  profileImageDataUrl: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;

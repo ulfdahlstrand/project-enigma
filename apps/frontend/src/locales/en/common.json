@@ -53,6 +53,8 @@
       "pageTitle": "Employee Details",
       "nameLabel": "Name",
       "emailLabel": "Email",
+      "uploadProfileImageButton": "Upload image",
+      "removeProfileImageButton": "Remove image",
       "saveButton": "Save",
       "moreActionsLabel": "More actions",
       "deleteButton": "Delete",

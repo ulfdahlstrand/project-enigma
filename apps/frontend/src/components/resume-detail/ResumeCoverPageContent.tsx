@@ -3,9 +3,11 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { RefObject } from "react";
+import { ConsultantAvatar } from "../ConsultantAvatar";
 
 interface ResumeCoverPageContentProps {
   employeeName: string;
+  profileImageDataUrl: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
@@ -24,6 +26,7 @@ interface ResumeCoverPageContentProps {
 
 export function ResumeCoverPageContent({
   employeeName,
+  profileImageDataUrl,
   consultantTitle,
   presentation,
   summary,
@@ -42,27 +45,37 @@ export function ResumeCoverPageContent({
   const { t } = useTranslation("common");
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100%", pt: "200px" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100%", pt: "112px" }}>
       <Box>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h1" component="h1" sx={{ fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}>
-            {employeeName}
-          </Typography>
-          {isEditing ? (
-            <TextField
-              label={t("resume.edit.consultantTitleLabel")}
-              value={draftTitle}
-              onChange={(e) => onDraftTitleChange?.(e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={{ mt: 0.5, "& input": { fontWeight: 700, fontSize: "1.25rem" } }}
-            />
-          ) : consultantTitle ? (
-            <Typography variant="h3" component="p" sx={{ fontWeight: 700, color: "text.primary", mt: 0.5 }}>
-              {consultantTitle}
+        <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 4 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h1" component="h1" sx={{ fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}>
+              {employeeName}
             </Typography>
-          ) : null}
+          </Box>
+
+          <ConsultantAvatar
+            name={employeeName}
+            profileImageDataUrl={profileImageDataUrl}
+            size={144}
+            fontSize={40}
+          />
         </Box>
+
+        {isEditing ? (
+          <TextField
+            label={t("resume.edit.consultantTitleLabel")}
+            value={draftTitle}
+            onChange={(e) => onDraftTitleChange?.(e.target.value)}
+            variant="standard"
+            fullWidth
+            sx={{ mt: 0.5, mb: 3, "& input": { fontWeight: 700, fontSize: "1.25rem" } }}
+          />
+        ) : consultantTitle ? (
+          <Typography variant="h3" component="p" sx={{ fontWeight: 700, color: "text.primary", mb: 3 }}>
+            {consultantTitle}
+          </Typography>
+        ) : null}
 
         {isEditing ? (
           <TextField

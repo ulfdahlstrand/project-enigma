@@ -9,6 +9,7 @@ interface ResumeCoverPageProps {
   page: number;
   totalPages: number;
   employeeName: string;
+  profileImageDataUrl: string | null;
   consultantTitle: string | null;
   presentation: string[];
   summary: string | null;
@@ -32,6 +33,7 @@ export function ResumeCoverPage({
   page,
   totalPages,
   employeeName,
+  profileImageDataUrl,
   consultantTitle,
   presentation,
   summary,
@@ -53,6 +55,7 @@ export function ResumeCoverPage({
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages} hideHeader>
         <ResumeCoverPageContent
           employeeName={employeeName}
+          profileImageDataUrl={profileImageDataUrl}
           consultantTitle={consultantTitle}
           presentation={presentation}
           summary={summary}

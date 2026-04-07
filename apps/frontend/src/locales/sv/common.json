@@ -53,6 +53,8 @@
       "pageTitle": "Anställd",
       "nameLabel": "Namn",
       "emailLabel": "E-post",
+      "uploadProfileImageButton": "Ladda upp bild",
+      "removeProfileImageButton": "Ta bort bild",
       "saveButton": "Spara",
       "moreActionsLabel": "Fler åtgärder",
       "deleteButton": "Ta bort",
