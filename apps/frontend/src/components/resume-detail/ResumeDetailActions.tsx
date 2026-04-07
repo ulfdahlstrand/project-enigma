@@ -40,7 +40,6 @@ interface ResumeDetailActionsProps {
   onSaveCurrent: () => void;
   onSaveAsNewVersion: (name: string) => Promise<void>;
   onEdit: () => void;
-  onOpenAiHelp: () => void;
   onExitEdit: () => void;
   onDeleteResume: () => void;
   isDeletePending: boolean;
@@ -169,7 +168,6 @@ export function ResumeDetailActions({
   onSaveCurrent,
   onSaveAsNewVersion,
   onEdit,
-  onOpenAiHelp,
   onExitEdit,
   onDeleteResume,
   isDeletePending,
@@ -238,9 +236,6 @@ export function ResumeDetailActions({
             canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
             isPending={isSaving}
           />
-          <Button variant="outlined" onClick={onOpenAiHelp}>
-            {t("revision.inline.aiHelpButton")}
-          </Button>
           <Button variant="outlined" onClick={onExitEdit}>
             {t("resume.edit.backButton")}
           </Button>

@@ -171,6 +171,8 @@ export function ResumeDetailPage({
   const [showFullAssignments, setShowFullAssignments] = useState(true);
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const wasInlineRevisionOpenRef = useRef(false);
+  const previousSuggestionCountRef = useRef(0);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const coverSectionRef = useRef<HTMLDivElement>(null);
@@ -423,13 +425,28 @@ export function ResumeDetailPage({
   }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
 
   useEffect(() => {
-    if (inlineRevision.isOpen) {
-      return;
+    if (wasInlineRevisionOpenRef.current && !inlineRevision.isOpen) {
+      setShowSuggestionsPanel(false);
+      setShowChatPanel(false);
+    }
+    wasInlineRevisionOpenRef.current = inlineRevision.isOpen;
+  }, [inlineRevision.isOpen]);
+
+  useEffect(() => {
+    const nextSuggestionCount = inlineRevision.suggestions.length;
+    const previousSuggestionCount = previousSuggestionCountRef.current;
+
+    if (
+      isEditRoute &&
+      inlineRevision.isOpen &&
+      !showSuggestionsPanel &&
+      nextSuggestionCount > previousSuggestionCount
+    ) {
+      setShowSuggestionsPanel(true);
     }
 
-    setShowSuggestionsPanel(false);
-    setShowChatPanel(false);
-  }, [inlineRevision.isOpen]);
+    previousSuggestionCountRef.current = nextSuggestionCount;
+  }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
@@ -500,12 +517,6 @@ export function ResumeDetailPage({
     }
 
     inlineRevision.reset();
-  };
-
-  const handleOpenAssistant = () => {
-    setShowSuggestionsPanel(true);
-    setShowChatPanel(true);
-    void inlineRevision.open();
   };
 
   const handleToggleAssistant = () => {
@@ -612,7 +623,6 @@ export function ResumeDetailPage({
           search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
-      onOpenAiHelp={handleOpenAssistant}
       onExitEdit={handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
@@ -629,6 +639,10 @@ export function ResumeDetailPage({
         display: inlineRevision.isOpen ? "flex" : "block",
         flexDirection: inlineRevision.isOpen ? "column" : undefined,
         overflow: inlineRevision.isOpen ? "hidden" : undefined,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflowX: "clip",
       }}
     >
       <PageHeader
@@ -738,6 +752,7 @@ export function ResumeDetailPage({
         />
       )}
       <ResumeStatusBar
+        isEditing={isEditRoute}
         resumeId={id}
         activeBranchId={activeBranchId}
         language={language ?? null}

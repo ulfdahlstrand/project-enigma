@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { VariantSwitcher } from "../VariantSwitcher";
 
 interface ResumeStatusBarProps {
+  isEditing: boolean;
   resumeId: string;
   activeBranchId: string | null;
   language: string | null;
@@ -27,6 +28,7 @@ interface ResumeStatusBarProps {
 }
 
 export function ResumeStatusBar({
+  isEditing,
   resumeId,
   activeBranchId,
   language,
@@ -50,62 +52,51 @@ export function ResumeStatusBar({
         position: "sticky",
         bottom: 0,
         zIndex: (theme) => theme.zIndex.appBar - 1,
+        borderRadius: 0,
         borderTop: "1px solid",
         borderColor: "divider",
-        bgcolor: "background.paper",
-        backdropFilter: "blur(10px)",
+        bgcolor: "grey.100",
       }}
     >
       <Box
         sx={{
-          minHeight: 38,
-          px: { xs: 1, md: 1.5 },
-          py: 0.5,
+          minHeight: 32,
+          px: { xs: 0.75, md: 1 },
+          py: 0.25,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 1,
+          gap: 0.75,
           flexWrap: "wrap",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flexWrap: "wrap" }}>
-          <Button
-            size="small"
-            variant={isSuggestionsOpen ? "contained" : "text"}
-            startIcon={<ChecklistIcon sx={{ fontSize: 16 }} />}
-            onClick={onToggleSuggestions}
-            sx={{
-              minWidth: 0,
-              px: 1,
-              py: 0.35,
-              borderRadius: 1,
-              textTransform: "none",
-              fontSize: 12,
-            }}
-          >
-            {t("revision.inline.suggestionsButton")}
-          </Button>
-
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flexWrap: "wrap" }}>
           <VariantSwitcher resumeId={resumeId} currentBranchId={activeBranchId} compact />
 
           {language ? (
             <Chip
               size="small"
-              variant="outlined"
+              variant="filled"
               label={language.toUpperCase()}
-              sx={{ height: 24, fontSize: 12, borderRadius: 1 }}
+              sx={{
+                height: 20,
+                fontSize: 10,
+                borderRadius: 0,
+                bgcolor: "grey.300",
+                color: "text.secondary",
+              }}
             />
           ) : null}
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, flexWrap: "wrap" }}>
           <IconButton
             size="small"
             aria-label={t("resume.detail.zoomOutLabel")}
             onClick={() => onZoomChange(zoom - 0.1)}
-            sx={{ width: 24, height: 24 }}
+            sx={{ width: 20, height: 20, color: "text.secondary" }}
           >
-            <RemoveIcon fontSize="inherit" />
+            <RemoveIcon sx={{ fontSize: 14 }} />
           </IconButton>
           <Slider
             aria-label={t("resume.detail.zoomLabel")}
@@ -114,35 +105,79 @@ export function ResumeStatusBar({
             step={0.1}
             value={zoom}
             onChange={(_event, value) => onZoomChange(value as number)}
-            sx={{ width: { xs: 92, md: 120 } }}
+            sx={{
+              width: { xs: 72, md: 96 },
+              color: "grey.600",
+              py: 0,
+              "& .MuiSlider-thumb": {
+                width: 10,
+                height: 10,
+              },
+              "& .MuiSlider-rail": {
+                opacity: 1,
+                bgcolor: "grey.400",
+              },
+            }}
           />
           <IconButton
             size="small"
             aria-label={t("resume.detail.zoomInLabel")}
             onClick={() => onZoomChange(zoom + 0.1)}
-            sx={{ width: 24, height: 24 }}
+            sx={{ width: 20, height: 20, color: "text.secondary" }}
           >
-            <AddIcon fontSize="inherit" />
+            <AddIcon sx={{ fontSize: 14 }} />
           </IconButton>
-          <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 40, textAlign: "right" }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 32, textAlign: "right", fontSize: 10.5 }}>
             {zoomPercent}%
           </Typography>
-          <Button
-            size="small"
-            variant={isAiOpen ? "contained" : "text"}
-            startIcon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />}
-            onClick={onToggleAi}
-            sx={{
-              minWidth: 0,
-              px: 1,
-              py: 0.35,
-              borderRadius: 1,
-              textTransform: "none",
-              fontSize: 12,
-            }}
-          >
-            {t("revision.inline.aiHelpButton")}
-          </Button>
+          {isEditing ? (
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<ChecklistIcon sx={{ fontSize: 16 }} />}
+              onClick={onToggleSuggestions}
+              sx={{
+                minWidth: 0,
+                px: 0.75,
+                minHeight: 24,
+                borderRadius: 0,
+                color: isSuggestionsOpen ? "text.primary" : "text.secondary",
+                bgcolor: isSuggestionsOpen ? "grey.300" : "transparent",
+                textTransform: "none",
+                fontSize: 11,
+                lineHeight: 1.2,
+                "&:hover": {
+                  bgcolor: isSuggestionsOpen ? "grey.400" : "grey.200",
+                },
+              }}
+            >
+              {t("revision.inline.suggestionsButton")}
+            </Button>
+          ) : null}
+          {isEditing ? (
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />}
+              onClick={onToggleAi}
+              sx={{
+                minWidth: 0,
+                px: 0.75,
+                minHeight: 24,
+                borderRadius: 0,
+                color: isAiOpen ? "text.primary" : "text.secondary",
+                bgcolor: isAiOpen ? "grey.300" : "transparent",
+                textTransform: "none",
+                fontSize: 11,
+                lineHeight: 1.2,
+                "&:hover": {
+                  bgcolor: isAiOpen ? "grey.400" : "grey.200",
+                },
+              }}
+            >
+              {t("revision.inline.aiHelpButton")}
+            </Button>
+          ) : null}
         </Box>
       </Box>
     </Paper>

@@ -89,7 +89,7 @@ export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: 
 
   return (
     <>
-      <FormControl size="small" sx={{ minWidth: compact ? 160 : 180 }}>
+      <FormControl size="small" sx={{ minWidth: compact ? 118 : 180 }}>
         {!compact ? <InputLabel>{t("resume.variantSwitcher.label")}</InputLabel> : null}
         <Select
           value={currentBranchId ?? ""}
@@ -113,7 +113,28 @@ export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: 
             }
           }}
           displayEmpty={compact}
-          {...(compact ? { sx: { bgcolor: "transparent" } } : {})}
+          {...(compact ? {
+            sx: {
+              bgcolor: "grey.200",
+              borderRadius: 0,
+              minHeight: 24,
+              fontSize: 11,
+              color: "text.secondary",
+              "& .MuiSelect-select": {
+                py: 0.25,
+                px: 0.75,
+                pr: "24px !important",
+                minHeight: "unset",
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "divider",
+              },
+              "& .MuiSvgIcon-root": {
+                fontSize: 16,
+                right: 4,
+              },
+            },
+          } : {})}
         >
           <MenuItem value={CREATE_VALUE}>
             <Box sx={{ fontStyle: "italic", color: "text.primary", fontSize: "0.875rem" }}>

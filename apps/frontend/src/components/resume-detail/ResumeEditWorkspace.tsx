@@ -95,6 +95,10 @@ export function ResumeEditWorkspace({
         display: "flex",
         flexDirection: "column",
         overflow: showRevisionShell ? "hidden" : undefined,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflowX: "hidden",
       }}
     >
       <Box
@@ -108,6 +112,8 @@ export function ResumeEditWorkspace({
           justifyContent: "center",
           gap: showRevisionShell ? 0 : 3,
           overflow: showRevisionShell ? "hidden" : "visible",
+          maxWidth: "100%",
+          minWidth: 0,
         }}
       >
         <Slide
@@ -149,11 +155,14 @@ export function ResumeEditWorkspace({
 
         <Box
           sx={{
-            flex: "1 1 auto",
+            flex: "1 1 0",
+            width: 0,
             order: { xs: 2, lg: 1 },
             minWidth: 0,
+            maxWidth: "100%",
             minHeight: showRevisionShell ? 0 : undefined,
-            overflow: showRevisionShell ? "auto" : "hidden",
+            overflowY: showRevisionShell ? "auto" : "visible",
+            overflowX: "hidden",
             px: showRevisionShell ? { xs: 2, md: 3 } : 0,
             py: showRevisionShell ? 4 : 0,
             display: "flex",

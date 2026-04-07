@@ -22,8 +22,8 @@ export function ResumeSkillsPageContent({
 }: ResumeSkillsPageContentProps) {
   const { t } = useTranslation("common");
 
-  const groupedByGroupId = skills.reduce<Record<string, Array<{ name: string; sortOrder: number }>>>((acc, skill) => {
-    const key = skill.groupId;
+  const groupedByGroupId = skills.reduce<Record<string, Array<{ name: string; sortOrder: number }>>>((acc, skill, index) => {
+    const key = skill.groupId || skill.category?.trim() || `__ungrouped__${index}`;
     return {
       ...acc,
       [key]: [...(acc[key] ?? []), {
@@ -48,7 +48,7 @@ export function ResumeSkillsPageContent({
   const fallbackCategories = Object.entries(groupedByGroupId)
     .filter(([groupId]) => !skillGroups.some((group) => group.id === groupId))
     .map(([groupId, groupSkills]) => ({
-      label: skills.find((skill) => skill.groupId === groupId)?.category?.trim() || "",
+      label: skills.find((skill) => (skill.groupId || skill.category?.trim() || "") === groupId)?.category?.trim() || "",
       names: groupSkills
         .slice()
         .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))

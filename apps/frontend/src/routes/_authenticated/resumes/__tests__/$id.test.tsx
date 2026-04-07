@@ -58,6 +58,7 @@ const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnTy
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
+const mockGetResumeCommit = orpc.getResumeCommit as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -124,9 +125,13 @@ const TEST_RESUME = {
   isMain: true,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
+  skillGroups: [
+    { id: "group-1", resumeId: TEST_RESUME_ID, name: "Programming", sortOrder: 0 },
+    { id: "group-2", resumeId: TEST_RESUME_ID, name: "Frontend", sortOrder: 1 },
+  ],
   skills: [
-    { id: "skill-1", resumeId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
-    { id: "skill-2", resumeId: TEST_RESUME_ID, name: "React", level: "Advanced", category: "Frontend", sortOrder: 2 },
+    { id: "skill-1", resumeId: TEST_RESUME_ID, groupId: "group-1", name: "TypeScript", category: "Programming", sortOrder: 0 },
+    { id: "skill-2", resumeId: TEST_RESUME_ID, groupId: "group-2", name: "React", category: "Frontend", sortOrder: 0 },
   ],
 };
 
@@ -164,6 +169,7 @@ beforeEach(() => {
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
+  mockGetResumeCommit.mockResolvedValue({ id: "commit-1", content: {} });
   mockDeleteResume.mockResolvedValue({ deleted: true });
   mockNavigate.mockReset();
 });
