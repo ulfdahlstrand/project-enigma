@@ -24,6 +24,7 @@ export function useAIAssistantChat({
   toolContext: toolContextProp,
 }: UseAIAssistantChatOptions = {}) {
   const {
+    isOpen,
     entityType,
     entityId,
     systemPrompt,
@@ -49,7 +50,9 @@ export function useAIAssistantChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const createInitiated = useRef(false);
 
-  const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId);
+  const { data: conversation, isError: isLoadError } = useAIConversation(activeConversationId, {
+    pollingEnabled: isOpen,
+  });
   const createConversation = useCreateAIConversation();
   const sendMessage = useSendAIMessage(activeConversationId);
   const closeConversation = useCloseAIConversation(entityType, entityId);

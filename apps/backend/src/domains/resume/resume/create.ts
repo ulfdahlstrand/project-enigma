@@ -75,8 +75,8 @@ export async function createResume(
     // 3. Create the root commit (empty snapshot)
     const initialContent = JSON.stringify({
       title: newResume.title,
-      consultantTitle: newResume.consultant_title,
-      presentation: newResume.presentation ?? [],
+      consultantTitle: null,
+      presentation: [],
       summary: newResume.summary,
       highlightedItems: [],
       language,
@@ -111,8 +111,8 @@ export async function createResume(
     id: resume.id,
     employeeId: resume.employee_id,
     title: resume.title,
-    consultantTitle: resume.consultant_title,
-    presentation: resume.presentation ?? [],
+    consultantTitle: null,
+    presentation: [],
     summary: resume.summary,
     highlightedItems: [],
     language: resume.language,

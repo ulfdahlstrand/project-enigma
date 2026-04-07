@@ -50,12 +50,23 @@ async function buildFromLive(
   employeeId: string
 ): Promise<Omit<ExportData, "resumeId" | "employeeId" | "commitId">> {
   const resume = await db
-    .selectFrom("resumes")
-    .selectAll()
+    .selectFrom("resumes as r")
+    .leftJoin("resume_branches as rb", (join) =>
+      join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
+    )
+    .select([
+      "r.id",
+      "r.summary",
+      "r.language",
+      "rb.head_commit_id",
+      "rb.forked_from_commit_id",
+    ])
     .where("id", "=", resumeId)
     .executeTakeFirstOrThrow();
 
-  const [employee, assignments, skills, education, highlightedItems] = await Promise.all([
+  const snapshotCommitId = resume.head_commit_id ?? resume.forked_from_commit_id ?? null;
+
+  const [employee, assignments, skills, education, highlightedItems, commitRow] = await Promise.all([
     db
       .selectFrom("employees")
       .select(["id", "name", "email"])
@@ -92,14 +103,23 @@ async function buildFromLive(
       .where("resume_id", "=", resumeId)
       .orderBy("sort_order", "asc")
       .execute(),
+    snapshotCommitId
+      ? db
+          .selectFrom("resume_commits")
+          .select(["content"])
+          .where("id", "=", snapshotCommitId)
+          .executeTakeFirst()
+      : Promise.resolve(undefined),
   ]);
+
+  const content = commitRow ? resumeCommitContentSchema.parse(commitRow.content) : null;
 
   return {
     name: employee?.name ?? "Unknown",
     email: employee?.email,
-    consultantTitle: resume.consultant_title ?? "",
+    consultantTitle: content?.consultantTitle ?? "",
     language: resume.language ?? "en",
-    presentation: (resume.presentation as string[] | null) ?? [],
+    presentation: content?.presentation ?? [],
     summary: resume.summary,
     highlightedItems: highlightedItems.map((item) => item.text),
     skills: skills.map((s) => ({

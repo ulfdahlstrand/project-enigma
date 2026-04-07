@@ -1,4 +1,3 @@
-import { sql } from "kysely";
 import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 
@@ -11,8 +10,6 @@ export async function syncLiveResumeFromContent(
     .updateTable("resumes")
     .set({
       title: content.title,
-      consultant_title: content.consultantTitle,
-      presentation: sql`${JSON.stringify(content.presentation)}::jsonb` as unknown as string[],
       summary: content.summary,
       language: content.language,
     })

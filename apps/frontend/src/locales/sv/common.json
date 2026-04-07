@@ -172,6 +172,9 @@
       "ai": {
         "improvePresentation": "Förbättra presentation med AI"
       },
+      "zoomLabel": "Zoom",
+      "zoomOutLabel": "Zooma ut",
+      "zoomInLabel": "Zooma in",
       "assignmentToggleFull": "Visa fullständiga uppdragsdetaljer",
       "assignmentToggleSummary": "Visa kompakt uppdragslista",
       "assignmentTechnologies": "Teknologier",
@@ -225,6 +228,7 @@
       "skillAddCategoryButton": "Lägg till kategori",
       "skillsDetailViewTooltip": "Detaljvy",
       "skillsListViewTooltip": "Listvy (ordna kategorier)",
+      "skillsSortWithinGroupTooltip": "Sortera kompetenser i kategorin",
       "skillsCount_one": "{{count}} kompetens",
       "skillsCount_other": "{{count}} kompetenser",
       "skillAdding": "Lägger till…",
@@ -499,6 +503,7 @@
       "suggestionsTitle": "Föreslagna revideringar",
       "suggestionCount": "{{count}} förslag",
       "reviewSuggestion": "Granska",
+      "suggestionsButton": "Förslag",
       "approveSuggestion": "Godkänn förslag",
       "reviewLater": "Granska senare",
       "reviewDialogTitle": "Granska ändringsförslag",

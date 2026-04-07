@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
+import { useResumeDocumentZoom } from "../../../hooks/useResumeDocumentZoom";
 import {
   resumeBranchHistoryGraphKey,
   resumeBranchesKey,
@@ -22,6 +23,7 @@ import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDet
 import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
 import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/ResumeRevisionReviewDialog";
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
+import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
@@ -53,6 +55,7 @@ export function ResumeDetailPage({
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { zoom, setZoom, minZoom, maxZoom } = useResumeDocumentZoom();
   const requestedBranchId = selectedBranchId ?? null;
 
   const { data: resume, isLoading, isError, error } = useQuery({
@@ -166,6 +169,10 @@ export function ResumeDetailPage({
   const { data: recentCommits = [] } = useResumeCommits(activeBranchId ?? mainBranchId ?? "");
 
   const [showFullAssignments, setShowFullAssignments] = useState(true);
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const wasInlineRevisionOpenRef = useRef(false);
+  const previousSuggestionCountRef = useRef(0);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const coverSectionRef = useRef<HTMLDivElement>(null);
@@ -237,22 +244,53 @@ export function ResumeDetailPage({
     setDraftHighlightedItems(nextHighlightedItems);
   }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
+  const snapshotSkillGroupDefs = snapshotContent
+    ? (() => {
+        const explicitGroups = snapshotContent.skillGroups.map((group, index) => ({
+          key: group.name.trim() || `__other__${index}`,
+          name: group.name.trim(),
+          sortOrder: group.sortOrder,
+        }));
+        const seen = new Set(explicitGroups.map((group) => group.key));
+        const fallbackGroups = snapshotContent.skills.reduce<Array<{ key: string; name: string; sortOrder: number }>>((acc, skill, index) => {
+          const name = skill.category?.trim() || "";
+          const key = name || "__other__";
+          if (seen.has(key)) {
+            return acc;
+          }
+          seen.add(key);
+          return [...acc, {
+            key,
+            name,
+            sortOrder: explicitGroups.length + index,
+          }];
+        }, []);
+
+        return [...explicitGroups, ...fallbackGroups];
+      })()
+    : null;
+
+  const snapshotSkillGroups = snapshotSkillGroupDefs?.map((group) => ({
+    id: `snapshot-group-${group.key}`,
+    resumeId: id,
+    name: group.name,
+    sortOrder: group.sortOrder,
+  })) ?? null;
+
+  const snapshotGroupIdByName = new Map(
+    (snapshotSkillGroupDefs ?? []).map((group) => [group.name, `snapshot-group-${group.key}`]),
+  );
+
   const snapshotSkills = snapshotContent?.skills
     ? snapshotContent.skills.map((skill, index) => ({
         id: `snapshot-skill-${index}-${skill.name}`,
-        groupId: `snapshot-group-${skill.category ?? "other"}`,
+        groupId: snapshotGroupIdByName.get(skill.category?.trim() || "") ?? "snapshot-group-__other__",
         name: skill.name,
         category: skill.category ?? null,
         sortOrder: skill.sortOrder ?? index,
       }))
     : null;
   const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
-  const snapshotSkillGroups = snapshotContent?.skillGroups?.map((group, index) => ({
-    id: `snapshot-group-${index}-${group.name}`,
-    resumeId: id,
-    name: group.name,
-    sortOrder: group.sortOrder,
-  })) ?? null;
   const skillGroups = isEditing ? (resume?.skillGroups ?? []) : (snapshotSkillGroups ?? (resume?.skillGroups ?? []));
   const hasSkills = skills.length > 0;
   const showSkillsPage = hasSkills || isEditing;
@@ -381,8 +419,34 @@ export function ResumeDetailPage({
       return;
     }
 
+    setShowSuggestionsPanel(true);
+    setShowChatPanel(true);
     inlineRevision.open();
   }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
+
+  useEffect(() => {
+    if (wasInlineRevisionOpenRef.current && !inlineRevision.isOpen) {
+      setShowSuggestionsPanel(false);
+      setShowChatPanel(false);
+    }
+    wasInlineRevisionOpenRef.current = inlineRevision.isOpen;
+  }, [inlineRevision.isOpen]);
+
+  useEffect(() => {
+    const nextSuggestionCount = inlineRevision.suggestions.length;
+    const previousSuggestionCount = previousSuggestionCountRef.current;
+
+    if (
+      isEditRoute &&
+      inlineRevision.isOpen &&
+      !showSuggestionsPanel &&
+      nextSuggestionCount > previousSuggestionCount
+    ) {
+      setShowSuggestionsPanel(true);
+    }
+
+    previousSuggestionCountRef.current = nextSuggestionCount;
+  }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 
@@ -455,8 +519,72 @@ export function ResumeDetailPage({
     inlineRevision.reset();
   };
 
-  const handleOpenAssistant = () => {
-    void inlineRevision.open();
+  const handleToggleAssistant = () => {
+    if (!isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+      return;
+    }
+
+    if (!inlineRevision.isOpen) {
+      setShowSuggestionsPanel(false);
+      setShowChatPanel(true);
+      void inlineRevision.open();
+      return;
+    }
+
+    if (showSuggestionsPanel) {
+      setShowChatPanel((current) => !current);
+      return;
+    }
+
+    setShowChatPanel((current) => {
+      const next = !current;
+      if (!next) {
+        inlineRevision.close();
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSuggestions = () => {
+    if (!isEditRoute) {
+      void navigate({
+        to: "/resumes/$id/edit",
+        params: { id },
+        search: {
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          assistant: "true",
+        },
+      });
+      return;
+    }
+
+    if (!inlineRevision.isOpen) {
+      setShowSuggestionsPanel(true);
+      setShowChatPanel(false);
+      void inlineRevision.open();
+      return;
+    }
+
+    if (showChatPanel) {
+      setShowSuggestionsPanel((current) => !current);
+      return;
+    }
+
+    setShowSuggestionsPanel((current) => {
+      const next = !current;
+      if (!next) {
+        inlineRevision.close();
+      }
+      return next;
+    });
   };
 
   const handleCloseRevision = () => {
@@ -468,6 +596,8 @@ export function ResumeDetailPage({
       });
     }
 
+    setShowSuggestionsPanel(false);
+    setShowChatPanel(false);
     inlineRevision.close();
   };
 
@@ -479,7 +609,6 @@ export function ResumeDetailPage({
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
-      isRevisionOpen={inlineRevision.isOpen}
       baseCommitId={baseCommitId}
       isSaving={updateResume.isPending || saveVersion.isPending || forkResumeBranch.isPending}
       canSaveAsNewVersion={baseCommitId !== null}
@@ -494,8 +623,7 @@ export function ResumeDetailPage({
           search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
-      onOpenAiHelp={handleOpenAssistant}
-      onCloseRevision={inlineRevision.isOpen ? handleCloseRevision : handleExitEditing}
+      onExitEdit={handleExitEditing}
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
       isDeleteError={deleteResume.isError}
@@ -511,6 +639,10 @@ export function ResumeDetailPage({
         display: inlineRevision.isOpen ? "flex" : "block",
         flexDirection: inlineRevision.isOpen ? "column" : undefined,
         overflow: inlineRevision.isOpen ? "hidden" : undefined,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflowX: "clip",
       }}
     >
       <PageHeader
@@ -526,13 +658,9 @@ export function ResumeDetailPage({
         ]}
         chip={(
           <ResumeHeaderChip
-            isRevisionOpen={inlineRevision.isOpen}
-            activeBranchName={activeBranchName}
-            language={language ?? null}
             revisionModeLabel={t("revision.inline.modeChip")}
           />
         )}
-        centerContent={<VariantSwitcher resumeId={id} currentBranchId={activeBranchId} />}
         actions={toolbarActions}
       />
       {isEditRoute ? (
@@ -567,13 +695,6 @@ export function ResumeDetailPage({
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           fabTop={fabTop}
-          onImprovePresentationAccept={(improved) => {
-            const paragraphs = improved
-              .split(/\n\n+/)
-              .map((p) => p.trim())
-              .filter(Boolean);
-            updateResume.mutate({ presentation: paragraphs });
-          }}
           hasAssignments={hasAssignments}
           assignmentsPage={assignmentsPage}
           assignments={editableAssignments}
@@ -591,6 +712,9 @@ export function ResumeDetailPage({
           skillsSectionRef={skillsSectionRef}
           assignmentsSectionRef={assignmentsSectionRef}
           assignmentItemRefs={assignmentItemRefs}
+          zoom={zoom}
+          showSuggestionsPanel={showSuggestionsPanel}
+          showChatPanel={showChatPanel}
         />
       ) : (
         <ResumeViewWorkspace
@@ -624,8 +748,23 @@ export function ResumeDetailPage({
           assignmentsSectionRef={assignmentsSectionRef}
           assignmentItemRefs={assignmentItemRefs}
           activeBranchId={activeBranchId}
+          zoom={zoom}
         />
       )}
+      <ResumeStatusBar
+        isEditing={isEditRoute}
+        resumeId={id}
+        activeBranchId={activeBranchId}
+        language={language ?? null}
+        zoom={zoom}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
+        onZoomChange={setZoom}
+        isSuggestionsOpen={inlineRevision.isOpen && showSuggestionsPanel}
+        onToggleSuggestions={handleToggleSuggestions}
+        isAiOpen={inlineRevision.isOpen && showChatPanel && inlineRevision.stage !== "finalize"}
+        onToggleAi={handleToggleAssistant}
+      />
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
     </Box>
   );

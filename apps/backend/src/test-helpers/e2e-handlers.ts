@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { URL } from "node:url";
-import { sql } from "kysely";
 import { getDb } from "../db/client.js";
 import { createResume } from "../domains/resume/resume/create.js";
 import { saveResumeVersion } from "../domains/resume/commit/save.js";
@@ -206,16 +205,6 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     language: body.language ?? "sv",
     summary: body.summary ?? null,
   });
-
-  await db
-    .updateTable("resumes")
-    .set({
-      consultant_title: body.consultantTitle ?? "Tech Lead / Senior Engineer",
-      presentation: sql`${JSON.stringify(body.presentationParagraphs ?? [])}::jsonb` as unknown as string[],
-      summary: body.summary ?? null,
-    })
-    .where("id", "=", resume.id)
-    .execute();
 
   const skillsToCreate = body.skills ?? [];
   const skillGroups = new Map<string, string>();

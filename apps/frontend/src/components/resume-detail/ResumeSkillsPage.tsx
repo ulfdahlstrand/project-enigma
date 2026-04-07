@@ -52,6 +52,7 @@ export function ResumeSkillsPage({
         ) : (
           <ResumeSkillsPageContent
             employeeName={employeeName}
+            skillGroups={skillGroups}
             skills={skills}
             degrees={degrees}
             certifications={certifications}

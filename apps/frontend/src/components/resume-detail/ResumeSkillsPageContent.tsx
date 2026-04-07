@@ -1,10 +1,12 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
+import type { SkillGroupRow } from "../SkillsEditor";
 
 interface ResumeSkillsPageContentProps {
   employeeName: string;
-  skills: Array<{ id: string; name: string; category: string | null; sortOrder?: number }>;
+  skillGroups: SkillGroupRow[];
+  skills: Array<{ id: string; groupId: string; name: string; category: string | null; sortOrder?: number }>;
   degrees: string[];
   certifications: string[];
   languages: string[];
@@ -12,6 +14,7 @@ interface ResumeSkillsPageContentProps {
 
 export function ResumeSkillsPageContent({
   employeeName,
+  skillGroups,
   skills,
   degrees,
   certifications,
@@ -19,27 +22,45 @@ export function ResumeSkillsPageContent({
 }: ResumeSkillsPageContentProps) {
   const { t } = useTranslation("common");
 
-  const grouped = skills.reduce<Record<string, { names: string[]; minSortOrder: number }>>((acc, skill) => {
-    const key = skill.category?.trim() || "";
-    const so = skill.sortOrder ?? 0;
-    const existing = acc[key];
+  const groupedByGroupId = skills.reduce<Record<string, Array<{ name: string; sortOrder: number }>>>((acc, skill, index) => {
+    const key = skill.groupId || skill.category?.trim() || `__ungrouped__${index}`;
     return {
       ...acc,
-      [key]: {
-        names: [...(existing?.names ?? []), skill.name],
-        minSortOrder: existing ? Math.min(existing.minSortOrder, so) : so,
-      },
+      [key]: [...(acc[key] ?? []), {
+        name: skill.name,
+        sortOrder: skill.sortOrder ?? 0,
+      }],
     };
   }, {});
 
-  const categories = Object.entries(grouped)
-    .sort(([a, aData], [b, bData]) => {
-      if (a === "") return 1;
-      if (b === "") return -1;
-      const diff = aData.minSortOrder - bData.minSortOrder;
-      return diff !== 0 ? diff : a.localeCompare(b);
-    })
-    .map(([label, { names }]) => [label, names] as [string, string[]]);
+  const orderedCategories = skillGroups
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+    .map((group) => ({
+      label: group.name.trim(),
+      names: (groupedByGroupId[group.id] ?? [])
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+        .map((skill) => skill.name),
+    }))
+    .filter((group) => group.names.length > 0);
+
+  const fallbackCategories = Object.entries(groupedByGroupId)
+    .filter(([groupId]) => !skillGroups.some((group) => group.id === groupId))
+    .map(([groupId, groupSkills]) => ({
+      label: skills.find((skill) => (skill.groupId || skill.category?.trim() || "") === groupId)?.category?.trim() || "",
+      names: groupSkills
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+        .map((skill) => skill.name),
+    }))
+    .sort((a, b) => {
+      if (a.label === "") return 1;
+      if (b.label === "") return -1;
+      return a.label.localeCompare(b.label);
+    });
+
+  const categories = [...orderedCategories, ...fallbackCategories].map(({ label, names }) => [label, names] as [string, string[]]);
 
   const mid = Math.ceil(categories.length / 2);
   const leftCategories = categories.slice(0, mid);

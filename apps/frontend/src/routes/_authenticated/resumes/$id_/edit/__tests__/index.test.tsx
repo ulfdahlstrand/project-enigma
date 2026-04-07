@@ -121,6 +121,7 @@ const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.f
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
+const mockGetResumeCommit = orpc.getResumeCommit as ReturnType<typeof vi.fn>;
 
 const TEST_RESUME = {
   id: TEST_RESUME_ID,
@@ -131,8 +132,11 @@ const TEST_RESUME = {
   isMain: true,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
+  skillGroups: [
+    { id: "group-1", resumeId: TEST_RESUME_ID, name: "Programming", sortOrder: 0 },
+  ],
   skills: [
-    { id: "skill-1", resumeId: TEST_RESUME_ID, name: "TypeScript", level: "Expert", category: "Programming", sortOrder: 1 },
+    { id: "skill-1", resumeId: TEST_RESUME_ID, groupId: "group-1", name: "TypeScript", category: "Programming", sortOrder: 0 },
   ],
 };
 
@@ -165,6 +169,7 @@ beforeEach(() => {
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListBranchAssignmentsFull.mockResolvedValue([]);
   mockListEducation.mockResolvedValue([]);
+  mockGetResumeCommit.mockResolvedValue({ id: "commit-2", content: { skills: [], skillGroups: [] } });
 });
 
 describe("/resumes/$id/edit", () => {

@@ -28,8 +28,6 @@ const RESUME_ROW_1 = {
   summary: "Experienced backend engineer",
   language: "en",
   is_main: true,
-  consultant_title: null,
-  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-01-01T00:00:00.000Z"),
   branch_id: BRANCH_ID_1,
@@ -43,12 +41,25 @@ const RESUME_ROW_2 = {
   summary: null,
   language: "sv",
   is_main: false,
-  consultant_title: null,
-  presentation: [],
   created_at: new Date("2025-02-01T00:00:00.000Z"),
   updated_at: new Date("2025-02-01T00:00:00.000Z"),
   branch_id: null,
   head_commit_id: null,
+};
+
+const COMMIT_ROW_1 = {
+  id: COMMIT_ID_1,
+  content: {
+    title: "Senior Backend Resume",
+    consultantTitle: "Tech Lead",
+    presentation: ["Committed presentation"],
+    summary: "Experienced backend engineer",
+    highlightedItems: [],
+    language: "en",
+    skillGroups: [],
+    skills: [],
+    assignments: [],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -65,9 +76,16 @@ function buildSelectMock(rows: unknown[]) {
   whereChain.where.mockReturnValue(whereChain);
   const select = vi.fn().mockReturnValue({ execute, where: whereChain.where });
   const leftJoin = vi.fn().mockReturnValue({ select });
+  const commitExecute = vi.fn().mockResolvedValue([COMMIT_ROW_1]);
+  const commitWhere = vi.fn().mockReturnValue({ execute: commitExecute });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
   const selectFrom = vi.fn().mockReturnValue({ leftJoin });
+  selectFrom.mockImplementation((table: string) => {
+    if (table === "resume_commits") return { select: commitSelect };
+    return { leftJoin };
+  });
   const db = { selectFrom } as unknown as Kysely<Database>;
-  return { db, selectFrom, leftJoin, select, execute, where: whereChain.where };
+  return { db, selectFrom, leftJoin, select, execute, where: whereChain.where, commitExecute };
 }
 
 /** Builds a mock for the employees lookup used by resolveEmployeeId. */
@@ -84,9 +102,13 @@ function buildDbWithEmployeeLookup(resumeRows: unknown[], employeeId: string) {
   const empExecuteTakeFirst = vi.fn().mockResolvedValue({ id: employeeId });
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
+  const commitExecute = vi.fn().mockResolvedValue([COMMIT_ROW_1]);
+  const commitWhere = vi.fn().mockReturnValue({ execute: commitExecute });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
+    if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
   });
 

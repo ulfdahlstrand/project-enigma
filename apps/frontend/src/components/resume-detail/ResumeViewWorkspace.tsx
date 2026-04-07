@@ -46,6 +46,7 @@ interface ResumeViewWorkspaceProps {
   assignmentsSectionRef: RefObject<HTMLDivElement | null>;
   assignmentItemRefs: MutableRefObject<Record<string, HTMLElement | null>>;
   activeBranchId: string | null;
+  zoom: number;
 }
 
 export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
@@ -58,6 +59,9 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
         px: { xs: 2, md: 3 },
         display: "flex",
         flexDirection: "column",
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
       }}
     >
       <Box
@@ -65,11 +69,16 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
           width: "100%",
           display: "flex",
           justifyContent: "center",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
+          overflowY: "visible",
         }}
       >
-        <Box sx={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden" }}>
+        <Box sx={{ flex: "1 1 0", width: 0, minWidth: 0, maxWidth: "100%", overflow: "visible" }}>
           <ResumeDocumentCanvas
             {...props}
+            zoom={props.zoom}
             isEditing={false}
             draftTitle=""
             draftPresentation=""
@@ -79,9 +88,7 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
             onDraftPresentationChange={() => {}}
             onDraftSummaryChange={() => {}}
             onDraftHighlightedItemsChange={() => {}}
-            showImprovePresentationFab={false}
             fabTop={0}
-            onImprovePresentationAccept={() => {}}
             showAssignmentsToggleFab={true}
             newAssignmentId={null}
             onAutoEditConsumed={() => {}}

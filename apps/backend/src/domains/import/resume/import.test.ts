@@ -4,6 +4,21 @@ import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { importCv, createImportCvHandler } from "./import.js";
+import { upsertBranchContentFromLive } from "../../resume/lib/upsert-branch-content-from-live.js";
+
+vi.mock("../../resume/lib/upsert-branch-content-from-live.js", () => ({
+  upsertBranchContentFromLive: vi.fn().mockResolvedValue({
+    title: "Imported resume",
+    consultantTitle: "Senior Engineer",
+    presentation: ["Expert in TypeScript"],
+    summary: null,
+    highlightedItems: [],
+    language: "en",
+    skillGroups: [],
+    skills: [],
+    assignments: [],
+  }),
+}));
 
 const EMP_ID = "550e8400-e29b-41d4-a716-446655440011";
 const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440099";
@@ -216,6 +231,15 @@ describe("importCv — resume", () => {
     const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
     expect(updateMock).toHaveBeenCalledWith("resumes");
+    expect(upsertBranchContentFromLive).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        resumeId: MAIN_RESUME.id,
+        branchId: BRANCH_ID,
+        consultantTitle: "Senior Engineer",
+        presentation: ["Expert in TypeScript"],
+      }),
+    );
     expect(result.resumeCreated).toBe(false);
   });
 
@@ -237,7 +261,7 @@ describe("importCv — resume", () => {
     expect(assignmentInsert?.resume_id).toBeUndefined();
   });
 
-  it("skips title/presentation update when title and presentation are empty", async () => {
+  it("still refreshes branch content when title and presentation are empty", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     const cv = {
       ...BASE_CV_JSON,
@@ -245,8 +269,15 @@ describe("importCv — resume", () => {
       assignments: [],
     };
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
-    const updateMock = (db as unknown as { updateTable: ReturnType<typeof vi.fn> }).updateTable;
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(upsertBranchContentFromLive).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        resumeId: MAIN_RESUME.id,
+        branchId: BRANCH_ID,
+        consultantTitle: null,
+        presentation: [],
+      }),
+    );
   });
 });
 

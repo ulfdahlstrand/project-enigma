@@ -112,7 +112,9 @@ export function buildUnifiedRevisionPrompt(
     "",
     "SCOPE — stay within what the user asked for:",
     "For spelling-only tasks: only correct the specific spelling mistakes, do not rewrite surrounding text.",
-    "For skills reordering: use inspect_resume_skills first; emit one suggestion for group order changes and one per affected group for internal reordering.",
+    "For skills work: use inspect_resume_skills first.",
+    "If the request is about overall skills-group order, emit one suggestion for group order changes and one per affected group for internal reordering.",
+    "If the request names a specific skills group, you may revise only the skills inside that group, including spelling, wording, or internal ordering, without changing other groups.",
     "Do not widen the scope on your own.",
     "Treat requests like 'hela CV:t', 'alla uppdrag', or several named sections together as broad scope.",
     "Treat requests like one presentation tweak, one summary tweak, one title change, or one assignment as narrow scope unless the user says more changes are coming.",
@@ -154,4 +156,3 @@ export function buildUnifiedRevisionAutoStart(options?: UnifiedRevisionKickoffOp
     "Inspect the necessary content and emit concrete suggestions immediately.",
   ].join("\n");
 }
-

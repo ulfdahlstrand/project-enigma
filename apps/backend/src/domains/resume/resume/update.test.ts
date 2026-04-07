@@ -5,6 +5,21 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { createUpdateResumeHandler, updateResume } from "./update.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { upsertBranchContentFromLive } from "../lib/upsert-branch-content-from-live.js";
+
+vi.mock("../lib/upsert-branch-content-from-live.js", () => ({
+  upsertBranchContentFromLive: vi.fn().mockResolvedValue({
+    title: "Updated Backend Resume",
+    consultantTitle: "Updated consultant title",
+    presentation: ["Updated presentation"],
+    summary: "Updated summary",
+    highlightedItems: [],
+    language: "en",
+    skillGroups: [],
+    skills: [],
+    assignments: [],
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Unit tests for the updateResume procedure.
@@ -21,8 +36,6 @@ const UPDATED_RESUME_ROW = {
   summary: "Updated summary",
   language: "en",
   is_main: true,
-  consultant_title: null,
-  presentation: [],
   created_at: new Date("2025-01-01T00:00:00.000Z"),
   updated_at: new Date("2025-04-01T00:00:00.000Z"),
 };
@@ -45,10 +58,14 @@ function buildUpdateMock(
   updatedRow: unknown,
   highlightedItemRows: unknown[] = [],
 ) {
-  // Resume lookup (selectFrom resumes for ownership check)
-  const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
-  const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
-  const resumeLookupSelect = vi.fn().mockReturnValue({ where: resumeLookupWhere });
+  const mainBranchLookupExecuteTakeFirst = vi.fn().mockResolvedValue({ id: "main-branch-id" });
+  const mainBranchLookupChain = {
+    select: vi.fn(),
+    where: vi.fn(),
+    executeTakeFirst: mainBranchLookupExecuteTakeFirst,
+  };
+  mainBranchLookupChain.select.mockReturnValue(mainBranchLookupChain);
+  mainBranchLookupChain.where.mockReturnValue(mainBranchLookupChain);
 
   // UPDATE chain
   const executeTakeFirst = vi.fn().mockResolvedValue(updatedRow);
@@ -75,7 +92,7 @@ function buildUpdateMock(
   const transaction = vi.fn().mockReturnValue({ execute: transactionExecute });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "resumes") return { select: resumeLookupSelect };
+    if (table === "resume_branches") return mainBranchLookupChain;
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
@@ -88,7 +105,7 @@ function buildUpdateMock(
     updateWhere,
     returningAll,
     executeTakeFirst,
-    resumeLookupExecuteTakeFirst,
+    mainBranchLookupExecuteTakeFirst,
     deleteFrom,
     insertInto,
     insertValues,
@@ -103,8 +120,15 @@ function buildDbWithEmployeeLookup(
   highlightedItemRows: unknown[] = [],
 ) {
   const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
-  const resumeLookupWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeLookupExecuteTakeFirst });
-  const resumeLookupSelect = vi.fn().mockReturnValue({ where: resumeLookupWhere });
+  const resumeLookupChain = {
+    leftJoin: vi.fn(),
+    select: vi.fn(),
+    where: vi.fn(),
+    executeTakeFirst: resumeLookupExecuteTakeFirst,
+  };
+  resumeLookupChain.leftJoin.mockReturnValue(resumeLookupChain);
+  resumeLookupChain.select.mockReturnValue(resumeLookupChain);
+  resumeLookupChain.where.mockReturnValue(resumeLookupChain);
 
   const executeTakeFirst = vi.fn().mockResolvedValue(updatedRow);
   const returningAll = vi.fn().mockReturnValue({ executeTakeFirst });
@@ -135,7 +159,7 @@ function buildDbWithEmployeeLookup(
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "resumes") return { select: resumeLookupSelect };
+    if (table === "resumes as r") return resumeLookupChain;
     if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
@@ -149,6 +173,23 @@ function buildDbWithEmployeeLookup(
 // ---------------------------------------------------------------------------
 
 describe("updateResume query function", () => {
+  it("uses branch content for consultant title and presentation in output", async () => {
+    const { db } = buildUpdateMock(
+      { employee_id: EMPLOYEE_ID_1 },
+      UPDATED_RESUME_ROW
+    );
+
+    const result = await updateResume(db, MOCK_ADMIN, {
+      id: RESUME_ID,
+      consultantTitle: "Updated consultant title",
+      presentation: ["Updated presentation"],
+    });
+
+    expect(upsertBranchContentFromLive).toHaveBeenCalled();
+    expect(result.consultantTitle).toBe("Updated consultant title");
+    expect(result.presentation).toEqual(["Updated presentation"]);
+  });
+
   it("updates title only and returns the updated resume row", async () => {
     const { db, set } = buildUpdateMock(
       { employee_id: EMPLOYEE_ID_1 },

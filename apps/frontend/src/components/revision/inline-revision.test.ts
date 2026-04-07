@@ -61,7 +61,10 @@ describe("inline revision work items", () => {
       "Inspect the current skills structure with inspect_resume_skills and decide the outcome for this work item only.",
     );
     expect(buildInlineRevisionWorkItemAutomationMessage(workItems)?.message).toContain(
-      "reorder only the skills inside that group",
+      "revise only the skills inside that group",
+    );
+    expect(buildInlineRevisionWorkItemAutomationMessage(workItems)?.message).toContain(
+      "internal ordering changes",
     );
   });
 
@@ -80,7 +83,8 @@ describe("inline revision work items", () => {
     };
 
     const message = buildInlineRevisionWorkItemAutomationMessage(workItems)?.message ?? "";
-    expect(message).toContain("reorder only the skills inside that group");
+    expect(message).toContain("revise only the skills inside that group");
+    expect(message).toContain("internal ordering changes");
     expect(message).not.toContain("This is a broad skills-ordering task.");
     expect(message).not.toContain("set_revision_work_items");
   });
@@ -148,5 +152,25 @@ describe("inline revision work items", () => {
       ...existing,
       summary: incoming.summary,
     });
+  });
+
+  it("allows spelling corrections inside a named skills group", () => {
+    const workItems = {
+      summary: "Proofread skills group",
+      items: [
+        {
+          id: "work-item-specialkunskaper-proofread",
+          title: "Proofread SPECIALKUNSKAPER group",
+          description: "Fix spelling issues inside SPECIALKUNSKAPER without changing other groups.",
+          section: "skills",
+          status: "pending" as const,
+        },
+      ],
+    };
+
+    const message = buildInlineRevisionWorkItemAutomationMessage(workItems)?.message ?? "";
+    expect(message).toContain("revise only the skills inside that group");
+    expect(message).toContain("spelling fixes");
+    expect(message).not.toContain("This is a broad skills-ordering task.");
   });
 });

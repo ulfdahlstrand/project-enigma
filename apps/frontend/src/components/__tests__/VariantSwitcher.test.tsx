@@ -24,10 +24,16 @@ import { VariantSwitcher } from "../VariantSwitcher";
 
 vi.mock("../../hooks/versioning", () => ({
   useResumeBranches: vi.fn(),
+  useForkResumeBranch: vi.fn(),
 }));
 
-import { useResumeBranches } from "../../hooks/versioning";
+import { useForkResumeBranch, useResumeBranches } from "../../hooks/versioning";
 const mockUseResumeBranches = useResumeBranches as ReturnType<typeof vi.fn>;
+const mockUseForkResumeBranch = useForkResumeBranch as ReturnType<typeof vi.fn>;
+const defaultForkMutation = () => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+});
 
 // ---------------------------------------------------------------------------
 // Mock TanStack Router
@@ -76,6 +82,8 @@ function renderSwitcher(resumeId = "resume-id-1", currentBranchId: string | null
 afterEach(() => {
   vi.clearAllMocks();
 });
+
+mockUseForkResumeBranch.mockReturnValue(defaultForkMutation());
 
 // ---------------------------------------------------------------------------
 // Hidden when not enough branches
@@ -131,6 +139,14 @@ describe("Visible state", () => {
     await user.click(screen.getByRole("combobox"));
     expect(await screen.findByText(enCommon.resume.variantSwitcher.manageVariants)).toBeInTheDocument();
   });
+
+  it("shows create variant option inside the dropdown", async () => {
+    mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
+    const user = userEvent.setup();
+    renderSwitcher();
+    await user.click(screen.getByRole("combobox"));
+    expect(await screen.findByText(enCommon.resume.variants.createButton)).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -168,5 +184,47 @@ describe("Branch selection", () => {
     await user.click(option);
 
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("Create variant dialog", () => {
+  it("opens from the dropdown and preselects the active branch as base", async () => {
+    mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
+    const user = userEvent.setup();
+    renderSwitcher("resume-id-1", "branch-id-2");
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: enCommon.resume.variants.createButton }));
+
+    expect(screen.getByRole("heading", { name: enCommon.resume.variants.createDialog.title })).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveTextContent("Swedish");
+  });
+
+  it("creates a branch from the selected base branch and navigates to it", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "branch-id-3" });
+    mockUseForkResumeBranch.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    });
+    mockUseResumeBranches.mockReturnValue({ data: TWO_BRANCHES });
+    const user = userEvent.setup();
+    renderSwitcher("resume-id-1", "branch-id-2");
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: enCommon.resume.variants.createButton }));
+
+    await user.type(screen.getByLabelText(enCommon.resume.variants.createDialog.nameLabel), "New Variant");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.variants.createDialog.create }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      fromCommitId: "commit-2",
+      name: "New Variant",
+      resumeId: "resume-id-1",
+    });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id",
+      params: { id: "resume-id-1" },
+      search: { branchId: "branch-id-3" },
+    });
   });
 });

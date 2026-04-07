@@ -172,6 +172,9 @@
       "ai": {
         "improvePresentation": "Improve presentation with AI"
       },
+      "zoomLabel": "Zoom",
+      "zoomOutLabel": "Zoom out",
+      "zoomInLabel": "Zoom in",
       "assignmentToggleFull": "Show full assignment details",
       "assignmentToggleSummary": "Show compact assignment list",
       "assignmentTechnologies": "Technologies",
@@ -225,6 +228,7 @@
       "skillAddCategoryButton": "Add category",
       "skillsDetailViewTooltip": "Detailed view",
       "skillsListViewTooltip": "List view (reorder categories)",
+      "skillsSortWithinGroupTooltip": "Sort skills in this category",
       "skillsCount_one": "{{count}} skill",
       "skillsCount_other": "{{count}} skills",
       "skillAdding": "Adding…",
@@ -499,6 +503,7 @@
       "suggestionsTitle": "Suggested revisions",
       "suggestionCount": "{{count}} suggestions",
       "reviewSuggestion": "Review",
+      "suggestionsButton": "Suggestions",
       "approveSuggestion": "Approve suggestion",
       "reviewLater": "Review later",
       "reviewDialogTitle": "Review suggested change",

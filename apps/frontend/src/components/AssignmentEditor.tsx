@@ -13,7 +13,6 @@ import Checkbox from "@mui/material/Checkbox";
 import Alert from "@mui/material/Alert";
 import EditIcon from "@mui/icons-material/Edit";
 import { orpc } from "../orpc-client";
-import { ImproveAssignmentFab } from "./ai-assistant/ImproveAssignmentFab";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -183,15 +182,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
     if (String(newEnd) !== String(origEnd)) patch.endDate = newEnd;
 
     updateMutation.mutate(patch);
-  };
-
-  const handleAiAccept = (a: AssignmentRow) => (improvedText: string) => {
-    if (editingId === a.id && draft) {
-      setDraft((prev) => (prev ? { ...prev, description: improvedText } : prev));
-    } else {
-      // id is branch_assignment id
-      updateMutation.mutate({ id: a.id, description: improvedText });
-    }
   };
 
   const setDraftField = <K extends keyof DraftState>(field: K, value: DraftState[K]) => {
@@ -429,24 +419,6 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
           );
         })}
       </Box>
-
-      {canvasEl && assignments.map((a) => {
-        if (editingId === a.id) return null;
-        const top = cardTops.get(a.id);
-        if (top === undefined) return null;
-        return createPortal(
-          <ImproveAssignmentFab
-            key={a.id}
-            assignmentId={a.id}
-            role={a.role}
-            clientName={a.clientName}
-            description={a.description}
-            top={top}
-            onAccept={handleAiAccept(a)}
-          />,
-          canvasEl
-        );
-      })}
     </>
   );
 }

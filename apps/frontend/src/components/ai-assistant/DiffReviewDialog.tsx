@@ -166,7 +166,7 @@ export function DiffReviewDialog<TValue, TResult>({
   discardLabel,
 }: DiffReviewDialogProps<TValue, TResult>) {
   const { t } = useTranslation("common");
-  const [viewMode, setViewMode] = useState<ReviewViewMode>("side-by-side");
+  const [viewMode, setViewMode] = useState<ReviewViewMode>("unified");
   const [draftValue, setDraftValue] = useState(value);
 
   useEffect(() => {
@@ -204,8 +204,8 @@ export function DiffReviewDialog<TValue, TResult>({
           onChange={handleViewChange}
           aria-label={t("aiAssistant.diff.title")}
         >
-          <ToggleButton value="side-by-side">{t("aiAssistant.diff.sideBySide")}</ToggleButton>
           <ToggleButton value="unified">{t("aiAssistant.diff.unified")}</ToggleButton>
+          <ToggleButton value="side-by-side">{t("aiAssistant.diff.sideBySide")}</ToggleButton>
         </ToggleButtonGroup>
       </DialogTitle>
 

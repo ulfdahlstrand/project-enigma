@@ -57,6 +57,10 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
         gap: 2,
         minHeight: 56,
         alignItems: "center",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflowX: "clip",
       }}
     >
       {/* Left: title + chip + breadcrumbs */}
@@ -127,6 +131,7 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
             flexWrap: "wrap",
             justifySelf: { md: "end" },
             gridColumn: { md: 3 },
+            minWidth: 0,
           }}
         >
           {actions}

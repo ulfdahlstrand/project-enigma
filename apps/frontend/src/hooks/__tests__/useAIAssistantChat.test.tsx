@@ -10,6 +10,7 @@ type Message = {
 };
 
 let mockContext: {
+  isOpen: boolean;
   entityType: string | null;
   entityId: string | null;
   systemPrompt: string | null;
@@ -26,6 +27,7 @@ let mockContext: {
 };
 
 let mockConversation: { messages: Message[] } | undefined;
+const mockUseAIConversation = vi.fn();
 
 const mockCreateConversation = {
   mutateAsync: vi.fn(),
@@ -46,10 +48,7 @@ const mockCloseConversation = {
 };
 
 vi.mock("../ai-assistant", () => ({
-  useAIConversation: () => ({
-    data: mockConversation,
-    isError: false,
-  }),
+  useAIConversation: (...args: unknown[]) => mockUseAIConversation(...args),
   useCreateAIConversation: () => mockCreateConversation,
   useSendAIMessage: () => mockSendMessage,
   useCloseAIConversation: () => mockCloseConversation,
@@ -94,6 +93,11 @@ function buildSuggestionMessage(content = "Improved text") {
 describe("useAIAssistantChat", () => {
   beforeEach(() => {
     mockConversation = undefined;
+    mockUseAIConversation.mockReset();
+    mockUseAIConversation.mockImplementation(() => ({
+      data: mockConversation,
+      isError: false,
+    }));
     mockCreateConversation.mutateAsync.mockReset();
     mockCreateConversation.mutateAsync.mockResolvedValue({
       id: "conv-1",
@@ -113,6 +117,7 @@ describe("useAIAssistantChat", () => {
 
     mockCloseConversation.mutate.mockReset();
     mockContext = {
+      isOpen: true,
       entityType: "resume",
       entityId: "resume-1",
       systemPrompt: "You are a helpful assistant.",
@@ -150,6 +155,20 @@ describe("useAIAssistantChat", () => {
     });
 
     expect(mockContext.setActiveConversationId).toHaveBeenCalledWith("conv-1");
+    expect(mockUseAIConversation).toHaveBeenCalledWith(null, {
+      pollingEnabled: true,
+    });
+  });
+
+  it("disables conversation polling when the assistant is hidden", () => {
+    mockContext.isOpen = false;
+    mockContext.activeConversationId = "conv-1";
+
+    renderHook(() => useAIAssistantChat());
+
+    expect(mockUseAIConversation).toHaveBeenCalledWith("conv-1", {
+      pollingEnabled: false,
+    });
   });
 
   it("hides internal tool payload messages from the visible chat transcript", async () => {
