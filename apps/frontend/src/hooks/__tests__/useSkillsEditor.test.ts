@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNextSkillSortOrder } from "../useSkillsEditor";
+import { getNextSkillSortOrder, reorderSkillsByIds, reorderSkillsInGroup } from "../useSkillsEditor";
 
 const sortedCategories = [
   {
@@ -39,5 +39,31 @@ describe("getNextSkillSortOrder", () => {
 
   it("places a brand-new category after the existing ordered categories", () => {
     expect(getNextSkillSortOrder(sortedCategories as any, "group-architecture")).toBe(2002);
+  });
+});
+
+describe("reorderSkillsInGroup", () => {
+  it("moves a skill up within its group without affecting other groups", () => {
+    const reordered = reorderSkillsInGroup(sortedCategories as any, "group-test", "4", "up");
+
+    expect(reordered.map((skill) => ({ id: skill.id, sortOrder: skill.sortOrder }))).toEqual([
+      { id: "4", sortOrder: 0 },
+      { id: "3", sortOrder: 1 },
+    ]);
+  });
+
+  it("returns an empty array when the move is not possible", () => {
+    expect(reorderSkillsInGroup(sortedCategories as any, "group-dev", "1", "up")).toEqual([]);
+  });
+});
+
+describe("reorderSkillsByIds", () => {
+  it("reorders skills within the given group based on explicit ids", () => {
+    const reordered = reorderSkillsByIds(sortedCategories as any, "group-dev", ["2", "1"]);
+
+    expect(reordered.map((skill) => ({ id: skill.id, sortOrder: skill.sortOrder }))).toEqual([
+      { id: "2", sortOrder: 0 },
+      { id: "1", sortOrder: 1 },
+    ]);
   });
 });

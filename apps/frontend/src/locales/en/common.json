@@ -228,6 +228,7 @@
       "skillAddCategoryButton": "Add category",
       "skillsDetailViewTooltip": "Detailed view",
       "skillsListViewTooltip": "List view (reorder categories)",
+      "skillsSortWithinGroupTooltip": "Sort skills in this category",
       "skillsCount_one": "{{count}} skill",
       "skillsCount_other": "{{count}} skills",
       "skillAdding": "Adding…",

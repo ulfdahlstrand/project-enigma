@@ -9,6 +9,7 @@
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
  */
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
@@ -25,7 +26,10 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import SortIcon from "@mui/icons-material/Sort";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
+import Button from "@mui/material/Button";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
 import {
@@ -59,6 +63,9 @@ export function SkillsEditor({ resumeId, skillGroups, skills, queryKey }: Skills
   const { t } = useTranslation("common");
   const editor = useSkillsEditor({ resumeId, skillGroups, skills, queryKey });
   const pageTopOffset = RESUME_PAGE_HEADER_HEIGHT + RESUME_PAGE_VERTICAL_PADDING;
+  const [sortingGroupId, setSortingGroupId] = useState<string | null>(null);
+  const [draggingSkillId, setDraggingSkillId] = useState<string | null>(null);
+  const [draftSkillOrder, setDraftSkillOrder] = useState<Record<string, string[]>>({});
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -94,17 +101,7 @@ export function SkillsEditor({ resumeId, skillGroups, skills, queryKey }: Skills
       );
     }
 
-    return (
-      <Chip
-        key={skill.id}
-        label={skill.name}
-        size="small"
-        variant="outlined"
-        onClick={() => editor.startEditing(skill)}
-        onDelete={() => editor.deleteMutation.mutate(skill.id)}
-        sx={{ fontSize: "0.75rem", cursor: "pointer", maxWidth: "100%" }}
-      />
-    );
+    return null;
   };
 
   const renderAddSkillInput = (groupId: string) => (
@@ -135,7 +132,14 @@ export function SkillsEditor({ resumeId, skillGroups, skills, queryKey }: Skills
     </Box>
   );
 
-  const renderCategoryBlock = (groupId: string, cat: string, catSkills: SkillRow[]) => (
+  const renderCategoryBlock = (groupId: string, cat: string, catSkills: SkillRow[]) => {
+    const isSorting = sortingGroupId === groupId;
+    const orderedSkillIds = draftSkillOrder[groupId] ?? catSkills.map((skill) => skill.id);
+    const orderedSkills = orderedSkillIds
+      .map((skillId: string) => catSkills.find((skill: SkillRow) => skill.id === skillId))
+      .filter((skill): skill is SkillRow => Boolean(skill));
+
+    return (
     <Box key={groupId} sx={{ mb: 2.5, minWidth: 0 }}>
       <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
         <Typography
@@ -149,13 +153,131 @@ export function SkillsEditor({ resumeId, skillGroups, skills, queryKey }: Skills
             <AddIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
+        <Tooltip title={t("resume.edit.skillsSortWithinGroupTooltip")}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              if (isSorting) {
+                setSortingGroupId(null);
+                setDraftSkillOrder((current) => {
+                  const next = { ...current };
+                  delete next[groupId];
+                  return next;
+                });
+                return;
+              }
+
+              setSortingGroupId(groupId);
+              setDraftSkillOrder((current) => ({
+                ...current,
+                [groupId]: catSkills.map((skill) => skill.id),
+              }));
+            }}
+            sx={{ p: 0.25 }}
+          >
+            <SortIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
+      {isSorting ? (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          {orderedSkills.map((skill) => (
+            <Box
+              key={skill.id}
+              draggable
+              onDragStart={() => setDraggingSkillId(skill.id)}
+              onDragEnd={() => setDraggingSkillId(null)}
+              onDragOver={(event) => {
+                event.preventDefault();
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (!draggingSkillId || draggingSkillId === skill.id) return;
+
+                const currentOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate: SkillRow) => candidate.id);
+                const nextOrder = currentOrder.filter((id: string) => id !== draggingSkillId);
+                const dropIndex = nextOrder.indexOf(skill.id);
+                nextOrder.splice(dropIndex, 0, draggingSkillId);
+                setDraftSkillOrder((current: Record<string, string[]>) => ({ ...current, [groupId]: nextOrder }));
+              }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1,
+                py: 0.75,
+                border: "1px solid",
+                borderColor: draggingSkillId === skill.id ? "primary.main" : "divider",
+                bgcolor: "background.paper",
+                cursor: "grab",
+              }}
+            >
+              <DragIndicatorIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {skill.name}
+              </Typography>
+            </Box>
+          ))}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 0.5 }}>
+            <Button
+              size="small"
+              onClick={() => {
+                setSortingGroupId(null);
+                setDraftSkillOrder((current: Record<string, string[]>) => {
+                  const next = { ...current };
+                  delete next[groupId];
+                  return next;
+                });
+              }}
+            >
+              {t("resume.edit.skillCancelButton")}
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              disabled={editor.isReordering}
+              onClick={() => {
+                const nextOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate: SkillRow) => candidate.id);
+                void editor.reorderSkills(groupId, nextOrder).then(() => {
+                  setSortingGroupId(null);
+                  setDraftSkillOrder((current: Record<string, string[]>) => {
+                    const next = { ...current };
+                    delete next[groupId];
+                    return next;
+                  });
+                });
+              }}
+            >
+              {t("resume.edit.skillSaveButton")}
+            </Button>
+          </Box>
+        </Box>
+      ) : (
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-        {catSkills.map(renderSkill)}
+        {catSkills.map((skill) => {
+          if (editor.editingSkillId === skill.id) {
+            return renderSkill(skill);
+          }
+
+          return (
+            <Box key={skill.id} sx={{ display: "flex", alignItems: "center", maxWidth: "100%" }}>
+              <Chip
+                label={skill.name}
+                size="small"
+                variant="outlined"
+                onClick={() => editor.startEditing(skill)}
+                onDelete={() => editor.deleteMutation.mutate(skill.id)}
+                sx={{ fontSize: "0.75rem", cursor: "pointer", maxWidth: "100%" }}
+              />
+            </Box>
+          );
+        })}
         {editor.addingToCategory === groupId && renderAddSkillInput(groupId)}
       </Box>
+      )}
     </Box>
   );
+  };
 
   // ---------------------------------------------------------------------------
   // View toggle

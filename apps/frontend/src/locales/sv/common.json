@@ -228,6 +228,7 @@
       "skillAddCategoryButton": "Lägg till kategori",
       "skillsDetailViewTooltip": "Detaljvy",
       "skillsListViewTooltip": "Listvy (ordna kategorier)",
+      "skillsSortWithinGroupTooltip": "Sortera kompetenser i kategorin",
       "skillsCount_one": "{{count}} kompetens",
       "skillsCount_other": "{{count}} kompetenser",
       "skillAdding": "Lägger till…",

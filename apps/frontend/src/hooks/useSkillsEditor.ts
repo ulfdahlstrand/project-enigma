@@ -23,6 +23,55 @@ export function getNextSkillSortOrder(groups: SkillCategoryRow[], groupId: strin
   return group.skills.reduce((max, skill) => Math.max(max, skill.sortOrder), -1) + 1;
 }
 
+export function reorderSkillsInGroup(
+  groups: SkillCategoryRow[],
+  groupId: string,
+  skillId: string,
+  direction: "up" | "down",
+): SkillRow[] {
+  const group = groups.find((candidate) => candidate.id === groupId);
+  if (!group) return [];
+
+  const currentIndex = group.skills.findIndex((skill) => skill.id === skillId);
+  if (currentIndex === -1) return [];
+
+  const swapIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  if (swapIndex < 0 || swapIndex >= group.skills.length) return [];
+
+  const reordered = [...group.skills];
+  const current = reordered[currentIndex]!;
+  reordered[currentIndex] = reordered[swapIndex]!;
+  reordered[swapIndex] = current;
+
+  return reordered.map((skill, index) => ({
+    ...skill,
+    sortOrder: index,
+  }));
+}
+
+export function reorderSkillsByIds(
+  groups: SkillCategoryRow[],
+  groupId: string,
+  orderedSkillIds: string[],
+): SkillRow[] {
+  const group = groups.find((candidate) => candidate.id === groupId);
+  if (!group) return [];
+
+  const skillById = new Map(group.skills.map((skill) => [skill.id, skill]));
+  const reordered = orderedSkillIds
+    .map((id) => skillById.get(id))
+    .filter((skill): skill is SkillRow => Boolean(skill));
+
+  if (reordered.length !== group.skills.length) {
+    return [];
+  }
+
+  return reordered.map((skill, index) => ({
+    ...skill,
+    sortOrder: index,
+  }));
+}
+
 function buildSkillGroups(skillGroups: SkillGroupRow[], skills: SkillRow[]): SkillCategoryRow[] {
   const groups = new Map<string, SkillCategoryRow>();
 
@@ -204,6 +253,40 @@ export function useSkillsEditor({ resumeId, skillGroups, skills, queryKey }: Use
     }
   };
 
+  const handleMoveSkill = async (groupId: string, skillId: string, direction: "up" | "down") => {
+    const reorderedSkills = reorderSkillsInGroup(sortedCategories, groupId, skillId, direction);
+    if (reorderedSkills.length === 0) return;
+
+    setIsReordering(true);
+    try {
+      await Promise.all(
+        reorderedSkills.map((skill, index) =>
+          orpc.updateResumeSkill({ id: skill.id, sortOrder: index }),
+        ),
+      );
+      await invalidate();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const reorderSkills = async (groupId: string, orderedSkillIds: string[]) => {
+    const reorderedSkills = reorderSkillsByIds(sortedCategories, groupId, orderedSkillIds);
+    if (reorderedSkills.length === 0) return;
+
+    setIsReordering(true);
+    try {
+      await Promise.all(
+        reorderedSkills.map((skill, index) =>
+          orpc.updateResumeSkill({ id: skill.id, sortOrder: index }),
+        ),
+      );
+      await invalidate();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   return {
     view, setView,
     editingSkillId, setEditingSkillId,
@@ -219,5 +302,7 @@ export function useSkillsEditor({ resumeId, skillGroups, skills, queryKey }: Use
     startEditing, commitEdit,
     startAddingToCategory, commitAddToCategory, commitAddCategory,
     handleMoveCategory,
+    handleMoveSkill,
+    reorderSkills,
   };
 }
