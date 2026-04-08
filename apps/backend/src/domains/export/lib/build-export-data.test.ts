@@ -19,6 +19,7 @@ const RESUME_ROW = {
   employee_id: EMPLOYEE_ID,
   summary: null,
   language: "en",
+  branch_name: "default",
   head_commit_id: COMMIT_ID,
   forked_from_commit_id: null,
 };
@@ -89,6 +90,11 @@ const COMMIT_ROW = {
   content: COMMIT_CONTENT,
 };
 
+const BRANCH_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440061",
+  name: "default",
+};
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -101,6 +107,7 @@ function buildDbMock(opts: {
   educationRows?: unknown[];
   highlightedItemRows?: unknown[];
   commitRow?: unknown;
+  branchRow?: unknown;
   resolveEmployeeId?: string | null;
 } = {}) {
   const {
@@ -111,6 +118,7 @@ function buildDbMock(opts: {
     educationRows = EDUCATION_ROWS,
     highlightedItemRows = HIGHLIGHTED_ITEM_ROWS,
     commitRow = COMMIT_ROW,
+    branchRow = BRANCH_ROW,
     resolveEmployeeId = null,
   } = opts;
 
@@ -148,6 +156,10 @@ function buildDbMock(opts: {
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExec });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
+  const branchExec = vi.fn().mockResolvedValue(branchRow);
+  const branchWhere = vi.fn().mockReturnValue({ executeTakeFirst: branchExec });
+  const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
+
   // Skills chain
   const skillsExec = vi.fn().mockResolvedValue(skillRows);
   const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExec });
@@ -184,6 +196,7 @@ function buildDbMock(opts: {
     if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
     if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
+    if (table === "resume_branches") return { select: branchSelect };
     if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
     if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
     if (table === "education") return { selectAll: eduSelectAll };
@@ -210,6 +223,7 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.resumeId).toBe(RESUME_ID);
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
+    expect(result.branchName).toBe("default");
     expect(result.consultantTitle).toBe("Tech Lead");
     expect(result.presentation).toEqual(["Expert consultant"]);
     expect(result.skills).toHaveLength(1);
@@ -255,9 +269,10 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
   it("returns data from commit snapshot, not live tables", async () => {
     const { db } = buildDbMock({ commitRow: COMMIT_ROW });
 
-    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID);
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID, BRANCH_ROW.id);
 
     expect(result.commitId).toBe(COMMIT_ID);
+    expect(result.branchName).toBe("default");
     expect(result.profileImageDataUrl).toBe("data:image/png;base64,display");
     expect(result.language).toBe("sv");
     expect(result.consultantTitle).toBe("Tech Lead");

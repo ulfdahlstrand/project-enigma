@@ -4,6 +4,8 @@ export const exportResumeMarkdownInputSchema = z.object({
   resumeId: z.string().uuid(),
   /** Optional: export from a specific commit snapshot instead of live data. */
   commitId: z.string().uuid().optional(),
+  /** Optional UI branch context for export filename naming. */
+  branchId: z.string().uuid().optional(),
 });
 
 export const exportResumeMarkdownOutputSchema = z.object({
@@ -16,6 +18,8 @@ export const exportResumePdfInputSchema = z.object({
   resumeId: z.string().uuid(),
   /** Optional: export from a specific commit snapshot instead of live data. */
   commitId: z.string().uuid().optional(),
+  /** Optional UI branch context for export filename naming. */
+  branchId: z.string().uuid().optional(),
 });
 
 export const exportResumePdfOutputSchema = z.object({
@@ -29,6 +33,8 @@ export const exportResumeDocxInputSchema = z.object({
   resumeId: z.string().uuid(),
   /** Optional: export from a specific commit snapshot instead of live data. */
   commitId: z.string().uuid().optional(),
+  /** Optional UI branch context for export filename naming. */
+  branchId: z.string().uuid().optional(),
 });
 
 export const exportResumeDocxOutputSchema = z.object({

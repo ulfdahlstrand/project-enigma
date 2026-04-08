@@ -5,6 +5,7 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { buildExportData } from "../lib/build-export-data.js";
+import { buildExportFilename } from "../lib/build-export-filename.js";
 import { getPdfTranslations } from "./pdf-translations.js";
 import { toQuarter } from "@cv-tool/utils";
 import { readFileSync } from "fs";
@@ -341,10 +342,6 @@ function buildTechBox(rows: Array<{ label: string; value: string }>): Table {
   });
 }
 
-function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
-
 // ---------------------------------------------------------------------------
 // Footer — SthlmTech logo right-aligned (mirrors PDF footer)
 // ---------------------------------------------------------------------------
@@ -453,9 +450,10 @@ export async function exportResumeDocx(
   db: Kysely<Database>,
   user: AuthUser,
   resumeId: string,
-  commitId?: string
+  commitId?: string,
+  branchId?: string,
 ): Promise<{ docx: string; filename: string; referenceId: string }> {
-  const data = await buildExportData(db, user, resumeId, commitId);
+  const data = await buildExportData(db, user, resumeId, commitId, branchId);
 
   const { name, consultantTitle, language, profileImageDataUrl, presentation, summary, highlightedItems, skills, assignments, education } = data;
   const t = getPdfTranslations(language);
@@ -609,7 +607,13 @@ export async function exportResumeDocx(
   });
 
   const buffer = await Packer.toBuffer(doc);
-  const filename = `${slug(name)}-${language}-cv.docx`;
+  const filename = buildExportFilename({
+    consultantName: name,
+    company: "SthlmTech",
+    language,
+    branchName: data.branchName,
+    extension: "docx",
+  });
 
   const record = await db
     .insertInto("export_records")
@@ -638,5 +642,6 @@ export const exportResumeDocxHandler = implement(
   contract.exportResumeDocx
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return exportResumeDocx(getDb(), user, input.resumeId, input.commitId);
+  const exportInput = input as typeof input & { branchId?: string };
+  return exportResumeDocx(getDb(), user, exportInput.resumeId, exportInput.commitId, exportInput.branchId);
 });

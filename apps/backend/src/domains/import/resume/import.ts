@@ -58,7 +58,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .insertInto("resume_branches")
       .values({
         resume_id: resumeId,
-        name: "main",
+        name: "default",
         language,
         is_main: true,
       })
