@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { computeGraphLayout, getReachableCommitIds } from "./history-graph-utils.js";
+import {
+  computeGraphLayout,
+  getReachableCommitIds,
+  shouldRenderBranchLane,
+} from "./history-graph-utils.js";
 import type { GraphBranch, GraphCommit, GraphEdge } from "./history-graph-utils.js";
 
 function branch(
@@ -49,6 +53,20 @@ describe("getReachableCommitIds", () => {
 
   it("returns an empty set when the branch has no head commit", () => {
     expect([...getReachableCommitIds(null, [])]).toEqual([]);
+  });
+});
+
+describe("shouldRenderBranchLane", () => {
+  it("returns false for branches that do not yet have any commits", () => {
+    expect(shouldRenderBranchLane([])).toBe(false);
+  });
+
+  it("returns true once a branch has at least one commit", () => {
+    expect(
+      shouldRenderBranchLane([
+        commit({ id: "c1", createdAt: "2024-01-01T00:00:00Z" }),
+      ]),
+    ).toBe(true);
   });
 });
 
