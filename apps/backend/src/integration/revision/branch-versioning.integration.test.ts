@@ -141,7 +141,6 @@ describe("revision branch versioning integration", () => {
       })
     );
 
-    expect(savedCommit.branchId).toBe(forkedBranch.id);
     expect(savedCommit.parentCommitId).toBe(forkedBranch.headCommitId);
     expect(savedCommit.message).toBe("Apply AI suggestion: Fix assignment spelling");
     expect(savedCommit.content.assignments[0]?.description).toBe("Built things with typo.");

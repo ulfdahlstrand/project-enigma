@@ -441,10 +441,9 @@ export function useInlineResumeRevision({
       queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
     ]).then(() =>
       navigate({
-        to: "/resumes/$id/edit",
-        params: { id: resumeId },
+        to: "/resumes/$id/edit/branch/$branchId",
+        params: { id: resumeId, branchId: branchHandoff.branchId },
         search: {
-          branchId: branchHandoff.branchId,
           assistant: "true",
           sourceBranchId: activeBranchId ?? undefined,
           sourceBranchName: activeBranchName,

@@ -8,8 +8,13 @@ import { sql } from "kysely";
 // pointer to a HEAD commit, with an optional fork point for tracing history
 // across variants.
 //
-// Also completes the circular FK by adding resume_commits.branch_id as a
-// DEFERRABLE FK. This allows inserting both rows in a single transaction
+// Historical note:
+//   This migration also completed the old circular FK by adding a DEFERRABLE
+//   FK from resume_commits.branch_id to resume_branches. That legacy commit
+//   column is dropped by a later cleanup migration once branch refs and commit
+//   ancestry live entirely in resume_branches + resume_commit_parents.
+//
+// This originally allowed inserting both rows in a single transaction
 // (branch with NULL head_commit_id, then commit, then updating head_commit_id)
 // without violating FK constraints mid-transaction.
 // ---------------------------------------------------------------------------
@@ -59,7 +64,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     WHERE is_main = true
   `.execute(db);
 
-  // Complete the circular FK: resume_commits.branch_id → resume_branches
+  // Complete the original circular FK: resume_commits.branch_id → resume_branches
   // DEFERRABLE INITIALLY DEFERRED allows the insert pattern:
   //   BEGIN; INSERT branch (head=NULL); INSERT commit (branch_id=X);
   //   UPDATE branch SET head_commit_id=Y; COMMIT;

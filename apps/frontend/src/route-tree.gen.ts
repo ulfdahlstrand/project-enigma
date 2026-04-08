@@ -23,6 +23,10 @@ import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './route
 import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes/_authenticated/resumes/$id_/history/index'
 import { Route as AuthenticatedResumesIdEditIndexRouteImport } from './routes/_authenticated/resumes/$id_/edit/index'
 import { Route as AuthenticatedResumesIdCompareIndexRouteImport } from './routes/_authenticated/resumes/$id_/compare/index'
+import { Route as AuthenticatedResumesIdCommitCommitIdRouteImport } from './routes/_authenticated/resumes/$id_/commit/$commitId'
+import { Route as AuthenticatedResumesIdBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/branch/$branchId'
+import { Route as AuthenticatedResumesIdHistoryBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/history/branch/$branchId'
+import { Route as AuthenticatedResumesIdEditBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/edit/branch/$branchId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -102,6 +106,30 @@ const AuthenticatedResumesIdCompareIndexRoute =
     path: '/resumes/$id/compare/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedResumesIdCommitCommitIdRoute =
+  AuthenticatedResumesIdCommitCommitIdRouteImport.update({
+    id: '/resumes/$id_/commit/$commitId',
+    path: '/resumes/$id/commit/$commitId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdBranchBranchIdRoute =
+  AuthenticatedResumesIdBranchBranchIdRouteImport.update({
+    id: '/resumes/$id_/branch/$branchId',
+    path: '/resumes/$id/branch/$branchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdHistoryBranchBranchIdRoute =
+  AuthenticatedResumesIdHistoryBranchBranchIdRouteImport.update({
+    id: '/resumes/$id_/history/branch/$branchId',
+    path: '/resumes/$id/history/branch/$branchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResumesIdEditBranchBranchIdRoute =
+  AuthenticatedResumesIdEditBranchBranchIdRouteImport.update({
+    id: '/resumes/$id_/edit/branch/$branchId',
+    path: '/resumes/$id/edit/branch/$branchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,10 +141,14 @@ export interface FileRoutesByFullPath {
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/resumes/': typeof AuthenticatedResumesIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
+  '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
+  '/resumes/$id/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
+  '/resumes/$id/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -128,10 +160,14 @@ export interface FileRoutesByTo {
   '/employees': typeof AuthenticatedEmployeesIndexRoute
   '/resumes': typeof AuthenticatedResumesIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
+  '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/edit': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/history': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/variants': typeof AuthenticatedResumesIdVariantsIndexRoute
+  '/resumes/$id/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
+  '/resumes/$id/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -145,10 +181,14 @@ export interface FileRoutesById {
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
   '/_authenticated/employees/$id_/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/_authenticated/resumes/$id_/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
+  '/_authenticated/resumes/$id_/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/_authenticated/resumes/$id_/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/_authenticated/resumes/$id_/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/_authenticated/resumes/$id_/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
+  '/_authenticated/resumes/$id_/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
+  '/_authenticated/resumes/$id_/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -162,10 +202,14 @@ export interface FileRouteTypes {
     | '/employees/'
     | '/resumes/'
     | '/employees/$id/import'
+    | '/resumes/$id/branch/$branchId'
+    | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare/'
     | '/resumes/$id/edit/'
     | '/resumes/$id/history/'
     | '/resumes/$id/variants/'
+    | '/resumes/$id/edit/branch/$branchId'
+    | '/resumes/$id/history/branch/$branchId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,10 +221,14 @@ export interface FileRouteTypes {
     | '/employees'
     | '/resumes'
     | '/employees/$id/import'
+    | '/resumes/$id/branch/$branchId'
+    | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare'
     | '/resumes/$id/edit'
     | '/resumes/$id/history'
     | '/resumes/$id/variants'
+    | '/resumes/$id/edit/branch/$branchId'
+    | '/resumes/$id/history/branch/$branchId'
   id:
     | '__root__'
     | '/'
@@ -193,10 +241,14 @@ export interface FileRouteTypes {
     | '/_authenticated/employees/'
     | '/_authenticated/resumes/'
     | '/_authenticated/employees/$id_/import'
+    | '/_authenticated/resumes/$id_/branch/$branchId'
+    | '/_authenticated/resumes/$id_/commit/$commitId'
     | '/_authenticated/resumes/$id_/compare/'
     | '/_authenticated/resumes/$id_/edit/'
     | '/_authenticated/resumes/$id_/history/'
     | '/_authenticated/resumes/$id_/variants/'
+    | '/_authenticated/resumes/$id_/edit/branch/$branchId'
+    | '/_authenticated/resumes/$id_/history/branch/$branchId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -305,6 +357,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResumesIdCompareIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/resumes/$id_/commit/$commitId': {
+      id: '/_authenticated/resumes/$id_/commit/$commitId'
+      path: '/resumes/$id/commit/$commitId'
+      fullPath: '/resumes/$id/commit/$commitId'
+      preLoaderRoute: typeof AuthenticatedResumesIdCommitCommitIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/resumes/$id_/branch/$branchId': {
+      id: '/_authenticated/resumes/$id_/branch/$branchId'
+      path: '/resumes/$id/branch/$branchId'
+      fullPath: '/resumes/$id/branch/$branchId'
+      preLoaderRoute: typeof AuthenticatedResumesIdBranchBranchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/resumes/$id_/history/branch/$branchId': {
+      id: '/_authenticated/resumes/$id_/history/branch/$branchId'
+      path: '/resumes/$id/history/branch/$branchId'
+      fullPath: '/resumes/$id/history/branch/$branchId'
+      preLoaderRoute: typeof AuthenticatedResumesIdHistoryBranchBranchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/resumes/$id_/edit/branch/$branchId': {
+      id: '/_authenticated/resumes/$id_/edit/branch/$branchId'
+      path: '/resumes/$id/edit/branch/$branchId'
+      fullPath: '/resumes/$id/edit/branch/$branchId'
+      preLoaderRoute: typeof AuthenticatedResumesIdEditBranchBranchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -316,10 +396,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
   AuthenticatedResumesIndexRoute: typeof AuthenticatedResumesIndexRoute
   AuthenticatedEmployeesIdImportRoute: typeof AuthenticatedEmployeesIdImportRoute
+  AuthenticatedResumesIdBranchBranchIdRoute: typeof AuthenticatedResumesIdBranchBranchIdRoute
+  AuthenticatedResumesIdCommitCommitIdRoute: typeof AuthenticatedResumesIdCommitCommitIdRoute
   AuthenticatedResumesIdCompareIndexRoute: typeof AuthenticatedResumesIdCompareIndexRoute
   AuthenticatedResumesIdEditIndexRoute: typeof AuthenticatedResumesIdEditIndexRoute
   AuthenticatedResumesIdHistoryIndexRoute: typeof AuthenticatedResumesIdHistoryIndexRoute
   AuthenticatedResumesIdVariantsIndexRoute: typeof AuthenticatedResumesIdVariantsIndexRoute
+  AuthenticatedResumesIdEditBranchBranchIdRoute: typeof AuthenticatedResumesIdEditBranchBranchIdRoute
+  AuthenticatedResumesIdHistoryBranchBranchIdRoute: typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -330,6 +414,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,
   AuthenticatedResumesIndexRoute: AuthenticatedResumesIndexRoute,
   AuthenticatedEmployeesIdImportRoute: AuthenticatedEmployeesIdImportRoute,
+  AuthenticatedResumesIdBranchBranchIdRoute:
+    AuthenticatedResumesIdBranchBranchIdRoute,
+  AuthenticatedResumesIdCommitCommitIdRoute:
+    AuthenticatedResumesIdCommitCommitIdRoute,
   AuthenticatedResumesIdCompareIndexRoute:
     AuthenticatedResumesIdCompareIndexRoute,
   AuthenticatedResumesIdEditIndexRoute: AuthenticatedResumesIdEditIndexRoute,
@@ -337,6 +425,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedResumesIdHistoryIndexRoute,
   AuthenticatedResumesIdVariantsIndexRoute:
     AuthenticatedResumesIdVariantsIndexRoute,
+  AuthenticatedResumesIdEditBranchBranchIdRoute:
+    AuthenticatedResumesIdEditBranchBranchIdRoute,
+  AuthenticatedResumesIdHistoryBranchBranchIdRoute:
+    AuthenticatedResumesIdHistoryBranchBranchIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

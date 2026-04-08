@@ -29,7 +29,7 @@ export const resumeCommitDiffKey = (
 // Query hooks
 // ---------------------------------------------------------------------------
 
-/** Lists all commits for a branch in reverse chronological order. */
+/** Lists all commits reachable from a branch head in reverse chronological order. */
 export function useResumeCommits(branchId: string) {
   return useQuery({
     queryKey: resumeCommitsKey(branchId),

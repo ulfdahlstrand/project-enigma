@@ -23,6 +23,7 @@ interface ResumeSkillsPageProps {
   languages: string[];
   isEditing: boolean;
   isSnapshotMode: boolean;
+  activeBranchId: string | null;
   resumeId: string;
   queryKey: readonly unknown[];
   sectionRef?: RefObject<HTMLDivElement | null>;
@@ -41,6 +42,7 @@ export function ResumeSkillsPage({
   languages,
   isEditing,
   isSnapshotMode,
+  activeBranchId,
   resumeId,
   queryKey,
   sectionRef,
@@ -75,9 +77,10 @@ export function ResumeSkillsPage({
     >
       <Box sx={{ position: "relative" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
-        {isEditing ? (
+        {isEditing && !isSnapshotMode ? (
           <SkillsEditor
             resumeId={resumeId}
+            branchId={activeBranchId}
             skillGroups={skillGroups}
             skills={skills}
             queryKey={queryKey}

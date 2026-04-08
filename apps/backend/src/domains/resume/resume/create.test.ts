@@ -42,7 +42,6 @@ const NEW_BRANCH_ROW = {
 const ROOT_COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
-  branch_id: BRANCH_ID,
   parent_commit_id: null,
   content: {},
   message: "initial",
@@ -186,7 +185,6 @@ describe("createResume query function", () => {
     expect(commitInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         resume_id: RESUME_ID,
-        branch_id: BRANCH_ID,
         message: "initial",
         created_by: MOCK_ADMIN.id,
       })

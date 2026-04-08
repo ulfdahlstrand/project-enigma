@@ -8,6 +8,10 @@ export type GraphBranch = ResumeBranchHistoryGraph["branches"][number];
 export type GraphCommit = ResumeBranchHistoryGraph["commits"][number];
 export type GraphEdge = ResumeBranchHistoryGraph["edges"][number];
 
+export interface GraphLayoutBranch extends GraphBranch {
+  isSynthetic?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Layout constants
 // ---------------------------------------------------------------------------
@@ -41,24 +45,204 @@ export function formatCommitTimestamp(value: string | Date): string {
   return date.toLocaleString();
 }
 
+export function getReachableCommitIds(
+  headCommitId: string | null,
+  graphEdges: GraphEdge[],
+): Set<string> {
+  if (!headCommitId) {
+    return new Set();
+  }
+
+  const parentIdsByCommitId = new Map<string, string[]>();
+  graphEdges.forEach((edge) => {
+    const existing = parentIdsByCommitId.get(edge.commitId) ?? [];
+    parentIdsByCommitId.set(edge.commitId, [...existing, edge.parentCommitId]);
+  });
+
+  const reachable = new Set<string>();
+  const stack = [headCommitId];
+
+  while (stack.length > 0) {
+    const commitId = stack.pop()!;
+    if (reachable.has(commitId)) {
+      continue;
+    }
+
+    reachable.add(commitId);
+    (parentIdsByCommitId.get(commitId) ?? []).forEach((parentCommitId) => {
+      if (!reachable.has(parentCommitId)) {
+        stack.push(parentCommitId);
+      }
+    });
+  }
+
+  return reachable;
+}
+
+export function getReachableCommits(
+  headCommitId: string | null,
+  graphCommits: GraphCommit[],
+  graphEdges: GraphEdge[],
+): GraphCommit[] {
+  if (headCommitId && !graphCommits.some((commit) => commit.id === headCommitId)) {
+    return [];
+  }
+
+  const reachableCommitIds = getReachableCommitIds(headCommitId, graphEdges);
+  return graphCommits.filter((commit) => reachableCommitIds.has(commit.id));
+}
+
 // ---------------------------------------------------------------------------
 // Graph layout computation
 // ---------------------------------------------------------------------------
 
 export interface GraphLayout {
-  orderedBranches: GraphBranch[];
+  orderedBranches: GraphLayoutBranch[];
   orderedCommits: GraphCommit[];
   branchIndexById: Map<string, number>;
   commitIndexById: Map<string, number>;
   branchColorById: Map<string, string>;
   branchCommitsByBranchId: Map<string, GraphCommit[]>;
   commitsById: Map<string, GraphCommit>;
-  rootBranches: GraphBranch[];
+  branchIdByCommitId: Map<string, string>;
+  branchById: Map<string, GraphLayoutBranch>;
+  rootBranches: GraphLayoutBranch[];
   forkCommitIds: Set<string>;
   mergeEdges: GraphEdge[];
   labelColumnX: number;
   width: number;
   height: number;
+}
+
+function getFirstParentIdByCommitId(
+  graphCommits: GraphCommit[],
+  graphEdges: GraphEdge[],
+): Map<string, string | null> {
+  const firstParentIdByCommitId = new Map<string, string | null>(
+    graphCommits.map((commit) => [commit.id, commit.parentCommitId ?? null]),
+  );
+
+  graphEdges
+    .filter((edge) => edge.parentOrder === 0)
+    .forEach((edge) => {
+      firstParentIdByCommitId.set(edge.commitId, edge.parentCommitId);
+    });
+
+  return firstParentIdByCommitId;
+}
+
+function deriveBranchAssignments(
+  branches: GraphBranch[],
+  graphCommits: GraphCommit[],
+  graphEdges: GraphEdge[],
+): {
+  orderedLayoutBranches: GraphLayoutBranch[];
+  branchIdByCommitId: Map<string, string>;
+  branchCommitsByBranchId: Map<string, GraphCommit[]>;
+} {
+  const sortedBranches = sortByCreatedAt(branches);
+  const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
+  const firstParentIdByCommitId = getFirstParentIdByCommitId(graphCommits, graphEdges);
+  const branchIdByCommitId = new Map<string, string>();
+  const mergeChildCommitIdsByParentCommitId = new Map<string, string[]>();
+
+  graphEdges
+    .filter((edge) => edge.parentOrder > 0)
+    .forEach((edge) => {
+      const existing = mergeChildCommitIdsByParentCommitId.get(edge.parentCommitId) ?? [];
+      mergeChildCommitIdsByParentCommitId.set(edge.parentCommitId, [...existing, edge.commitId]);
+    });
+
+  const assignCommitChainToBranch = (
+    branchId: string,
+    headCommitId: string | null,
+    stopCommitId: string | null,
+  ) => {
+    let currentCommitId = headCommitId;
+
+    while (currentCommitId && currentCommitId !== stopCommitId && !branchIdByCommitId.has(currentCommitId)) {
+      branchIdByCommitId.set(currentCommitId, branchId);
+      currentCommitId = firstParentIdByCommitId.get(currentCommitId) ?? null;
+    }
+  };
+
+  sortedBranches.forEach((branch) => {
+    assignCommitChainToBranch(branch.id, branch.headCommitId, branch.forkedFromCommitId);
+  });
+
+  const unassignedCommits = graphCommits.filter((commit) => !branchIdByCommitId.has(commit.id));
+  const childCommitIdsByFirstParentId = new Map<string, string[]>();
+  firstParentIdByCommitId.forEach((parentCommitId, commitId) => {
+    if (!parentCommitId) return;
+    const existing = childCommitIdsByFirstParentId.get(parentCommitId) ?? [];
+    childCommitIdsByFirstParentId.set(parentCommitId, [...existing, commitId]);
+  });
+
+  const syntheticBranches: GraphLayoutBranch[] = [];
+  const syntheticHeadCommits = sortByCreatedAt(unassignedCommits).reverse().filter((commit) =>
+    !(childCommitIdsByFirstParentId.get(commit.id) ?? []).some((childCommitId) => !branchIdByCommitId.has(childCommitId)),
+  );
+
+  syntheticHeadCommits.forEach((headCommit, index) => {
+    const mergeChildBranchId = (mergeChildCommitIdsByParentCommitId.get(headCommit.id) ?? [])
+      .map((childCommitId) => commitsById.get(childCommitId))
+      .filter((commit): commit is GraphCommit => Boolean(commit))
+      .sort((a, b) => {
+        const aDate = typeof a.createdAt === "string" ? a.createdAt : a.createdAt.toISOString();
+        const bDate = typeof b.createdAt === "string" ? b.createdAt : b.createdAt.toISOString();
+        return bDate.localeCompare(aDate);
+      })
+      .map((commit) => branchIdByCommitId.get(commit.id) ?? null)
+      .find((branchId): branchId is string => branchId !== null);
+
+    if (mergeChildBranchId) {
+      let currentCommitId: string | null = headCommit.id;
+
+      while (currentCommitId && !branchIdByCommitId.has(currentCommitId)) {
+        branchIdByCommitId.set(currentCommitId, mergeChildBranchId);
+        currentCommitId = firstParentIdByCommitId.get(currentCommitId) ?? null;
+      }
+
+      return;
+    }
+
+    const syntheticBranchId = `synthetic-${headCommit.id}`;
+    let currentCommitId: string | null = headCommit.id;
+    let forkedFromCommitId: string | null = null;
+
+    while (currentCommitId && !branchIdByCommitId.has(currentCommitId)) {
+      branchIdByCommitId.set(currentCommitId, syntheticBranchId);
+      const nextCommitId: string | null = firstParentIdByCommitId.get(currentCommitId) ?? null;
+      if (nextCommitId && branchIdByCommitId.has(nextCommitId)) {
+        forkedFromCommitId = nextCommitId;
+        break;
+      }
+      currentCommitId = nextCommitId;
+    }
+
+    syntheticBranches.push({
+      id: syntheticBranchId,
+      resumeId: headCommit.resumeId,
+      name: `Historical branch ${index + 1}`,
+      language: "und",
+      isMain: false,
+      headCommitId: headCommit.id,
+      forkedFromCommitId,
+      createdBy: null,
+      createdAt: headCommit.createdAt,
+      isSynthetic: true,
+    });
+  });
+
+  const orderedLayoutBranches = [...sortedBranches, ...syntheticBranches];
+  const branchCommitsByBranchId = new Map(
+    orderedLayoutBranches.map((branch) => [
+      branch.id,
+      sortByCreatedAt(graphCommits.filter((commit) => branchIdByCommitId.get(commit.id) === branch.id)),
+    ]),
+  );
+
+  return { orderedLayoutBranches, branchIdByCommitId, branchCommitsByBranchId };
 }
 
 export function computeGraphLayout(
@@ -68,16 +252,14 @@ export function computeGraphLayout(
   isDark: boolean,
 ): GraphLayout {
   const treeBranchColors = isDark ? TREE_BRANCH_COLORS_DARK : TREE_BRANCH_COLORS_LIGHT;
-  const sortedBranches = sortByCreatedAt(branches);
   const commitsById = new Map(graphCommits.map((commit) => [commit.id, commit]));
-  const branchCommitsByBranchId = new Map(
-    sortedBranches.map((branch) => [
-      branch.id,
-      sortByCreatedAt(graphCommits.filter((commit) => commit.branchId === branch.id)),
-    ]),
+  const { orderedLayoutBranches, branchIdByCommitId, branchCommitsByBranchId } = deriveBranchAssignments(
+    branches,
+    graphCommits,
+    graphEdges,
   );
   const childBranchesByForkCommitId = new Map<string, GraphBranch[]>();
-  sortedBranches.forEach((branch) => {
+  orderedLayoutBranches.forEach((branch) => {
     if (!branch.forkedFromCommitId) return;
     const existing = childBranchesByForkCommitId.get(branch.forkedFromCommitId) ?? [];
     childBranchesByForkCommitId.set(branch.forkedFromCommitId, [...existing, branch]);
@@ -86,14 +268,14 @@ export function computeGraphLayout(
   // Group all children by their PARENT BRANCH (not by exact fork commit) so that
   // siblings forked from different commits of the same parent are sorted together.
   const childBranchesByParentBranchId = new Map<string, GraphBranch[]>();
-  sortedBranches.forEach((branch) => {
+  orderedLayoutBranches.forEach((branch) => {
     if (!branch.forkedFromCommitId) return;
-    const parentBranchId = commitsById.get(branch.forkedFromCommitId)?.branchId;
+    const parentBranchId = branchIdByCommitId.get(branch.forkedFromCommitId);
     if (!parentBranchId) return;
     const existing = childBranchesByParentBranchId.get(parentBranchId) ?? [];
     childBranchesByParentBranchId.set(parentBranchId, [...existing, branch]);
   });
-  const rootBranches = sortedBranches.filter(
+  const rootBranches = orderedLayoutBranches.filter(
     (branch) => !branch.forkedFromCommitId || !commitsById.has(branch.forkedFromCommitId),
   );
 
@@ -102,9 +284,9 @@ export function computeGraphLayout(
   const mergedBranchIds = new Set<string>();
   for (const e of graphEdges) {
     if (e.parentOrder > 0) {
-      const mergedCommit = commitsById.get(e.parentCommitId);
-      if (mergedCommit?.branchId) {
-        mergedBranchIds.add(mergedCommit.branchId);
+      const mergedBranchId = branchIdByCommitId.get(e.parentCommitId);
+      if (mergedBranchId) {
+        mergedBranchIds.add(mergedBranchId);
       }
     }
   }
@@ -129,11 +311,11 @@ export function computeGraphLayout(
   }
 
   rootBranches.forEach((branch) => pushBranchAndChildren(branch.id));
-  sortedBranches.forEach((branch) => pushBranchAndChildren(branch.id));
+  orderedLayoutBranches.forEach((branch) => pushBranchAndChildren(branch.id));
 
   const orderedBranches = orderedBranchIds
-    .map((branchId) => branches.find((branch) => branch.id === branchId))
-    .filter((branch): branch is GraphBranch => Boolean(branch));
+    .map((branchId) => orderedLayoutBranches.find((branch) => branch.id === branchId))
+    .filter((branch): branch is GraphLayoutBranch => Boolean(branch));
   const orderedCommits = sortByCreatedAt(graphCommits).reverse();
   const commitIndexById = new Map(orderedCommits.map((commit, index) => [commit.id, index]));
 
@@ -182,7 +364,7 @@ export function computeGraphLayout(
     // Start the column search from parentCol + 1 so child is never placed at
     // the same column or to the left of the branch it was forked from.
     const parentBranchId = branch.forkedFromCommitId
-      ? (commitsById.get(branch.forkedFromCommitId)?.branchId ?? null)
+      ? (branchIdByCommitId.get(branch.forkedFromCommitId) ?? null)
       : null;
     const parentCol = parentBranchId !== null ? (branchIndexById.get(parentBranchId) ?? null) : null;
     const minCol = parentCol !== null ? parentCol + 1 : 0;
@@ -222,7 +404,7 @@ export function computeGraphLayout(
 
   orderedBranches.forEach((branch) => {
     if (!branch.forkedFromCommitId) return;
-    const parentBranchId = commitsById.get(branch.forkedFromCommitId)?.branchId;
+    const parentBranchId = branchIdByCommitId.get(branch.forkedFromCommitId);
     if (parentBranchId) addColorAdjacency(branch.id, parentBranchId);
   });
 
@@ -264,7 +446,7 @@ export function computeGraphLayout(
   );
 
   const forkCommitIds = new Set(
-    sortedBranches
+    branches
       .map((b) => b.forkedFromCommitId)
       .filter((id): id is string => id !== null && id !== undefined),
   );
@@ -290,6 +472,8 @@ export function computeGraphLayout(
     branchColorById,
     branchCommitsByBranchId,
     commitsById,
+    branchIdByCommitId,
+    branchById: new Map(orderedBranches.map((branch) => [branch.id, branch])),
     rootBranches,
     forkCommitIds,
     mergeEdges,

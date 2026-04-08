@@ -13,17 +13,29 @@ import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-he
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
-const SOURCE_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
 const NEW_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440032";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
 
+const SNAPSHOT_ASSIGNMENT = {
+  assignmentId: "550e8400-e29b-41d4-a716-446655440051",
+  clientName: "Acme Corp",
+  role: "Engineer",
+  description: "Built things",
+  startDate: "2024-01-01",
+  endDate: null,
+  technologies: [],
+  isCurrent: true,
+  keywords: null,
+  type: null,
+  highlight: true,
+  sortOrder: 0,
+};
+
 const COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
-  source_branch_id: SOURCE_BRANCH_ID,
   employee_id: EMPLOYEE_ID_1,
-  source_language: "sv",
   content: {
     title: "My Resume",
     consultantTitle: "Senior Developer",
@@ -31,7 +43,7 @@ const COMMIT_ROW = {
     summary: "Summary text",
     language: "sv",
     skills: [],
-    assignments: [],
+    assignments: [SNAPSHOT_ASSIGNMENT],
   },
 };
 
@@ -48,7 +60,7 @@ const NEW_BRANCH_ROW = {
 };
 
 const SOURCE_ASSIGNMENTS = [
-  { assignment_id: "550e8400-e29b-41d4-a716-446655440051", highlight: true, sort_order: 0 },
+  { assignment_id: SNAPSHOT_ASSIGNMENT.assignmentId, highlight: true, sort_order: 0 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -58,13 +70,11 @@ const SOURCE_ASSIGNMENTS = [
 function buildDbMock(opts: {
   commitRow?: unknown;
   newBranchRow?: unknown;
-  sourceAssignments?: unknown[];
   employeeId?: string | null;
 } = {}) {
   const {
     commitRow = COMMIT_ROW,
     newBranchRow = NEW_BRANCH_ROW,
-    sourceAssignments = SOURCE_ASSIGNMENTS,
     employeeId = null,
   } = opts;
 
@@ -75,24 +85,16 @@ function buildDbMock(opts: {
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
-  // Commit + resume join + source branch leftJoin (for language)
+  // Commit + resume join
   const commitExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedCommit);
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
-  const commitLeftJoin = vi.fn().mockReturnValue({ select: commitSelect });
-  const commitInnerJoin = vi.fn().mockReturnValue({ leftJoin: commitLeftJoin });
+  const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
 
   // Branch insert (inside transaction)
   const branchInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(newBranchRow);
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
-
-  // Source assignments query — branch_assignments as ba, innerJoin + selectAll + 2 wheres (copy step)
-  const assignmentsExecute = vi.fn().mockResolvedValue(sourceAssignments);
-  const assignmentsWhere2 = vi.fn().mockReturnValue({ execute: assignmentsExecute });
-  const assignmentsWhere1 = vi.fn().mockReturnValue({ where: assignmentsWhere2 });
-  const assignmentsSelectAll = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
-  const assignmentsInnerJoin = vi.fn().mockReturnValue({ selectAll: assignmentsSelectAll });
 
   // Copy assignments insert (inside transaction)
   const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
@@ -104,14 +106,9 @@ function buildDbMock(opts: {
     return {};
   });
 
-  const trxSelectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
-    return {};
-  });
-
   const transaction = vi.fn().mockImplementation(() => ({
     execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
-      const trx = { insertInto, selectFrom: trxSelectFrom };
+      const trx = { insertInto };
       return fn(trx);
     }),
   }));
@@ -200,7 +197,13 @@ describe("forkResumeBranch", () => {
   });
 
   it("falls back to 'en' language when source branch has no language", async () => {
-    const commitWithNoLanguage = { ...COMMIT_ROW, source_language: null };
+    const commitWithNoLanguage = {
+      ...COMMIT_ROW,
+      content: {
+        ...COMMIT_ROW.content,
+        language: null,
+      },
+    };
     const { db, branchInsertValues } = buildDbMock({ commitRow: commitWithNoLanguage });
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
@@ -210,7 +213,7 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("copies branch_assignments from the source branch to the new branch", async () => {
+  it("copies branch_assignments from the commit snapshot to the new branch", async () => {
     const { db, copyInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
@@ -228,7 +231,15 @@ describe("forkResumeBranch", () => {
   });
 
   it("skips copying assignments if source branch has none", async () => {
-    const { db, copyInsertValues } = buildDbMock({ sourceAssignments: [] });
+    const { db, copyInsertValues } = buildDbMock({
+      commitRow: {
+        ...COMMIT_ROW,
+        content: {
+          ...COMMIT_ROW.content,
+          assignments: [],
+        },
+      },
+    });
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 

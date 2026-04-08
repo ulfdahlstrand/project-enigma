@@ -61,7 +61,6 @@ export type ResumeCommitContent = z.infer<typeof resumeCommitContentSchema>;
 export const resumeCommitSchema = z.object({
   id: z.string().uuid(),
   resumeId: z.string().uuid(),
-  branchId: z.string().uuid().nullable(),
   parentCommitId: z.string().uuid().nullable(),
   content: resumeCommitContentSchema,
   message: z.string(),
@@ -151,11 +150,15 @@ export const resumeCommitSummarySchema = resumeCommitSchema.omit({ content: true
 
 export type ResumeCommitSummary = z.infer<typeof resumeCommitSummarySchema>;
 
+export const resumeCommitListItemSchema = resumeCommitSummarySchema;
+
+export type ResumeCommitListItem = z.infer<typeof resumeCommitListItemSchema>;
+
 export const listResumeCommitsInputSchema = z.object({
   branchId: z.string().uuid(),
 });
 
-export const listResumeCommitsOutputSchema = z.array(resumeCommitSummarySchema);
+export const listResumeCommitsOutputSchema = z.array(resumeCommitListItemSchema);
 
 // ---------------------------------------------------------------------------
 // forkResumeBranch schemas
@@ -222,9 +225,13 @@ export const resumeCommitGraphEdgeSchema = z.object({
   parentOrder: z.number().int(),
 });
 
+export const resumeCommitGraphNodeSchema = resumeCommitListItemSchema;
+
+export type ResumeCommitGraphNode = z.infer<typeof resumeCommitGraphNodeSchema>;
+
 export const resumeBranchHistoryGraphSchema = z.object({
   branches: z.array(resumeBranchSchema),
-  commits: z.array(resumeCommitSummarySchema),
+  commits: z.array(resumeCommitGraphNodeSchema),
   edges: z.array(resumeCommitGraphEdgeSchema),
 });
 

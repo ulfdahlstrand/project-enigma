@@ -138,27 +138,33 @@ export async function saveResumeVersion(
       assignments: [],
   };
 
-  // Fetch skills for this resume
-  const skillGroups = await db
-    .selectFrom("resume_skill_groups")
-    .select(["id", "name", "sort_order"])
-    .where("resume_id", "=", branch.resume_id)
-    .orderBy("sort_order", "asc")
-    .execute();
+  const shouldReadLegacySkills =
+    headCommit === null && (input.skillGroups === undefined || input.skills === undefined);
 
-  const skillRows = await db
-    .selectFrom("resume_skills as rs")
-    .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-    .select([
-      "rs.name",
-      "rs.sort_order",
-      "rs.group_id",
-      "rsg.name as category",
-    ])
-    .where("rs.resume_id", "=", branch.resume_id)
-    .orderBy("rsg.sort_order", "asc")
-    .orderBy("rs.sort_order", "asc")
-    .execute();
+  const skillGroups = shouldReadLegacySkills
+    ? await db
+        .selectFrom("resume_skill_groups")
+        .select(["id", "name", "sort_order"])
+        .where("resume_id", "=", branch.resume_id)
+        .orderBy("sort_order", "asc")
+        .execute()
+    : [];
+
+  const skillRows = shouldReadLegacySkills
+    ? await db
+        .selectFrom("resume_skills as rs")
+        .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
+        .select([
+          "rs.name",
+          "rs.sort_order",
+          "rs.group_id",
+          "rsg.name as category",
+        ])
+        .where("rs.resume_id", "=", branch.resume_id)
+        .orderBy("rsg.sort_order", "asc")
+        .orderBy("rs.sort_order", "asc")
+        .execute()
+    : [];
 
   // Fetch assignments linked to this branch — all content is now in branch_assignments.
   // Soft-deleted assignments are excluded (deleted_at IS NULL guard).
@@ -191,15 +197,21 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skillGroups: input.skillGroups ?? skillGroups.map((group) => ({
-      name: group.name,
-      sortOrder: group.sort_order,
-    })),
-    skills: (input.skills ?? skillRows.map((s) => ({
-      name: s.name,
-      category: s.category,
-      sortOrder: s.sort_order,
-    }))).map((skill) => ({
+    skillGroups: input.skillGroups
+      ?? (headCommit
+        ? baseContent.skillGroups ?? []
+        : skillGroups.map((group) => ({
+            name: group.name,
+            sortOrder: group.sort_order,
+          }))),
+    skills: (input.skills
+      ?? (headCommit
+        ? baseContent.skills ?? []
+        : skillRows.map((s) => ({
+            name: s.name,
+            category: s.category,
+            sortOrder: s.sort_order,
+          })))).map((skill) => ({
       name: skill.name,
       category: skill.category,
       sortOrder: skill.sortOrder,
@@ -231,7 +243,6 @@ export async function saveResumeVersion(
       .insertInto("resume_commits")
       .values({
         resume_id: branch.resume_id,
-        branch_id: input.branchId,
         content: JSON.stringify(content),
         title,
         description,
@@ -264,7 +275,6 @@ export async function saveResumeVersion(
   return {
     id: commit.id,
     resumeId: commit.resume_id,
-    branchId: commit.branch_id,
     parentCommitId: branch.head_commit_id,
     content: commit.content as unknown as ResumeCommitContent,
     message: commit.message,

@@ -167,9 +167,8 @@ describe("Branch selection", () => {
     await user.click(option);
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-2" },
+      to: "/resumes/$id/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-2" },
     });
   });
 
@@ -201,7 +200,7 @@ describe("Create variant dialog", () => {
   });
 
   it("creates a branch from the selected base branch and navigates to it", async () => {
-    const mutateAsync = vi.fn().mockResolvedValue({ id: "branch-id-3" });
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "branch-id-3", headCommitId: "commit-3" });
     mockUseForkResumeBranch.mockReturnValue({
       mutateAsync,
       isPending: false,
@@ -222,9 +221,8 @@ describe("Create variant dialog", () => {
       resumeId: "resume-id-1",
     });
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-3" },
+      to: "/resumes/$id/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-3" },
     });
   });
 });

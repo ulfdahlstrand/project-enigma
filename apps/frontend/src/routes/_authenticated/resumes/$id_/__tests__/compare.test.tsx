@@ -79,8 +79,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 const RESUME = { id: "resume-id-1", mainBranchId: "branch-id-1", title: "My Resume" };
 
 const COMMITS = [
-  { id: "commit-id-1", branchId: "branch-id-1", message: "Version A", createdAt: "2024-06-01T10:00:00Z" },
-  { id: "commit-id-2", branchId: "branch-id-1", message: "Version B", createdAt: "2024-06-02T10:00:00Z" },
+  { id: "commit-id-1", message: "Version A", createdAt: "2024-06-01T10:00:00Z" },
+  { id: "commit-id-2", message: "Version B", createdAt: "2024-06-02T10:00:00Z" },
 ];
 
 const NO_CHANGES_DIFF = {

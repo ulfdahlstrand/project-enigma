@@ -3,7 +3,8 @@
  *
  * Two dropdowns to pick commits; renders a ResumeDiff when both are selected.
  *
- * Data: useResumeCommits(branchId), useResumeCommitDiff(baseId, headId)
+ * Data: useResumeCommits(branchId) for commits reachable from the branch head,
+ * useResumeCommitDiff(baseId, headId)
  * i18n: useTranslation("common") — no plain string literals as JSX children
  * Styling: MUI sx prop only
  */
