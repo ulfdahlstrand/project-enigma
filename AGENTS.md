@@ -1,6 +1,7 @@
 # Project Enigma — Agent Notes
 
 Keep this file lightweight. Use it as a map to the real sources of truth.
+Open only the files needed for the current task instead of bulk-reading referenced docs.
 
 ## Overview
 
@@ -62,6 +63,7 @@ Keep this file lightweight. Use it as a map to the real sources of truth.
 
 - PRs target `dev`
 - use `gh` for GitHub operations
+- `docs/agents/working-agreement.md`
 
 ## Temporary Planning
 
