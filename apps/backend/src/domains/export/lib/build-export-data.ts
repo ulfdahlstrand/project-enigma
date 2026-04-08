@@ -1,16 +1,15 @@
 import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
-import { resumeCommitContentSchema } from "@cv-tool/contracts";
 import { sortAssignments } from "@cv-tool/utils";
 import type { Database } from "../../../db/types.js";
 import type { AuthUser } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
 // Shared export data shape
 //
 // All three export procedures (PDF, DOCX, Markdown) work on this struct.
-// It is populated from either live tables (no commitId) or a commit snapshot.
 // ---------------------------------------------------------------------------
 
 export interface ExportData {
@@ -42,7 +41,43 @@ export interface ExportData {
 }
 
 // ---------------------------------------------------------------------------
-// Live-data path (existing behaviour)
+// Helpers
+// ---------------------------------------------------------------------------
+
+function mapAssignments(
+  assignments: Array<{
+    role: string;
+    client_name: string;
+    start_date: string | Date;
+    end_date: string | Date | null;
+    is_current: boolean;
+    type: string | null;
+    technologies: unknown;
+    keywords: string | null;
+    description: string | null;
+  }>
+) {
+  return sortAssignments(
+    assignments.map((a) => ({
+      role: a.role,
+      client_name: a.client_name,
+      start_date: typeof a.start_date === "string" ? a.start_date : a.start_date.toISOString(),
+      end_date: a.end_date
+        ? typeof a.end_date === "string" ? a.end_date : a.end_date.toISOString()
+        : null,
+      is_current: a.is_current,
+      type: a.type,
+      technologies: (a.technologies as string[]) ?? [],
+      keywords: a.keywords,
+      description: a.description ?? "",
+    })),
+    (a) => a.is_current,
+    (a) => a.start_date
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Live-data path (no commitId supplied — uses main branch HEAD commit tree)
 // ---------------------------------------------------------------------------
 
 async function buildFromLive(
@@ -56,21 +91,20 @@ async function buildFromLive(
       join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
     )
     .select([
-      "r.id",
       "r.summary",
       "r.language",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
     ])
-    .where("id", "=", resumeId)
+    .where("r.id", "=", resumeId)
     .executeTakeFirstOrThrow();
 
   const snapshotCommitId = resume.head_commit_id ?? resume.forked_from_commit_id ?? null;
 
-  const [employee, assignments, skills, education, highlightedItems, commitRow] = await Promise.all([
+  const [employee, assignments, education, commitRow] = await Promise.all([
     db
       .selectFrom("employees")
-      .select(["id", "name", "email", "profile_image_data_url"])
+      .select(["name", "email", "profile_image_data_url"])
       .where("id", "=", employeeId)
       .executeTakeFirst(),
     db
@@ -85,35 +119,23 @@ async function buildFromLive(
       .orderBy("ba.start_date", "desc")
       .execute(),
     db
-      .selectFrom("resume_skills as rs")
-      .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-      .select(["rs.name", "rs.sort_order", "rsg.name as category", "rsg.sort_order as group_sort_order"])
-      .where("rs.resume_id", "=", resumeId)
-      .orderBy("rsg.sort_order", "asc")
-      .orderBy("rs.sort_order", "asc")
-      .execute(),
-    db
       .selectFrom("education")
       .selectAll()
       .where("employee_id", "=", employeeId)
       .orderBy("sort_order", "asc")
       .execute(),
-    db
-      .selectFrom("resume_highlighted_items")
-      .select(["text"])
-      .where("resume_id", "=", resumeId)
-      .orderBy("sort_order", "asc")
-      .execute(),
     snapshotCommitId
       ? db
           .selectFrom("resume_commits")
-          .select(["content"])
+          .select(["tree_id"])
           .where("id", "=", snapshotCommitId)
           .executeTakeFirst()
       : Promise.resolve(undefined),
   ]);
 
-  const content = commitRow ? resumeCommitContentSchema.parse(commitRow.content) : null;
+  const content = commitRow?.tree_id
+    ? await readTreeContent(db, commitRow.tree_id)
+    : null;
 
   return {
     name: employee?.name ?? "Unknown",
@@ -123,36 +145,15 @@ async function buildFromLive(
     language: resume.language ?? "en",
     presentation: content?.presentation ?? [],
     summary: resume.summary,
-    highlightedItems: highlightedItems.map((item) => item.text),
-    skills: skills.map((s) => ({
-      name: s.name,
-      category: s.category,
-    })),
-    assignments: sortAssignments(
-      assignments.map((a) => ({
-        role: a.role,
-        client_name: a.client_name,
-        start_date: typeof a.start_date === "string" ? a.start_date : a.start_date.toISOString(),
-        end_date: a.end_date
-          ? typeof a.end_date === "string"
-            ? a.end_date
-            : a.end_date.toISOString()
-          : null,
-        is_current: a.is_current,
-        type: a.type,
-        technologies: (a.technologies as string[]) ?? [],
-        keywords: a.keywords,
-        description: a.description ?? "",
-      })),
-      (a) => a.is_current,
-      (a) => a.start_date
-    ),
+    highlightedItems: content?.highlightedItems ?? [],
+    skills: (content?.skills ?? []).map((s) => ({ name: s.name, category: s.category })),
+    assignments: mapAssignments(assignments),
     education: education.map((e) => ({ type: e.type, value: e.value })),
   };
 }
 
 // ---------------------------------------------------------------------------
-// Snapshot path (new behaviour when commitId is provided)
+// Snapshot path (commitId supplied — reads directly from commit tree)
 // ---------------------------------------------------------------------------
 
 async function buildFromSnapshot(
@@ -164,12 +165,12 @@ async function buildFromSnapshot(
   const [commitRow, employee, education] = await Promise.all([
     db
       .selectFrom("resume_commits")
-      .select(["id", "resume_id", "content"])
+      .select(["resume_id", "tree_id"])
       .where("id", "=", commitId)
       .executeTakeFirst(),
     db
       .selectFrom("employees")
-      .select(["id", "name", "email", "profile_image_data_url"])
+      .select(["name", "email", "profile_image_data_url"])
       .where("id", "=", employeeId)
       .executeTakeFirst(),
     db
@@ -188,8 +189,11 @@ async function buildFromSnapshot(
       message: "Commit does not belong to the specified resume",
     });
   }
+  if (!commitRow.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
+  }
 
-  const content = resumeCommitContentSchema.parse(commitRow.content);
+  const content = await readTreeContent(db, commitRow.tree_id);
 
   return {
     name: employee?.name ?? "Unknown",
@@ -200,10 +204,7 @@ async function buildFromSnapshot(
     presentation: content.presentation,
     summary: content.summary,
     highlightedItems: content.highlightedItems ?? [],
-    skills: content.skills.map((s) => ({
-      name: s.name,
-      category: s.category,
-    })),
+    skills: content.skills.map((s) => ({ name: s.name, category: s.category })),
     assignments: sortAssignments(
       content.assignments.map((a) => ({
         role: a.role,
@@ -227,19 +228,6 @@ async function buildFromSnapshot(
 // Public entry point
 // ---------------------------------------------------------------------------
 
-/**
- * Resolves all data needed to render a resume export.
- *
- * When `commitId` is provided the content comes from the commit's JSONB
- * snapshot (education is still fetched live as it lives outside the snapshot).
- * When `commitId` is omitted the existing live-join path is used.
- *
- * Access control (ownership check) is performed here before any data is read.
- *
- * @throws ORPCError("NOT_FOUND")   if the resume (or commit) does not exist.
- * @throws ORPCError("FORBIDDEN")   if the caller doesn't own the resume.
- * @throws ORPCError("BAD_REQUEST") if the commit belongs to a different resume.
- */
 export async function buildExportData(
   db: Kysely<Database>,
   user: AuthUser,
