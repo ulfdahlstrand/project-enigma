@@ -150,10 +150,22 @@ function buildDbMock(opts: {
   const parentInsertExecute = vi.fn().mockResolvedValue(undefined);
   const parentInsertValues = vi.fn().mockReturnValue({ execute: parentInsertExecute });
 
+  // Generic insert stub for revision/tree tables introduced by buildCommitTree.
+  // Returns a fixed revision UUID so the function completes without error.
+  const treeInsertReturning = vi.fn().mockReturnValue({
+    executeTakeFirstOrThrow: vi.fn().mockResolvedValue({ id: "00000000-0000-4000-8000-000000000099" }),
+  });
+  const treeInsertExecute = vi.fn().mockResolvedValue(undefined);
+  const treeInsertValues = vi.fn().mockReturnValue({
+    returning: treeInsertReturning,
+    execute: treeInsertExecute,
+  });
+
   const insertInto = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_commits") return { values: insertValues };
     if (table === "resume_commit_parents") return { values: parentInsertValues };
-    return { values: insertValues };
+    // All revision/tree tables from buildCommitTree
+    return { values: treeInsertValues };
   });
 
   // Update branch
@@ -355,6 +367,18 @@ describe("saveResumeVersion", () => {
 
     const content = JSON.parse(insertValues.mock.calls[0][0].content);
     expect(content.consultantTitle).toBeNull();
+  });
+
+  it("includes tree_id in the commit insert (dual-write)", async () => {
+    const { db, insertValues } = buildDbMock();
+
+    await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tree_id: expect.any(String),
+      })
+    );
   });
 
   it("throws FORBIDDEN when consultant tries to save another employee's branch", async () => {
