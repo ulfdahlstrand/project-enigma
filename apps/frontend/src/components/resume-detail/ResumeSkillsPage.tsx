@@ -73,6 +73,7 @@ export function ResumeSkillsPage({
       {...(sectionRef ? { ref: sectionRef } : {})}
       sx={{ width: "100%", display: "flex", justifyContent: "center" }}
     >
+      <Box sx={{ position: "relative" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
         {isEditing ? (
           <SkillsEditor
@@ -98,6 +99,7 @@ export function ResumeSkillsPage({
       </ResumeDocumentPage>
 
       <ResumePageSideToolbar actions={toolbarActions} />
+      </Box>
     </Box>
   );
 }

@@ -20,11 +20,13 @@ export function ResumePageSideToolbar({ actions }: ResumePageSideToolbarProps) {
   return (
     <Box
       sx={{
+        position: "absolute",
+        right: 0,
+        top: 16,
+        transform: "translateX(50%)",
+        zIndex: 10,
         display: "flex",
         flexDirection: "column",
-        alignSelf: "flex-start",
-        ml: 1,
-        mt: 2,
         bgcolor: "background.paper",
         borderRadius: 6,
         boxShadow: 2,

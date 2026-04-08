@@ -65,6 +65,7 @@ export function ResumeAssignmentsPage({
 
   return (
     <Box {...(sectionRef ? { ref: sectionRef } : {})} sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+      <Box sx={{ position: "relative" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
           {t("resume.detail.assignmentsHeading")}
@@ -226,6 +227,7 @@ export function ResumeAssignmentsPage({
           }] : []),
         ]}
       />
+      </Box>
     </Box>
   );
 }
