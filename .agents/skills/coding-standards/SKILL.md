@@ -6,6 +6,8 @@ origin: ECC
 
 # Coding Standards & Best Practices
 
+> **Project rules take precedence.** See `.claude/rules/core/style.md` and domain-specific rules under `.claude/rules/` for authoritative project standards. This skill provides supplementary patterns and examples.
+
 Universal coding standards applicable across all projects.
 
 ## When to Activate
