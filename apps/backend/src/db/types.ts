@@ -160,6 +160,8 @@ export interface ResumeCommitTable {
   resume_id: string;
   /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
   content: ColumnType<ResumeCommitContent, string, string>;
+  /** Points to the commit's tree in the Git-inspired content model. NULL for legacy commits. */
+  tree_id: string | null;
   message: Generated<string>;
   /** Short human-readable title for this commit (e.g. "ai(suggestion): …"). */
   title: Generated<string>;
@@ -379,6 +381,133 @@ export interface ResumeHighlightedItemTable {
 export type ResumeHighlightedItem = Selectable<ResumeHighlightedItemTable>;
 export type NewResumeHighlightedItem = Insertable<ResumeHighlightedItemTable>;
 
+// ---------------------------------------------------------------------------
+// Git-inspired content model — tree layer
+// ---------------------------------------------------------------------------
+
+export interface ResumeEntryTypeTable {
+  id: Generated<string>;
+  name: string;
+  revision_table: string;
+}
+
+export interface ResumeTreeTable {
+  id: Generated<string>;
+  created_at: Generated<Date>;
+}
+
+export interface ResumeTreeEntryTable {
+  id: Generated<string>;
+  tree_id: string;
+  entry_type: string;
+  position: number;
+}
+
+export interface ResumeTreeEntryContentTable {
+  entry_id: string;
+  revision_id: string;
+  revision_type: string;
+}
+
+// ---------------------------------------------------------------------------
+// Git-inspired content model — revision tables
+// ---------------------------------------------------------------------------
+
+export interface ResumeMetadataRevisionTable {
+  id: Generated<string>;
+  title: string;
+  language: string;
+  created_at: Generated<Date>;
+}
+
+export interface ConsultantTitleRevisionTable {
+  id: Generated<string>;
+  value: string;
+  created_at: Generated<Date>;
+}
+
+export interface PresentationRevisionTable {
+  id: Generated<string>;
+  paragraphs: string[];
+  created_at: Generated<Date>;
+}
+
+export interface SummaryRevisionTable {
+  id: Generated<string>;
+  content: string;
+  created_at: Generated<Date>;
+}
+
+export interface HighlightedItemRevisionTable {
+  id: Generated<string>;
+  items: string[];
+  created_at: Generated<Date>;
+}
+
+export interface SkillGroupRevisionTable {
+  id: Generated<string>;
+  name: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export interface SkillRevisionTable {
+  id: Generated<string>;
+  name: string;
+  group_revision_id: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export interface AssignmentRevisionTable {
+  id: Generated<string>;
+  assignment_id: string;
+  client_name: string;
+  role: string;
+  description: Generated<string>;
+  technologies: ColumnType<string[], string[], string[]>;
+  start_date: Date;
+  end_date: Date | null;
+  is_current: Generated<boolean>;
+  sort_order: number | null;
+  created_at: Generated<Date>;
+}
+
+export interface EducationRevisionTable {
+  id: Generated<string>;
+  employee_id: string;
+  type: EducationType;
+  value: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export type ResumeEntryType = Selectable<ResumeEntryTypeTable>;
+export type ResumeTree = Selectable<ResumeTreeTable>;
+export type NewResumeTree = Insertable<ResumeTreeTable>;
+export type ResumeTreeEntry = Selectable<ResumeTreeEntryTable>;
+export type NewResumeTreeEntry = Insertable<ResumeTreeEntryTable>;
+export type ResumeTreeEntryContent = Selectable<ResumeTreeEntryContentTable>;
+export type NewResumeTreeEntryContent = Insertable<ResumeTreeEntryContentTable>;
+export type ResumeMetadataRevision = Selectable<ResumeMetadataRevisionTable>;
+export type NewResumeMetadataRevision = Insertable<ResumeMetadataRevisionTable>;
+export type ConsultantTitleRevision = Selectable<ConsultantTitleRevisionTable>;
+export type NewConsultantTitleRevision = Insertable<ConsultantTitleRevisionTable>;
+export type PresentationRevision = Selectable<PresentationRevisionTable>;
+export type NewPresentationRevision = Insertable<PresentationRevisionTable>;
+export type SummaryRevision = Selectable<SummaryRevisionTable>;
+export type NewSummaryRevision = Insertable<SummaryRevisionTable>;
+export type HighlightedItemRevision = Selectable<HighlightedItemRevisionTable>;
+export type NewHighlightedItemRevision = Insertable<HighlightedItemRevisionTable>;
+export type SkillGroupRevision = Selectable<SkillGroupRevisionTable>;
+export type NewSkillGroupRevision = Insertable<SkillGroupRevisionTable>;
+export type SkillRevision = Selectable<SkillRevisionTable>;
+export type NewSkillRevision = Insertable<SkillRevisionTable>;
+export type AssignmentRevision = Selectable<AssignmentRevisionTable>;
+export type NewAssignmentRevision = Insertable<AssignmentRevisionTable>;
+export type EducationRevision = Selectable<EducationRevisionTable>;
+export type NewEducationRevision = Insertable<EducationRevisionTable>;
+
 export interface Database {
   employees: EmployeeTable;
   resume_highlighted_items: ResumeHighlightedItemTable;
@@ -399,6 +528,20 @@ export interface Database {
   ai_revision_work_items: AIRevisionWorkItemTable;
   ai_revision_suggestions: AIRevisionSuggestionTable;
   user_sessions: UserSessionTable;
+  // Git-inspired content model
+  resume_entry_types: ResumeEntryTypeTable;
+  resume_trees: ResumeTreeTable;
+  resume_tree_entries: ResumeTreeEntryTable;
+  resume_tree_entry_content: ResumeTreeEntryContentTable;
+  resume_metadata_revisions: ResumeMetadataRevisionTable;
+  consultant_title_revisions: ConsultantTitleRevisionTable;
+  presentation_revisions: PresentationRevisionTable;
+  summary_revisions: SummaryRevisionTable;
+  highlighted_item_revisions: HighlightedItemRevisionTable;
+  skill_group_revisions: SkillGroupRevisionTable;
+  skill_revisions: SkillRevisionTable;
+  assignment_revisions: AssignmentRevisionTable;
+  education_revisions: EducationRevisionTable;
 }
 
 // ---------------------------------------------------------------------------
