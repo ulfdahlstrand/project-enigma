@@ -39,6 +39,7 @@ test-results/
 
 # Local log files
 .logs/
+.backup/
 
 # Flower orchestrator runtime data
 .flower/
