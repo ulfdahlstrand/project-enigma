@@ -33,7 +33,7 @@ import {
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
-import { sortByCreatedAt } from "./history-graph-utils";
+import { getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
 
@@ -71,7 +71,7 @@ function VersionHistoryPage() {
   const selectedView = viewFromSearch ?? "list";
   const selectedResumeCommitId = selectedBranch?.headCommitId ?? selectedBranch?.forkedFromCommitId ?? null;
   const commits = sortByCreatedAt(
-    graphCommits.filter((commit) => commit.branchId === selectedBranchId),
+    getReachableCommits(selectedBranch?.headCommitId ?? null, graphCommits, graphEdges),
   ).reverse();
   const mergeTargetBranches = branches.filter((branch) => branch.id !== selectedBranchId);
   const canMergeSelectedBranch = Boolean(

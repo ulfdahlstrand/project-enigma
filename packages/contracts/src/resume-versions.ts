@@ -151,11 +151,15 @@ export const resumeCommitSummarySchema = resumeCommitSchema.omit({ content: true
 
 export type ResumeCommitSummary = z.infer<typeof resumeCommitSummarySchema>;
 
+export const resumeCommitListItemSchema = resumeCommitSummarySchema.omit({ branchId: true });
+
+export type ResumeCommitListItem = z.infer<typeof resumeCommitListItemSchema>;
+
 export const listResumeCommitsInputSchema = z.object({
   branchId: z.string().uuid(),
 });
 
-export const listResumeCommitsOutputSchema = z.array(resumeCommitSummarySchema);
+export const listResumeCommitsOutputSchema = z.array(resumeCommitListItemSchema);
 
 // ---------------------------------------------------------------------------
 // forkResumeBranch schemas

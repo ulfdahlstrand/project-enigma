@@ -87,7 +87,6 @@ const COMMITS = [
   {
     id: "commit-3",
     resumeId: "resume-id-1",
-    branchId: "branch-id-1",
     parentCommitId: null,
     message: "Initial version",
     createdAt: "2024-03-01T00:00:00Z",
@@ -95,7 +94,6 @@ const COMMITS = [
   {
     id: "commit-4",
     resumeId: "resume-id-1",
-    branchId: "branch-id-1",
     parentCommitId: "commit-3",
     message: "Updated skills",
     createdAt: "2024-04-01T00:00:00Z",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeGraphLayout } from "./history-graph-utils.js";
+import { computeGraphLayout, getReachableCommitIds } from "./history-graph-utils.js";
 import type { GraphBranch, GraphCommit, GraphEdge } from "./history-graph-utils.js";
 
 function branch(
@@ -34,6 +34,24 @@ function commit(
 function edge(commitId: string, parentCommitId: string, parentOrder = 0): GraphEdge {
   return { commitId, parentCommitId, parentOrder };
 }
+
+describe("getReachableCommitIds", () => {
+  it("returns all ancestors reachable from a merge head across branch boundaries", () => {
+    const edges: GraphEdge[] = [
+      edge("m3", "m2", 0),
+      edge("m3", "s1", 1),
+      edge("m2", "m1", 0),
+      edge("s1", "m1", 0),
+      edge("g1", "s1", 0),
+    ];
+
+    expect([...getReachableCommitIds("m3", edges)]).toEqual(["m3", "s1", "m1", "m2"]);
+  });
+
+  it("returns an empty set when the branch has no head commit", () => {
+    expect([...getReachableCommitIds(null, [])]).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Sibling ordering: merged before non-merged (closer to base branch)

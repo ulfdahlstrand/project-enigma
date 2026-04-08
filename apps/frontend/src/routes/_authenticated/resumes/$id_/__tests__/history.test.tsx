@@ -155,6 +155,33 @@ const GRAPH = {
   ],
 };
 
+const GRAPH_WITH_MERGE = {
+  ...GRAPH,
+  branches: GRAPH.branches.map((branch) =>
+    branch.id === "branch-id-1"
+      ? { ...branch, headCommitId: "commit-id-5" }
+      : branch
+  ),
+  commits: [
+    {
+      id: "commit-id-5",
+      resumeId: "resume-id-1",
+      branchId: "branch-id-1",
+      parentCommitId: "commit-id-2",
+      message: "Merge Swedish variant",
+      title: "",
+      description: "",
+      createdAt: "2024-06-05T10:00:00Z",
+    },
+    ...GRAPH.commits,
+  ],
+  edges: [
+    { commitId: "commit-id-5", parentCommitId: "commit-id-2", parentOrder: 0 },
+    { commitId: "commit-id-5", parentCommitId: "commit-id-3", parentOrder: 1 },
+    ...GRAPH.edges,
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Render helper
 // ---------------------------------------------------------------------------
@@ -239,12 +266,13 @@ describe("Commit list", () => {
     expect(screen.getByText(enCommon.resume.history.tableHeaderSavedAt)).toBeInTheDocument();
   });
 
-  it("renders only commits for the selected branch", async () => {
+  it("renders commits reachable from the selected branch head, including ancestors", async () => {
     mockSearch = { branchId: "branch-id-2", view: "list" };
     renderPage();
 
     expect(await screen.findByText("Swedish version")).toBeInTheDocument();
-    expect(screen.queryByText("Initial version")).toBeNull();
+    expect(screen.getByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("German version")).toBeNull();
   });
 
   it("falls back to the main branch when the search branch is unknown", async () => {
@@ -263,6 +291,16 @@ describe("Commit list", () => {
     const commitMessages = screen.getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
     expect(commitMessages[0]).toContain(enCommon.resume.history.defaultMessage);
     expect(commitMessages[1]).toContain("Initial version");
+  });
+
+  it("renders merged ancestor commits for the selected branch head", async () => {
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH_WITH_MERGE);
+    renderPage();
+
+    expect(await screen.findByText("Merge Swedish variant")).toBeInTheDocument();
+    expect(screen.getByText("Swedish version")).toBeInTheDocument();
+    expect(screen.getByText("Initial version")).toBeInTheDocument();
+    expect(screen.queryByText("German version")).toBeNull();
   });
 });
 

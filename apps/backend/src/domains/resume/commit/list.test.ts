@@ -44,18 +44,86 @@ const COMMIT_ROWS = [
   },
 ];
 
+const DEFAULT_COMMIT_PARENT_ROWS = [
+  {
+    commit_id: COMMIT_ID_2,
+    parent_commit_id: COMMIT_ID_1,
+    parent_order: 0,
+  },
+];
+
+const REACHABLE_MERGE_COMMIT_ROWS = [
+  {
+    id: "550e8400-e29b-41d4-a716-446655440063",
+    resume_id: RESUME_ID,
+    branch_id: BRANCH_ID,
+    parent_commit_id: COMMIT_ID_2,
+    message: "Merge revision",
+    title: "Merge revision",
+    description: "",
+    created_by: CREATOR_ID,
+    created_at: new Date("2026-03-01T00:00:00.000Z"),
+  },
+  ...COMMIT_ROWS,
+  {
+    id: "550e8400-e29b-41d4-a716-446655440064",
+    resume_id: RESUME_ID,
+    branch_id: "550e8400-e29b-41d4-a716-446655440032",
+    parent_commit_id: COMMIT_ID_1,
+    message: "Branch-only work",
+    title: "Branch-only work",
+    description: "",
+    created_by: CREATOR_ID,
+    created_at: new Date("2026-02-15T00:00:00.000Z"),
+  },
+];
+
+const REACHABLE_MERGE_PARENT_ROWS = [
+  {
+    commit_id: "550e8400-e29b-41d4-a716-446655440063",
+    parent_commit_id: COMMIT_ID_2,
+    parent_order: 0,
+  },
+  {
+    commit_id: "550e8400-e29b-41d4-a716-446655440063",
+    parent_commit_id: "550e8400-e29b-41d4-a716-446655440064",
+    parent_order: 1,
+  },
+  {
+    commit_id: COMMIT_ID_2,
+    parent_commit_id: COMMIT_ID_1,
+    parent_order: 0,
+  },
+  {
+    commit_id: "550e8400-e29b-41d4-a716-446655440064",
+    parent_commit_id: COMMIT_ID_1,
+    parent_order: 0,
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BRANCH_ROW = { id: BRANCH_ID, employee_id: EMPLOYEE_ID_1 };
+const DEFAULT_BRANCH_ROW = {
+  id: BRANCH_ID,
+  resume_id: RESUME_ID,
+  head_commit_id: COMMIT_ID_2,
+  employee_id: EMPLOYEE_ID_1,
+};
 
 function buildDbMock(opts: {
   branchRow?: unknown;
   commitRows?: unknown[];
+  commitParentRows?: unknown[];
   employeeId?: string | null;
 } = {}) {
-  const { branchRow = DEFAULT_BRANCH_ROW, commitRows = COMMIT_ROWS, employeeId = null } = opts;
+  const {
+    branchRow = DEFAULT_BRANCH_ROW,
+    commitRows = COMMIT_ROWS,
+    commitParentRows = DEFAULT_COMMIT_PARENT_ROWS,
+    employeeId = null,
+  } = opts;
   // null sentinel → Kysely "not found" (executeTakeFirst returns undefined)
   const resolvedBranch = branchRow === null ? undefined : branchRow;
   const empExecuteTakeFirst = vi.fn().mockResolvedValue(employeeId ? { id: employeeId } : undefined);
@@ -71,13 +139,22 @@ function buildDbMock(opts: {
   // Commits query
   const commitsExecute = vi.fn().mockResolvedValue(commitRows);
   const commitsOrderBy = vi.fn().mockReturnValue({ execute: commitsExecute });
-  const commitsWhere = vi.fn().mockReturnValue({ orderBy: commitsOrderBy });
+  const commitsWhere = vi.fn().mockReturnValue({ orderBy: commitsOrderBy, execute: commitsExecute });
   const commitsSelect = vi.fn().mockReturnValue({ where: commitsWhere });
   const commitsLeftJoin = vi.fn().mockReturnValue({ select: commitsSelect });
+
+  // Parent edges query
+  const edgesExecute = vi.fn().mockResolvedValue(commitParentRows);
+  const edgesOrderBySecond = vi.fn().mockReturnValue({ execute: edgesExecute });
+  const edgesOrderByFirst = vi.fn().mockReturnValue({ orderBy: edgesOrderBySecond });
+  const edgesWhere = vi.fn().mockReturnValue({ orderBy: edgesOrderByFirst });
+  const edgesSelect = vi.fn().mockReturnValue({ where: edgesWhere });
+  const edgesInnerJoin = vi.fn().mockReturnValue({ select: edgesSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_commits") return { leftJoin: commitsLeftJoin };
+    if (table === "resume_commit_parents as rcp") return { innerJoin: edgesInnerJoin };
     return { innerJoin: branchInnerJoin };
   });
 
@@ -90,14 +167,13 @@ function buildDbMock(opts: {
 
 describe("listResumeCommits", () => {
   it("returns commits in reverse chronological order for admin", async () => {
-    const { db, commitsOrderBy } = buildDbMock();
+    const { db } = buildDbMock();
 
     const result = await listResumeCommits(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: COMMIT_ID_2, message: "Updated skills" });
     expect(result[1]).toMatchObject({ id: COMMIT_ID_1, message: "Initial version" });
-    expect(commitsOrderBy).toHaveBeenCalledWith("resume_commits.created_at", "desc");
   });
 
   it("returns empty array when branch has no commits", async () => {
@@ -114,6 +190,24 @@ describe("listResumeCommits", () => {
     const result = await listResumeCommits(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
     expect((result[0] as Record<string, unknown>).content).toBeUndefined();
+  });
+
+  it("includes merged ancestor commits reachable from the branch head", async () => {
+    const headCommitId = "550e8400-e29b-41d4-a716-446655440063";
+    const { db } = buildDbMock({
+      branchRow: { ...DEFAULT_BRANCH_ROW, resume_id: RESUME_ID, head_commit_id: headCommitId },
+      commitRows: REACHABLE_MERGE_COMMIT_ROWS,
+      commitParentRows: REACHABLE_MERGE_PARENT_ROWS,
+    });
+
+    const result = await listResumeCommits(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+
+    expect(result.map((commit) => commit.id)).toEqual([
+      headCommitId,
+      "550e8400-e29b-41d4-a716-446655440064",
+      COMMIT_ID_2,
+      COMMIT_ID_1,
+    ]);
   });
 
   it("throws NOT_FOUND when branch does not exist", async () => {

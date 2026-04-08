@@ -41,6 +41,53 @@ export function formatCommitTimestamp(value: string | Date): string {
   return date.toLocaleString();
 }
 
+export function getReachableCommitIds(
+  headCommitId: string | null,
+  graphEdges: GraphEdge[],
+): Set<string> {
+  if (!headCommitId) {
+    return new Set();
+  }
+
+  const parentIdsByCommitId = new Map<string, string[]>();
+  graphEdges.forEach((edge) => {
+    const existing = parentIdsByCommitId.get(edge.commitId) ?? [];
+    parentIdsByCommitId.set(edge.commitId, [...existing, edge.parentCommitId]);
+  });
+
+  const reachable = new Set<string>();
+  const stack = [headCommitId];
+
+  while (stack.length > 0) {
+    const commitId = stack.pop()!;
+    if (reachable.has(commitId)) {
+      continue;
+    }
+
+    reachable.add(commitId);
+    (parentIdsByCommitId.get(commitId) ?? []).forEach((parentCommitId) => {
+      if (!reachable.has(parentCommitId)) {
+        stack.push(parentCommitId);
+      }
+    });
+  }
+
+  return reachable;
+}
+
+export function getReachableCommits(
+  headCommitId: string | null,
+  graphCommits: GraphCommit[],
+  graphEdges: GraphEdge[],
+): GraphCommit[] {
+  if (headCommitId && !graphCommits.some((commit) => commit.id === headCommitId)) {
+    return [];
+  }
+
+  const reachableCommitIds = getReachableCommitIds(headCommitId, graphEdges);
+  return graphCommits.filter((commit) => reachableCommitIds.has(commit.id));
+}
+
 // ---------------------------------------------------------------------------
 // Graph layout computation
 // ---------------------------------------------------------------------------

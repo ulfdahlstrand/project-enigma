@@ -42,7 +42,6 @@ export async function getResumeBranchHistoryGraph(
     .where("resume_branches.resume_id", "=", input.resumeId)
     .orderBy("resume_branches.created_at", "asc")
     .execute();
-  const activeBranchIds = new Set(branches.map((branch) => branch.id));
 
   const rawCommits = await db
     .selectFrom("resume_commits")
@@ -65,10 +64,6 @@ export async function getResumeBranchHistoryGraph(
     .where("resume_commits.resume_id", "=", input.resumeId)
     .orderBy("resume_commits.created_at", "asc")
     .execute();
-  const commits = rawCommits.filter(
-    (commit) => commit.branch_id !== null && activeBranchIds.has(commit.branch_id),
-  );
-  const commitIds = new Set(commits.map((commit) => commit.id));
 
   const rawEdges = await db
     .selectFrom("resume_commit_parents as rcp")
@@ -82,6 +77,34 @@ export async function getResumeBranchHistoryGraph(
     .orderBy("rcp.commit_id", "asc")
     .orderBy("rcp.parent_order", "asc")
     .execute();
+  const parentCommitIdsByCommitId = new Map<string, string[]>();
+  rawEdges.forEach((edge) => {
+    const existing = parentCommitIdsByCommitId.get(edge.commit_id) ?? [];
+    parentCommitIdsByCommitId.set(edge.commit_id, [...existing, edge.parent_commit_id]);
+  });
+
+  const reachableCommitIds = new Set<string>();
+  const stack = branches
+    .map((branch) => branch.head_commit_id)
+    .filter((commitId): commitId is string => Boolean(commitId));
+
+  while (stack.length > 0) {
+    const commitId = stack.pop()!;
+    if (reachableCommitIds.has(commitId)) {
+      continue;
+    }
+
+    reachableCommitIds.add(commitId);
+    (parentCommitIdsByCommitId.get(commitId) ?? []).forEach((parentCommitId) => {
+      if (!reachableCommitIds.has(parentCommitId)) {
+        stack.push(parentCommitId);
+      }
+    });
+  }
+
+  const commits = rawCommits.filter((commit) => reachableCommitIds.has(commit.id));
+  const commitIds = new Set(commits.map((commit) => commit.id));
+
   const edges = rawEdges.filter(
     (edge) => commitIds.has(edge.commit_id) && commitIds.has(edge.parent_commit_id),
   );
