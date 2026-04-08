@@ -63,9 +63,11 @@ const EXPORT_OPTIONS: ExportFormat[] = ["pdf", "docx", "markdown"];
 function ExportSplitButton({
   resumeId,
   commitId,
+  branchId,
 }: {
   resumeId: string;
   commitId?: string | null;
+  branchId?: string | null;
 }) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
@@ -74,7 +76,11 @@ function ExportSplitButton({
 
   async function triggerDownload(format: ExportFormat): Promise<void> {
     const { orpc } = await import("../../orpc-client");
-    const exportInput = commitId ? { resumeId, commitId } : { resumeId };
+    const exportInput = {
+      resumeId,
+      ...(commitId ? { commitId } : {}),
+      ...(branchId ? { branchId } : {}),
+    };
 
     if (format === "pdf") {
       const result = await orpc.exportResumePdf(exportInput);
@@ -269,7 +275,11 @@ export function ResumeDetailActions({
         </>
       ) : (
         <>
-          <ExportSplitButton resumeId={resumeId} commitId={currentCommitId} />
+          <ExportSplitButton
+            resumeId={resumeId}
+            commitId={currentCommitId}
+            branchId={activeBranchId}
+          />
           {!isSnapshotMode ? <EditButton onEdit={onEdit} /> : null}
         </>
       )}

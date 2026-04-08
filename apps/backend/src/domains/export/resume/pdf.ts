@@ -5,6 +5,7 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { buildExportData } from "../lib/build-export-data.js";
+import { buildExportFilename } from "../lib/build-export-filename.js";
 import { PDF_CSS, PDF_FONT_LINKS } from "./pdf-styles.js";
 import { getPdfTranslations } from "./pdf-translations.js";
 import { toQuarter } from "@cv-tool/utils";
@@ -19,10 +20,6 @@ const LOGO_DATA_URI = `data:image/svg+xml;base64,${readFileSync(join(__dirname, 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
 
 function escapeHtml(s: string): string {
   return s
@@ -215,9 +212,10 @@ export async function exportResumePdf(
   db: Kysely<Database>,
   user: AuthUser,
   resumeId: string,
-  commitId?: string
+  commitId?: string,
+  branchId?: string,
 ): Promise<{ pdf: string; filename: string; referenceId: string }> {
-  const data = await buildExportData(db, user, resumeId, commitId);
+  const data = await buildExportData(db, user, resumeId, commitId, branchId);
 
   const { name, language } = data;
 
@@ -262,7 +260,13 @@ export async function exportResumePdf(
     await browser.close();
   }
 
-  const filename = `${slug(name)}-${language}-cv.pdf`;
+  const filename = buildExportFilename({
+    consultantName: name,
+    company: "SthlmTech",
+    language,
+    branchName: data.branchName,
+    extension: "pdf",
+  });
 
   const record = await db
     .insertInto("export_records")
@@ -291,5 +295,6 @@ export const exportResumePdfHandler = implement(
   contract.exportResumePdf
 ).handler(async ({ input, context }) => {
   const user = requireAuth(context as AuthContext);
-  return exportResumePdf(getDb(), user, input.resumeId, input.commitId);
+  const exportInput = input as typeof input & { branchId?: string };
+  return exportResumePdf(getDb(), user, exportInput.resumeId, exportInput.commitId, exportInput.branchId);
 });

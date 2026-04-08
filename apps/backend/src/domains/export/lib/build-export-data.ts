@@ -17,6 +17,7 @@ export interface ExportData {
   resumeId: string;
   employeeId: string;
   name: string;
+  branchName: string;
   email: string | null | undefined;
   profileImageDataUrl: string | null;
   consultantTitle: string;
@@ -93,6 +94,7 @@ async function buildFromLive(
     )
     .select([
       "r.language",
+      "rb.name as branch_name",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
     ])
@@ -131,6 +133,7 @@ async function buildFromLive(
 
   return {
     name: employee?.name ?? "Unknown",
+    branchName: resume.branch_name ?? "default",
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
@@ -164,9 +167,10 @@ async function buildFromSnapshot(
   db: Kysely<Database>,
   resumeId: string,
   employeeId: string,
-  commitId: string
+  commitId: string,
+  branchId?: string
 ): Promise<Omit<ExportData, "resumeId" | "employeeId" | "commitId">> {
-  const [commitRow, employee, education] = await Promise.all([
+  const [commitRow, employee, education, branch] = await Promise.all([
     db
       .selectFrom("resume_commits")
       .select(["resume_id", "tree_id"])
@@ -183,6 +187,13 @@ async function buildFromSnapshot(
       .where("employee_id", "=", employeeId)
       .orderBy("sort_order", "asc")
       .execute(),
+    branchId
+      ? db
+          .selectFrom("resume_branches")
+          .select(["id", "name"])
+          .where("id", "=", branchId)
+          .executeTakeFirst()
+      : Promise.resolve(undefined),
   ]);
 
   if (!commitRow) {
@@ -202,6 +213,7 @@ async function buildFromSnapshot(
 
   return {
     name: employee?.name ?? "Unknown",
+    branchName: branch?.name ?? "default",
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content.consultantTitle ?? "",
@@ -237,7 +249,8 @@ export async function buildExportData(
   db: Kysely<Database>,
   user: AuthUser,
   resumeId: string,
-  commitId: string | null | undefined
+  commitId: string | null | undefined,
+  branchId?: string
 ): Promise<ExportData> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
@@ -255,7 +268,7 @@ export async function buildExportData(
   }
 
   const rest = commitId
-    ? await buildFromSnapshot(db, resumeId, resume.employee_id, commitId)
+    ? await buildFromSnapshot(db, resumeId, resume.employee_id, commitId, branchId)
     : await buildFromLive(db, resumeId, resume.employee_id);
 
   return {

@@ -62,7 +62,7 @@ export async function createResume(
       .insertInto("resume_branches")
       .values({
         resume_id: newResume.id,
-        name: "main",
+        name: "default",
         language,
         is_main: true,
         head_commit_id: null,

@@ -33,7 +33,7 @@ const NEW_RESUME_ROW = {
 const NEW_BRANCH_ROW = {
   id: BRANCH_ID,
   resume_id: RESUME_ID,
-  name: "main",
+  name: "default",
   language: "en",
   is_main: true,
   head_commit_id: null,
@@ -173,7 +173,7 @@ describe("createResume query function", () => {
     expect(branchInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         resume_id: RESUME_ID,
-        name: "main",
+        name: "default",
         is_main: true,
         language: "en",
         created_by: MOCK_ADMIN.id,

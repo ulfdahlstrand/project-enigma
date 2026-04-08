@@ -25,6 +25,7 @@ const RESUME_ROW = {
   employee_id: EMPLOYEE_ID,
   summary: null,
   language: "en",
+  branch_name: "default",
   head_commit_id: COMMIT_ID,
   forked_from_commit_id: null,
 };
@@ -71,6 +72,11 @@ const COMMIT_ROW = {
   tree_id: TREE_ID,
 };
 
+const BRANCH_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440061",
+  name: "default",
+};
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -80,6 +86,7 @@ function buildDbMock(opts: {
   employeeRow?: unknown;
   educationRows?: unknown[];
   commitRow?: unknown;
+  branchRow?: unknown;
   resolveEmployeeId?: string | null;
 } = {}) {
   const {
@@ -87,6 +94,7 @@ function buildDbMock(opts: {
     employeeRow = EMPLOYEE_ROW,
     educationRows = EDUCATION_ROWS,
     commitRow = COMMIT_ROW,
+    branchRow = BRANCH_ROW,
     resolveEmployeeId = null,
   } = opts;
 
@@ -162,6 +170,7 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
     expect(result.language).toBe("sv");
+    expect(result.branchName).toBe("default");
     expect(result.consultantTitle).toBe("Tech Lead");
     expect(result.presentation).toEqual(["Expert consultant"]);
     expect(result.skills).toEqual([{ name: "Go", category: null }]);
@@ -226,9 +235,10 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
   it("returns data from commit tree, not live tables", async () => {
     const { db } = buildDbMock();
 
-    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID);
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID, BRANCH_ROW.id);
 
     expect(result.commitId).toBe(COMMIT_ID);
+    expect(result.branchName).toBe("default");
     expect(result.profileImageDataUrl).toBe("data:image/png;base64,display");
     expect(result.language).toBe("sv");
     expect(result.consultantTitle).toBe("Tech Lead");
