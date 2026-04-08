@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
+import { createHash } from "node:crypto";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
@@ -14,6 +15,45 @@ import type { getResumeOutputSchema } from "@cv-tool/contracts";
 // ---------------------------------------------------------------------------
 
 type GetResumeOutput = z.infer<typeof getResumeOutputSchema>;
+
+function buildDeterministicUuid(seed: string): string {
+  const bytes = createHash("sha1").update(seed).digest().subarray(0, 16);
+
+  // Force RFC 4122-compliant version/variant bits so zod uuid validation
+  // accepts synthetic IDs used for detached snapshot reads.
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+
+  const hex = Buffer.from(bytes).toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function buildSnapshotSkills(resumeId: string, snapshotContent: ResumeCommitContent) {
+  const skillGroups = snapshotContent.skillGroups.map((group, index) => ({
+    id: buildDeterministicUuid(`${resumeId}:snapshot-skill-group:${index}:${group.name}`),
+    resumeId,
+    name: group.name,
+    sortOrder: group.sortOrder,
+  }));
+
+  const groupIdByName = new Map(
+    skillGroups.map((group) => [group.name.trim(), group.id]),
+  );
+
+  const skills = snapshotContent.skills.map((skill, index) => ({
+    id: buildDeterministicUuid(`${resumeId}:snapshot-skill:${index}:${skill.name}:${skill.category ?? ""}`),
+    resumeId,
+    groupId:
+      groupIdByName.get(skill.category?.trim() ?? "")
+      ?? skillGroups[0]?.id
+      ?? buildDeterministicUuid(`${resumeId}:snapshot-skill-ungrouped:${index}`),
+    name: skill.name,
+    category: skill.category ?? null,
+    sortOrder: skill.sortOrder,
+  }));
+
+  return { skillGroups, skills };
+}
 
 /**
  * Fetches a single resume with its skills by ID.
@@ -34,6 +74,7 @@ export async function getResume(
   user: AuthUser,
   id: string,
   branchId?: string,
+  commitId?: string,
 ): Promise<GetResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
@@ -67,7 +108,21 @@ export async function getResume(
   }
 
   let snapshotContent: ResumeCommitContent | null = null;
-  if (branchId) {
+  if (commitId) {
+    // Commit-first read: when a commitId is given, resolve exclusively from
+    // that exact commit. This is a detached view, so snapshot data must win.
+    const commitRow = await db
+      .selectFrom("resume_commits")
+      .select(["id", "resume_id", "content"])
+      .where("id", "=", commitId)
+      .executeTakeFirst();
+
+    if (commitRow === undefined || commitRow.resume_id !== id) {
+      throw new ORPCError("NOT_FOUND");
+    }
+
+    snapshotContent = commitRow.content as ResumeCommitContent;
+  } else if (branchId) {
     const branchRow = await db
       .selectFrom("resume_branches")
       .select(["id", "resume_id", "head_commit_id", "forked_from_commit_id"])
@@ -94,6 +149,28 @@ export async function getResume(
       .where("id", "=", resumeRow.head_commit_id)
       .executeTakeFirst();
     snapshotContent = commitRow?.content ?? null;
+  }
+
+  if (snapshotContent !== null) {
+    const snapshotSkills = buildSnapshotSkills(id, snapshotContent);
+
+    return {
+      id: resumeRow.id,
+      employeeId: resumeRow.employee_id,
+      title: snapshotContent.title ?? resumeRow.title,
+      consultantTitle: snapshotContent.consultantTitle ?? null,
+      presentation: snapshotContent.presentation ?? [],
+      summary: snapshotContent.summary ?? resumeRow.summary,
+      highlightedItems: snapshotContent.highlightedItems ?? [],
+      language: snapshotContent.language ?? resumeRow.language,
+      isMain: resumeRow.is_main,
+      mainBranchId: resumeRow.branch_id ?? null,
+      headCommitId: resumeRow.head_commit_id ?? null,
+      createdAt: resumeRow.created_at,
+      updatedAt: resumeRow.updated_at,
+      skillGroups: snapshotSkills.skillGroups,
+      skills: snapshotSkills.skills,
+    };
   }
 
   const skillRows = await db
@@ -140,12 +217,12 @@ export async function getResume(
   return {
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
-    title: snapshotContent?.title ?? resumeRow.title,
-    consultantTitle: snapshotContent?.consultantTitle ?? null,
-    presentation: snapshotContent?.presentation ?? [],
-    summary: snapshotContent?.summary ?? resumeRow.summary,
-    highlightedItems: snapshotContent?.highlightedItems ?? highlightedItemRows.map((item) => item.text),
-    language: snapshotContent?.language ?? resumeRow.language,
+    title: resumeRow.title,
+    consultantTitle: null,
+    presentation: [],
+    summary: resumeRow.summary,
+    highlightedItems: highlightedItemRows.map((item) => item.text),
+    language: resumeRow.language,
     isMain: resumeRow.is_main,
     mainBranchId: resumeRow.branch_id ?? null,
     headCommitId: resumeRow.head_commit_id ?? null,
@@ -170,7 +247,7 @@ export async function getResume(
 export const getResumeHandler = implement(contract.getResume).handler(
   async ({ input, context }) => {
     const user = requireAuth(context as AuthContext);
-    return getResume(getDb(), user, input.id, input.branchId);
+    return getResume(getDb(), user, input.id, input.branchId, input.commitId);
   }
 );
 
@@ -188,7 +265,7 @@ export function createGetResumeHandler(db: Kysely<Database>) {
   return implement(contract.getResume).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return getResume(db, user, input.id, input.branchId);
+      return getResume(db, user, input.id, input.branchId, input.commitId);
     }
   );
 }

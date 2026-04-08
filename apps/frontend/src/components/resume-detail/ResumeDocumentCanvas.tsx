@@ -48,7 +48,11 @@ interface ResumeDocumentCanvasProps {
   certifications: string[];
   languages: string[];
   isSnapshotMode: boolean;
-  getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
+  getResumeQueryKey: (
+    id: string,
+    branchId?: string | null,
+    commitId?: string | null,
+  ) => readonly ["getResume", string, string | null, string | null];
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];
@@ -169,6 +173,7 @@ export function ResumeDocumentCanvas({
           languages={languages}
           isEditing={isEditing}
           isSnapshotMode={isSnapshotMode}
+          activeBranchId={activeBranchId}
           resumeId={resumeId}
           queryKey={getResumeQueryKey(resumeId, activeBranchId)}
           sectionRef={skillsSectionRef}

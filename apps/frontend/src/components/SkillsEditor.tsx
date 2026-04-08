@@ -12,9 +12,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
@@ -24,9 +29,9 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import SortIcon from "@mui/icons-material/Sort";
-import Button from "@mui/material/Button";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
 
@@ -47,6 +52,7 @@ export interface SkillGroupRow {
 
 interface SkillsEditorProps {
   resumeId: string;
+  branchId?: string | null;
   skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
@@ -58,6 +64,7 @@ interface SkillsEditorProps {
 
 export function SkillsEditor({
   resumeId,
+  branchId,
   skillGroups,
   skills,
   queryKey,
@@ -69,6 +76,7 @@ export function SkillsEditor({
   const { t } = useTranslation("common");
   const editor = useSkillsEditor({
     resumeId,
+    branchId,
     skillGroups,
     skills,
     queryKey,
@@ -80,6 +88,7 @@ export function SkillsEditor({
   const [sortingGroupId, setSortingGroupId] = useState<string | null>(null);
   const [draggingSkillId, setDraggingSkillId] = useState<string | null>(null);
   const [draftSkillOrder, setDraftSkillOrder] = useState<Record<string, string[]>>({});
+  const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -165,6 +174,11 @@ export function SkillsEditor({
         <Tooltip title={t("resume.edit.skillAddButton")}>
           <IconButton size="small" onClick={() => editor.startAddingToCategory(groupId)} sx={{ p: 0.25 }}>
             <AddIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t("resume.edit.skillDeleteCategoryButton")}>
+          <IconButton size="small" onClick={() => setConfirmDeleteGroupId(groupId)} sx={{ p: 0.25 }}>
+            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
         <Tooltip title={t("resume.edit.skillsSortWithinGroupTooltip")}>
@@ -326,6 +340,13 @@ export function SkillsEditor({
                 <Box sx={{ display: "flex" }}>
                   <IconButton
                     size="small"
+                    onClick={() => setConfirmDeleteGroupId(group.id)}
+                    disabled={editor.isReordering}
+                  >
+                    <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
                     onClick={() => void editor.handleMoveCategory(index, "up")}
                     disabled={index === 0 || editor.isReordering}
                   >
@@ -392,6 +413,44 @@ export function SkillsEditor({
         onCancel={() => editor.setAddingCategory(false)}
         onStartAdding={() => { editor.setAddingCategory(true); editor.setNewCategoryName(""); editor.setNewCategorySkillName(""); }}
       />
+      <Dialog
+        open={confirmDeleteGroupId !== null}
+        onClose={() => {
+          if (!editor.deleteGroupMutation.isPending) {
+            setConfirmDeleteGroupId(null);
+          }
+        }}
+      >
+        <DialogTitle>{t("resume.edit.skillDeleteCategoryDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {t("resume.edit.skillDeleteCategoryDialog.description")}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDeleteGroupId(null)}
+            disabled={editor.deleteGroupMutation.isPending}
+          >
+            {t("resume.edit.skillCancelButton")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={confirmDeleteGroupId === null || editor.deleteGroupMutation.isPending}
+            onClick={() => {
+              if (!confirmDeleteGroupId) return;
+              editor.deleteGroupMutation.mutate(confirmDeleteGroupId, {
+                onSuccess: () => setConfirmDeleteGroupId(null),
+              });
+            }}
+          >
+            {editor.deleteGroupMutation.isPending
+              ? t("resume.edit.skillDeleteCategoryDialog.deleting")
+              : t("resume.edit.skillDeleteCategoryDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

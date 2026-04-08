@@ -383,14 +383,19 @@ describe("Generic error state", () => {
 // ---------------------------------------------------------------------------
 
 describe("getResumeQueryKey", () => {
-  it("returns a tuple with 'getResume', the id, and the branch id", () => {
+  it("returns a tuple with 'getResume', the id, the branch id, and the commit id", () => {
     const key = getResumeQueryKey("my-resume-id", "my-branch-id");
-    expect(key).toEqual(["getResume", "my-resume-id", "my-branch-id"]);
+    expect(key).toEqual(["getResume", "my-resume-id", "my-branch-id", null]);
   });
 
-  it("uses null when no branch id is provided", () => {
+  it("uses null when no branch id or commit id is provided", () => {
     const key = getResumeQueryKey("my-resume-id");
-    expect(key).toEqual(["getResume", "my-resume-id", null]);
+    expect(key).toEqual(["getResume", "my-resume-id", null, null]);
+  });
+
+  it("includes commit id when provided", () => {
+    const key = getResumeQueryKey("my-resume-id", "my-branch-id", "my-commit-id");
+    expect(key).toEqual(["getResume", "my-resume-id", "my-branch-id", "my-commit-id"]);
   });
 });
 

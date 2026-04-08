@@ -228,6 +228,7 @@
       "skillCategoryLabel": "Kategori (valfritt)",
       "skillAddButton": "Lägg till",
       "skillAddCategoryButton": "Lägg till kategori",
+      "skillDeleteCategoryButton": "Ta bort kategori",
       "skillsDetailViewTooltip": "Detaljvy",
       "skillsListViewTooltip": "Listvy (ordna kategorier)",
       "skillsSortWithinGroupTooltip": "Sortera kompetenser i kategorin",
@@ -238,6 +239,12 @@
       "skillEditButton": "Redigera",
       "skillSaveButton": "Spara",
       "skillCancelButton": "Avbryt",
+      "skillDeleteCategoryDialog": {
+        "title": "Ta bort kategori?",
+        "description": "Är du säker? Detta tar bort kategorin och alla kompetenser i den.",
+        "confirm": "Ta bort kategori",
+        "deleting": "Tar bort..."
+      },
       "skillSaving": "Sparar…",
       "skillAddError": "Det gick inte att lägga till kompetensen. Försök igen.",
       "skillUpdateError": "Det gick inte att uppdatera kompetensen. Försök igen.",
