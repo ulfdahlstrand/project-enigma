@@ -437,6 +437,146 @@ describe("getResume — commit-first read (commitId provided)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: tree-based read path (tree_id set on commit)
+// ---------------------------------------------------------------------------
+
+const TREE_ID = "550e8400-e29b-41d4-a716-446655440090";
+
+/**
+ * Builds a mock where the commit has tree_id set.
+ * The selectFrom mock handles all tree + revision tables so readTreeContent
+ * can complete without hitting a real database.
+ */
+function buildDbMockWithTree(opts: {
+  commitTreeId?: string;
+  treeEntries?: unknown[];
+  entryContentByEntryId?: Record<string, unknown>;
+  revisionsByRevId?: Record<string, unknown>;
+} = {}) {
+  const {
+    commitTreeId = TREE_ID,
+    treeEntries = [
+      { id: "te1", tree_id: TREE_ID, entry_type: "metadata", position: 0 },
+      { id: "te2", tree_id: TREE_ID, entry_type: "presentation", position: 1 },
+      { id: "te3", tree_id: TREE_ID, entry_type: "summary", position: 2 },
+      { id: "te4", tree_id: TREE_ID, entry_type: "highlighted_items", position: 3 },
+    ],
+    entryContentByEntryId = {
+      te1: { revision_id: "rv1", revision_type: "resume_metadata_revisions" },
+      te2: { revision_id: "rv2", revision_type: "presentation_revisions" },
+      te3: { revision_id: "rv3", revision_type: "summary_revisions" },
+      te4: { revision_id: "rv4", revision_type: "highlighted_item_revisions" },
+    },
+    revisionsByRevId = {
+      rv1: { id: "rv1", title: "Tree title", language: "sv" },
+      rv2: { id: "rv2", paragraphs: ["Tree paragraph"] },
+      rv3: { id: "rv3", content: "Tree summary" },
+      rv4: { id: "rv4", items: ["Tree highlight"] },
+    },
+  } = opts;
+
+  const resumeRow = { ...RESUME_ROW, head_commit_id: COMMIT_ID };
+
+  const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
+  const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
+  const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
+  const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
+
+  const commitRow = {
+    id: COMMIT_ID,
+    resume_id: RESUME_ID,
+    tree_id: commitTreeId,
+    content: { title: "JSON title", consultantTitle: null, presentation: [], summary: null,
+               highlightedItems: [], language: "en", skillGroups: [], skills: [], assignments: [] },
+  };
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue(commitRow);
+  const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
+  const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
+
+  const selectFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
+    if (table === "resume_commits") return { select: commitSelect };
+
+    if (table === "resume_tree_entries") {
+      return {
+        select: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              execute: vi.fn().mockResolvedValue(treeEntries),
+            }),
+          }),
+        }),
+      };
+    }
+
+    if (table === "resume_tree_entry_content") {
+      return {
+        select: vi.fn().mockReturnValue({
+          where: vi.fn().mockImplementation((_col: string, _op: string, entryId: string) => ({
+            executeTakeFirst: vi.fn().mockResolvedValue(
+              (entryContentByEntryId as Record<string, unknown>)[entryId]
+            ),
+          })),
+        }),
+      };
+    }
+
+    // All revision tables — look up by revision id
+    return {
+      select: vi.fn().mockReturnValue({
+        where: vi.fn().mockImplementation((_col: string, _op: string, revId: string) => ({
+          executeTakeFirst: vi.fn().mockResolvedValue(
+            (revisionsByRevId as Record<string, unknown>)[revId]
+          ),
+        })),
+      }),
+    };
+  });
+
+  return { db: { selectFrom } as unknown as Kysely<Database>, commitExecuteTakeFirst };
+}
+
+describe("getResume — tree-based read path (tree_id set)", () => {
+  it("reads title from metadata revision when tree_id is set", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    expect(result.title).toBe("Tree title");
+  });
+
+  it("reads language from metadata revision when tree_id is set", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    expect(result.language).toBe("sv");
+  });
+
+  it("reads presentation from presentation revision", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    expect(result.presentation).toEqual(["Tree paragraph"]);
+  });
+
+  it("reads summary from summary revision", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    expect(result.summary).toBe("Tree summary");
+  });
+
+  it("reads highlightedItems from highlighted_item revision", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    expect(result.highlightedItems).toEqual(["Tree highlight"]);
+  });
+
+  it("PARITY: tree-based output title does not come from legacy JSON content", async () => {
+    const { db } = buildDbMockWithTree();
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
+    // JSON content has title "JSON title" — tree must win
+    expect(result.title).toBe("Tree title");
+    expect(result.title).not.toBe("JSON title");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: createGetResumeHandler (oRPC handler)
 // ---------------------------------------------------------------------------
 

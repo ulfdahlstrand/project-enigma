@@ -512,6 +512,19 @@ describe("UX improvements", () => {
     expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
   });
 
+  it("navigates to a GitHub-like compare range for the selected branch", async () => {
+    const user = userEvent.setup();
+    renderPage("branch-id-2");
+
+    await screen.findByText("Swedish version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.compareButton }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/compare/$range",
+      params: { id: "resume-id-1", range: "main...Swedish Variant" },
+    });
+  });
+
   it("disables merge and delete actions for the main branch", async () => {
     renderPage();
     await screen.findByText("Initial version");

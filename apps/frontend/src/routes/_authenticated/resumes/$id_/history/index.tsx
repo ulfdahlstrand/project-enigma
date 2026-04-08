@@ -65,6 +65,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
     branches.find((branch) => branch.id === forcedBranchId) ??
     branches.find((branch) => branch.isMain) ??
     branches[0];
+  const mainBranch = branches.find((branch) => branch.isMain);
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
   const selectedBranchId = selectedBranch?.id ?? mainBranchId;
   const selectedView = viewFromSearch ?? "list";
@@ -123,6 +124,30 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
     await deleteResumeBranch.mutateAsync({ branchId: selectedBranchId });
     setDeleteDialogOpen(false);
     await navigateToHistory(mainBranchId || undefined, selectedView);
+  }
+
+  async function handleOpenCompare() {
+    if (
+      selectedBranch &&
+      mainBranch &&
+      selectedBranch.name !== mainBranch.name &&
+      selectedBranch.headCommitId &&
+      mainBranch.headCommitId
+    ) {
+      await navigate({
+        to: "/resumes/$id/compare/$range",
+        params: {
+          id: resumeId,
+          range: `${mainBranch.name}...${selectedBranch.name}`,
+        },
+      });
+      return;
+    }
+
+    await navigate({
+      to: "/resumes/$id/compare",
+      params: { id: resumeId },
+    });
   }
 
   function handleViewCommit(commitId: string) {
@@ -220,9 +245,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
             <Button
               variant="outlined"
               size="small"
-              onClick={() =>
-                void navigate({ to: "/resumes/$id/compare", params: { id: resumeId } })
-              }
+              onClick={() => void handleOpenCompare()}
             >
               {t("resume.history.compareButton")}
             </Button>

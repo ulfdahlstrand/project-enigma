@@ -355,7 +355,10 @@
       "toLabel": "To (newer)",
       "compareButton": "Compare",
       "fieldLabel": "Field",
-      "noSelectionHint": "Select two versions above to see what changed between them."
+      "noSelectionHint": "Select two versions above to see what changed between them.",
+      "branchGroupLabel": "Branches",
+      "commitGroupLabel": "Commits",
+      "emptyBranch": "no head commit"
     },
     "saveVersion": {
       "button": "Save version",

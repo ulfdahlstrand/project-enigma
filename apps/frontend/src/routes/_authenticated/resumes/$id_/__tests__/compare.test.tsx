@@ -18,37 +18,29 @@ import { screen } from "@testing-library/react";
 import enCommon from "../../../../../locales/en/common.json";
 import { renderWithProviders, buildTestQueryClient } from "../../../../../test-utils/render";
 import { Route } from "../compare/index";
-
-// ---------------------------------------------------------------------------
-// Mock oRPC client
-// ---------------------------------------------------------------------------
-
-vi.mock("../../../../../orpc-client", () => ({
-  orpc: {
-    getResume: vi.fn(),
-    listResumeCommits: vi.fn(),
-  },
-}));
-
-import { orpc } from "../../../../../orpc-client";
-
-const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
-const mockListCommits = orpc.listResumeCommits as ReturnType<typeof vi.fn>;
+import {
+  parseCompareRange,
+  resolveCompareRefToCommitId,
+} from "../compare/CompareVersionsPage";
 
 // ---------------------------------------------------------------------------
 // Mock diff hook
 // ---------------------------------------------------------------------------
 
-const mockDiffData = { current: undefined as unknown };
-const mockDiffIsLoading = { current: false };
-const mockDiffIsError = { current: false };
-
 vi.mock("../../../../../hooks/versioning", () => ({
-  resumeCommitsKey: (branchId: string) => ["listResumeCommits", branchId],
+  useResumeBranches: vi.fn(),
+  useResumeBranchHistoryGraph: vi.fn(),
   useResumeCommitDiff: vi.fn(),
 }));
 
-import { useResumeCommitDiff } from "../../../../../hooks/versioning";
+import {
+  useResumeBranches,
+  useResumeBranchHistoryGraph,
+  useResumeCommitDiff,
+} from "../../../../../hooks/versioning";
+
+const mockUseResumeBranches = useResumeBranches as ReturnType<typeof vi.fn>;
+const mockUseResumeBranchHistoryGraph = useResumeBranchHistoryGraph as ReturnType<typeof vi.fn>;
 const mockUseDiff = useResumeCommitDiff as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
@@ -56,13 +48,14 @@ const mockUseDiff = useResumeCommitDiff as ReturnType<typeof vi.fn>;
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
+const mockParams = { current: { id: "resume-id-1" } as { id: string; range?: string } };
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ id: "resume-id-1" }),
+    useParams: () => mockParams.current,
     Link: React.forwardRef(function MockLink(
       { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
       ref: React.Ref<HTMLAnchorElement>
@@ -76,12 +69,59 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
-const RESUME = { id: "resume-id-1", mainBranchId: "branch-id-1", title: "My Resume" };
+const BRANCHES = [
+  {
+    id: "branch-id-1",
+    resumeId: "resume-id-1",
+    name: "main",
+    language: "en",
+    isMain: true,
+    headCommitId: "commit-id-1",
+    forkedFromCommitId: null,
+    createdBy: null,
+    createdAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "branch-id-2",
+    resumeId: "resume-id-1",
+    name: "qwerty",
+    language: "en",
+    isMain: false,
+    headCommitId: "commit-id-2",
+    forkedFromCommitId: "commit-id-1",
+    createdBy: null,
+    createdAt: "2024-06-02T10:00:00Z",
+  },
+];
 
 const COMMITS = [
-  { id: "commit-id-1", message: "Version A", createdAt: "2024-06-01T10:00:00Z" },
-  { id: "commit-id-2", message: "Version B", createdAt: "2024-06-02T10:00:00Z" },
+  {
+    id: "commit-id-1",
+    resumeId: "resume-id-1",
+    parentCommitId: null,
+    message: "Version A",
+    title: "Version A",
+    description: "",
+    createdBy: null,
+    createdAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "commit-id-2",
+    resumeId: "resume-id-1",
+    parentCommitId: "commit-id-1",
+    message: "Version B",
+    title: "Version B",
+    description: "",
+    createdBy: null,
+    createdAt: "2024-06-02T10:00:00Z",
+  },
 ];
+
+const GRAPH = {
+  branches: BRANCHES,
+  commits: COMMITS,
+  edges: [{ commitId: "commit-id-2", parentCommitId: "commit-id-1", parentOrder: 0 }],
+};
 
 const NO_CHANGES_DIFF = {
   baseCommitId: "commit-id-1",
@@ -125,9 +165,7 @@ function renderPage() {
 
 afterEach(() => {
   vi.clearAllMocks();
-  mockDiffData.current = undefined;
-  mockDiffIsLoading.current = false;
-  mockDiffIsError.current = false;
+  mockParams.current = { id: "resume-id-1" };
 });
 
 // ---------------------------------------------------------------------------
@@ -136,11 +174,10 @@ afterEach(() => {
 
 describe("Loading state", () => {
   it("renders a progressbar while commits are loading", async () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockReturnValue(new Promise(() => undefined));
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: undefined, isLoading: true });
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
     renderPage();
-    // Progressbar appears after resume resolves and commits query starts (async)
     expect(await screen.findByRole("progressbar")).toBeInTheDocument();
   });
 });
@@ -151,8 +188,8 @@ describe("Loading state", () => {
 
 describe("Version dropdowns", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
   });
 
@@ -182,8 +219,8 @@ describe("Version dropdowns", () => {
 
 describe("No changes diff", () => {
   it("renders the no-changes alert", async () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: NO_CHANGES_DIFF, isLoading: false, isError: false });
 
     renderPage();
@@ -199,8 +236,8 @@ describe("No changes diff", () => {
 
 describe("Diff with changes", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: HAS_CHANGES_DIFF, isLoading: false, isError: false });
   });
 
@@ -249,8 +286,8 @@ describe("Diff with changes", () => {
 
 describe("Error state", () => {
   it("renders an error alert when diff fetch fails", async () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: true });
 
     renderPage();
@@ -266,8 +303,8 @@ describe("Error state", () => {
 
 describe("Breadcrumb navigation", () => {
   it("renders a breadcrumb link back to the resumes list", async () => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
 
     renderPage();
@@ -284,8 +321,8 @@ describe("Breadcrumb navigation", () => {
 
 describe("UX improvements", () => {
   beforeEach(() => {
-    mockGetResume.mockResolvedValue(RESUME);
-    mockListCommits.mockResolvedValue(COMMITS);
+    mockUseResumeBranches.mockReturnValue({ data: BRANCHES, isLoading: false });
+    mockUseResumeBranchHistoryGraph.mockReturnValue({ data: GRAPH, isLoading: false });
     mockUseDiff.mockReturnValue({ data: undefined, isLoading: false, isError: false });
   });
 
@@ -299,5 +336,24 @@ describe("UX improvements", () => {
     renderPage();
     await screen.findByRole("heading", { level: 1, name: enCommon.resume.compare.pageTitle });
     expect(screen.getByText(enCommon.resume.compare.noSelectionHint)).toBeInTheDocument();
+  });
+});
+
+describe("Range route resolution", () => {
+  it("parses GitHub-like compare ranges", () => {
+    expect(parseCompareRange("main...qwerty")).toEqual({
+      baseRef: "main",
+      compareRef: "qwerty",
+    });
+  });
+
+  it("resolves branch names to their head commit ids", () => {
+    expect(resolveCompareRefToCommitId("main", BRANCHES, COMMITS)).toBe("commit-id-1");
+    expect(resolveCompareRefToCommitId("qwerty", BRANCHES, COMMITS)).toBe("commit-id-2");
+  });
+
+  it("resolves mixed branch and commit refs", () => {
+    expect(resolveCompareRefToCommitId("main", BRANCHES, COMMITS)).toBe("commit-id-1");
+    expect(resolveCompareRefToCommitId("commit-id-2", BRANCHES, COMMITS)).toBe("commit-id-2");
   });
 });
