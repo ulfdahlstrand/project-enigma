@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -129,9 +130,8 @@ describe("LoginPage", () => {
 
   it("navigates to /employees after successful login", async () => {
     renderLogin();
-    await act(async () => {
-      screen.getByRole("button", { name: /sign in with google/i }).click();
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /sign in with google/i }));
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" })
     );
@@ -149,9 +149,8 @@ describe("LoginPage", () => {
 
   it("shows loading state after clicking sign in", async () => {
     renderLogin();
-    await act(async () => {
-      screen.getByRole("button", { name: /sign in with google/i }).click();
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /sign in with google/i }));
     // After click, the Google button should be replaced by progress indicator
     expect(screen.queryByRole("button", { name: /sign in with google/i })).toBeNull();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();

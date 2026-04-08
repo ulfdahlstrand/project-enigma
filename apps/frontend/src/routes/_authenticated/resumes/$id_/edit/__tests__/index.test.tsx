@@ -80,6 +80,7 @@ vi.mock("../../../../../../orpc-client", () => ({
   orpc: {
     getResume: vi.fn(),
     listResumeBranches: vi.fn(),
+    listResumeCommits: vi.fn(),
     getEmployee: vi.fn(),
     listBranchAssignmentsFull: vi.fn(),
     listEducation: vi.fn(),
@@ -118,6 +119,7 @@ import { orpc } from "../../../../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
+const mockListResumeCommits = orpc.listResumeCommits as ReturnType<typeof vi.fn>;
 const mockGetEmployee = orpc.getEmployee as ReturnType<typeof vi.fn>;
 const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListEducation = orpc.listEducation as ReturnType<typeof vi.fn>;
@@ -166,6 +168,7 @@ beforeEach(() => {
   mockCloseInlineRevision.mockReset();
   mockGetResume.mockResolvedValue(TEST_RESUME);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
+  mockListResumeCommits.mockResolvedValue([]);
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListBranchAssignmentsFull.mockResolvedValue([]);
   mockListEducation.mockResolvedValue([]);

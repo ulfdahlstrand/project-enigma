@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { AuthProvider, useAuth } from "./auth-context";
 import type { GetCurrentSessionOutput } from "@cv-tool/contracts";
 import { resetAuthSession } from "./session-store";
@@ -114,9 +115,8 @@ describe("AuthProvider / useAuth", () => {
       </AuthProvider>
     );
 
-    await act(async () => {
-      screen.getByRole("button", { name: "login" }).click();
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "login" }));
 
     await waitFor(() =>
       expect(screen.getByTestId("login-user").textContent).toBe(SESSION_RESPONSE.user.email)
