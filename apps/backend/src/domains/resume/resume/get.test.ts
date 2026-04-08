@@ -304,7 +304,10 @@ describe("getResume query function", () => {
   });
 
   it("uses the selected branch snapshot when branchId is provided", async () => {
-    const { db, branchExecuteTakeFirst, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    const { db, branchExecuteTakeFirst, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, [
+      SKILL_ROW_1,
+      SKILL_ROW_2,
+    ]);
     branchExecuteTakeFirst.mockResolvedValue({
       id: REVISION_BRANCH_ID,
       resume_id: RESUME_ID,
@@ -319,8 +322,8 @@ describe("getResume query function", () => {
         summary: "Branch summary",
         highlightedItems: ["Branch highlight"],
         language: "en",
-        skillGroups: [],
-        skills: [],
+        skillGroups: [{ name: "Branch skills", sortOrder: 0 }],
+        skills: [{ name: "Branch-only skill", category: "Branch skills", sortOrder: 0 }],
         assignments: [],
       },
     });
@@ -331,6 +334,13 @@ describe("getResume query function", () => {
     expect(result.presentation).toEqual(["Branch presentation"]);
     expect(result.summary).toBe("Branch summary");
     expect(result.highlightedItems).toEqual(["Branch highlight"]);
+    expect(result.skillGroups).toEqual([
+      expect.objectContaining({ resumeId: RESUME_ID, name: "Branch skills", sortOrder: 0 }),
+    ]);
+    expect(result.skills).toEqual([
+      expect.objectContaining({ name: "Branch-only skill", category: "Branch skills", sortOrder: 0 }),
+    ]);
+    expect(result.skills[0]?.groupId).toBe(result.skillGroups[0]?.id);
   });
 
   it("throws NOT_FOUND when the requested branch does not belong to the resume", async () => {
@@ -343,6 +353,137 @@ describe("getResume query function", () => {
     });
 
     await expect(getResume(db, MOCK_ADMIN, RESUME_ID, REVISION_BRANCH_ID)).rejects.toSatisfy(
+      (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: commit-first read (commitId provided)
+// ---------------------------------------------------------------------------
+
+describe("getResume — commit-first read (commitId provided)", () => {
+  const EXACT_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440099";
+
+  it("returns content from the exact commit when commitId is provided", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    commitExecuteTakeFirst.mockResolvedValueOnce({
+      id: EXACT_COMMIT_ID,
+      resume_id: RESUME_ID,
+      content: {
+        title: "Historical title",
+        consultantTitle: "Historical consultant",
+        presentation: ["Historical presentation"],
+        summary: "Historical summary",
+        highlightedItems: ["Historical highlight"],
+        language: "sv",
+        skillGroups: [{ name: "platforms", sortOrder: 0 }],
+        skills: [{ name: "AWS", category: "platforms", sortOrder: 0 }],
+        assignments: [],
+      },
+    });
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID);
+
+    expect(result.title).toBe("Historical title");
+    expect(result.consultantTitle).toBe("Historical consultant");
+    expect(result.presentation).toEqual(["Historical presentation"]);
+    expect(result.summary).toBe("Historical summary");
+    expect(result.language).toBe("sv");
+    expect(result.skillGroups).toEqual([
+      expect.objectContaining({ resumeId: RESUME_ID, name: "platforms", sortOrder: 0 }),
+    ]);
+    expect(result.skills).toEqual([
+      expect.objectContaining({
+        resumeId: RESUME_ID,
+        name: "AWS",
+        category: "platforms",
+        sortOrder: 0,
+      }),
+    ]);
+    expect(result.skillGroups[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(result.skills[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(result.skills[0]?.groupId).toBe(result.skillGroups[0]?.id);
+  });
+
+  it("does not mix live branch state into a commit view (detached read)", async () => {
+    const { db, commitExecuteTakeFirst, skillsWhere } = buildDbMock(RESUME_ROW, [
+      SKILL_ROW_1,
+      SKILL_ROW_2,
+    ]);
+    commitExecuteTakeFirst.mockResolvedValueOnce({
+      id: EXACT_COMMIT_ID,
+      resume_id: RESUME_ID,
+      content: {
+        title: "Snapshot title",
+        consultantTitle: null,
+        presentation: [],
+        summary: "Snapshot summary",
+        highlightedItems: [],
+        language: "en",
+        skillGroups: [{ name: "snapshot-group", sortOrder: 0 }],
+        skills: [{ name: "Snapshot skill", category: "snapshot-group", sortOrder: 0 }],
+        assignments: [],
+      },
+    });
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID);
+
+    // Title must come from the commit snapshot, not from the live resume row
+    expect(result.title).toBe("Snapshot title");
+    expect(result.title).not.toBe(RESUME_ROW.title);
+    expect(result.skills).toEqual([
+      expect.objectContaining({ name: "Snapshot skill", category: "snapshot-group" }),
+    ]);
+    expect(skillsWhere).not.toHaveBeenCalled();
+  });
+
+  it("prefers commitId over branchId when both are provided", async () => {
+    const { db, commitExecuteTakeFirst, branchExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    commitExecuteTakeFirst.mockResolvedValueOnce({
+      id: EXACT_COMMIT_ID,
+      resume_id: RESUME_ID,
+      content: {
+        title: "Commit wins",
+        consultantTitle: null,
+        presentation: [],
+        summary: null,
+        highlightedItems: [],
+        language: "en",
+        skillGroups: [],
+        skills: [],
+        assignments: [],
+      },
+    });
+
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, REVISION_BRANCH_ID, EXACT_COMMIT_ID);
+
+    expect(result.title).toBe("Commit wins");
+    expect(branchExecuteTakeFirst).not.toHaveBeenCalled();
+  });
+
+  it("throws NOT_FOUND when the commit does not belong to the resume", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    commitExecuteTakeFirst.mockResolvedValueOnce({
+      id: EXACT_COMMIT_ID,
+      resume_id: "550e8400-e29b-41d4-a716-000000000000", // different resume
+      content: {},
+    });
+
+    await expect(
+      getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID)
+    ).rejects.toSatisfy(
+      (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
+    );
+  });
+
+  it("throws NOT_FOUND when the commit does not exist", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    commitExecuteTakeFirst.mockResolvedValueOnce(undefined);
+
+    await expect(
+      getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID)
+    ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
     );
   });
@@ -375,5 +516,31 @@ describe("createGetResumeHandler", () => {
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "UNAUTHORIZED"
     );
+  });
+
+  it("passes commitId through the handler to get an exact commit view", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    const handler = createGetResumeHandler(db);
+    commitExecuteTakeFirst.mockResolvedValueOnce({
+      id: COMMIT_ID,
+      resume_id: RESUME_ID,
+      content: {
+        title: "Handler commit snapshot",
+        consultantTitle: null,
+        presentation: [],
+        summary: null,
+        highlightedItems: [],
+        language: "en",
+        skillGroups: [],
+        skills: [],
+        assignments: [],
+      },
+    });
+
+    const result = await call(handler, { id: RESUME_ID, commitId: COMMIT_ID }, {
+      context: { user: MOCK_ADMIN },
+    });
+
+    expect(result.title).toBe("Handler commit snapshot");
   });
 });

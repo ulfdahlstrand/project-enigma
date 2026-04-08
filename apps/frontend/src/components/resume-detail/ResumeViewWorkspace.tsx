@@ -34,7 +34,11 @@ interface ResumeViewWorkspaceProps {
   certifications: string[];
   languages: string[];
   isSnapshotMode: boolean;
-  getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
+  getResumeQueryKey: (
+    id: string,
+    branchId?: string | null,
+    commitId?: string | null,
+  ) => readonly ["getResume", string, string | null, string | null];
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];

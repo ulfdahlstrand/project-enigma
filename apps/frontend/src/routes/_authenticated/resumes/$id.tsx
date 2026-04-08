@@ -27,12 +27,16 @@ import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusB
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
-export const getResumeQueryKey = (id: string, branchId?: string | null) =>
-  ["getResume", id, branchId ?? null] as const;
+export const getResumeQueryKey = (
+  id: string,
+  branchId?: string | null,
+  commitId?: string | null,
+) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   validateSearch: z.object({
     branchId: z.string().optional(),
+    commitId: z.string().optional(),
   }),
   component: () => <ResumeDetailPage routeMode="detail" />,
 });
@@ -47,9 +51,15 @@ export function ResumeDetailPage({
   const id = idParam!;
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { branchId: selectedBranchId, assistant: assistantMode, sourceBranchId: urlSourceBranchId } =
+  const {
+    branchId: selectedBranchId,
+    commitId: selectedCommitId,
+    assistant: assistantMode,
+    sourceBranchId: urlSourceBranchId,
+  } =
     useSearch({ strict: false }) as any as {
       branchId?: string;
+      commitId?: string;
       assistant?: "true";
       sourceBranchId?: string;
     };
@@ -57,10 +67,15 @@ export function ResumeDetailPage({
   const queryClient = useQueryClient();
   const { zoom, setZoom, minZoom, maxZoom } = useResumeDocumentZoom();
   const requestedBranchId = selectedBranchId ?? null;
+  const requestedCommitId = selectedCommitId ?? null;
 
   const { data: resume, isLoading, isError, error } = useQuery({
-    queryKey: getResumeQueryKey(id, requestedBranchId),
-    queryFn: () => orpc.getResume({ id, branchId: requestedBranchId ?? undefined }),
+    queryKey: getResumeQueryKey(id, requestedBranchId, requestedCommitId),
+    queryFn: () => orpc.getResume({
+      id,
+      branchId: requestedBranchId ?? undefined,
+      commitId: requestedCommitId ?? undefined,
+    }),
     retry: false,
   });
 
@@ -74,12 +89,12 @@ export function ResumeDetailPage({
   const activeBranchId = selectedBranchId ?? mainBranchId ?? null;
   const activeBranch = branches?.find((b) => b.id === activeBranchId);
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
+  const isBranchBackedMode = activeBranchId !== null && activeBranchId !== mainBranchId;
+  const isSnapshotMode = requestedCommitId !== null;
 
-  const isSnapshotMode = activeBranchId !== null && activeBranchId !== mainBranchId && activeBranch?.headCommitId != null;
-
-  const { data: branchCommit, isError: isBranchCommitError } = useQuery({
-    queryKey: ["getResumeCommit", activeBranch?.headCommitId],
-    queryFn: () => orpc.getResumeCommit({ commitId: activeBranch!.headCommitId! }),
+  const { data: selectedCommit, isError: isSelectedCommitError } = useQuery({
+    queryKey: ["getResumeCommit", requestedCommitId],
+    queryFn: () => orpc.getResumeCommit({ commitId: requestedCommitId! }),
     enabled: isSnapshotMode,
   });
 
@@ -120,7 +135,9 @@ export function ResumeDetailPage({
     }) =>
       orpc.updateResume({ id, ...patch }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
+      await queryClient.invalidateQueries({
+        queryKey: getResumeQueryKey(id, requestedBranchId, requestedCommitId),
+      });
     },
   });
 
@@ -128,7 +145,9 @@ export function ResumeDetailPage({
     mutationFn: () => orpc.deleteResume({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LIST_RESUMES_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: getResumeQueryKey(id, requestedBranchId) });
+      await queryClient.invalidateQueries({
+        queryKey: getResumeQueryKey(id, requestedBranchId, requestedCommitId),
+      });
       void navigate({
         to: "/resumes",
         search: resume?.employeeId ? { employeeId: resume.employeeId } : {},
@@ -189,7 +208,7 @@ export function ResumeDetailPage({
   }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
   const assignments = liveAssignments;
-  const snapshotContent = isSnapshotMode ? branchCommit?.content : null;
+  const snapshotContent = isSnapshotMode ? selectedCommit?.content : null;
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
   const language = snapshotContent?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
@@ -446,14 +465,14 @@ export function ResumeDetailPage({
     return <ErrorState message={isNotFound ? t("resume.detail.notFound") : t("resume.detail.error")} />;
   }
 
-  if (isSnapshotMode && isBranchCommitError) {
+  if (isSnapshotMode && isSelectedCommitError) {
     return <ErrorState message={t("resume.detail.error")} />;
   }
 
   const handleSave = async () => {
     const patch = buildDraftPatch();
 
-    if (isSnapshotMode && activeBranchId) {
+    if (isBranchBackedMode && activeBranchId) {
       // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
     } else {

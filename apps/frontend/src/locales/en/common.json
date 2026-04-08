@@ -228,6 +228,7 @@
       "skillCategoryLabel": "Category (optional)",
       "skillAddButton": "Add skill",
       "skillAddCategoryButton": "Add category",
+      "skillDeleteCategoryButton": "Delete category",
       "skillsDetailViewTooltip": "Detailed view",
       "skillsListViewTooltip": "List view (reorder categories)",
       "skillsSortWithinGroupTooltip": "Sort skills in this category",
@@ -238,6 +239,12 @@
       "skillEditButton": "Edit",
       "skillSaveButton": "Save",
       "skillCancelButton": "Cancel",
+      "skillDeleteCategoryDialog": {
+        "title": "Delete category?",
+        "description": "Are you sure? This will delete the category and all skills in it.",
+        "confirm": "Delete category",
+        "deleting": "Deleting..."
+      },
       "skillSaving": "Saving…",
       "skillAddError": "Failed to add skill. Please try again.",
       "skillUpdateError": "Failed to update skill. Please try again.",
