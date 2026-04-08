@@ -9,6 +9,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { getResumeOutputSchema } from "@cv-tool/contracts";
+import { readTreeContent } from "../lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
 // getResume — query logic
@@ -112,7 +113,7 @@ export async function getResume(
     // that exact commit. This is a detached view, so snapshot data must win.
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select(["id", "resume_id", "content"])
+      .select(["id", "resume_id", "content", "tree_id"])
       .where("id", "=", commitId)
       .executeTakeFirst();
 
@@ -120,14 +121,20 @@ export async function getResume(
       throw new ORPCError("NOT_FOUND");
     }
 
-    snapshotContent = commitRow.content as ResumeCommitContent;
+    snapshotContent = commitRow.tree_id
+      ? await readTreeContent(db, commitRow.tree_id)
+      : commitRow.content as ResumeCommitContent;
   } else if (resumeRow.head_commit_id) {
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select("content")
+      .select(["content", "tree_id"])
       .where("id", "=", resumeRow.head_commit_id)
       .executeTakeFirst();
-    snapshotContent = commitRow?.content ?? null;
+    if (commitRow) {
+      snapshotContent = commitRow.tree_id
+        ? await readTreeContent(db, commitRow.tree_id)
+        : (commitRow.content as ResumeCommitContent) ?? null;
+    }
   }
 
   if (snapshotContent !== null) {
