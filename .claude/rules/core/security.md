@@ -1,7 +1,3 @@
----
-alwaysApply: true
----
-
 # Security
 
 - Never hardcode secrets — always use env vars; fail fast if missing

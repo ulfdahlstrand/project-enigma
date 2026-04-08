@@ -1,7 +1,3 @@
----
-alwaysApply: true
----
-
 # Agents — when to use
 
 | Agent | Trigger |
