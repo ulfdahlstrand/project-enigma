@@ -61,7 +61,6 @@ const ASSIGNMENT_ROW = {
 const INSERTED_COMMIT = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
-  branch_id: BRANCH_ID,
   parent_commit_id: null,
   content: {
     title: "Senior Engineer",
@@ -198,7 +197,6 @@ describe("saveResumeVersion", () => {
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         resume_id: RESUME_ID,
-        branch_id: BRANCH_ID,
         message: "My version",
         created_by: MOCK_ADMIN.id,
       })

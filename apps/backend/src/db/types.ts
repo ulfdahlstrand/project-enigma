@@ -158,8 +158,6 @@ export interface ResumeCommitContent {
 export interface ResumeCommitTable {
   id: Generated<string>;
   resume_id: string;
-  /** Which branch this commit belongs to. SET NULL if the branch is deleted. */
-  branch_id: string | null;
   /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
   content: ColumnType<ResumeCommitContent, string, string>;
   message: Generated<string>;

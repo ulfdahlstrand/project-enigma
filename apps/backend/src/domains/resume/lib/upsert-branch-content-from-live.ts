@@ -131,7 +131,6 @@ export async function upsertBranchContentFromLive(
       .insertInto("resume_commits")
       .values({
         resume_id: resumeId,
-        branch_id: branchId,
         content: JSON.stringify(content),
         message: "initial",
         title: "initial",

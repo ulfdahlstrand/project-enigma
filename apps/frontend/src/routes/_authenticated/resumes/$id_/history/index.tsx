@@ -33,27 +33,26 @@ import {
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
-import { sortByCreatedAt } from "./history-graph-utils";
+import { getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   validateSearch: z.object({
-    branchId: z.string().optional(),
     view: z.enum(["list", "tree"]).optional(),
   }),
-  component: VersionHistoryPage,
+  component: HistoryIndexRoute,
 });
 
-function VersionHistoryPage() {
+export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string } = {}) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mergeTargetBranchId, setMergeTargetBranchId] = useState("");
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
-  const { branchId: branchIdFromSearch, view: viewFromSearch } =
-    useSearch({ strict: false }) as { branchId?: string; view?: "list" | "tree" };
+  const { view: viewFromSearch } =
+    useSearch({ strict: false }) as { view?: "list" | "tree" };
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
@@ -63,7 +62,7 @@ function VersionHistoryPage() {
   const graphEdges = graph?.edges ?? [];
 
   const selectedBranch =
-    branches.find((branch) => branch.id === branchIdFromSearch) ??
+    branches.find((branch) => branch.id === forcedBranchId) ??
     branches.find((branch) => branch.isMain) ??
     branches[0];
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
@@ -71,13 +70,29 @@ function VersionHistoryPage() {
   const selectedView = viewFromSearch ?? "list";
   const selectedResumeCommitId = selectedBranch?.headCommitId ?? selectedBranch?.forkedFromCommitId ?? null;
   const commits = sortByCreatedAt(
-    graphCommits.filter((commit) => commit.branchId === selectedBranchId),
+    getReachableCommits(selectedBranch?.headCommitId ?? null, graphCommits, graphEdges),
   ).reverse();
   const mergeTargetBranches = branches.filter((branch) => branch.id !== selectedBranchId);
   const canMergeSelectedBranch = Boolean(
     selectedBranch && !selectedBranch.isMain && selectedBranch.headCommitId && mergeTargetBranches.length > 0,
   );
   const canDeleteSelectedBranch = Boolean(selectedBranch && !selectedBranch.isMain);
+
+  function navigateToHistory(branchId: string | undefined, view: "list" | "tree") {
+    if (branchId) {
+      return navigate({
+        to: "/resumes/$id/history/branch/$branchId",
+        params: { id: resumeId, branchId },
+        search: { view },
+      });
+    }
+
+    return navigate({
+      to: "/resumes/$id/history",
+      params: { id: resumeId },
+      search: { view },
+    });
+  }
 
   function openMergeDialog() {
     const firstTargetBranchId = mergeTargetBranches[0]?.id ?? "";
@@ -97,11 +112,7 @@ function VersionHistoryPage() {
     });
 
     setMergeDialogOpen(false);
-    await navigate({
-      to: "/resumes/$id/history",
-      params: { id: resumeId },
-      search: { branchId: mergeTargetBranchId, view: selectedView },
-    });
+    await navigateToHistory(mergeTargetBranchId, selectedView);
   }
 
   async function handleDeleteSelectedBranch() {
@@ -111,11 +122,7 @@ function VersionHistoryPage() {
 
     await deleteResumeBranch.mutateAsync({ branchId: selectedBranchId });
     setDeleteDialogOpen(false);
-    await navigate({
-      to: "/resumes/$id/history",
-      params: { id: resumeId },
-      search: { branchId: mainBranchId || undefined, view: selectedView },
-    });
+    await navigateToHistory(mainBranchId || undefined, selectedView);
   }
 
   function handleViewCommit(commitId: string) {
@@ -161,11 +168,7 @@ function VersionHistoryPage() {
                 value={selectedBranchId}
                 label={t("resume.history.branchLabel")}
                 onChange={(event) =>
-                  void navigate({
-                    to: "/resumes/$id/history",
-                    params: { id: resumeId },
-                    search: { branchId: event.target.value, view: selectedView },
-                  })
+                  void navigateToHistory(event.target.value, selectedView)
                 }
               >
                 {branches.map((branch) => (
@@ -180,11 +183,7 @@ function VersionHistoryPage() {
               <Button
                 variant={selectedView === "list" ? "contained" : "outlined"}
                 onClick={() =>
-                  void navigate({
-                    to: "/resumes/$id/history",
-                    params: { id: resumeId },
-                    search: { branchId: selectedBranchId, view: "list" },
-                  })
+                  void navigateToHistory(selectedBranchId || undefined, "list")
                 }
               >
                 {t("resume.history.listView")}
@@ -192,11 +191,7 @@ function VersionHistoryPage() {
               <Button
                 variant={selectedView === "tree" ? "contained" : "outlined"}
                 onClick={() =>
-                  void navigate({
-                    to: "/resumes/$id/history",
-                    params: { id: resumeId },
-                    search: { branchId: selectedBranchId, view: "tree" },
-                  })
+                  void navigateToHistory(selectedBranchId || undefined, "tree")
                 }
               >
                 {t("resume.history.treeView")}
@@ -344,4 +339,8 @@ function VersionHistoryPage() {
       </PageContent>
     </>
   );
+}
+
+function HistoryIndexRoute() {
+  return <VersionHistoryPage />;
 }

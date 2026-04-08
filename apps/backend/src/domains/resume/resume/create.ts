@@ -89,7 +89,6 @@ export async function createResume(
       .insertInto("resume_commits")
       .values({
         resume_id: newResume.id,
-        branch_id: newBranch.id,
         content: initialContent,
         message: "initial",
         created_by: user.id,

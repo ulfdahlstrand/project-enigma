@@ -96,10 +96,10 @@ describe("AC4 – Indexes for graph traversal", () => {
   });
 });
 
-// ── AC 5: Backfill from resume_commits.parent_commit_id ──────────────────────
+// ── AC 5: Historical backfill from legacy resume_commits.parent_commit_id ───
 
 describe("AC5 – Backfill in up()", () => {
-  it("inserts from resume_commits where parent_commit_id is not null", () => {
+  it("historically inserts from resume_commits where parent_commit_id is not null", () => {
     expect(migrationSource).toContain("resume_commits");
     expect(migrationSource).toMatch(/parent_commit_id\s+is\s+not\s+null/i);
   });

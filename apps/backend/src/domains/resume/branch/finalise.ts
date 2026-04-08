@@ -81,7 +81,6 @@ export async function finaliseResumeBranch(
       .insertInto("resume_commits")
       .values({
         resume_id: sourceBranch.resume_id,
-        branch_id: sourceBranch.id,
         content: JSON.stringify(normalisedContent),
         title: `merged ${revisionBranch.name} into ${sourceBranch.name}`,
         description: "",

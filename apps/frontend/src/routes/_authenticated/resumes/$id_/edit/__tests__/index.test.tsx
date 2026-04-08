@@ -9,7 +9,7 @@ const TEST_RESUME_ID = "resume-test-id-99";
 const mockNavigate = vi.fn();
 const mockOpenInlineRevision = vi.fn();
 const mockCloseInlineRevision = vi.fn();
-let mockSearch: { branchId?: string; assistant?: "true"; sourceBranchId?: string } = {};
+let mockSearch: { assistant?: "true"; sourceBranchId?: string } = {};
 
 vi.mock("../../../../../../hooks/inline-resume-revision", () => ({
   useInlineResumeRevision: () => {
@@ -199,7 +199,7 @@ describe("/resumes/$id/edit", () => {
   });
 
   it("does not call open() when sourceBranchId is in the URL (hook handles restoration)", async () => {
-    mockSearch = { branchId: "branch-revision-1", assistant: "true", sourceBranchId: MAIN_BRANCH.id };
+    mockSearch = { assistant: "true", sourceBranchId: MAIN_BRANCH.id };
     mockListResumeBranches.mockResolvedValue([
       MAIN_BRANCH,
       {

@@ -243,7 +243,6 @@ export async function saveResumeVersion(
       .insertInto("resume_commits")
       .values({
         resume_id: branch.resume_id,
-        branch_id: input.branchId,
         content: JSON.stringify(content),
         title,
         description,
@@ -276,7 +275,6 @@ export async function saveResumeVersion(
   return {
     id: commit.id,
     resumeId: commit.resume_id,
-    branchId: commit.branch_id,
     parentCommitId: branch.head_commit_id,
     content: commit.content as unknown as ResumeCommitContent,
     message: commit.message,

@@ -8,7 +8,15 @@ import { sql } from "kysely";
 // represents a point-in-time capture of a resume branch's full content —
 // analogous to a git commit.
 //
-// Note on circular FK: resume_commits.branch_id → resume_branches, and
+// Historical note:
+//   This original table shape included legacy branch_id and parent_commit_id
+//   columns as transitional compatibility fields. The modern model uses:
+//     - resume_branches for branch refs
+//     - resume_commit_parents for commit ancestry
+//   A later migration drops both legacy columns after the app has been fully
+//   rewired away from them.
+//
+// Original circular FK note: resume_commits.branch_id → resume_branches, and
 // resume_branches.head_commit_id → resume_commits. To break this cycle:
 //   1. This migration creates resume_commits WITHOUT branch_id FK.
 //   2. The next migration (create_resume_branches) creates resume_branches,
@@ -24,8 +32,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("resume_id", "uuid", (col) =>
       col.notNull().references("resumes.id").onDelete("cascade")
     )
-    // branch_id FK added by the subsequent migration to avoid circular dependency
+    // Legacy compatibility column. Dropped by a later cleanup migration.
     .addColumn("branch_id", "uuid")
+    // Legacy compatibility column. Replaced by resume_commit_parents.
     .addColumn("parent_commit_id", "uuid", (col) =>
       col.references("resume_commits.id").onDelete("set null")
     )

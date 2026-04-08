@@ -322,7 +322,7 @@ export async function e2eRevisionStateHandler(req: IncomingMessage, res: ServerR
 
   const commits = await db
     .selectFrom("resume_commits")
-    .select(["id", "branch_id", "message", "title", "description"])
+    .select(["id", "message", "title", "description"])
     .where("resume_id", "=", resumeId)
     .orderBy("created_at", "asc")
     .execute();

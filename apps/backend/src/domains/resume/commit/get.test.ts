@@ -13,7 +13,6 @@ import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-he
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
-const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440031";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 // Valid v4 UUID (Zod v4 requires version nibble 1-8 and variant bits)
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
@@ -21,7 +20,6 @@ const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
 const COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
-  branch_id: BRANCH_ID,
   parent_commit_id: null,
   content: { title: "Engineer", skills: [], assignments: [], language: "en", presentation: [], summary: null, consultantTitle: null },
   message: "Initial version",
@@ -72,7 +70,6 @@ describe("getResumeCommit", () => {
     expect(result).toMatchObject({
       id: COMMIT_ID,
       resumeId: RESUME_ID,
-      branchId: BRANCH_ID,
       parentCommitId: null,
       message: "Initial version",
     });

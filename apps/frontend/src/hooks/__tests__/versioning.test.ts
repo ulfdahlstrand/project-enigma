@@ -112,7 +112,7 @@ describe("resumeCommitDiffKey", () => {
 
 describe("useResumeCommits", () => {
   const COMMITS = [
-    { id: "commit-1", branchId: "branch-1", message: "v1", createdAt: "2024-01-01T00:00:00Z" },
+    { id: "commit-1", message: "v1", createdAt: "2024-01-01T00:00:00Z" },
   ];
 
   it("calls orpc.listResumeCommits with the branchId and returns data", async () => {
@@ -184,7 +184,7 @@ describe("useResumeBranchHistoryGraph", () => {
       { id: "branch-1", resumeId: "resume-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", forkedFromCommitId: null, createdAt: "2024-01-01T00:00:00Z" },
     ],
     commits: [
-      { id: "commit-1", resumeId: "resume-1", branchId: "branch-1", parentCommitId: null, message: "v1", createdAt: "2024-01-01T00:00:00Z" },
+      { id: "commit-1", resumeId: "resume-1", parentCommitId: null, message: "v1", createdAt: "2024-01-01T00:00:00Z" },
     ],
   };
 

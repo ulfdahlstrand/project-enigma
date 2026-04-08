@@ -82,7 +82,6 @@ export async function getResumeCommit(
     .select([
       "rc.id",
       "rc.resume_id",
-      "rc.branch_id",
       "rcp.parent_commit_id as parent_commit_id",
       "rc.content",
       "rc.message",
@@ -106,7 +105,6 @@ export async function getResumeCommit(
   return {
     id: row.id,
     resumeId: row.resume_id,
-    branchId: row.branch_id,
     parentCommitId: row.parent_commit_id,
     content: normaliseCommitContent(row.content as unknown as ResumeCommitContent),
     message: row.message,

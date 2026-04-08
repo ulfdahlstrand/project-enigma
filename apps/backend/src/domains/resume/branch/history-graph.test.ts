@@ -29,7 +29,7 @@ const BRANCH_ROWS = [
     name: "main",
     language: "en",
     is_main: true,
-    head_commit_id: MAIN_COMMIT_ID_2,
+    head_commit_id: MERGE_COMMIT_ID,
     forked_from_commit_id: null,
     created_by: CREATOR_ID,
     created_at: new Date("2026-01-01T00:00:00.000Z"),
@@ -185,7 +185,7 @@ describe("getResumeBranchHistoryGraph", () => {
     });
     expect(result.branches[0]).toMatchObject({
       id: MAIN_BRANCH_ID,
-      headCommitId: MAIN_COMMIT_ID_2,
+      headCommitId: MERGE_COMMIT_ID,
       forkedFromCommitId: null,
     });
     expect(result.branches[1]).toMatchObject({
@@ -195,7 +195,6 @@ describe("getResumeBranchHistoryGraph", () => {
     });
     expect(result.commits[3]).toMatchObject({
       id: SV_COMMIT_ID_1,
-      branchId: SV_BRANCH_ID,
       parentCommitId: MAIN_COMMIT_ID_1,
     });
     expect(branchOrderBy).toHaveBeenCalledWith("resume_branches.created_at", "asc");
@@ -241,6 +240,69 @@ describe("getResumeBranchHistoryGraph", () => {
 
     expect(result.commits.map((commit) => commit.id)).not.toContain(orphanCommitId);
     expect(result.edges.some((edge) => edge.commitId === orphanCommitId)).toBe(false);
+  });
+
+  it("preserves reachable merged commits even when their source branch is no longer active", async () => {
+    const mergedCommitId = "550e8400-e29b-41d4-a716-446655440045";
+    const { db } = buildDbMock({
+      branchRows: [BRANCH_ROWS[0]!],
+      commitRows: [
+        ...COMMIT_ROWS,
+        {
+          id: mergedCommitId,
+          resume_id: RESUME_ID,
+          branch_id: SV_BRANCH_ID,
+          parent_commit_id: MAIN_COMMIT_ID_1,
+          message: "Merged branch work",
+          title: "Merged branch work",
+          description: "",
+          created_by: CREATOR_ID,
+          created_at: new Date("2026-01-04T12:00:00.000Z"),
+        },
+        {
+          id: MERGE_COMMIT_ID,
+          resume_id: RESUME_ID,
+          branch_id: MAIN_BRANCH_ID,
+          parent_commit_id: MAIN_COMMIT_ID_2,
+          message: "Merge revision workflow",
+          title: "Merge revision workflow",
+          description: "",
+          created_by: CREATOR_ID,
+          created_at: new Date("2026-01-05T00:00:00.000Z"),
+        },
+      ],
+      commitParentRows: [
+        {
+          commit_id: MAIN_COMMIT_ID_2,
+          parent_commit_id: MAIN_COMMIT_ID_1,
+          parent_order: 0,
+        },
+        {
+          commit_id: mergedCommitId,
+          parent_commit_id: MAIN_COMMIT_ID_1,
+          parent_order: 0,
+        },
+        {
+          commit_id: MERGE_COMMIT_ID,
+          parent_commit_id: MAIN_COMMIT_ID_2,
+          parent_order: 0,
+        },
+        {
+          commit_id: MERGE_COMMIT_ID,
+          parent_commit_id: mergedCommitId,
+          parent_order: 1,
+        },
+      ],
+    });
+
+    const result = await getResumeBranchHistoryGraph(db, MOCK_ADMIN, { resumeId: RESUME_ID });
+
+    expect(result.commits.map((commit) => commit.id)).toContain(mergedCommitId);
+    expect(result.edges).toContainEqual({
+      commitId: MERGE_COMMIT_ID,
+      parentCommitId: mergedCommitId,
+      parentOrder: 1,
+    });
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
