@@ -223,7 +223,10 @@ describe("Branch list", () => {
     const openButtons = screen.getAllByRole("button", { name: enCommon.resume.variants.openButton });
     await user.click(openButtons[0]!);
     expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ search: { branchId: BRANCHES[0]!.id } })
+      expect.objectContaining({
+        to: "/resumes/$id/branch/$branchId",
+        params: { id: "resume-id-1", branchId: BRANCHES[0]!.id },
+      })
     );
   });
 });

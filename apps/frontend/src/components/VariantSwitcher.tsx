@@ -1,7 +1,7 @@
 /**
  * VariantSwitcher — dropdown showing all branches for a resume.
- * Clicking a variant navigates to /resumes/$id (the same page; future work
- * can thread branchId through as a search param).
+ * Branch selection navigates to the branch route, which resolves the branch's
+ * head commit under the hood.
  *
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
@@ -75,9 +75,8 @@ export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: 
       });
       setDialogOpen(false);
       await navigate({
-        to: "/resumes/$id",
-        params: { id: resumeId },
-        search: { branchId: newBranch.id },
+        to: "/resumes/$id/branch/$branchId",
+        params: { id: resumeId, branchId: newBranch.id },
       });
     } catch {
       setForkError(t("resume.variants.createDialog.error"));
@@ -106,9 +105,8 @@ export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: 
             }
             if (val !== currentBranchId) {
               void navigate({
-                to: "/resumes/$id",
-                params: { id: resumeId },
-                search: { branchId: val },
+                to: "/resumes/$id/branch/$branchId",
+                params: { id: resumeId, branchId: val },
               });
             }
           }}

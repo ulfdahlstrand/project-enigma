@@ -447,9 +447,24 @@ describe("UX improvements", () => {
     renderPage();
     await screen.findByText("Initial version");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.viewInResumeButton }));
-    expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ search: expect.objectContaining({ branchId: "branch-id-1" }) })
-    );
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-1" },
+    });
+  });
+
+  it("opens an exact commit from the row actions menu", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Initial version");
+    await user.click(screen.getAllByRole("button", { name: enCommon.resume.history.commitActionsButton })[0]!);
+    await user.click(screen.getByRole("menuitem", { name: enCommon.resume.history.viewCommitMenuItem }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/commit/$commitId",
+      params: { id: "resume-id-1", commitId: "commit-id-2" },
+    });
   });
 
   it("renders the Compare versions button", async () => {
@@ -516,5 +531,18 @@ describe("UX improvements", () => {
     await screen.findByText("Initial version");
     const headBadges = screen.getAllByText(enCommon.resume.history.headBadge);
     expect(headBadges.length).toBeGreaterThan(0);
+  });
+
+  it("opens an exact commit when clicking a commit in tree view", async () => {
+    const user = userEvent.setup();
+    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    renderPage();
+
+    await user.click(await screen.findByTestId("tree-commit-commit-id-3"));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/commit/$commitId",
+      params: { id: "resume-id-1", commitId: "commit-id-3" },
+    });
   });
 });

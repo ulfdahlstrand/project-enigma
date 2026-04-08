@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -9,15 +13,24 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import { useState } from "react";
 import type { GraphBranch, GraphCommit } from "./history-graph-utils";
 
 interface HistoryCommitTableProps {
   commits: GraphCommit[];
   selectedBranch: GraphBranch | undefined;
+  onViewCommit: (commitId: string) => void;
 }
 
-export function HistoryCommitTable({ commits, selectedBranch }: HistoryCommitTableProps) {
+export function HistoryCommitTable({ commits, selectedBranch, onViewCommit }: HistoryCommitTableProps) {
   const { t } = useTranslation("common");
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
+
+  const closeMenu = () => {
+    setMenuAnchorEl(null);
+    setMenuCommitId(null);
+  };
 
   if (!commits || commits.length === 0) {
     return <Typography variant="body1">{t("resume.history.empty")}</Typography>;
@@ -30,6 +43,7 @@ export function HistoryCommitTable({ commits, selectedBranch }: HistoryCommitTab
           <TableRow>
             <TableCell>{t("resume.history.tableHeaderMessage")}</TableCell>
             <TableCell>{t("resume.history.tableHeaderSavedAt")}</TableCell>
+            <TableCell align="right">{t("resume.history.tableHeaderActions")}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -49,11 +63,39 @@ export function HistoryCommitTable({ commits, selectedBranch }: HistoryCommitTab
                   </Box>
                 </TableCell>
                 <TableCell>{savedAt.toLocaleString()}</TableCell>
+                <TableCell align="right">
+                  <IconButton
+                    size="small"
+                    aria-label={t("resume.history.commitActionsButton")}
+                    onClick={(event) => {
+                      setMenuAnchorEl(event.currentTarget);
+                      setMenuCommitId(commit.id);
+                    }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={closeMenu}
+      >
+        <MenuItem
+          onClick={() => {
+            if (menuCommitId) {
+              onViewCommit(menuCommitId);
+            }
+            closeMenu();
+          }}
+        >
+          {t("resume.history.viewCommitMenuItem")}
+        </MenuItem>
+      </Menu>
     </TableContainer>
   );
 }

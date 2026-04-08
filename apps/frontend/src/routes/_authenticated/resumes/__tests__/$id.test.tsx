@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../../locales/en/common.json";
@@ -21,7 +21,7 @@ import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../../test-utils/render";
-import { Route, getResumeQueryKey } from "../$id";
+import { Route, ResumeDetailPage, getResumeQueryKey } from "../$id";
 
 // ---------------------------------------------------------------------------
 // Mock oRPC client
@@ -144,11 +144,11 @@ const TEST_RESUME_NO_SKILLS = {
 // Render helper
 // ---------------------------------------------------------------------------
 
-const ResumeDetailPage = Route.options.component as React.ComponentType;
+const ResumeDetailRouteComponent = Route.options.component as React.ComponentType;
 
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  const result = renderWithProviders(<ResumeDetailPage />, { queryClient });
+  const result = renderWithProviders(<ResumeDetailRouteComponent />, { queryClient });
   return { ...result, queryClient };
 }
 
@@ -294,7 +294,6 @@ describe("Navigation", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/edit",
       params: { id: TEST_RESUME_ID },
-      search: { branchId: MAIN_BRANCH.id },
     });
   });
 
@@ -335,6 +334,26 @@ describe("Navigation", () => {
     });
   });
 
+});
+
+describe("Commit-first branch resolution", () => {
+  beforeEach(() => {
+    mockGetResume.mockResolvedValue(TEST_RESUME);
+  });
+
+  it("resolves a branch route to the branch head commit before calling getResume", async () => {
+    const queryClient = buildTestQueryClient();
+    renderWithProviders(<ResumeDetailPage routeMode="detail" forcedBranchId={MAIN_BRANCH.id} />, { queryClient });
+
+    await screen.findAllByText(TEST_RESUME.title);
+
+    await waitFor(() =>
+      expect(mockGetResume).toHaveBeenCalledWith({
+        id: TEST_RESUME_ID,
+        commitId: MAIN_BRANCH.headCommitId,
+      })
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

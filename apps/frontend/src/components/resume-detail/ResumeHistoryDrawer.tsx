@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ interface ResumeHistoryDrawerProps {
   onClose: () => void;
   resumeId: string;
   activeBranchId: string | null;
+  currentCommitId?: string | null;
   recentCommits: ResumeCommitRow[];
   language?: string | null;
 }
@@ -27,6 +29,7 @@ export function ResumeHistoryDrawer({
   onClose,
   resumeId,
   activeBranchId,
+  currentCommitId = null,
   recentCommits,
   language,
 }: ResumeHistoryDrawerProps) {
@@ -65,23 +68,40 @@ export function ResumeHistoryDrawer({
           </ListItem>
         ) : (
           recentCommits.slice(0, 20).map((commit) => (
-            <ListItem key={commit.id} divider>
-              <ListItemText
-                primary={commit.message || t("resume.detail.historyDrawer.defaultMessage")}
-                secondary={
-                  commit.createdAt
-                    ? new Date(commit.createdAt).toLocaleDateString(language === "sv" ? "sv-SE" : "en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })
-                    : undefined
-                }
-                slotProps={{
-                  primary: { variant: "body2" },
-                  secondary: { variant: "caption" },
+            <ListItem key={commit.id} divider disablePadding>
+              <ListItemButton
+                selected={commit.id === currentCommitId}
+                aria-current={commit.id === currentCommitId ? "true" : undefined}
+                sx={{
+                  alignItems: "flex-start",
+                  "&.Mui-selected": {
+                    bgcolor: "action.selected",
+                  },
+                  "&.Mui-selected:hover": {
+                    bgcolor: "action.selected",
+                  },
                 }}
-              />
+              >
+                <ListItemText
+                  primary={commit.message || t("resume.detail.historyDrawer.defaultMessage")}
+                  secondary={
+                    commit.createdAt
+                      ? new Date(commit.createdAt).toLocaleDateString(language === "sv" ? "sv-SE" : "en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : undefined
+                  }
+                  slotProps={{
+                    primary: {
+                      variant: "body2",
+                      ...(commit.id === currentCommitId ? { fontWeight: 600 } : {}),
+                    },
+                    secondary: { variant: "caption" },
+                  }}
+                />
+              </ListItemButton>
             </ListItem>
           ))
         )}
