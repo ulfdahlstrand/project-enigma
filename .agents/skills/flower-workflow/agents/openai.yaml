@@ -1,0 +1,7 @@
+interface:
+  display_name: "Flower Workflow"
+  short_description: "Issue-to-PR workflow with labels and branch management"
+  brand_color: "#F59E0B"
+  default_prompt: "Follow the flower workflow: check issue, branch, implement with TDD, review, create PR targeting dev"
+policy:
+  allow_implicit_invocation: true
