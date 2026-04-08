@@ -8,6 +8,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { diffResumeCommits } from "../lib/resume-diff.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import {
   resumeCommitContentSchema,
 } from "@cv-tool/contracts";
@@ -48,13 +49,13 @@ export async function compareResumeCommits(
     db
       .selectFrom("resume_commits as rc")
       .innerJoin("resumes as r", "r.id", "rc.resume_id")
-      .select(["rc.id", "rc.resume_id", "rc.content", "r.employee_id"])
+      .select(["rc.id", "rc.resume_id", "rc.content", "rc.tree_id", "r.employee_id"])
       .where("rc.id", "=", input.baseCommitId)
       .executeTakeFirst(),
     db
       .selectFrom("resume_commits as rc")
       .innerJoin("resumes as r", "r.id", "rc.resume_id")
-      .select(["rc.id", "rc.resume_id", "rc.content", "r.employee_id"])
+      .select(["rc.id", "rc.resume_id", "rc.content", "rc.tree_id", "r.employee_id"])
       .where("rc.id", "=", input.headCommitId)
       .executeTakeFirst(),
   ]);
@@ -76,8 +77,15 @@ export async function compareResumeCommits(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const baseContent = resumeCommitContentSchema.parse(baseRow.content);
-  const headContent = resumeCommitContentSchema.parse(headRow.content);
+  const [baseContent, headContent] = await Promise.all([
+    baseRow.tree_id
+      ? readTreeContent(db, baseRow.tree_id)
+      : resumeCommitContentSchema.parse(baseRow.content),
+    headRow.tree_id
+      ? readTreeContent(db, headRow.tree_id)
+      : resumeCommitContentSchema.parse(headRow.content),
+  ]);
+
   const diff = diffResumeCommits(baseContent, headContent);
 
   return {
