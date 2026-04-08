@@ -35,4 +35,23 @@ describe("ResumeHistoryDrawer", () => {
     expect(await screen.findByRole("button", { name: /Current commit/i })).toHaveAttribute("aria-current", "true");
     expect(screen.getByRole("button", { name: /Previous commit/i })).not.toHaveAttribute("aria-current");
   });
+
+  it("links to the branch-specific history route when an active branch exists", async () => {
+    renderWithProviders(
+      <ResumeHistoryDrawer
+        open
+        onClose={() => undefined}
+        resumeId="resume-id-1"
+        activeBranchId="branch-id-1"
+        currentCommitId="commit-3"
+        recentCommits={recentCommits}
+        language="en"
+      />,
+    );
+
+    expect(await screen.findByRole("link", { name: /View full history/i })).toHaveAttribute(
+      "href",
+      "/resumes/$id/history/branch/$branchId",
+    );
+  });
 });

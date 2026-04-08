@@ -18,7 +18,7 @@ function branch(
 }
 
 function commit(
-  overrides: Partial<GraphCommit> & Pick<GraphCommit, "id" | "branchId" | "createdAt">,
+  overrides: Partial<GraphCommit> & Pick<GraphCommit, "id" | "createdAt">,
 ): GraphCommit {
   return {
     parentCommitId: null,
@@ -80,12 +80,12 @@ describe("computeGraphLayout — column assignment", () => {
     ];
 
     const commits: GraphCommit[] = [
-      commit({ id: "m2", branchId: "main",   parentCommitId: "m1", createdAt: "2024-01-06T00:00:00Z" }),
-      commit({ id: "a2", branchId: "active", parentCommitId: "a1", createdAt: "2024-01-05T00:00:00Z" }),
-      commit({ id: "z2", branchId: "zxcv",   parentCommitId: "z1", createdAt: "2024-01-04T00:00:00Z" }),
-      commit({ id: "a1", branchId: "active", parentCommitId: "m1", createdAt: "2024-01-03T06:00:00Z" }),
-      commit({ id: "z1", branchId: "zxcv",   parentCommitId: "m1", createdAt: "2024-01-02T06:00:00Z" }),
-      commit({ id: "m1", branchId: "main",   parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
+      commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-06T00:00:00Z" }),
+      commit({ id: "a2", parentCommitId: "a1", createdAt: "2024-01-05T00:00:00Z" }),
+      commit({ id: "z2", parentCommitId: "z1", createdAt: "2024-01-04T00:00:00Z" }),
+      commit({ id: "a1", parentCommitId: "m1", createdAt: "2024-01-03T06:00:00Z" }),
+      commit({ id: "z1", parentCommitId: "m1", createdAt: "2024-01-02T06:00:00Z" }),
+      commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
     ];
 
     const edges: GraphEdge[] = [
@@ -117,15 +117,15 @@ describe("computeGraphLayout — column assignment", () => {
     ];
 
     const commits: GraphCommit[] = [
-      commit({ id: "m3",  branchId: "main",    parentCommitId: "m2",  createdAt: "2024-01-09T00:00:00Z" }),
-      commit({ id: "m2",  branchId: "main",    parentCommitId: "m1",  createdAt: "2024-01-08T00:00:00Z" }),
-      commit({ id: "a2",  branchId: "active",  parentCommitId: "a1",  createdAt: "2024-01-07T00:00:00Z" }),
-      commit({ id: "r2b", branchId: "merged2", parentCommitId: "r2a", createdAt: "2024-01-06T00:00:00Z" }),
-      commit({ id: "r1b", branchId: "merged1", parentCommitId: "r1a", createdAt: "2024-01-05T00:00:00Z" }),
-      commit({ id: "a1",  branchId: "active",  parentCommitId: "m1",  createdAt: "2024-01-04T06:00:00Z" }),
-      commit({ id: "r2a", branchId: "merged2", parentCommitId: "m1",  createdAt: "2024-01-03T06:00:00Z" }),
-      commit({ id: "r1a", branchId: "merged1", parentCommitId: "m1",  createdAt: "2024-01-02T06:00:00Z" }),
-      commit({ id: "m1",  branchId: "main",    parentCommitId: null,  createdAt: "2024-01-01T06:00:00Z" }),
+      commit({ id: "m3", parentCommitId: "m2", createdAt: "2024-01-09T00:00:00Z" }),
+      commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-08T00:00:00Z" }),
+      commit({ id: "a2", parentCommitId: "a1", createdAt: "2024-01-07T00:00:00Z" }),
+      commit({ id: "r2b", parentCommitId: "r2a", createdAt: "2024-01-06T00:00:00Z" }),
+      commit({ id: "r1b", parentCommitId: "r1a", createdAt: "2024-01-05T00:00:00Z" }),
+      commit({ id: "a1", parentCommitId: "m1", createdAt: "2024-01-04T06:00:00Z" }),
+      commit({ id: "r2a", parentCommitId: "m1", createdAt: "2024-01-03T06:00:00Z" }),
+      commit({ id: "r1a", parentCommitId: "m1", createdAt: "2024-01-02T06:00:00Z" }),
+      commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
     ];
 
     const edges: GraphEdge[] = [
@@ -182,16 +182,16 @@ describe("computeGraphLayout — column assignment", () => {
     ];
 
     const commits: GraphCommit[] = [
-      commit({ id: "m2",  branchId: "main",    parentCommitId: "m1",  createdAt: "2024-01-12T00:00:00Z" }),
-      commit({ id: "c1",  branchId: "current", parentCommitId: null,  createdAt: "2024-01-11T00:00:00Z" }),
-      commit({ id: "z3",  branchId: "zxcv",    parentCommitId: "z2",  createdAt: "2024-01-10T00:00:00Z" }),
-      commit({ id: "r2b", branchId: "rev2",    parentCommitId: "r2a", createdAt: "2024-01-09T00:00:00Z" }),
-      commit({ id: "r1b", branchId: "rev1",    parentCommitId: "r1a", createdAt: "2024-01-08T00:00:00Z" }),
-      commit({ id: "z2",  branchId: "zxcv",    parentCommitId: "z1",  createdAt: "2024-01-07T00:00:00Z" }),
-      commit({ id: "r2a", branchId: "rev2",    parentCommitId: "z2",  createdAt: "2024-01-06T00:00:00Z" }),
-      commit({ id: "r1a", branchId: "rev1",    parentCommitId: "z1",  createdAt: "2024-01-05T06:00:00Z" }),
-      commit({ id: "z1",  branchId: "zxcv",    parentCommitId: "m1",  createdAt: "2024-01-04T00:00:00Z" }),
-      commit({ id: "m1",  branchId: "main",    parentCommitId: null,  createdAt: "2024-01-01T06:00:00Z" }),
+      commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-12T00:00:00Z" }),
+      commit({ id: "c1", parentCommitId: null, createdAt: "2024-01-11T00:00:00Z" }),
+      commit({ id: "z3", parentCommitId: "z2", createdAt: "2024-01-10T00:00:00Z" }),
+      commit({ id: "r2b", parentCommitId: "r2a", createdAt: "2024-01-09T00:00:00Z" }),
+      commit({ id: "r1b", parentCommitId: "r1a", createdAt: "2024-01-08T00:00:00Z" }),
+      commit({ id: "z2", parentCommitId: "z1", createdAt: "2024-01-07T00:00:00Z" }),
+      commit({ id: "r2a", parentCommitId: "z2", createdAt: "2024-01-06T00:00:00Z" }),
+      commit({ id: "r1a", parentCommitId: "z1", createdAt: "2024-01-05T06:00:00Z" }),
+      commit({ id: "z1", parentCommitId: "m1", createdAt: "2024-01-04T00:00:00Z" }),
+      commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
     ];
 
     const edges: GraphEdge[] = [
@@ -239,9 +239,9 @@ describe("computeGraphLayout — column assignment", () => {
         branch({ id: "child", headCommitId: "c1", forkedFromCommitId: "m1", createdAt: "2024-01-02T00:00:00Z" }),
       ];
       const commits: GraphCommit[] = [
-        commit({ id: "m2", branchId: "main",  parentCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
-        commit({ id: "c1", branchId: "child", parentCommitId: "m1", createdAt: "2024-01-02T06:00:00Z" }),
-        commit({ id: "m1", branchId: "main",  parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
+        commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
+        commit({ id: "c1", parentCommitId: "m1", createdAt: "2024-01-02T06:00:00Z" }),
+        commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
       ];
 
       const layout = computeGraphLayout(branches, commits, [], false);
@@ -262,10 +262,10 @@ describe("computeGraphLayout — column assignment", () => {
         branch({ id: "feat2", headCommitId: "f2", forkedFromCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
       ];
       const commits: GraphCommit[] = [
-        commit({ id: "m2", branchId: "main",  parentCommitId: "m1", createdAt: "2024-01-05T00:00:00Z" }),
-        commit({ id: "f2", branchId: "feat2", parentCommitId: "m1", createdAt: "2024-01-04T00:00:00Z" }),
-        commit({ id: "f1", branchId: "feat1", parentCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
-        commit({ id: "m1", branchId: "main",  parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
+        commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-05T00:00:00Z" }),
+        commit({ id: "f2", parentCommitId: "m1", createdAt: "2024-01-04T00:00:00Z" }),
+        commit({ id: "f1", parentCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
+        commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-01T06:00:00Z" }),
       ];
 
       const layout = computeGraphLayout(branches, commits, [], false);
@@ -292,9 +292,9 @@ describe("computeGraphLayout — column assignment", () => {
         branch({ id: "b2",   headCommitId: "b2c", forkedFromCommitId: "b1c", createdAt: "2024-01-03T00:00:00Z" }),
       ];
       const commits: GraphCommit[] = [
-        commit({ id: "m1",  branchId: "main", parentCommitId: null,  createdAt: "2024-01-05T00:00:00Z" }),
-        commit({ id: "b1c", branchId: "b1",   parentCommitId: "m1",  createdAt: "2024-01-04T00:00:00Z" }),
-        commit({ id: "b2c", branchId: "b2",   parentCommitId: "b1c", createdAt: "2024-01-03T06:00:00Z" }),
+        commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-05T00:00:00Z" }),
+        commit({ id: "b1c", parentCommitId: "m1", createdAt: "2024-01-04T00:00:00Z" }),
+        commit({ id: "b2c", parentCommitId: "b1c", createdAt: "2024-01-03T06:00:00Z" }),
       ];
 
       const layout = computeGraphLayout(branches, commits, [], false);
@@ -324,9 +324,9 @@ describe("computeGraphLayout — column assignment", () => {
     ];
 
     const commits: GraphCommit[] = [
-      commit({ id: "m1", branchId: "main",  parentCommitId: null, createdAt: "2024-01-05T00:00:00Z" }),
-      commit({ id: "c1", branchId: "child", parentCommitId: "c0", createdAt: "2024-01-03T00:00:00Z" }),
-      commit({ id: "c0", branchId: "child", parentCommitId: null, createdAt: "2024-01-02T00:00:00Z" }),
+      commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-05T00:00:00Z" }),
+      commit({ id: "c1", parentCommitId: "c0", createdAt: "2024-01-03T00:00:00Z" }),
+      commit({ id: "c0", parentCommitId: null, createdAt: "2024-01-02T00:00:00Z" }),
     ];
 
     const edges: GraphEdge[] = [
@@ -339,5 +339,28 @@ describe("computeGraphLayout — column assignment", () => {
     const childCol = layout.branchIndexById.get("child")!;
 
     expect(childCol).toBeGreaterThan(mainCol);
+  });
+
+  it("reuses the surviving branch lane for merged orphan commits after a branch is deleted", () => {
+    const branches: GraphBranch[] = [
+      branch({ id: "main", isMain: true, headCommitId: "m2", createdAt: "2024-01-01T00:00:00Z" }),
+    ];
+
+    const commits: GraphCommit[] = [
+      commit({ id: "m2", parentCommitId: "m1", createdAt: "2024-01-04T00:00:00Z" }),
+      commit({ id: "b1", parentCommitId: "m1", createdAt: "2024-01-03T00:00:00Z" }),
+      commit({ id: "m1", parentCommitId: null, createdAt: "2024-01-02T00:00:00Z" }),
+    ];
+
+    const edges: GraphEdge[] = [
+      edge("m2", "m1", 0),
+      edge("m2", "b1", 1),
+      edge("b1", "m1", 0),
+    ];
+
+    const layout = computeGraphLayout(branches, commits, edges, false);
+
+    expect(layout.branchIdByCommitId.get("b1")).toBe("main");
+    expect(layout.orderedBranches.some((branch) => branch.id.startsWith("synthetic-"))).toBe(false);
   });
 });

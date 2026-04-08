@@ -51,12 +51,10 @@ export function ResumeDetailPage({
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const {
-    branchId: editBranchId,
     assistant: assistantMode,
     sourceBranchId: urlSourceBranchId,
   } =
     useSearch({ strict: false }) as any as {
-      branchId?: string;
       assistant?: "true";
       sourceBranchId?: string;
     };
@@ -68,7 +66,7 @@ export function ResumeDetailPage({
     queryFn: () => orpc.listResumeBranches({ resumeId: id }),
   });
 
-  const requestedBranchId = forcedBranchId ?? (isEditRoute ? editBranchId ?? null : null);
+  const requestedBranchId = forcedBranchId ?? null;
   const activeBranchId = requestedBranchId ?? branches?.find((b) => b.isMain)?.id ?? null;
   const activeBranch = branches?.find((b) => b.id === activeBranchId);
   const resolvedBranchCommitId = activeBranch?.headCommitId ?? activeBranch?.forkedFromCommitId ?? null;

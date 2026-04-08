@@ -73,7 +73,6 @@ export async function getResume(
   db: Kysely<Database>,
   user: AuthUser,
   id: string,
-  branchId?: string,
   commitId?: string,
 ): Promise<GetResumeOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
@@ -122,26 +121,6 @@ export async function getResume(
     }
 
     snapshotContent = commitRow.content as ResumeCommitContent;
-  } else if (branchId) {
-    const branchRow = await db
-      .selectFrom("resume_branches")
-      .select(["id", "resume_id", "head_commit_id", "forked_from_commit_id"])
-      .where("id", "=", branchId)
-      .executeTakeFirst();
-
-    if (branchRow === undefined || branchRow.resume_id !== id) {
-      throw new ORPCError("NOT_FOUND");
-    }
-
-    const snapshotCommitId = branchRow.head_commit_id ?? branchRow.forked_from_commit_id;
-    if (snapshotCommitId) {
-      const commitRow = await db
-        .selectFrom("resume_commits")
-        .select("content")
-        .where("id", "=", snapshotCommitId)
-        .executeTakeFirst();
-      snapshotContent = commitRow?.content ?? null;
-    }
   } else if (resumeRow.head_commit_id) {
     const commitRow = await db
       .selectFrom("resume_commits")
@@ -247,7 +226,7 @@ export async function getResume(
 export const getResumeHandler = implement(contract.getResume).handler(
   async ({ input, context }) => {
     const user = requireAuth(context as AuthContext);
-    return getResume(getDb(), user, input.id, input.branchId, input.commitId);
+    return getResume(getDb(), user, input.id, input.commitId);
   }
 );
 
@@ -265,7 +244,7 @@ export function createGetResumeHandler(db: Kysely<Database>) {
   return implement(contract.getResume).handler(
     async ({ input, context }) => {
       const user = requireAuth(context as AuthContext);
-      return getResume(db, user, input.id, input.branchId, input.commitId);
+      return getResume(db, user, input.id, input.commitId);
     }
   );
 }

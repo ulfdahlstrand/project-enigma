@@ -53,7 +53,6 @@ export async function getResumeBranchHistoryGraph(
     .select([
       "resume_commits.id",
       "resume_commits.resume_id",
-      "resume_commits.branch_id",
       "rcp.parent_commit_id as parent_commit_id",
       "resume_commits.message",
       "resume_commits.title",
@@ -124,7 +123,6 @@ export async function getResumeBranchHistoryGraph(
     commits: commits.map((commit) => ({
       id: commit.id,
       resumeId: commit.resume_id,
-      branchId: commit.branch_id,
       parentCommitId: commit.parent_commit_id,
       message: commit.message,
       title: commit.title,

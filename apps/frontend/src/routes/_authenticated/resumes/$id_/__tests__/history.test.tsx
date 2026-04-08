@@ -16,7 +16,7 @@ import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../../../../locales/en/common.json";
 import { renderWithProviders, buildTestQueryClient } from "../../../../../test-utils/render";
-import { Route } from "../history/index";
+import { VersionHistoryPage } from "../history/index";
 
 // ---------------------------------------------------------------------------
 // Mock oRPC client
@@ -41,7 +41,7 @@ const mockDeleteResumeBranch = orpc.deleteResumeBranch as ReturnType<typeof vi.f
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
-let mockSearch: { branchId?: string; view?: "list" | "tree" } = {};
+let mockSearch: { view?: "list" | "tree" } = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
@@ -110,7 +110,6 @@ const GRAPH = {
     {
       id: "commit-id-1",
       resumeId: "resume-id-1",
-      branchId: "branch-id-1",
       parentCommitId: null,
       message: "Initial version",
       title: "",
@@ -120,7 +119,6 @@ const GRAPH = {
     {
       id: "commit-id-2",
       resumeId: "resume-id-1",
-      branchId: "branch-id-1",
       parentCommitId: "commit-id-1",
       message: "",
       title: "",
@@ -130,7 +128,6 @@ const GRAPH = {
     {
       id: "commit-id-3",
       resumeId: "resume-id-1",
-      branchId: "branch-id-2",
       parentCommitId: "commit-id-1",
       message: "Swedish version",
       title: "",
@@ -140,7 +137,6 @@ const GRAPH = {
     {
       id: "commit-id-4",
       resumeId: "resume-id-1",
-      branchId: "branch-id-3",
       parentCommitId: "commit-id-3",
       message: "German version",
       title: "",
@@ -166,7 +162,6 @@ const GRAPH_WITH_MERGE = {
     {
       id: "commit-id-5",
       resumeId: "resume-id-1",
-      branchId: "branch-id-1",
       parentCommitId: "commit-id-2",
       message: "Merge Swedish variant",
       title: "",
@@ -186,11 +181,17 @@ const GRAPH_WITH_MERGE = {
 // Render helper
 // ---------------------------------------------------------------------------
 
-const HistoryPage = Route.options.component as React.ComponentType;
-
-function renderPage() {
+function renderPage(forcedBranchId?: string) {
   const queryClient = buildTestQueryClient();
-  return { ...renderWithProviders(<HistoryPage />, { queryClient }), queryClient };
+  return {
+    ...renderWithProviders(
+      forcedBranchId
+        ? <VersionHistoryPage forcedBranchId={forcedBranchId} />
+        : <VersionHistoryPage />,
+      { queryClient },
+    ),
+    queryClient,
+  };
 }
 
 afterEach(() => {
@@ -216,15 +217,15 @@ describe("Loading state", () => {
 
 describe("Empty state", () => {
   beforeEach(() => {
-    mockSearch = { branchId: "branch-id-2", view: "list" };
+    mockSearch = { view: "list" };
     mockGetResumeBranchHistoryGraph.mockResolvedValue({
       ...GRAPH,
-      commits: GRAPH.commits.filter((commit) => commit.branchId !== "branch-id-2"),
+      commits: GRAPH.commits.filter((commit) => commit.id !== "commit-id-3"),
     });
   });
 
   it("renders the empty message when no commits exist", async () => {
-    renderPage();
+    renderPage("branch-id-2");
     const msg = await screen.findByText(enCommon.resume.history.empty);
     expect(msg).toBeInTheDocument();
   });
@@ -267,8 +268,8 @@ describe("Commit list", () => {
   });
 
   it("renders commits reachable from the selected branch head, including ancestors", async () => {
-    mockSearch = { branchId: "branch-id-2", view: "list" };
-    renderPage();
+    mockSearch = { view: "list" };
+    renderPage("branch-id-2");
 
     expect(await screen.findByText("Swedish version")).toBeInTheDocument();
     expect(screen.getByText("Initial version")).toBeInTheDocument();
@@ -276,8 +277,8 @@ describe("Commit list", () => {
   });
 
   it("falls back to the main branch when the search branch is unknown", async () => {
-    mockSearch = { branchId: "missing-branch", view: "list" };
-    renderPage();
+    mockSearch = { view: "list" };
+    renderPage("missing-branch");
 
     expect(await screen.findByText("Initial version")).toBeInTheDocument();
     expect(screen.queryByText("Swedish version")).toBeNull();
@@ -324,14 +325,14 @@ describe("View controls", () => {
     await user.click(screen.getByText("Swedish Variant"));
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-2", view: "list" },
+      to: "/resumes/$id/history/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-2" },
+      search: { view: "list" },
     });
   });
 
   it("renders the tree overview mode", async () => {
-    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    mockSearch = { view: "tree" };
     renderPage();
 
     expect(await screen.findByTestId("history-graph")).toBeInTheDocument();
@@ -346,7 +347,7 @@ describe("View controls", () => {
   });
 
   it("renders branch ancestry details in deterministic order", async () => {
-    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    mockSearch = { view: "tree" };
     renderPage();
 
     const mainBranch = await screen.findByTestId("tree-branch-branch-id-1");
@@ -364,8 +365,8 @@ describe("View controls", () => {
 
   it("renders the no-commits branch state in tree mode", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree", branchId: "branch-id-4" };
-    renderPage();
+    mockSearch = { view: "tree" };
+    renderPage("branch-id-4");
 
     const emptyBranch = await screen.findByTestId("tree-branch-branch-id-4");
     await user.hover(emptyBranch);
@@ -387,7 +388,7 @@ describe("View controls", () => {
 
   it("renders commit details only on hover in tree mode", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    mockSearch = { view: "tree" };
     renderPage();
 
     const swedishCommit = await screen.findByTestId("tree-commit-commit-id-3");
@@ -402,7 +403,7 @@ describe("View controls", () => {
 
   it("renders branch details only on hover in tree mode", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    mockSearch = { view: "tree" };
     renderPage();
 
     expect(screen.queryByText("Swedish Variant")).toBeNull();
@@ -421,9 +422,9 @@ describe("View controls", () => {
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.treeView }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-1", view: "tree" },
+      to: "/resumes/$id/history/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-1" },
+      search: { view: "tree" },
     });
   });
 });
@@ -521,8 +522,8 @@ describe("UX improvements", () => {
 
   it("opens merge dialog and merges selected branch into chosen target branch", async () => {
     const user = userEvent.setup();
-    mockSearch = { branchId: "branch-id-2", view: "list" };
-    renderPage();
+    mockSearch = { view: "list" };
+    renderPage("branch-id-2");
 
     await screen.findByText("Swedish version");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeButton }));
@@ -539,16 +540,16 @@ describe("UX improvements", () => {
       action: "merge",
     });
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-3", view: "list" },
+      to: "/resumes/$id/history/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-3" },
+      search: { view: "list" },
     });
   });
 
   it("opens delete dialog and deletes the selected branch", async () => {
     const user = userEvent.setup();
-    mockSearch = { branchId: "branch-id-2", view: "list" };
-    renderPage();
+    mockSearch = { view: "list" };
+    renderPage("branch-id-2");
 
     await screen.findByText("Swedish version");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton }));
@@ -558,9 +559,9 @@ describe("UX improvements", () => {
 
     expect(mockDeleteResumeBranch).toHaveBeenCalledWith({ branchId: "branch-id-2" });
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-1", view: "list" },
+      to: "/resumes/$id/history/branch/$branchId",
+      params: { id: "resume-id-1", branchId: "branch-id-1" },
+      search: { view: "list" },
     });
   });
 
@@ -573,7 +574,7 @@ describe("UX improvements", () => {
 
   it("opens an exact commit when clicking a commit in tree view", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree", branchId: "branch-id-1" };
+    mockSearch = { view: "tree" };
     renderPage();
 
     await user.click(await screen.findByTestId("tree-commit-commit-id-3"));

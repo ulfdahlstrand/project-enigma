@@ -59,6 +59,8 @@ export function HistoryBranchGraph({
       branchColorById,
       branchCommitsByBranchId,
       commitsById,
+      branchIdByCommitId,
+      branchById,
       forkCommitIds,
       mergeEdges,
       branchIndexById,
@@ -104,9 +106,11 @@ export function HistoryBranchGraph({
 
       if (!branch.forkedFromCommitId) return;
       const baseCommit = commitsById.get(branch.forkedFromCommitId);
-      if (!baseCommit?.branchId) return;
+      if (!baseCommit) return;
+      const baseBranchId = baseCommit ? branchIdByCommitId.get(baseCommit.id) : null;
+      if (!baseBranchId) return;
 
-      const baseX = bx(baseCommit.branchId);
+      const baseX = bx(baseBranchId);
       const baseY = cy(baseCommit.id);
       const firstCommit = branchCommits[0];
       const targetX = branchX;
@@ -130,15 +134,19 @@ export function HistoryBranchGraph({
     mergeEdges.forEach((edge) => {
       const destinationCommit = commitsById.get(edge.commitId);
       const sourceCommit = commitsById.get(edge.parentCommitId);
-      if (!destinationCommit?.branchId || !sourceCommit?.branchId) return;
+      if (!destinationCommit || !sourceCommit) return;
+      const destinationBranchId = destinationCommit ? branchIdByCommitId.get(destinationCommit.id) : null;
+      const sourceBranchId = sourceCommit ? branchIdByCommitId.get(sourceCommit.id) : null;
+      if (!destinationBranchId || !sourceBranchId) return;
+      if (destinationBranchId === sourceBranchId) return;
 
-      const destinationX = bx(destinationCommit.branchId);
+      const destinationX = bx(destinationBranchId);
       const destinationY = cy(destinationCommit.id);
-      const sourceX = bx(sourceCommit.branchId);
+      const sourceX = bx(sourceBranchId);
       const sourceY = cy(sourceCommit.id);
-      const sourceBranch = branches.find((branch) => branch.id === sourceCommit.branchId);
+      const sourceBranch = branchById.get(sourceBranchId);
       const branchColor = sourceBranch ? (branchColorById.get(sourceBranch.id) ?? "#61afef") : "#61afef";
-      const isSelected = sourceCommit.branchId === selectedBranchId;
+      const isSelected = sourceBranchId === selectedBranchId;
       const lineColor = isSelected ? branchColor : `${branchColor}99`;
       const horizontalDirection = destinationX >= sourceX ? 1 : -1;
       const turnRadius = Math.min(
@@ -159,7 +167,8 @@ export function HistoryBranchGraph({
 
     // Draw commit nodes
     orderedCommits.forEach((commit) => {
-      const branch = branches.find((b) => b.id === commit.branchId);
+      const commitBranchId = branchIdByCommitId.get(commit.id);
+      const branch = commitBranchId ? branchById.get(commitBranchId) : null;
       if (!branch) return;
 
       const branchColor = branchColorById.get(branch.id) ?? "#61afef";
@@ -219,7 +228,8 @@ export function HistoryBranchGraph({
         {graphLayout.orderedCommits.map((commit) => {
           const commitY = getCommitY(graphLayout.commitIndexById, commit.id);
           const commitLabel = commit.title || commit.message || t("resume.history.defaultMessage");
-          const branch = branches.find((b) => b.id === commit.branchId);
+          const commitBranchId = graphLayout.branchIdByCommitId.get(commit.id);
+          const branch = commitBranchId ? graphLayout.branchById.get(commitBranchId) : null;
           const isHead = branch ? commit.id === branch.headCommitId : false;
 
           return (
@@ -230,7 +240,7 @@ export function HistoryBranchGraph({
               title={
                 <Box sx={{ py: 0.5 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{commitLabel}</Typography>
-                  {branch && (
+                  {branch && !branch.isSynthetic && (
                     <Typography variant="caption" sx={{ display: "block" }}>{branch.name}</Typography>
                   )}
                   <Typography variant="caption" sx={{ display: "block" }}>

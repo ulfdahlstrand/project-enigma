@@ -195,7 +195,6 @@ describe("getResumeBranchHistoryGraph", () => {
     });
     expect(result.commits[3]).toMatchObject({
       id: SV_COMMIT_ID_1,
-      branchId: SV_BRANCH_ID,
       parentCommitId: MAIN_COMMIT_ID_1,
     });
     expect(branchOrderBy).toHaveBeenCalledWith("resume_branches.created_at", "asc");

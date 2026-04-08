@@ -49,9 +49,8 @@ export function ResumeHistoryDrawer({
         <RouterButton
           variant="text"
           size="small"
-          to="/resumes/$id/history"
-          params={{ id: resumeId }}
-          {...(activeBranchId ? { search: { branchId: activeBranchId } } : {})}
+          to={activeBranchId ? "/resumes/$id/history/branch/$branchId" : "/resumes/$id/history"}
+          params={activeBranchId ? { id: resumeId, branchId: activeBranchId } : { id: resumeId }}
           sx={{ mt: 0.5, px: 0 }}
           onClick={onClose}
         >
