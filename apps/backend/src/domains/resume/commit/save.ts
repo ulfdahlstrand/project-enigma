@@ -7,6 +7,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { buildCommitTree } from "../lib/build-commit-tree.js";
 import type { saveResumeVersionInputSchema, saveResumeVersionOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -239,11 +240,14 @@ export async function saveResumeVersion(
 
   // Atomically insert commit and update branch HEAD
   const commit = await db.transaction().execute(async (trx) => {
+    const treeId = await buildCommitTree(trx, branch.resume_id, branch.employee_id, content);
+
     const newCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: branch.resume_id,
         content: JSON.stringify(content),
+        tree_id: treeId,
         title,
         description,
         message,
