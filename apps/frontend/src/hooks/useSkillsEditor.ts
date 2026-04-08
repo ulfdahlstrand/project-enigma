@@ -118,17 +118,41 @@ interface UseSkillsEditorParams {
   skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
+  view?: "detail" | "list" | undefined;
+  onViewChange?: ((v: "detail" | "list") => void) | undefined;
+  addingCategory?: boolean | undefined;
+  onAddingCategoryChange?: ((open: boolean) => void) | undefined;
 }
 
-export function useSkillsEditor({ resumeId, skillGroups, skills, queryKey }: UseSkillsEditorParams) {
+export function useSkillsEditor({
+  resumeId,
+  skillGroups,
+  skills,
+  queryKey,
+  view: externalView,
+  onViewChange,
+  addingCategory: externalAddingCategory,
+  onAddingCategoryChange,
+}: UseSkillsEditorParams) {
   const queryClient = useQueryClient();
 
-  const [view, setView] = useState<"detail" | "list">("detail");
+  const [internalView, setInternalView] = useState<"detail" | "list">("detail");
+  const view = externalView ?? internalView;
+  const setView = (v: "detail" | "list") => {
+    setInternalView(v);
+    onViewChange?.(v);
+  };
+
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [newSkillName, setNewSkillName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
+  const [internalAddingCategory, setInternalAddingCategory] = useState(false);
+  const addingCategory = externalAddingCategory ?? internalAddingCategory;
+  const setAddingCategory = (open: boolean) => {
+    setInternalAddingCategory(open);
+    onAddingCategoryChange?.(open);
+  };
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategorySkillName, setNewCategorySkillName] = useState("");
   const [isReordering, setIsReordering] = useState(false);

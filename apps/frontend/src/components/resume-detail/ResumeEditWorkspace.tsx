@@ -50,7 +50,6 @@ interface ResumeEditWorkspaceProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
-  fabTop: number;
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];
@@ -62,7 +61,6 @@ interface ResumeEditWorkspaceProps {
   onCreateAssignment: () => void;
   createAssignmentPending: boolean;
   canCreateAssignment: boolean;
-  assignmentsFabTop: number;
   presentationRef: RefObject<HTMLDivElement | null>;
   coverSectionRef: RefObject<HTMLDivElement | null>;
   skillsSectionRef: RefObject<HTMLDivElement | null>;

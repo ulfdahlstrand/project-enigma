@@ -4,19 +4,18 @@ import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
-import Fab from "@mui/material/Fab";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { toQuarter } from "@cv-tool/utils";
 import { useTranslation } from "react-i18next";
 import type { MutableRefObject, RefObject } from "react";
 import { ResumeDocumentPage } from "./ResumeDocumentPage";
+import { ResumePageSideToolbar } from "./ResumePageSideToolbar";
 import { AssignmentEditor, type AssignmentRow as EditorAssignmentRow } from "../AssignmentEditor";
 
 interface ResumeAssignmentsPageProps {
@@ -35,7 +34,6 @@ interface ResumeAssignmentsPageProps {
   onAutoEditConsumed: () => void;
   onCreateAssignment: () => void;
   createAssignmentPending: boolean;
-  assignmentsFabTop: number;
   showToggleFab: boolean;
   sectionRef?: RefObject<HTMLDivElement | null>;
   assignmentItemRefs: MutableRefObject<Record<string, HTMLElement | null>>;
@@ -58,7 +56,6 @@ export function ResumeAssignmentsPage({
   onAutoEditConsumed,
   onCreateAssignment,
   createAssignmentPending,
-  assignmentsFabTop,
   showToggleFab,
   sectionRef,
   assignmentItemRefs,
@@ -212,62 +209,23 @@ export function ResumeAssignmentsPage({
         )}
       </ResumeDocumentPage>
 
-      {showToggleFab && (
-        <Tooltip
-          title={showFullAssignments
-            ? t("resume.detail.assignmentToggleSummary")
-            : t("resume.detail.assignmentToggleFull")}
-          placement="left"
-        >
-          <Fab
-            size="small"
-            aria-label={showFullAssignments
+      <ResumePageSideToolbar
+        actions={[
+          ...(showToggleFab ? [{
+            icon: showFullAssignments ? <FormatListBulletedIcon fontSize="small" /> : <ViewAgendaIcon fontSize="small" />,
+            label: showFullAssignments
               ? t("resume.detail.assignmentToggleSummary")
-              : t("resume.detail.assignmentToggleFull")}
-            onClick={onToggleShowFullAssignments}
-            sx={{
-              position: "absolute",
-              left: `calc(50% + ${794 / 2}px + 16px)`,
-              top: (theme) => `calc(${assignmentsFabTop}px + ${theme.spacing(2)})`,
-              zIndex: 10,
-              bgcolor: "transparent",
-              color: "action.active",
-              boxShadow: 0,
-              opacity: 0.5,
-              transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
-              "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
-            }}
-          >
-            {showFullAssignments ? <FormatListBulletedIcon fontSize="small" /> : <ViewAgendaIcon fontSize="small" />}
-          </Fab>
-        </Tooltip>
-      )}
-
-      {isEditing && !isSnapshotMode && (
-        <Tooltip title={t("resume.detail.addAssignment")} placement="left">
-          <Fab
-            size="small"
-            aria-label={t("resume.detail.addAssignment")}
-            disabled={createAssignmentPending || !canCreateAssignment}
-            onClick={onCreateAssignment}
-            sx={{
-              position: "absolute",
-              left: `calc(50% + ${794 / 2}px + 16px)`,
-              top: (theme) =>
-                `calc(${assignmentsFabTop}px + ${theme.spacing(showToggleFab ? 7 : 2)})`,
-              zIndex: 10,
-              bgcolor: "transparent",
-              color: "action.active",
-              boxShadow: 0,
-              opacity: 0.5,
-              transition: "opacity 0.2s, box-shadow 0.2s, background-color 0.2s",
-              "&:hover": { bgcolor: "action.selected", boxShadow: 1, opacity: 1 },
-            }}
-          >
-            <AddIcon fontSize="small" />
-          </Fab>
-        </Tooltip>
-      )}
+              : t("resume.detail.assignmentToggleFull"),
+            onClick: onToggleShowFullAssignments,
+          }] : []),
+          ...(isEditing && !isSnapshotMode ? [{
+            icon: <AddIcon fontSize="small" />,
+            label: t("resume.detail.addAssignment"),
+            onClick: onCreateAssignment,
+            disabled: createAssignmentPending || !canCreateAssignment,
+          }] : []),
+        ]}
+      />
     </Box>
   );
 }

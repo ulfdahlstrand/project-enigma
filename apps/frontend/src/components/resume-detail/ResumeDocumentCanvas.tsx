@@ -49,7 +49,6 @@ interface ResumeDocumentCanvasProps {
   languages: string[];
   isSnapshotMode: boolean;
   getResumeQueryKey: (id: string, branchId?: string | null) => readonly ["getResume", string, string | null];
-  fabTop: number;
   hasAssignments: boolean;
   assignmentsPage: number | null;
   assignments: Assignment[];
@@ -62,7 +61,6 @@ interface ResumeDocumentCanvasProps {
   onCreateAssignment: () => void;
   createAssignmentPending: boolean;
   canCreateAssignment: boolean;
-  assignmentsFabTop: number;
   presentationRef: RefObject<HTMLDivElement | null>;
   coverSectionRef: RefObject<HTMLDivElement | null>;
   skillsSectionRef: RefObject<HTMLDivElement | null>;
@@ -101,7 +99,6 @@ export function ResumeDocumentCanvas({
   languages,
   isSnapshotMode,
   getResumeQueryKey,
-  fabTop,
   hasAssignments,
   assignmentsPage,
   assignments,
@@ -114,7 +111,6 @@ export function ResumeDocumentCanvas({
   onCreateAssignment,
   createAssignmentPending,
   canCreateAssignment,
-  assignmentsFabTop,
   presentationRef,
   coverSectionRef,
   skillsSectionRef,
@@ -196,7 +192,6 @@ export function ResumeDocumentCanvas({
           onAutoEditConsumed={onAutoEditConsumed}
           onCreateAssignment={onCreateAssignment}
           createAssignmentPending={createAssignmentPending}
-          assignmentsFabTop={assignmentsFabTop}
           showToggleFab={showAssignmentsToggleFab}
           sectionRef={assignmentsSectionRef}
           assignmentItemRefs={assignmentItemRefs}

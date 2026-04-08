@@ -2,7 +2,7 @@ import { z } from "zod";
 import { sortAssignments } from "@cv-tool/utils";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import { orpc } from "../../../orpc-client";
@@ -180,20 +180,6 @@ export function ResumeDetailPage({
   const skillsSectionRef = useRef<HTMLDivElement>(null);
   const assignmentsSectionRef = useRef<HTMLDivElement>(null);
   const assignmentItemRefs = useRef<Record<string, HTMLElement | null>>({});
-  const [fabTop, setFabTop] = useState(0);
-  const [assignmentsFabTop, setAssignmentsFabTop] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    if (presentationRef.current) {
-      setFabTop(presentationRef.current.getBoundingClientRect().top - canvasRect.top);
-    }
-    if (assignmentsSectionRef.current) {
-      setAssignmentsFabTop(assignmentsSectionRef.current.getBoundingClientRect().top - canvasRect.top);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee, resume, branchCommit, isEditing, liveAssignments]);
 
   useEffect(() => {
     draftTitleRef.current = draftTitle;
@@ -695,7 +681,6 @@ export function ResumeDetailPage({
           languages={education.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
-          fabTop={fabTop}
           hasAssignments={hasAssignments}
           assignmentsPage={assignmentsPage}
           assignments={editableAssignments}
@@ -707,7 +692,6 @@ export function ResumeDetailPage({
           onCreateAssignment={() => void createAssignment.mutate()}
           createAssignmentPending={createAssignment.isPending}
           canCreateAssignment={!!activeBranchId && !!resume?.employeeId}
-          assignmentsFabTop={assignmentsFabTop}
           presentationRef={presentationRef}
           coverSectionRef={coverSectionRef}
           skillsSectionRef={skillsSectionRef}
