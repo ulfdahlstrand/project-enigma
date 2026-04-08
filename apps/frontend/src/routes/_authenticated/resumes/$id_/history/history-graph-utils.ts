@@ -92,6 +92,10 @@ export function getReachableCommits(
   return graphCommits.filter((commit) => reachableCommitIds.has(commit.id));
 }
 
+export function shouldRenderBranchLane(branchCommits: GraphCommit[]): boolean {
+  return branchCommits.length > 0;
+}
+
 // ---------------------------------------------------------------------------
 // Graph layout computation
 // ---------------------------------------------------------------------------
