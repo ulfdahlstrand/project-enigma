@@ -69,6 +69,7 @@ function VersionHistoryPage() {
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
   const selectedBranchId = selectedBranch?.id ?? mainBranchId;
   const selectedView = viewFromSearch ?? "list";
+  const selectedResumeCommitId = selectedBranch?.headCommitId ?? selectedBranch?.forkedFromCommitId ?? null;
   const commits = sortByCreatedAt(
     graphCommits.filter((commit) => commit.branchId === selectedBranchId),
   ).reverse();
@@ -114,6 +115,24 @@ function VersionHistoryPage() {
       to: "/resumes/$id/history",
       params: { id: resumeId },
       search: { branchId: mainBranchId || undefined, view: selectedView },
+    });
+  }
+
+  function handleViewCommit(commitId: string) {
+    void navigate({
+      to: "/resumes/$id/commit/$commitId",
+      params: { id: resumeId, commitId },
+    });
+  }
+
+  function handleViewSelectedBranchInResume() {
+    if (!selectedBranchId) {
+      return;
+    }
+
+    void navigate({
+      to: "/resumes/$id/branch/$branchId",
+      params: { id: resumeId, branchId: selectedBranchId },
     });
   }
 
@@ -215,13 +234,7 @@ function VersionHistoryPage() {
             <Button
               variant="outlined"
               size="small"
-              onClick={() =>
-                void navigate({
-                  to: "/resumes/$id",
-                  params: { id: resumeId },
-                  search: { branchId: selectedBranchId },
-                })
-              }
+              onClick={handleViewSelectedBranchInResume}
             >
               {t("resume.history.viewInResumeButton")}
             </Button>
@@ -234,9 +247,14 @@ function VersionHistoryPage() {
             graphCommits={graphCommits}
             graphEdges={graphEdges}
             selectedBranchId={selectedBranchId}
+            onViewCommit={handleViewCommit}
           />
         ) : (
-          <HistoryCommitTable commits={commits} selectedBranch={selectedBranch} />
+          <HistoryCommitTable
+            commits={commits}
+            selectedBranch={selectedBranch}
+            onViewCommit={handleViewCommit}
+          />
         )}
 
         <Dialog

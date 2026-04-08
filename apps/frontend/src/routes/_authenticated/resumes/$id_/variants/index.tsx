@@ -178,9 +178,8 @@ function VariantsPage() {
                           size="small"
                           onClick={() =>
                             void navigate({
-                              to: "/resumes/$id",
-                              params: { id: resumeId },
-                              search: { branchId: branch.id },
+                              to: "/resumes/$id/branch/$branchId",
+                              params: { id: resumeId, branchId: branch.id },
                             })
                           }
                         >

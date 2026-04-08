@@ -1,12 +1,18 @@
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CallSplitIcon from "@mui/icons-material/CallSplit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
+import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Grow from "@mui/material/Grow";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
@@ -14,6 +20,7 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
+import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
@@ -31,6 +38,7 @@ interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
+  currentCommitId: string | null;
   isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
@@ -39,6 +47,7 @@ interface ResumeDetailActionsProps {
   canSaveAsNewVersion: boolean;
   onSaveCurrent: () => void;
   onSaveAsNewVersion: (name: string) => Promise<void>;
+  onCreateBranchFromCommit: (name: string) => Promise<void>;
   onEdit: () => void;
   onExitEdit: () => void;
   onDeleteResume: () => void;
@@ -159,6 +168,7 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
+  currentCommitId,
   isEditRoute,
   isSnapshotMode,
   isEditing,
@@ -167,6 +177,7 @@ export function ResumeDetailActions({
   canSaveAsNewVersion,
   onSaveCurrent,
   onSaveAsNewVersion,
+  onCreateBranchFromCommit,
   onEdit,
   onExitEdit,
   onDeleteResume,
@@ -180,6 +191,9 @@ export function ResumeDetailActions({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
+  const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
+  const [createBranchName, setCreateBranchName] = useState("");
+  const [createBranchError, setCreateBranchError] = useState<string | null>(null);
 
   const openComparePage = () => {
     void navigate({
@@ -212,6 +226,19 @@ export function ResumeDetailActions({
         <ViewAgendaIcon fontSize="small" sx={{ mr: 1 }} />
         {t("revision.inline.compareButton")}
       </MenuItem>
+      {isSnapshotMode && currentCommitId && (
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            setCreateBranchError(null);
+            setCreateBranchName("");
+            setCreateBranchDialogOpen(true);
+          }}
+        >
+          <CallSplitIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("resume.detail.createBranchFromCommitMenuItem")}
+        </MenuItem>
+      )}
       {!isSnapshotMode && (
         <MenuItem
           onClick={() => {
@@ -242,8 +269,8 @@ export function ResumeDetailActions({
         </>
       ) : (
         <>
-          <ExportSplitButton resumeId={resumeId} commitId={baseCommitId} />
-          <EditButton onEdit={onEdit} />
+          <ExportSplitButton resumeId={resumeId} commitId={currentCommitId} />
+          {!isSnapshotMode ? <EditButton onEdit={onEdit} /> : null}
         </>
       )}
       <IconButton
@@ -255,14 +282,59 @@ export function ResumeDetailActions({
 
       {sharedMoreMenu}
 
+      <Dialog open={createBranchDialogOpen} onClose={() => setCreateBranchDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
+        <DialogContent>
+          {createBranchError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {createBranchError}
+            </Alert>
+          )}
+          <TextField
+            autoFocus
+            fullWidth
+            label={t("resume.variants.createDialog.nameLabel")}
+            value={createBranchName}
+            onChange={(event) => setCreateBranchName(event.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateBranchDialogOpen(false)}>
+            {t("resume.variants.createDialog.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!createBranchName.trim() || isSaving}
+            onClick={() => {
+              void (async () => {
+                try {
+                  setCreateBranchError(null);
+                  await onCreateBranchFromCommit(createBranchName.trim());
+                  setCreateBranchDialogOpen(false);
+                  setCreateBranchName("");
+                } catch {
+                  setCreateBranchError(t("resume.variants.createDialog.error"));
+                }
+              })();
+            }}
+          >
+            {isSaving
+              ? t("resume.variants.createDialog.creating")
+              : t("resume.variants.createDialog.create")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <ResumeHistoryDrawer
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         resumeId={resumeId}
-      activeBranchId={activeBranchId}
-      recentCommits={recentCommits}
-      language={language ?? null}
-    />
+        activeBranchId={activeBranchId}
+        currentCommitId={currentCommitId}
+        recentCommits={recentCommits}
+        language={language ?? null}
+      />
 
       <ResumeDeleteDialog
         open={deleteDialogOpen}

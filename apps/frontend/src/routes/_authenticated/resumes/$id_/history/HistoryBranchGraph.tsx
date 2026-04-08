@@ -22,6 +22,7 @@ interface HistoryBranchGraphProps {
   graphCommits: GraphCommit[];
   graphEdges: GraphEdge[];
   selectedBranchId: string;
+  onViewCommit: (commitId: string) => void;
 }
 
 export function HistoryBranchGraph({
@@ -29,6 +30,7 @@ export function HistoryBranchGraph({
   graphCommits,
   graphEdges,
   selectedBranchId,
+  onViewCommit,
 }: HistoryBranchGraphProps) {
   const { t } = useTranslation("common");
   const theme = useTheme();
@@ -243,6 +245,7 @@ export function HistoryBranchGraph({
               <Box
                 data-testid={`tree-commit-${commit.id}`}
                 aria-label={commitLabel}
+                onClick={() => onViewCommit(commit.id)}
                 sx={{
                   position: "absolute",
                   left: 0,
@@ -253,7 +256,7 @@ export function HistoryBranchGraph({
                   alignItems: "center",
                   zIndex: 1,
                   borderRadius: 0.5,
-                  cursor: "default",
+                  cursor: "pointer",
                   "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" },
                 }}
               >

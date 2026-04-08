@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { sortAssignments } from "@cv-tool/utils";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,17 +33,17 @@ export const getResumeQueryKey = (
 ) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
-  validateSearch: z.object({
-    branchId: z.string().optional(),
-    commitId: z.string().optional(),
-  }),
   component: () => <ResumeDetailPage routeMode="detail" />,
 });
 
 export function ResumeDetailPage({
   routeMode = "detail",
+  forcedBranchId = null,
+  forcedCommitId = null,
 }: {
   routeMode?: "detail" | "edit";
+  forcedBranchId?: string | null;
+  forcedCommitId?: string | null;
 }) {
   const { t } = useTranslation("common");
   const { id: idParam } = useParams({ strict: false });
@@ -52,45 +51,42 @@ export function ResumeDetailPage({
   const isEditRoute = routeMode === "edit";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const {
-    branchId: selectedBranchId,
-    commitId: selectedCommitId,
+    branchId: editBranchId,
     assistant: assistantMode,
     sourceBranchId: urlSourceBranchId,
   } =
     useSearch({ strict: false }) as any as {
       branchId?: string;
-      commitId?: string;
       assistant?: "true";
       sourceBranchId?: string;
     };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { zoom, setZoom, minZoom, maxZoom } = useResumeDocumentZoom();
-  const requestedBranchId = selectedBranchId ?? null;
-  const requestedCommitId = selectedCommitId ?? null;
+  const { data: branches } = useQuery({
+    queryKey: resumeBranchesKey(id),
+    queryFn: () => orpc.listResumeBranches({ resumeId: id }),
+  });
+
+  const requestedBranchId = forcedBranchId ?? (isEditRoute ? editBranchId ?? null : null);
+  const activeBranchId = requestedBranchId ?? branches?.find((b) => b.isMain)?.id ?? null;
+  const activeBranch = branches?.find((b) => b.id === activeBranchId);
+  const resolvedBranchCommitId = activeBranch?.headCommitId ?? activeBranch?.forkedFromCommitId ?? null;
+  const requestedCommitId = forcedCommitId ?? (requestedBranchId ? resolvedBranchCommitId : null);
 
   const { data: resume, isLoading, isError, error } = useQuery({
-    queryKey: getResumeQueryKey(id, requestedBranchId, requestedCommitId),
+    queryKey: getResumeQueryKey(id, null, requestedCommitId),
     queryFn: () => orpc.getResume({
       id,
-      branchId: requestedBranchId ?? undefined,
       commitId: requestedCommitId ?? undefined,
     }),
     retry: false,
   });
 
-  const { data: branches } = useQuery({
-    queryKey: resumeBranchesKey(id),
-    queryFn: () => orpc.listResumeBranches({ resumeId: id }),
-    enabled: !!resume,
-  });
-
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
-  const activeBranchId = selectedBranchId ?? mainBranchId ?? null;
-  const activeBranch = branches?.find((b) => b.id === activeBranchId);
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
   const isBranchBackedMode = activeBranchId !== null && activeBranchId !== mainBranchId;
-  const isSnapshotMode = requestedCommitId !== null;
+  const isSnapshotMode = forcedCommitId !== null;
 
   const { data: selectedCommit, isError: isSelectedCommitError } = useQuery({
     queryKey: ["getResumeCommit", requestedCommitId],
@@ -427,7 +423,7 @@ export function ResumeDetailPage({
     setShowSuggestionsPanel(true);
     setShowChatPanel(true);
     inlineRevision.open();
-  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, selectedBranchId, urlSourceBranchId]);
+  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, urlSourceBranchId]);
 
   useEffect(() => {
     if (wasInlineRevisionOpenRef.current && !inlineRevision.isOpen) {
@@ -504,19 +500,52 @@ export function ResumeDetailPage({
       ...patch,
     });
 
+    if (isEditRoute) {
+      await navigate({
+        to: "/resumes/$id/edit/branch/$branchId",
+        params: { id, branchId: newBranch.id },
+      });
+      return;
+    }
+
     await navigate({
-      to: isEditRoute ? "/resumes/$id/edit" : "/resumes/$id",
-      params: { id },
-      search: { branchId: newBranch.id },
+      to: "/resumes/$id/branch/$branchId",
+      params: { id, branchId: newBranch.id },
+    });
+  };
+
+  const currentViewedCommitId = requestedCommitId ?? baseCommitId;
+
+  const handleCreateBranchFromCommit = async (name: string) => {
+    if (!currentViewedCommitId) {
+      throw new Error("Missing current commit");
+    }
+
+    const newBranch = await forkResumeBranch.mutateAsync({
+      fromCommitId: currentViewedCommitId,
+      name,
+      resumeId: id,
+    });
+
+    await navigate({
+      to: "/resumes/$id/branch/$branchId",
+      params: { id, branchId: newBranch.id },
     });
   };
 
   const handleExitEditing = () => {
     if (isEditRoute) {
+      if (activeBranchId && activeBranchId !== mainBranchId) {
+        void navigate({
+          to: "/resumes/$id/branch/$branchId",
+          params: { id, branchId: activeBranchId },
+        });
+        return;
+      }
+
       void navigate({
         to: "/resumes/$id",
         params: { id },
-        search: activeBranchId ? { branchId: activeBranchId } : {},
       });
       return;
     }
@@ -526,13 +555,19 @@ export function ResumeDetailPage({
 
   const handleToggleAssistant = () => {
     if (!isEditRoute) {
+      if (activeBranchId && activeBranchId !== mainBranchId) {
+        void navigate({
+          to: "/resumes/$id/edit/branch/$branchId",
+          params: { id, branchId: activeBranchId },
+          search: { assistant: "true" },
+        });
+        return;
+      }
+
       void navigate({
         to: "/resumes/$id/edit",
         params: { id },
-        search: {
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
-          assistant: "true",
-        },
+        search: { assistant: "true" },
       });
       return;
     }
@@ -560,13 +595,19 @@ export function ResumeDetailPage({
 
   const handleToggleSuggestions = () => {
     if (!isEditRoute) {
+      if (activeBranchId && activeBranchId !== mainBranchId) {
+        void navigate({
+          to: "/resumes/$id/edit/branch/$branchId",
+          params: { id, branchId: activeBranchId },
+          search: { assistant: "true" },
+        });
+        return;
+      }
+
       void navigate({
         to: "/resumes/$id/edit",
         params: { id },
-        search: {
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
-          assistant: "true",
-        },
+        search: { assistant: "true" },
       });
       return;
     }
@@ -594,11 +635,17 @@ export function ResumeDetailPage({
 
   const handleCloseRevision = () => {
     if (isEditRoute) {
-      void navigate({
-        to: "/resumes/$id/edit",
-        params: { id },
-        search: activeBranchId ? { branchId: activeBranchId } : {},
-      });
+      if (activeBranchId && activeBranchId !== mainBranchId) {
+        void navigate({
+          to: "/resumes/$id/edit/branch/$branchId",
+          params: { id, branchId: activeBranchId },
+        });
+      } else {
+        void navigate({
+          to: "/resumes/$id/edit",
+          params: { id },
+        });
+      }
     }
 
     setShowSuggestionsPanel(false);
@@ -611,6 +658,7 @@ export function ResumeDetailPage({
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
@@ -621,11 +669,19 @@ export function ResumeDetailPage({
         void handleSave();
       }}
       onSaveAsNewVersion={handleSaveAsNewVersion}
+      onCreateBranchFromCommit={handleCreateBranchFromCommit}
       onEdit={() => {
+        if (activeBranchId && activeBranchId !== mainBranchId) {
+          void navigate({
+            to: "/resumes/$id/edit/branch/$branchId",
+            params: { id, branchId: activeBranchId },
+          });
+          return;
+        }
+
         void navigate({
           to: "/resumes/$id/edit",
           params: { id },
-          search: activeBranchId ? { branchId: activeBranchId } : {},
         });
       }}
       onExitEdit={handleExitEditing}
