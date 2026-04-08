@@ -89,14 +89,12 @@ export function ResumeViewWorkspace(props: ResumeViewWorkspaceProps) {
             onDraftPresentationChange={() => {}}
             onDraftSummaryChange={() => {}}
             onDraftHighlightedItemsChange={() => {}}
-            fabTop={0}
             showAssignmentsToggleFab={true}
             newAssignmentId={null}
             onAutoEditConsumed={() => {}}
             onCreateAssignment={() => {}}
             createAssignmentPending={false}
             canCreateAssignment={false}
-            assignmentsFabTop={0}
           />
         </Box>
       </Box>
