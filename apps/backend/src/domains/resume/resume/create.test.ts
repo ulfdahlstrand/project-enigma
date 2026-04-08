@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { createCreateResumeHandler, createResume } from "./create.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT } from "../../../test-helpers/mock-users.js";
+import { buildCommitTree } from "../lib/build-commit-tree.js";
+
+vi.mock("../lib/build-commit-tree.js");
 
 // ---------------------------------------------------------------------------
 // Unit tests for the createResume procedure.
@@ -39,11 +42,13 @@ const NEW_BRANCH_ROW = {
   created_at: new Date("2025-03-01T00:00:00.000Z"),
 };
 
+const TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
+
 const ROOT_COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
   parent_commit_id: null,
-  content: {},
+  tree_id: TREE_ID,
   message: "initial",
   created_by: MOCK_ADMIN.id,
   created_at: new Date("2025-03-01T00:00:00.000Z"),
@@ -124,6 +129,10 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("createResume query function", () => {
+  beforeEach(() => {
+    vi.mocked(buildCommitTree).mockResolvedValue(TREE_ID);
+  });
+
   it("admin creates resume and returns it with empty skills, mainBranchId, and headCommitId", async () => {
     const { db, resumeInsertValues } = buildDbMock();
 
@@ -185,6 +194,7 @@ describe("createResume query function", () => {
     expect(commitInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         resume_id: RESUME_ID,
+        tree_id: TREE_ID,
         message: "initial",
         created_by: MOCK_ADMIN.id,
       })
@@ -247,6 +257,10 @@ describe("createResume query function", () => {
 // ---------------------------------------------------------------------------
 
 describe("createCreateResumeHandler", () => {
+  beforeEach(() => {
+    vi.mocked(buildCommitTree).mockResolvedValue(TREE_ID);
+  });
+
   it("creates a resume for authenticated admin", async () => {
     const { db } = buildDbMock();
     const handler = createCreateResumeHandler(db);

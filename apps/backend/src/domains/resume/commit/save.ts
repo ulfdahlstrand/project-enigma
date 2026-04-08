@@ -8,6 +8,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { buildCommitTree } from "../lib/build-commit-tree.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { saveResumeVersionInputSchema, saveResumeVersionOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -119,53 +120,27 @@ export async function saveResumeVersion(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const headCommit = branch.head_commit_id
+  const headCommitRow = branch.head_commit_id
     ? await db
         .selectFrom("resume_commits")
-        .select(["content"])
+        .select(["tree_id"])
         .where("id", "=", branch.head_commit_id)
         .executeTakeFirst()
     : null;
 
-  const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
-      title: branch.title,
-      consultantTitle: null,
-      presentation: [],
-      summary: branch.summary,
-      highlightedItems: [],
-      language: branch.language,
-      skillGroups: [],
-      skills: [],
-      assignments: [],
-  };
-
-  const shouldReadLegacySkills =
-    headCommit === null && (input.skillGroups === undefined || input.skills === undefined);
-
-  const skillGroups = shouldReadLegacySkills
-    ? await db
-        .selectFrom("resume_skill_groups")
-        .select(["id", "name", "sort_order"])
-        .where("resume_id", "=", branch.resume_id)
-        .orderBy("sort_order", "asc")
-        .execute()
-    : [];
-
-  const skillRows = shouldReadLegacySkills
-    ? await db
-        .selectFrom("resume_skills as rs")
-        .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-        .select([
-          "rs.name",
-          "rs.sort_order",
-          "rs.group_id",
-          "rsg.name as category",
-        ])
-        .where("rs.resume_id", "=", branch.resume_id)
-        .orderBy("rsg.sort_order", "asc")
-        .orderBy("rs.sort_order", "asc")
-        .execute()
-    : [];
+  const baseContent: ResumeCommitContent = headCommitRow?.tree_id
+    ? await readTreeContent(db, headCommitRow.tree_id)
+    : {
+        title: branch.title,
+        consultantTitle: null,
+        presentation: [],
+        summary: branch.summary,
+        highlightedItems: [],
+        language: branch.language,
+        skillGroups: [],
+        skills: [],
+        assignments: [],
+      };
 
   // Fetch assignments linked to this branch — all content is now in branch_assignments.
   // Soft-deleted assignments are excluded (deleted_at IS NULL guard).
@@ -198,21 +173,8 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skillGroups: input.skillGroups
-      ?? (headCommit
-        ? baseContent.skillGroups ?? []
-        : skillGroups.map((group) => ({
-            name: group.name,
-            sortOrder: group.sort_order,
-          }))),
-    skills: (input.skills
-      ?? (headCommit
-        ? baseContent.skills ?? []
-        : skillRows.map((s) => ({
-            name: s.name,
-            category: s.category,
-            sortOrder: s.sort_order,
-          })))).map((skill) => ({
+    skillGroups: input.skillGroups ?? baseContent.skillGroups ?? [],
+    skills: (input.skills ?? baseContent.skills ?? []).map((skill) => ({
       name: skill.name,
       category: skill.category,
       sortOrder: skill.sortOrder,
@@ -246,7 +208,6 @@ export async function saveResumeVersion(
       .insertInto("resume_commits")
       .values({
         resume_id: branch.resume_id,
-        content: JSON.stringify(content),
         tree_id: treeId,
         title,
         description,
@@ -280,7 +241,7 @@ export async function saveResumeVersion(
     id: commit.id,
     resumeId: commit.resume_id,
     parentCommitId: branch.head_commit_id,
-    content: commit.content as unknown as ResumeCommitContent,
+    content,
     message: commit.message,
     title: commit.title,
     description: commit.description,

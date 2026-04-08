@@ -2,12 +2,14 @@ import { implement, ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database, ResumeCommitContent } from "../../../db/types.js";
+import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "../lib/sync-branch-assignments.js";
 import { syncLiveResumeFromContent } from "../lib/sync-live-resume-from-content.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+import { buildCommitTree } from "../lib/build-commit-tree.js";
 import type { finaliseResumeBranchInputSchema, finaliseResumeBranchOutputSchema } from "@cv-tool/contracts";
 
 type FinaliseResumeBranchInput = z.infer<typeof finaliseResumeBranchInputSchema>;
@@ -62,7 +64,7 @@ export async function finaliseResumeBranch(
 
   const revisionCommit = await db
     .selectFrom("resume_commits")
-    .select(["content"])
+    .select(["tree_id"])
     .where("id", "=", revisionBranch.head_commit_id)
     .executeTakeFirst();
 
@@ -70,18 +72,26 @@ export async function finaliseResumeBranch(
     throw new ORPCError("NOT_FOUND");
   }
 
+  if (!revisionCommit.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Revision commit uses a legacy format without a tree" });
+  }
+
+  const revisionContent = await readTreeContent(db, revisionCommit.tree_id);
+
   const normalisedContent = await normaliseAssignmentIds(
     db,
     sourceBranch.employee_id,
-    revisionCommit.content as ResumeCommitContent
+    revisionContent,
   );
 
   await db.transaction().execute(async (trx) => {
+    const treeId = await buildCommitTree(trx, sourceBranch.resume_id, sourceBranch.employee_id, normalisedContent);
+
     const mergeCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: sourceBranch.resume_id,
-        content: JSON.stringify(normalisedContent),
+        tree_id: treeId,
         title: `merged ${revisionBranch.name} into ${sourceBranch.name}`,
         description: "",
         message: "Merge inline AI revision",

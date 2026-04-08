@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
@@ -12,6 +12,9 @@ import {
   MOCK_CONSULTANT,
   MOCK_CONSULTANT_2,
 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -23,12 +26,15 @@ const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const BASE_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 const HEAD_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440042";
 const OTHER_RESUME_ID = "550e8400-e29b-41d4-a716-446655440022";
+const TREE_ID_BASE = "550e8400-e29b-41d4-a716-000000000001";
+const TREE_ID_HEAD = "550e8400-e29b-41d4-a716-000000000002";
 
 const BASE_CONTENT = {
   title: "Engineer",
   consultantTitle: null,
   presentation: ["I build things"],
   summary: null,
+  highlightedItems: [],
   language: "en",
   skillGroups: [],
   skills: [{ name: "TypeScript", category: null, sortOrder: 1 }],
@@ -47,25 +53,20 @@ const HEAD_CONTENT = {
 const BASE_ROW = {
   id: BASE_COMMIT_ID,
   resume_id: RESUME_ID,
-  content: BASE_CONTENT,
+  tree_id: TREE_ID_BASE,
   employee_id: EMPLOYEE_ID_1,
 };
 
 const HEAD_ROW = {
   id: HEAD_COMMIT_ID,
   resume_id: RESUME_ID,
-  content: HEAD_CONTENT,
+  tree_id: TREE_ID_HEAD,
   employee_id: EMPLOYEE_ID_1,
 };
 
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
-//
-// Two independent selectFrom chains are needed (one per commit).
-// We track which call index we're on so the first call returns baseRow
-// and the second returns headRow.
-//
 
 function buildDbMock(opts: {
   baseRow?: unknown;
@@ -81,14 +82,12 @@ function buildDbMock(opts: {
   const resolvedBase = baseRow === null ? undefined : baseRow;
   const resolvedHead = headRow === null ? undefined : headRow;
 
-  // Employee lookup (resolveEmployeeId)
   const empExecuteTakeFirst = vi
     .fn()
     .mockResolvedValue(employeeId ? { id: employeeId } : undefined);
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
 
-  // Commit lookups — two separate chains, returned in order
   let commitCallCount = 0;
   const commitExecuteTakeFirst = vi.fn().mockImplementation(async () => {
     commitCallCount++;
@@ -111,6 +110,12 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("compareResumeCommits", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockImplementation(async (_db, treeId) =>
+      treeId === TREE_ID_BASE ? BASE_CONTENT : HEAD_CONTENT
+    );
+  });
+
   it("returns diff with hasChanges=true when commits differ", async () => {
     const { db } = buildDbMock();
 
@@ -131,6 +136,7 @@ describe("compareResumeCommits", () => {
   });
 
   it("returns diff with hasChanges=false when commits are identical", async () => {
+    vi.mocked(readTreeContent).mockResolvedValue(BASE_CONTENT);
     const { db } = buildDbMock({ headRow: { ...BASE_ROW, id: HEAD_COMMIT_ID } });
 
     const result = await compareResumeCommits(db, MOCK_ADMIN, {
@@ -184,6 +190,20 @@ describe("compareResumeCommits", () => {
     );
   });
 
+  it("throws BAD_REQUEST when a commit has no tree_id (legacy format)", async () => {
+    const legacyRow = { ...BASE_ROW, tree_id: null };
+    const { db } = buildDbMock({ baseRow: legacyRow });
+
+    await expect(
+      compareResumeCommits(db, MOCK_ADMIN, {
+        baseCommitId: BASE_COMMIT_ID,
+        headCommitId: HEAD_COMMIT_ID,
+      })
+    ).rejects.toSatisfy(
+      (err: unknown) => err instanceof ORPCError && err.code === "BAD_REQUEST"
+    );
+  });
+
   it("allows consultant to compare commits on their own resume", async () => {
     const { db } = buildDbMock({ employeeId: EMPLOYEE_ID_1 });
 
@@ -214,6 +234,12 @@ describe("compareResumeCommits", () => {
 // ---------------------------------------------------------------------------
 
 describe("createCompareResumeCommitsHandler", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockImplementation(async (_db, treeId) =>
+      treeId === TREE_ID_BASE ? BASE_CONTENT : HEAD_CONTENT
+    );
+  });
+
   it("returns result for authenticated admin", async () => {
     const { db } = buildDbMock();
     const handler = createCompareResumeCommitsHandler(db);

@@ -6,6 +6,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { listResumesInputSchema, listResumesOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -77,12 +78,19 @@ export async function listResumes(
   const commitRows = headCommitIds.length > 0
     ? await db
         .selectFrom("resume_commits")
-        .select(["id", "content"])
+        .select(["id", "tree_id"])
         .where("id", "in", headCommitIds)
         .execute()
     : [];
-  const contentByCommitId = new Map(
-    commitRows.map((row) => [row.id, row.content as ResumeCommitContent]),
+
+  const contentByCommitId = new Map<string, ResumeCommitContent>();
+  await Promise.all(
+    commitRows
+      .filter((row) => row.tree_id !== null)
+      .map(async (row) => {
+        const content = await readTreeContent(db, row.tree_id!);
+        contentByCommitId.set(row.id, content);
+      }),
   );
 
   return rows.map((row) => ({

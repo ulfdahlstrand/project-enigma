@@ -3,10 +3,11 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database, ResumeCommitContent } from "../../../db/types.js";
+import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { forkResumeBranchInputSchema, forkResumeBranchOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -68,7 +69,7 @@ export async function forkResumeBranch(
     .select([
       "rc.id",
       "rc.resume_id",
-      "rc.content",
+      "rc.tree_id",
       "r.employee_id",
     ])
     .where("rc.id", "=", input.fromCommitId)
@@ -82,7 +83,11 @@ export async function forkResumeBranch(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const commitContent = commit.content as ResumeCommitContent;
+  if (!commit.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
+  }
+
+  const commitContent = await readTreeContent(db, commit.tree_id);
 
   // Create the new branch and copy assignments atomically.
   // No initial commit is created — the branch starts empty (headCommitId = null)

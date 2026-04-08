@@ -113,7 +113,7 @@ export async function getResume(
     // that exact commit. This is a detached view, so snapshot data must win.
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select(["id", "resume_id", "content", "tree_id"])
+      .select(["id", "resume_id", "tree_id"])
       .where("id", "=", commitId)
       .executeTakeFirst();
 
@@ -121,19 +121,17 @@ export async function getResume(
       throw new ORPCError("NOT_FOUND");
     }
 
-    snapshotContent = commitRow.tree_id
-      ? await readTreeContent(db, commitRow.tree_id)
-      : commitRow.content as ResumeCommitContent;
+    if (commitRow.tree_id) {
+      snapshotContent = await readTreeContent(db, commitRow.tree_id);
+    }
   } else if (resumeRow.head_commit_id) {
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select(["content", "tree_id"])
+      .select(["tree_id"])
       .where("id", "=", resumeRow.head_commit_id)
       .executeTakeFirst();
-    if (commitRow) {
-      snapshotContent = commitRow.tree_id
-        ? await readTreeContent(db, commitRow.tree_id)
-        : (commitRow.content as ResumeCommitContent) ?? null;
+    if (commitRow?.tree_id) {
+      snapshotContent = await readTreeContent(db, commitRow.tree_id);
     }
   }
 
@@ -159,47 +157,7 @@ export async function getResume(
     };
   }
 
-  const skillRows = await db
-    .selectFrom("resume_skills as rs")
-    .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-    .select([
-      "rs.id",
-      "rs.resume_id",
-      "rs.group_id",
-      "rs.name",
-      "rs.sort_order",
-      "rsg.name as group_name",
-      "rsg.sort_order as group_sort_order",
-    ])
-    .where("rs.resume_id", "=", id)
-    .orderBy("rsg.sort_order", "asc")
-    .orderBy("rs.sort_order", "asc")
-    .execute();
-
-  const liveSkillGroups = skillRows.reduce<Array<{
-    id: string;
-    resumeId: string;
-    name: string;
-    sortOrder: number;
-  }>>((acc, row) => {
-    if (acc.some((group) => group.id === row.group_id)) {
-      return acc;
-    }
-    return [...acc, {
-      id: row.group_id,
-      resumeId: row.resume_id,
-      name: row.group_name,
-      sortOrder: row.group_sort_order,
-    }];
-  }, []);
-
-  const highlightedItemRows = await db
-    .selectFrom("resume_highlighted_items")
-    .select(["text"])
-    .where("resume_id", "=", id)
-    .orderBy("sort_order", "asc")
-    .execute();
-
+  // No tree-backed commit — return resume metadata with empty content arrays.
   return {
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
@@ -207,22 +165,15 @@ export async function getResume(
     consultantTitle: null,
     presentation: [],
     summary: resumeRow.summary,
-    highlightedItems: highlightedItemRows.map((item) => item.text),
+    highlightedItems: [],
     language: resumeRow.language,
     isMain: resumeRow.is_main,
     mainBranchId: resumeRow.branch_id ?? null,
     headCommitId: resumeRow.head_commit_id ?? null,
     createdAt: resumeRow.created_at,
     updatedAt: resumeRow.updated_at,
-    skillGroups: liveSkillGroups,
-    skills: skillRows.map((s) => ({
-      id: s.id,
-      resumeId: s.resume_id,
-      groupId: s.group_id,
-      name: s.name,
-      category: s.group_name,
-      sortOrder: s.sort_order,
-    })),
+    skillGroups: [],
+    skills: [],
   };
 }
 

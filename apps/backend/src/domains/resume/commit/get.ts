@@ -7,6 +7,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { getResumeCommitInputSchema, getResumeCommitOutputSchema } from "@cv-tool/contracts";
 
 function normaliseRichText(value: unknown): string {
@@ -83,7 +84,7 @@ export async function getResumeCommit(
       "rc.id",
       "rc.resume_id",
       "rcp.parent_commit_id as parent_commit_id",
-      "rc.content",
+      "rc.tree_id",
       "rc.message",
       "rc.title",
       "rc.description",
@@ -102,11 +103,17 @@ export async function getResumeCommit(
     throw new ORPCError("FORBIDDEN");
   }
 
+  if (!row.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
+  }
+
+  const rawContent = await readTreeContent(db, row.tree_id);
+
   return {
     id: row.id,
     resumeId: row.resume_id,
     parentCommitId: row.parent_commit_id,
-    content: normaliseCommitContent(row.content as unknown as ResumeCommitContent),
+    content: normaliseCommitContent(rawContent),
     message: row.message,
     title: row.title,
     description: row.description,

@@ -1,5 +1,7 @@
 import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
+import { readTreeContent } from "./read-tree-content.js";
+import { buildCommitTree } from "./build-commit-tree.js";
 
 interface UpsertBranchContentFromLiveParams {
   resumeId: string;
@@ -25,7 +27,7 @@ export async function upsertBranchContentFromLive(
     await Promise.all([
       db
         .selectFrom("resumes")
-        .select(["title", "summary", "language"])
+        .select(["employee_id", "title", "summary", "language"])
         .where("id", "=", resumeId)
         .executeTakeFirstOrThrow(),
       db
@@ -72,13 +74,15 @@ export async function upsertBranchContentFromLive(
       branchRow.head_commit_id
         ? db
           .selectFrom("resume_commits")
-          .select(["content"])
+          .select(["tree_id"])
           .where("id", "=", branchRow.head_commit_id)
           .executeTakeFirst()
         : Promise.resolve(undefined),
     ]);
 
-  const previousContent = headCommitRow?.content as ResumeCommitContent | undefined;
+  const previousContent: ResumeCommitContent | undefined = headCommitRow?.tree_id
+    ? await readTreeContent(db, headCommitRow.tree_id)
+    : undefined;
 
   const content: ResumeCommitContent = {
     title: resumeRow.title,
@@ -120,10 +124,12 @@ export async function upsertBranchContentFromLive(
     })),
   };
 
+  const treeId = await buildCommitTree(db, resumeId, resumeRow.employee_id, content);
+
   if (branchRow.head_commit_id) {
     await db
       .updateTable("resume_commits")
-      .set({ content: JSON.stringify(content) })
+      .set({ tree_id: treeId })
       .where("id", "=", branchRow.head_commit_id)
       .execute();
   } else {
@@ -131,7 +137,7 @@ export async function upsertBranchContentFromLive(
       .insertInto("resume_commits")
       .values({
         resume_id: resumeId,
-        content: JSON.stringify(content),
+        tree_id: treeId,
         message: "initial",
         title: "initial",
         description: "",

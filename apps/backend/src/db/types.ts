@@ -158,9 +158,7 @@ export interface ResumeCommitContent {
 export interface ResumeCommitTable {
   id: Generated<string>;
   resume_id: string;
-  /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
-  content: ColumnType<ResumeCommitContent, string, string>;
-  /** Points to the commit's tree in the Git-inspired content model. NULL for legacy commits. */
+  /** Points to the commit's immutable tree in the Git-inspired content model. */
   tree_id: string | null;
   message: Generated<string>;
   /** Short human-readable title for this commit (e.g. "ai(suggestion): …"). */
