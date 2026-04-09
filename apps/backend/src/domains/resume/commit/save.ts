@@ -106,7 +106,6 @@ export async function saveResumeVersion(
       "rb.head_commit_id",
       "r.employee_id",
       "r.title",
-      "r.summary",
       "r.language",
     ])
     .where("rb.id", "=", input.branchId)
@@ -134,7 +133,7 @@ export async function saveResumeVersion(
         title: branch.title,
         consultantTitle: null,
         presentation: [],
-        summary: branch.summary,
+        summary: null,
         highlightedItems: [],
         language: branch.language,
         skillGroups: [],

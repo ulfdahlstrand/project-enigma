@@ -9,6 +9,7 @@ interface UpsertBranchContentFromLiveParams {
   userId: string | null;
   consultantTitle?: string | null;
   presentation?: string[];
+  summary?: string | null;
   highlightedItems?: string[];
   skillGroups?: Array<{ name: string; sortOrder: number }>;
   skills?: Array<{ name: string; category: string | null; sortOrder: number }>;
@@ -18,7 +19,7 @@ export async function upsertBranchContentFromLive(
   db: Kysely<Database>,
   params: UpsertBranchContentFromLiveParams,
 ): Promise<ResumeCommitContent> {
-  const { resumeId, branchId, userId, consultantTitle, presentation, highlightedItems, skillGroups, skills } = params;
+  const { resumeId, branchId, userId, consultantTitle, presentation, summary, highlightedItems, skillGroups, skills } = params;
 
   const branchRow = await db
     .selectFrom("resume_branches")
@@ -29,7 +30,7 @@ export async function upsertBranchContentFromLive(
   const [resumeRow, headCommitRow] = await Promise.all([
     db
       .selectFrom("resumes")
-      .select(["employee_id", "title", "summary", "language"])
+      .select(["employee_id", "title", "language"])
       .where("id", "=", resumeId)
       .executeTakeFirstOrThrow(),
     branchRow.head_commit_id
@@ -53,7 +54,7 @@ export async function upsertBranchContentFromLive(
     presentation: presentation !== undefined
       ? presentation
       : previousContent?.presentation ?? [],
-    summary: resumeRow.summary,
+    summary: summary !== undefined ? summary : previousContent?.summary ?? null,
     highlightedItems: highlightedItems !== undefined
       ? highlightedItems
       : previousContent?.highlightedItems ?? [],

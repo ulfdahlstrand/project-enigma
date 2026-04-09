@@ -10,7 +10,6 @@ export async function syncLiveResumeFromContent(
     .updateTable("resumes")
     .set({
       title: content.title,
-      summary: content.summary,
       language: content.language,
     })
     .where("id", "=", resumeId)

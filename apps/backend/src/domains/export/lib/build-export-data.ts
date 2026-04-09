@@ -91,7 +91,6 @@ async function buildFromLive(
       join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
     )
     .select([
-      "r.summary",
       "r.language",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
@@ -144,7 +143,7 @@ async function buildFromLive(
     consultantTitle: content?.consultantTitle ?? "",
     language: resume.language ?? "en",
     presentation: content?.presentation ?? [],
-    summary: resume.summary,
+    summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],
     skills: (content?.skills ?? []).map((s) => ({ name: s.name, category: s.category })),
     assignments: mapAssignments(assignments),

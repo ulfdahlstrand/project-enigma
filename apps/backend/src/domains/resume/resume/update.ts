@@ -68,13 +68,11 @@ export async function updateResume(
 
   const set: {
     title?: string;
-    summary?: string | null;
     language?: string;
     is_main?: boolean;
   } = {};
 
   if (input.title !== undefined) set.title = input.title;
-  if (input.summary !== undefined) set.summary = input.summary;
   if (input.language !== undefined) set.language = input.language;
   if (input.isMain !== undefined) set.is_main = input.isMain;
 
@@ -97,6 +95,7 @@ export async function updateResume(
         userId: user.id,
         ...(input.consultantTitle !== undefined ? { consultantTitle: input.consultantTitle } : {}),
         ...(input.presentation !== undefined ? { presentation: input.presentation } : {}),
+        ...(input.summary !== undefined ? { summary: input.summary } : {}),
         ...(input.highlightedItems !== undefined ? { highlightedItems: input.highlightedItems.map((s) => s.trim()).filter(Boolean) } : {}),
       })
       : null;
@@ -114,7 +113,7 @@ export async function updateResume(
     title: updatedResume.title,
     consultantTitle: branchContent?.consultantTitle ?? null,
     presentation: branchContent?.presentation ?? [],
-    summary: updatedResume.summary,
+    summary: branchContent?.summary ?? null,
     highlightedItems: branchContent?.highlightedItems ?? [],
     language: updatedResume.language,
     isMain: updatedResume.is_main,

@@ -53,7 +53,6 @@ export async function createResume(
         employee_id: input.employeeId,
         title: input.title,
         language,
-        summary: input.summary ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -78,7 +77,7 @@ export async function createResume(
       title: newResume.title,
       consultantTitle: null,
       presentation: [],
-      summary: newResume.summary,
+      summary: input.summary ?? null,
       highlightedItems: [],
       language,
       skillGroups: [],
@@ -115,7 +114,7 @@ export async function createResume(
     title: resume.title,
     consultantTitle: null,
     presentation: [],
-    summary: resume.summary,
+    summary: input.summary ?? null,
     highlightedItems: [],
     language: resume.language,
     isMain: resume.is_main,
