@@ -107,7 +107,6 @@ export async function finaliseResumeBranch(
         tree_id: treeId,
         title: `Merge ${revisionBranch.name} into ${sourceBranch.name}`,
         description: "",
-        message: `Merge ${revisionBranch.name} into ${sourceBranch.name}`,
         created_by: user.id,
       })
       .returningAll()

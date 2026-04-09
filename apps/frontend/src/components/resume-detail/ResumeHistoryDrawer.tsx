@@ -11,7 +11,6 @@ import RouterButton from "../RouterButton";
 type ResumeCommitRow = {
   id: string;
   title?: string | null;
-  message: string | null;
   createdAt: string | Date | null;
 };
 
@@ -83,7 +82,7 @@ export function ResumeHistoryDrawer({
                 }}
               >
                 <ListItemText
-                  primary={commit.title || commit.message || t("resume.detail.historyDrawer.defaultMessage")}
+                  primary={commit.title || t("resume.detail.historyDrawer.defaultMessage")}
                   secondary={
                     commit.createdAt
                       ? new Date(commit.createdAt).toLocaleDateString(language === "sv" ? "sv-SE" : "en-GB", {

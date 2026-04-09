@@ -227,7 +227,7 @@ export function HistoryBranchGraph({
 
         {graphLayout.orderedCommits.map((commit) => {
           const commitY = getCommitY(graphLayout.commitIndexById, commit.id);
-          const commitLabel = commit.title || commit.message || t("resume.history.defaultMessage");
+          const commitLabel = commit.title || t("resume.history.defaultMessage");
           const commitBranchId = graphLayout.branchIdByCommitId.get(commit.id);
           const branch = commitBranchId ? graphLayout.branchById.get(commitBranchId) : null;
           const isHead = branch ? commit.id === branch.headCommitId : false;

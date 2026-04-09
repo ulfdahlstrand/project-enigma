@@ -71,8 +71,6 @@ export const resumeCommitSchema = z.object({
   resumeId: z.string().uuid(),
   parentCommitId: z.string().uuid().nullable(),
   content: resumeCommitContentSchema,
-  /** @deprecated Legacy alias for `title`. Kept temporarily for compatibility. */
-  message: z.string(),
   title: z.string(),
   description: z.string(),
   createdBy: z.string().uuid().nullable(),
@@ -119,12 +117,9 @@ export type BranchAssignment = z.infer<typeof branchAssignmentSchema>;
 
 export const saveResumeVersionInputSchema = z.object({
   branchId: z.string().uuid(),
-  /** Short human-readable commit title. Takes precedence over `message` when both are provided. */
   title: z.string().optional(),
   /** Optional extended description for this commit. */
   description: z.string().optional(),
-  /** @deprecated Use `title` instead. Kept for backward compatibility. */
-  message: z.string().optional(),
   /** Optional content overrides — when provided, these values are stored in the
    *  commit instead of reading from the live resume record. Use this when saving
    *  branch-specific edits without touching the main resume. */

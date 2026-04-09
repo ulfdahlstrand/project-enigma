@@ -49,7 +49,7 @@ export function HistoryCommitTable({ commits, selectedBranch, onViewCommit }: Hi
         <TableBody>
           {commits.map((commit) => {
             const savedAt = typeof commit.createdAt === "string" ? new Date(commit.createdAt) : commit.createdAt;
-            const message = commit.title || commit.message || t("resume.history.defaultMessage");
+            const message = commit.title || t("resume.history.defaultMessage");
             const isHead = selectedBranch?.headCommitId === commit.id;
 
             return (

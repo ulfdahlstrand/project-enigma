@@ -101,7 +101,6 @@ export async function upsertBranchContentFromLive(
       .values({
         resume_id: resumeId,
         tree_id: treeId,
-        message: "initial",
         title: "initial",
         description: "",
         created_by: userId,

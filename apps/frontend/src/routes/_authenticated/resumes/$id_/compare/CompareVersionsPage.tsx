@@ -141,7 +141,7 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
       typeof commit.createdAt === "string"
         ? new Date(commit.createdAt).toLocaleString()
         : commit.createdAt?.toLocaleString() ?? "";
-    const title = commit.title || commit.message;
+    const title = commit.title;
     return title ? `${title} (${date})` : date;
   }
 

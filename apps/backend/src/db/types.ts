@@ -142,8 +142,6 @@ export interface ResumeCommitTable {
   resume_id: string;
   /** Points to the commit's immutable tree in the Git-inspired content model. */
   tree_id: string | null;
-  /** @deprecated Legacy alias for title. Kept until the column is dropped. */
-  message: Generated<string>;
   /** Short human-readable title for this commit (e.g. "ai(suggestion): …"). */
   title: Generated<string>;
   /** Optional extended description; empty string for most automated commits. */

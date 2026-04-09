@@ -86,7 +86,7 @@ function summarizeCommitChanges(
  *
  * @param db    - Kysely instance (real or mock).
  * @param user  - The authenticated user.
- * @param input - { branchId, message? }
+ * @param input - { branchId, title?, description? }
  * @throws ORPCError("NOT_FOUND")  if the branch does not exist.
  * @throws ORPCError("FORBIDDEN")  if a consultant does not own the resume.
  */
@@ -172,9 +172,8 @@ export async function saveResumeVersion(
   };
 
   const generatedMetadata = summarizeCommitChanges(baseContent, content);
-  const title = input.title?.trim() || input.message?.trim() || generatedMetadata.title;
+  const title = input.title?.trim() || generatedMetadata.title;
   const description = input.description?.trim() || generatedMetadata.description;
-  const message = title;
 
   // Atomically insert commit and update branch HEAD
   const commit = await db.transaction().execute(async (trx) => {
@@ -193,7 +192,6 @@ export async function saveResumeVersion(
         tree_id: treeId,
         title,
         description,
-        message,
         created_by: user.id,
       })
       .returningAll()
@@ -224,7 +222,6 @@ export async function saveResumeVersion(
     resumeId: commit.resume_id,
     parentCommitId: branch.head_commit_id,
     content,
-    message: commit.title,
     title: commit.title,
     description: commit.description,
     createdBy: commit.created_by,

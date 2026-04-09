@@ -11,9 +11,6 @@ import { resumeVersionRoutes } from "./domains/resume-versions/routes.js";
 import {
   healthInputSchema,
   healthOutputSchema,
-  listTestEntriesInputSchema,
-  listTestEntriesOutputSchema,
-  testEntrySchema,
 } from "./domains/system/schema.js";
 import { systemRoutes } from "./domains/system/routes.js";
 

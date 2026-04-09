@@ -30,7 +30,7 @@ import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
 
 type ResumeCommitRow = {
   id: string;
-  message: string | null;
+  title: string | null;
   createdAt: string | Date | null;
 };
 

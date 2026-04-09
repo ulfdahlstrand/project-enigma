@@ -277,7 +277,7 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
 
   const savedCommit = await saveResumeVersion(db, user, {
     branchId: resume.mainBranchId!,
-    message: "bootstrap revision fixture",
+    title: "bootstrap revision fixture",
     consultantTitle: body.consultantTitle ?? "Tech Lead / Senior Engineer",
     presentation: body.presentationParagraphs ?? [],
     summary: body.summary ?? null,
@@ -319,7 +319,7 @@ export async function e2eRevisionStateHandler(req: IncomingMessage, res: ServerR
 
   const commits = await db
     .selectFrom("resume_commits")
-    .select(["id", "message", "title", "description"])
+    .select(["id", "title", "description"])
     .where("resume_id", "=", resumeId)
     .orderBy("created_at", "asc")
     .execute();
