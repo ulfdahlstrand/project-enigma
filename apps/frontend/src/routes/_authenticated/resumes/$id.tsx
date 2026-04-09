@@ -98,6 +98,11 @@ export function ResumeDetailPage({
     enabled: !!resume?.employeeId,
   });
 
+  const { data: liveBranchAssignments = [] } = useQuery({
+    queryKey: ["listBranchAssignmentsFull", activeBranchId],
+    queryFn: () => orpc.listBranchAssignmentsFull({ branchId: activeBranchId! }),
+    enabled: !isSnapshotMode && !!activeBranchId,
+  });
   const { data: education = [] } = useQuery({
     queryKey: ["listEducation", resume?.employeeId],
     queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
@@ -211,10 +216,23 @@ export function ResumeDetailPage({
         updatedAt: "",
       }))
     : education;
-  const assignments = (snapshotContent?.assignments ?? resume?.assignments ?? []).map((assignment) => ({
-    ...assignment,
-    id: assignment.assignmentId,
-  }));
+  const assignments: Array<{
+    id: string;
+    assignmentId?: string;
+    isCurrent: boolean;
+    startDate: string | Date;
+    clientName: string;
+    role: string;
+    description: string;
+    endDate: string | Date | null;
+    technologies: string[];
+    keywords?: string | null;
+  }> = isSnapshotMode
+    ? (snapshotContent?.assignments ?? []).map((assignment) => ({
+        ...assignment,
+        id: assignment.assignmentId,
+      }))
+    : liveBranchAssignments;
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
   const language = snapshotContent?.language ?? activeBranch?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
@@ -224,7 +242,7 @@ export function ResumeDetailPage({
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
   const editableAssignments = sortedAssignments.map((assignment) => ({
     ...assignment,
-    assignmentId: assignment.assignmentId,
+    assignmentId: assignment.assignmentId ?? assignment.id,
   })) as EditorAssignmentRow[];
   const fallbackHighlightedItems = sortedAssignments
     .slice(0, COVER_HIGHLIGHT_COUNT)
@@ -342,14 +360,14 @@ export function ResumeDetailPage({
       sortOrder: skill.sortOrder ?? 0,
     })),
     assignments: sortedAssignments.map((assignment) => ({
-      id: assignment.assignmentId,
+      id: assignment.assignmentId ?? assignment.id,
       clientName: assignment.clientName,
       role: assignment.role,
       description: assignment.description,
       technologies: assignment.technologies,
       isCurrent: assignment.isCurrent,
-      startDate: assignment.startDate,
-      endDate: assignment.endDate,
+      startDate: assignment.startDate instanceof Date ? assignment.startDate.toISOString() : (assignment.startDate ?? null),
+      endDate: assignment.endDate instanceof Date ? assignment.endDate.toISOString() : (assignment.endDate ?? null),
     })),
   };
   const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);

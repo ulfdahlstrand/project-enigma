@@ -16,3 +16,31 @@ if (!i18n.isInitialized) {
     interpolation: { escapeValue: false },
   });
 }
+const canvasContextStub = {
+  setTransform: () => {},
+  clearRect: () => {},
+  fillRect: () => {},
+  beginPath: () => {},
+  arc: () => {},
+  closePath: () => {},
+  clip: () => {},
+  drawImage: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  quadraticCurveTo: () => {},
+  stroke: () => {},
+  fill: () => {},
+  save: () => {},
+  restore: () => {},
+  setLineDash: () => {},
+  fillText: () => {},
+  measureText: () => ({ width: 0 }),
+};
+
+Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+  value: () => canvasContextStub,
+});
+
+Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", {
+  value: () => "data:image/png;base64,test",
+});
