@@ -17,6 +17,7 @@ import type { MutableRefObject, RefObject } from "react";
 import { ResumeDocumentPage } from "./ResumeDocumentPage";
 import { ResumePageSideToolbar } from "./ResumePageSideToolbar";
 import { AssignmentEditor, type AssignmentRow as EditorAssignmentRow } from "../AssignmentEditor";
+import { getResumeLanguageTranslations } from "./resume-language-translations";
 
 interface ResumeAssignmentsPageProps {
   title: string;
@@ -62,13 +63,14 @@ export function ResumeAssignmentsPage({
   activeBranchId,
 }: ResumeAssignmentsPageProps) {
   const { t } = useTranslation("common");
+  const labels = getResumeLanguageTranslations(language);
 
   return (
     <Box {...(sectionRef ? { ref: sectionRef } : {})} sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
       <Box sx={{ position: "relative" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-          {t("resume.detail.assignmentsHeading")}
+          {labels.experienceHeading}
         </Typography>
         <Divider sx={{ mb: 2 }} />
 
@@ -86,7 +88,7 @@ export function ResumeAssignmentsPage({
             {assignments.map((a) => {
               const startQ = a.startDate ? toQuarter(a.startDate) : "";
               const endQ = a.isCurrent
-                ? t("resume.detail.assignmentPresent")
+                ? labels.present
                 : a.endDate
                   ? toQuarter(a.endDate)
                   : "—";
@@ -150,7 +152,7 @@ export function ResumeAssignmentsPage({
                       {technologies.length > 0 && (
                         <Typography variant="body2" sx={{ mb: keywords ? 0.5 : 0 }}>
                           <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
-                            {t("resume.detail.assignmentTechnologies")}:{" "}
+                            {labels.technologies}:{" "}
                           </Box>
                           {technologies.join(", ")}
                         </Typography>
@@ -158,7 +160,7 @@ export function ResumeAssignmentsPage({
                       {keywords && (
                         <Typography variant="body2">
                           <Box component="span" sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
-                            {t("assignment.new.keywordsLabel")}:{" "}
+                            {labels.keywords}:{" "}
                           </Box>
                           {keywords}
                         </Typography>
@@ -196,7 +198,7 @@ export function ResumeAssignmentsPage({
                     <TableCell>{typeof a.startDate === "string" ? a.startDate.slice(0, 10) : ""}</TableCell>
                     <TableCell>
                       {a.isCurrent ? (
-                        <Chip label={t("resume.detail.assignmentPresent")} color="success" size="small" />
+                        <Chip label={labels.present} color="success" size="small" />
                       ) : typeof a.endDate === "string" ? (
                         a.endDate.slice(0, 10)
                       ) : (

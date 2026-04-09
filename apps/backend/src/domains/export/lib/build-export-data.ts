@@ -134,7 +134,7 @@ async function buildFromLive(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
-    language: resume.language ?? "en",
+    language: content?.language ?? resume.language ?? "en",
     presentation: content?.presentation ?? [],
     summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],

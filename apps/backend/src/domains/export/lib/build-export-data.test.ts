@@ -5,8 +5,10 @@ import type { Database } from "../../../db/types.js";
 import { buildExportData } from "./build-export-data.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
 import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+import { filterDeletedAssignments } from "../../resume/lib/branch-assignment-content.js";
 
 vi.mock("../../resume/lib/read-tree-content.js");
+vi.mock("../../resume/lib/branch-assignment-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -145,6 +147,7 @@ describe("buildExportData — live path (no commitId)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
   });
 
   it("returns mapped export data for admin", async () => {
@@ -158,6 +161,7 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.resumeId).toBe(RESUME_ID);
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
+    expect(result.language).toBe("sv");
     expect(result.consultantTitle).toBe("Tech Lead");
     expect(result.presentation).toEqual(["Expert consultant"]);
     expect(result.skills).toEqual([{ name: "Go", category: null }]);
@@ -216,6 +220,7 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
   });
 
   it("returns data from commit tree, not live tables", async () => {

@@ -91,6 +91,7 @@ export function ResumeSkillsPage({
           />
         ) : (
           <ResumeSkillsPageContent
+            language={language}
             employeeName={employeeName}
             skillGroups={skillGroups}
             skills={skills}

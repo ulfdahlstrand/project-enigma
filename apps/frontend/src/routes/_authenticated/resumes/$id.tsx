@@ -216,7 +216,7 @@ export function ResumeDetailPage({
     id: assignment.assignmentId,
   }));
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
-  const language = snapshotContent?.language ?? resume?.language;
+  const language = snapshotContent?.language ?? activeBranch?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;

@@ -1,14 +1,7 @@
-// ---------------------------------------------------------------------------
-// PDF static translations
-//
-// Keyed by resume language code. Falls back to "en" for unknown locales.
-// ---------------------------------------------------------------------------
-
-export interface PdfTranslations {
+export interface ResumeLanguageTranslations {
   experienceHeading: string;
   experienceSummaryHeading: string;
   specialSkillsHeading: string;
-  atClient: string;
   consultantProfile: string;
   present: string;
   technologies: string;
@@ -19,12 +12,11 @@ export interface PdfTranslations {
   languages: string;
 }
 
-const TRANSLATIONS: Record<string, PdfTranslations> = {
+const TRANSLATIONS: Record<string, ResumeLanguageTranslations> = {
   en: {
     experienceHeading: "Experience",
     experienceSummaryHeading: "EXAMPLES OF EXPERIENCE",
     specialSkillsHeading: "SPECIAL SKILLS",
-    atClient: "at",
     consultantProfile: "Consultant profile",
     present: "Present",
     technologies: "TECHNOLOGIES",
@@ -38,7 +30,6 @@ const TRANSLATIONS: Record<string, PdfTranslations> = {
     experienceHeading: "Urval av kvalifikationer",
     experienceSummaryHeading: "EXEMPEL PÅ ERFARENHET",
     specialSkillsHeading: "SPECIALKUNSKAPER",
-    atClient: "hos",
     consultantProfile: "Konsultprofil",
     present: "Pågående",
     technologies: "TEKNIKER",
@@ -50,6 +41,6 @@ const TRANSLATIONS: Record<string, PdfTranslations> = {
   },
 };
 
-export function getPdfTranslations(language: string | null | undefined): PdfTranslations {
-  return TRANSLATIONS[language ?? "en"] ?? (TRANSLATIONS["en"] as PdfTranslations);
+export function getResumeLanguageTranslations(language: string | null | undefined): ResumeLanguageTranslations {
+  return TRANSLATIONS[language ?? "en"] ?? (TRANSLATIONS.en as ResumeLanguageTranslations);
 }

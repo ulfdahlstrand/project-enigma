@@ -1,9 +1,10 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { useTranslation } from "react-i18next";
 import type { SkillGroupRow } from "../SkillsEditor";
+import { getResumeLanguageTranslations } from "./resume-language-translations";
 
 interface ResumeSkillsPageContentProps {
+  language?: string | null | undefined;
   employeeName: string;
   skillGroups: SkillGroupRow[];
   skills: Array<{ id: string; groupId: string; name: string; category: string | null; sortOrder?: number }>;
@@ -13,6 +14,7 @@ interface ResumeSkillsPageContentProps {
 }
 
 export function ResumeSkillsPageContent({
+  language,
   employeeName,
   skillGroups,
   skills,
@@ -20,7 +22,7 @@ export function ResumeSkillsPageContent({
   certifications,
   languages,
 }: ResumeSkillsPageContentProps) {
-  const { t } = useTranslation("common");
+  const labels = getResumeLanguageTranslations(language);
 
   const groupedByGroupId = skills.reduce<Record<string, Array<{ name: string; sortOrder: number }>>>((acc, skill, index) => {
     const key = skill.groupId || skill.category?.trim() || `__ungrouped__${index}`;
@@ -87,32 +89,32 @@ export function ResumeSkillsPageContent({
           {employeeName}
         </Typography>
         <Typography variant="h3" color="text.primary">
-          {t("resume.detail.consultantProfileLabel")}
+          {labels.consultantProfile}
         </Typography>
       </Box>
 
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start" }}>
         <Box>
           {leftCategories.map(([cat, names]) => (
-            <CategoryBlock key={cat} label={cat || t("resume.detail.skillsHeading")} skillNames={names} />
+            <CategoryBlock key={cat} label={cat || labels.specialSkillsHeading} skillNames={names} />
           ))}
         </Box>
 
         <Box>
           {rightCategories.map(([cat, names]) => (
-            <CategoryBlock key={cat} label={cat || t("resume.detail.skillsHeading")} skillNames={names} />
+            <CategoryBlock key={cat} label={cat || labels.specialSkillsHeading} skillNames={names} />
           ))}
 
           {hasOther && (
             <Box sx={{ mt: rightCategories.length > 0 ? 1 : 0 }}>
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 1.5 }}>
-                {t("resume.detail.otherHeading")}
+                {labels.educationHeading}
               </Typography>
 
               {degrees.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {t("employee.detail.educationDegrees")}
+                    {labels.degrees}
                   </Typography>
                   {degrees.map((d, i) => (
                     <Typography key={i} variant="body2" color="text.secondary">
@@ -125,7 +127,7 @@ export function ResumeSkillsPageContent({
               {certifications.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {t("employee.detail.educationCertifications")}
+                    {labels.certifications}
                   </Typography>
                   {certifications.map((c, i) => (
                     <Typography key={i} variant="body2" color="text.secondary">
@@ -138,7 +140,7 @@ export function ResumeSkillsPageContent({
               {languages.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {t("employee.detail.educationLanguages")}
+                    {labels.languages}
                   </Typography>
                   {languages.map((l, i) => (
                     <Typography key={i} variant="body2" color="text.secondary">

@@ -54,6 +54,7 @@ export function ResumeCoverPage({
     <Box {...(sectionRef ? { ref: sectionRef } : {})} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages} hideHeader>
         <ResumeCoverPageContent
+          language={language}
           employeeName={employeeName}
           profileImageDataUrl={profileImageDataUrl}
           consultantTitle={consultantTitle}
