@@ -77,6 +77,13 @@ export async function finaliseResumeBranch(
   }
 
   const revisionContent = await readTreeContent(db, revisionCommit.tree_id);
+  const sourceCommit = sourceBranch.head_commit_id
+    ? await db
+        .selectFrom("resume_commits")
+        .select(["tree_id"])
+        .where("id", "=", sourceBranch.head_commit_id)
+        .executeTakeFirst()
+    : null;
 
   const normalisedContent = await normaliseAssignmentIds(
     db,
@@ -85,7 +92,13 @@ export async function finaliseResumeBranch(
   );
 
   await db.transaction().execute(async (trx) => {
-    const treeId = await buildCommitTree(trx, sourceBranch.resume_id, sourceBranch.employee_id, normalisedContent);
+    const treeId = await buildCommitTree(
+      trx,
+      sourceBranch.resume_id,
+      sourceBranch.employee_id,
+      normalisedContent,
+      sourceCommit?.tree_id ?? null,
+    );
 
     const mergeCommit = await trx
       .insertInto("resume_commits")

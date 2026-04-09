@@ -81,7 +81,13 @@ export async function upsertBranchContentFromLive(
     assignments: assignments !== undefined ? assignments : previousContent?.assignments ?? [],
   };
 
-  const treeId = await buildCommitTree(db, resumeId, resumeRow.employee_id, content);
+  const treeId = await buildCommitTree(
+    db,
+    resumeId,
+    resumeRow.employee_id,
+    content,
+    headCommitRow?.tree_id ?? null,
+  );
 
   if (branchRow.head_commit_id) {
     await db

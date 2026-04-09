@@ -17,6 +17,9 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { buildCommitTree } from "./build-commit-tree.js";
 import type { ResumeCommitContent } from "../../../db/types.js";
+import { readTreeContent } from "./read-tree-content.js";
+
+vi.mock("./read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -36,6 +39,7 @@ const CONTENT: ResumeCommitContent = {
   summary: "Strong focus on distributed systems",
   highlightedItems: ["Led platform rewrite"],
   language: "en",
+  education: [],
   skillGroups: [{ name: "Languages", sortOrder: 0 }],
   skills: [{ name: "TypeScript", category: "Languages", sortOrder: 0 }],
   assignments: [
@@ -89,6 +93,11 @@ function buildTrxMock() {
 // ---------------------------------------------------------------------------
 
 describe("buildCommitTree", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(readTreeContent).mockResolvedValue(CONTENT as never);
+  });
+
   it("returns a tree_id string", async () => {
     const { trx } = buildTrxMock();
     const result = await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
@@ -268,5 +277,60 @@ describe("buildCommitTree", () => {
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
 
     expect(captured[0]).toMatchObject({ content: CONTENT.summary });
+  });
+
+  it("reuses previous revision ids when a section is unchanged", async () => {
+    const insertInto = vi.fn().mockImplementation((table: string) => ({
+      values: vi.fn().mockImplementation(() => ({
+        returning: vi.fn().mockReturnValue({
+          executeTakeFirstOrThrow: vi.fn().mockResolvedValue({
+            id: table === "resume_trees" ? TREE_ID : table === "resume_tree_entries" ? ENTRY_ID : REVISION_ID,
+          }),
+        }),
+        execute: vi.fn().mockResolvedValue(undefined),
+      })),
+    }));
+
+    const execute = vi.fn().mockResolvedValue([
+      { entryType: "metadata", revisionId: "meta-1", position: 0 },
+      { entryType: "consultant_title", revisionId: "ct-1", position: 1 },
+      { entryType: "presentation", revisionId: "pres-1", position: 2 },
+      { entryType: "summary", revisionId: "sum-1", position: 3 },
+      { entryType: "highlighted_items", revisionId: "hi-1", position: 4 },
+      { entryType: "skill_group", revisionId: "sg-1", position: 5 },
+      { entryType: "skill", revisionId: "sk-1", position: 6 },
+      { entryType: "assignment", revisionId: "as-1", position: 7 },
+    ]);
+
+    const trx = {
+      insertInto,
+      selectFrom: vi.fn().mockImplementation((table: string) => {
+        if (table === "resume_tree_entries as rte") {
+          return {
+            innerJoin: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  orderBy: vi.fn().mockReturnValue({
+                    execute,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected selectFrom table: ${table}`);
+      }),
+    } as unknown as Kysely<Database>;
+
+    await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT, "base-tree-1");
+
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_metadata");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_presentation");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_summary");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_highlighted_item");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_skill_group");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_skill");
+    expect(insertInto).not.toHaveBeenCalledWith("resume_revision_assignment");
   });
 });

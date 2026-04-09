@@ -178,7 +178,13 @@ export async function saveResumeVersion(
 
   // Atomically insert commit and update branch HEAD
   const commit = await db.transaction().execute(async (trx) => {
-    const treeId = await buildCommitTree(trx, branch.resume_id, branch.employee_id, content);
+    const treeId = await buildCommitTree(
+      trx,
+      branch.resume_id,
+      branch.employee_id,
+      content,
+      headCommitRow?.tree_id ?? null,
+    );
 
     const newCommit = await trx
       .insertInto("resume_commits")
