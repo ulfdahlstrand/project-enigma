@@ -5,7 +5,7 @@
  *   - Renders all assignments in read-only mode with correct role/client text
  *   - Edit icon button switches the card to edit mode with populated fields
  *   - Cancel returns to read-only mode without saving
- *   - Save calls orpc.updateBranchAssignment with correct id and changed fields
+ *   - Save calls orpc.updateBranchAssignment with correct assignment id and changed fields
  *   - isCurrent checkbox disables the end-date field when checked
  *   - Save button is disabled while mutation is pending
  *   - Error alert appears on mutation failure
@@ -191,7 +191,7 @@ describe("AssignmentEditor", () => {
 
     await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
     const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
-    expect(call.id).toBe(A1.id);
+    expect(call.id).toBe(A1.assignmentId);
     expect(call.role).toBe("Principal Engineer");
     // clientName unchanged — should not be in payload
     expect(call.clientName).toBeUndefined();
@@ -213,7 +213,7 @@ describe("AssignmentEditor", () => {
 
     await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
     const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
-    expect(call.id).toBe(A1.id);
+    expect(call.id).toBe(A1.assignmentId);
     expect(call.role).toBeUndefined();
     expect(call.clientName).toBeUndefined();
     expect(call.description).toBeUndefined();

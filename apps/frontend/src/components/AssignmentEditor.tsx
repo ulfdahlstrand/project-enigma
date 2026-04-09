@@ -19,9 +19,9 @@ import { orpc } from "../orpc-client";
 // ---------------------------------------------------------------------------
 
 export interface AssignmentRow {
-  /** assignment identity id — used for branch-scoped content updates */
+  /** Row id used by the current caller. May or may not equal assignmentId. */
   id: string;
-  /** assignment identity id — kept for compatibility with older callers */
+  /** Stable assignment identity id used for branch-scoped content updates. */
   assignmentId: string;
   clientName: string;
   role: string;
@@ -102,7 +102,7 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
 
   useEffect(() => {
     if (!autoEditId) return;
-    const target = assignments.find((a) => a.id === autoEditId);
+    const target = assignments.find((a) => a.id === autoEditId || a.assignmentId === autoEditId);
     if (!target) return;
     startEdit(target);
     onAutoEditConsumed?.();
@@ -125,7 +125,10 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
     onSuccess: async () => {
       setConfirmDeleteId(null);
       cancelEdit();
-      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
     },
   });
 
@@ -137,7 +140,10 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
       setEditingId(null);
       setDraft(null);
       setSaveError(false);
-      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
     },
     onError: () => setSaveError(true),
   });
@@ -156,7 +162,10 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
 
   const handleSave = (original: AssignmentRow) => {
     if (!draft) return;
-    const patch: Parameters<typeof orpc.updateBranchAssignment>[0] = { branchId, id: original.id };
+    const patch: Parameters<typeof orpc.updateBranchAssignment>[0] = {
+      branchId,
+      id: original.assignmentId,
+    };
 
     if (draft.role !== original.role) patch.role = draft.role;
     if (draft.clientName !== original.clientName) patch.clientName = draft.clientName;

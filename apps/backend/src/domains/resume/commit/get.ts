@@ -10,13 +10,13 @@ import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { readTreeContent } from "../lib/read-tree-content.js";
 import type { getResumeCommitInputSchema, getResumeCommitOutputSchema } from "@cv-tool/contracts";
 
-function normaliseRichText(value: unknown): string {
+function normaliseAssignmentDescription(value: unknown): string {
   if (Array.isArray(value)) {
     return value
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
       .filter(Boolean)
-      .join("\n\n");
+      .join("\n");
   }
 
   return typeof value === "string" ? value : "";
@@ -34,7 +34,7 @@ function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitConte
     assignments: Array.isArray(content.assignments)
       ? content.assignments.map((assignment) => ({
           ...assignment,
-          description: normaliseRichText(assignment.description),
+          description: normaliseAssignmentDescription(assignment.description),
           endDate: assignment.endDate ?? null,
           technologies: Array.isArray(assignment.technologies) ? assignment.technologies : [],
           keywords: assignment.keywords ?? null,

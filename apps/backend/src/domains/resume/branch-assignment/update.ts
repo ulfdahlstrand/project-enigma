@@ -31,7 +31,9 @@ export async function updateBranchAssignment(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const existing = branch.content.assignments.find((assignment) => assignment.assignmentId === input.id);
+  const existing = branch.content.assignments.find((assignment) =>
+    assignment.assignmentId === input.id,
+  );
   if (!existing) {
     throw new ORPCError("NOT_FOUND");
   }
