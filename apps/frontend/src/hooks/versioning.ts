@@ -82,11 +82,13 @@ export function useSaveResumeVersion() {
   return useMutation({
     mutationFn: ({
       branchId,
-      message,
+      title,
+      description,
     }: {
       branchId: string;
-      message?: string;
-    }) => orpc.saveResumeVersion({ branchId, message }),
+      title?: string;
+      description?: string;
+    }) => orpc.saveResumeVersion({ branchId, title, description }),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: resumeCommitsKey(variables.branchId),

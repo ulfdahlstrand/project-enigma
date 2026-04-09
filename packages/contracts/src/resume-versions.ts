@@ -71,6 +71,7 @@ export const resumeCommitSchema = z.object({
   resumeId: z.string().uuid(),
   parentCommitId: z.string().uuid().nullable(),
   content: resumeCommitContentSchema,
+  /** @deprecated Legacy alias for `title`. Kept temporarily for compatibility. */
   message: z.string(),
   title: z.string(),
   description: z.string(),

@@ -141,7 +141,8 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
       typeof commit.createdAt === "string"
         ? new Date(commit.createdAt).toLocaleString()
         : commit.createdAt?.toLocaleString() ?? "";
-    return commit.message ? `${commit.message} (${date})` : date;
+    const title = commit.title || commit.message;
+    return title ? `${title} (${date})` : date;
   }
 
   function branchLabel(name: string): string {

@@ -94,6 +94,8 @@ export async function createResume(
         resume_id: newResume.id,
         tree_id: treeId,
         message: "initial",
+        title: "initial",
+        description: "",
         created_by: user.id,
       })
       .returningAll()

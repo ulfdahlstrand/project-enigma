@@ -105,9 +105,9 @@ export async function finaliseResumeBranch(
       .values({
         resume_id: sourceBranch.resume_id,
         tree_id: treeId,
-        title: `merged ${revisionBranch.name} into ${sourceBranch.name}`,
+        title: `Merge ${revisionBranch.name} into ${sourceBranch.name}`,
         description: "",
-        message: "Merge inline AI revision",
+        message: `Merge ${revisionBranch.name} into ${sourceBranch.name}`,
         created_by: user.id,
       })
       .returningAll()

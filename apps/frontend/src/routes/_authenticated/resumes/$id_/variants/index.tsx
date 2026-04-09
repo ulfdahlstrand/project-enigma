@@ -63,7 +63,8 @@ function VariantsPage() {
     const date = typeof c.createdAt === "string"
       ? new Date(c.createdAt).toLocaleString()
       : c.createdAt.toLocaleString();
-    return c.message ? `${c.message} (${date})` : `${t("resume.variants.createDialog.versionDefault")} (${date})`;
+    const title = c.title || c.message;
+    return title ? `${title} (${date})` : `${t("resume.variants.createDialog.versionDefault")} (${date})`;
   }
 
   function openDialog() {
