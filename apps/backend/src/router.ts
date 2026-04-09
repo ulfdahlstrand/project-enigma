@@ -1,6 +1,6 @@
 import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
-import { healthHandler, listTestEntriesHandler } from "./infra/index.js";
+import { healthHandler } from "./infra/index.js";
 import {
   listEmployeesHandler,
   getEmployeeHandler,
@@ -65,7 +65,6 @@ import { getCurrentSessionHandler } from "./domains/auth/index.js";
 export const router = implement(contract).router({
   health: healthHandler,
   getCurrentSession: getCurrentSessionHandler,
-  listTestEntries: listTestEntriesHandler,
   listEmployees: listEmployeesHandler,
   getEmployee: getEmployeeHandler,
   createEmployee: createEmployeeHandler,

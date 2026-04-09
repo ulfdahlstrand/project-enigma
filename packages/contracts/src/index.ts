@@ -216,11 +216,7 @@ export type {
 export {
   healthInputSchema,
   healthOutputSchema,
-  listTestEntriesInputSchema,
-  listTestEntriesOutputSchema,
-  testEntrySchema,
 } from "./domains/system/schema.js";
-export type { TestEntry } from "./domains/system/schema.js";
 
 // ---------------------------------------------------------------------------
 // Router contract

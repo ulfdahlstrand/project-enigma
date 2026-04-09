@@ -9,16 +9,3 @@ export const healthOutputSchema = z.object({
   echo: z.string().optional(),
 });
 
-export const listTestEntriesInputSchema = z.object({});
-
-export const testEntrySchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  note: z.string(),
-});
-
-export const listTestEntriesOutputSchema = z.object({
-  entries: z.array(testEntrySchema),
-});
-
-export type TestEntry = z.infer<typeof testEntrySchema>;
