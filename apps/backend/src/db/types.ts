@@ -187,35 +187,6 @@ export type ResumeBranch = Selectable<ResumeBranchTable>;
 export type NewResumeBranch = Insertable<ResumeBranchTable>;
 export type ResumeBranchUpdate = Updateable<ResumeBranchTable>;
 
-/**
- * Per-branch assignment content. Each row owns the full content for one
- * assignment on one branch — editing is branch-specific.
- */
-export interface BranchAssignmentTable {
-  id: Generated<string>;
-  branch_id: string;
-  assignment_id: string;
-  // Content columns (branch-specific)
-  client_name: string;
-  role: string;
-  description: Generated<string>;
-  start_date: Date;
-  end_date: Date | null;
-  technologies: ColumnType<string[], string[], string[]>;
-  is_current: Generated<boolean>;
-  keywords: string | null;
-  type: string | null;
-  // Curation columns
-  highlight: Generated<boolean>;
-  sort_order: number | null;
-  created_at: Generated<Date>;
-  updated_at: Generated<Date>;
-}
-
-export type BranchAssignment = Selectable<BranchAssignmentTable>;
-export type NewBranchAssignment = Insertable<BranchAssignmentTable>;
-export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
-
 // ---------------------------------------------------------------------------
 // AI assistant tables
 // ---------------------------------------------------------------------------
@@ -486,7 +457,6 @@ export interface Database {
   resume_commits: ResumeCommitTable;
   resume_commit_parents: ResumeCommitParentTable;
   resume_branches: ResumeBranchTable;
-  branch_assignments: BranchAssignmentTable;
   assignments: AssignmentTable;
   education: EducationTable;
   export_records: ExportRecordTable;
