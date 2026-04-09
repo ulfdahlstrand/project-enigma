@@ -39,7 +39,6 @@ const COMMIT_ROW = {
   resume_id: RESUME_ID,
   parent_commit_id: null,
   tree_id: DEFAULT_TREE_ID,
-  message: "Initial version",
   title: "Initial version",
   description: "",
   created_by: CREATOR_ID,
@@ -92,7 +91,7 @@ describe("getResumeCommit", () => {
       id: COMMIT_ID,
       resumeId: RESUME_ID,
       parentCommitId: null,
-      message: "Initial version",
+      title: "Initial version",
     });
     expect(result.content).toBeDefined();
   });
@@ -184,7 +183,7 @@ describe("getResumeCommit", () => {
 
     const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
 
-    expect(result.content.assignments[0]?.description).toBe("First paragraph\n\nSecond paragraph");
+    expect(result.content.assignments[0]?.description).toBe("First paragraph\nSecond paragraph");
   });
 });
 

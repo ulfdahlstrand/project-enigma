@@ -22,7 +22,6 @@ function commit(
 ): GraphCommit {
   return {
     parentCommitId: null,
-    message: "",
     title: "",
     description: "",
     resumeId: "resume-1",
