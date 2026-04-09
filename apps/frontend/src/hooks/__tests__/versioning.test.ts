@@ -279,7 +279,7 @@ describe("useResumeCommitDiff", () => {
 // ---------------------------------------------------------------------------
 
 describe("useSaveResumeVersion", () => {
-  it("calls orpc.saveResumeVersion with branchId and optional message", async () => {
+  it("calls orpc.saveResumeVersion with branchId and optional title", async () => {
     mockSaveVersion.mockResolvedValue({ id: "commit-new" });
     const qc = buildClient();
 
@@ -288,16 +288,17 @@ describe("useSaveResumeVersion", () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ branchId: "branch-1", message: "v2" });
+      await result.current.mutateAsync({ branchId: "branch-1", title: "v2" });
     });
 
     expect(mockSaveVersion).toHaveBeenCalledWith({
       branchId: "branch-1",
-      message: "v2",
+      title: "v2",
+      description: undefined,
     });
   });
 
-  it("calls orpc.saveResumeVersion without message when omitted", async () => {
+  it("calls orpc.saveResumeVersion without title when omitted", async () => {
     mockSaveVersion.mockResolvedValue({ id: "commit-new" });
     const qc = buildClient();
 
@@ -311,7 +312,8 @@ describe("useSaveResumeVersion", () => {
 
     expect(mockSaveVersion).toHaveBeenCalledWith({
       branchId: "branch-1",
-      message: undefined,
+      title: undefined,
+      description: undefined,
     });
   });
 

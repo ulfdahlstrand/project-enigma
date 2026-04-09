@@ -1,6 +1,5 @@
 import { implement } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
-import { sql } from "kysely";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
@@ -8,6 +7,7 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readBranchAssignmentContent } from "../lib/branch-assignment-content.js";
 import type { listBranchAssignmentsInputSchema, listBranchAssignmentsOutputSchema } from "@cv-tool/contracts";
 
 type ListBranchAssignmentsInput = z.infer<typeof listBranchAssignmentsInputSchema>;
@@ -21,34 +21,22 @@ export async function listBranchAssignments(
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   // Verify branch exists and check ownership
-  const branch = await db
-    .selectFrom("resume_branches as rb")
-    .innerJoin("resumes as r", "r.id", "rb.resume_id")
-    .select(["rb.id", "r.employee_id"])
-    .where("rb.id", "=", input.branchId)
-    .executeTakeFirst();
+  const branch = await readBranchAssignmentContent(db, input.branchId);
 
-  if (branch === undefined) {
+  if (branch === null) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (ownerEmployeeId !== null && branch.employee_id !== ownerEmployeeId) {
+  if (ownerEmployeeId !== null && branch.employeeId !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
-  const rows = await db
-    .selectFrom("branch_assignments")
-    .selectAll()
-    .where("branch_id", "=", input.branchId)
-    .orderBy(sql`sort_order ASC NULLS LAST`)
-    .execute();
-
-  return rows.map((row) => ({
-    id: row.id,
-    branchId: row.branch_id,
-    assignmentId: row.assignment_id,
-    highlight: row.highlight,
-    sortOrder: row.sort_order,
+  return branch.content.assignments.map((assignment) => ({
+    id: assignment.assignmentId,
+    branchId: branch.branchId,
+    assignmentId: assignment.assignmentId,
+    highlight: assignment.highlight,
+    sortOrder: assignment.sortOrder,
   }));
 }
 

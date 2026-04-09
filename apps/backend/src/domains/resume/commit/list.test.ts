@@ -25,7 +25,6 @@ const COMMIT_ROWS = [
     resume_id: RESUME_ID,
     branch_id: BRANCH_ID,
     parent_commit_id: COMMIT_ID_1,
-    message: "Updated skills",
     title: "Updated skills",
     description: "",
     created_by: CREATOR_ID,
@@ -36,7 +35,6 @@ const COMMIT_ROWS = [
     resume_id: RESUME_ID,
     branch_id: BRANCH_ID,
     parent_commit_id: null,
-    message: "Initial version",
     title: "Initial version",
     description: "",
     created_by: CREATOR_ID,
@@ -58,7 +56,6 @@ const REACHABLE_MERGE_COMMIT_ROWS = [
     resume_id: RESUME_ID,
     branch_id: BRANCH_ID,
     parent_commit_id: COMMIT_ID_2,
-    message: "Merge revision",
     title: "Merge revision",
     description: "",
     created_by: CREATOR_ID,
@@ -70,7 +67,6 @@ const REACHABLE_MERGE_COMMIT_ROWS = [
     resume_id: RESUME_ID,
     branch_id: "550e8400-e29b-41d4-a716-446655440032",
     parent_commit_id: COMMIT_ID_1,
-    message: "Branch-only work",
     title: "Branch-only work",
     description: "",
     created_by: CREATOR_ID,
@@ -172,8 +168,8 @@ describe("listResumeCommits", () => {
     const result = await listResumeCommits(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ id: COMMIT_ID_2, message: "Updated skills" });
-    expect(result[1]).toMatchObject({ id: COMMIT_ID_1, message: "Initial version" });
+    expect(result[0]).toMatchObject({ id: COMMIT_ID_2, title: "Updated skills" });
+    expect(result[1]).toMatchObject({ id: COMMIT_ID_1, title: "Initial version" });
   });
 
   it("returns empty array when branch has no commits", async () => {

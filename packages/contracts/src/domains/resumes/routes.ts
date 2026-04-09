@@ -1,9 +1,5 @@
 import { oc } from "@orpc/contract";
 import {
-  createResumeSkillGroupInputSchema,
-  createResumeSkillGroupOutputSchema,
-  updateResumeSkillGroupInputSchema,
-  updateResumeSkillGroupOutputSchema,
   listResumesInputSchema,
   listResumesOutputSchema,
   getResumeInputSchema,
@@ -14,12 +10,6 @@ import {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
-  createResumeSkillInputSchema,
-  createResumeSkillOutputSchema,
-  updateResumeSkillInputSchema,
-  updateResumeSkillOutputSchema,
-  deleteResumeSkillInputSchema,
-  deleteResumeSkillOutputSchema,
 } from "../../resumes.js";
 
 export const resumeRoutes = {
@@ -43,24 +33,4 @@ export const resumeRoutes = {
     .route({ method: "DELETE", path: "/resumes/{id}" })
     .input(deleteResumeInputSchema)
     .output(deleteResumeOutputSchema),
-  createResumeSkillGroup: oc
-    .route({ method: "POST", path: "/resumes/{resumeId}/skill-groups" })
-    .input(createResumeSkillGroupInputSchema)
-    .output(createResumeSkillGroupOutputSchema),
-  updateResumeSkillGroup: oc
-    .route({ method: "PATCH", path: "/resume-skill-groups/{id}" })
-    .input(updateResumeSkillGroupInputSchema)
-    .output(updateResumeSkillGroupOutputSchema),
-  createResumeSkill: oc
-    .route({ method: "POST", path: "/resumes/{resumeId}/skills" })
-    .input(createResumeSkillInputSchema)
-    .output(createResumeSkillOutputSchema),
-  updateResumeSkill: oc
-    .route({ method: "PATCH", path: "/resume-skills/{id}" })
-    .input(updateResumeSkillInputSchema)
-    .output(updateResumeSkillOutputSchema),
-  deleteResumeSkill: oc
-    .route({ method: "DELETE", path: "/resume-skills/{id}" })
-    .input(deleteResumeSkillInputSchema)
-    .output(deleteResumeSkillOutputSchema),
 };

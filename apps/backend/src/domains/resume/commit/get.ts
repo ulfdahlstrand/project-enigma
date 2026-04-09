@@ -7,15 +7,16 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { getResumeCommitInputSchema, getResumeCommitOutputSchema } from "@cv-tool/contracts";
 
-function normaliseRichText(value: unknown): string {
+function normaliseAssignmentDescription(value: unknown): string {
   if (Array.isArray(value)) {
     return value
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
       .filter(Boolean)
-      .join("\n\n");
+      .join("\n");
   }
 
   return typeof value === "string" ? value : "";
@@ -28,11 +29,12 @@ function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitConte
     presentation: Array.isArray(content.presentation) ? content.presentation : [],
     summary: content.summary ?? null,
     highlightedItems: Array.isArray(content.highlightedItems) ? content.highlightedItems : [],
+    education: Array.isArray(content.education) ? content.education : [],
     skills: Array.isArray(content.skills) ? content.skills : [],
     assignments: Array.isArray(content.assignments)
       ? content.assignments.map((assignment) => ({
           ...assignment,
-          description: normaliseRichText(assignment.description),
+          description: normaliseAssignmentDescription(assignment.description),
           endDate: assignment.endDate ?? null,
           technologies: Array.isArray(assignment.technologies) ? assignment.technologies : [],
           keywords: assignment.keywords ?? null,
@@ -83,8 +85,7 @@ export async function getResumeCommit(
       "rc.id",
       "rc.resume_id",
       "rcp.parent_commit_id as parent_commit_id",
-      "rc.content",
-      "rc.message",
+      "rc.tree_id",
       "rc.title",
       "rc.description",
       "rc.created_by",
@@ -102,12 +103,17 @@ export async function getResumeCommit(
     throw new ORPCError("FORBIDDEN");
   }
 
+  if (!row.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
+  }
+
+  const rawContent = await readTreeContent(db, row.tree_id);
+
   return {
     id: row.id,
     resumeId: row.resume_id,
     parentCommitId: row.parent_commit_id,
-    content: normaliseCommitContent(row.content as unknown as ResumeCommitContent),
-    message: row.message,
+    content: normaliseCommitContent(rawContent),
     title: row.title,
     description: row.description,
     createdBy: row.created_by,

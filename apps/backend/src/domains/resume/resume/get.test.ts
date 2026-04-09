@@ -1,14 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { createGetResumeHandler, getResume } from "./get.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Unit tests for the getResume procedure.
 // ---------------------------------------------------------------------------
+
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
 
 const EMPLOYEE_ID_1 = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
@@ -63,92 +68,31 @@ const HIGHLIGHTED_ITEM_ROW_2 = { text: "Tech Lead hos Beta" };
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a mock Kysely instance that handles both the resume LEFT JOIN lookup
- * and the skills query that getResume performs.
+ * Builds a mock Kysely instance that handles the resume LEFT JOIN lookup
+ * and the commit tree lookup that getResume performs.
  */
-function buildDbMock(resumeRow: unknown, skillRows: unknown[], highlightedItemRows: unknown[] = []) {
-  // Skills query chain: innerJoin -> select -> where -> orderBy -> orderBy -> execute
-  const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
-  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
-  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
-
-  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
-  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
-  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
-
-  const branchExecuteTakeFirst = vi.fn().mockResolvedValue(undefined);
-  const branchWhere = vi.fn().mockReturnValue({ executeTakeFirst: branchExecuteTakeFirst });
-  const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
-
-  const commitExecuteTakeFirst = vi.fn().mockResolvedValue(undefined);
+function buildDbMock(resumeRow: unknown) {
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue({ tree_id: DEFAULT_TREE_ID });
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
-  // Resume query chain with LEFT JOIN: leftJoin → select → where → executeTakeFirst
   const resumeExecuteTakeFirst = vi.fn().mockResolvedValue(resumeRow);
   const resumeWhere = vi.fn().mockReturnValue({ executeTakeFirst: resumeExecuteTakeFirst });
   const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
   const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
-    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
-    if (table === "resume_highlighted_items") return { select: highlightedSelect };
-    if (table === "resume_branches") return { select: branchSelect };
     if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
   });
 
   const db = { selectFrom } as unknown as Kysely<Database>;
-  return {
-    db,
-    selectFrom,
-    resumeWhere,
-    skillsWhere,
-    skillsOrderBy1,
-    skillsOrderBy2,
-    skillsExecute,
-    resumeExecuteTakeFirst,
-    branchExecuteTakeFirst,
-    commitExecuteTakeFirst,
-  };
+  return { db, resumeExecuteTakeFirst, commitExecuteTakeFirst };
 }
 
 /** Builds a db mock that also handles the employee lookup (for consultant auth). */
-function buildDbWithEmployeeLookup(
-  resumeRow: unknown,
-  skillRows: unknown[],
-  employeeId: string,
-  highlightedItemRows: unknown[] = [],
-) {
-  const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
-  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
-  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
-
-  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
-  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
-  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
-
-  const commitExecuteTakeFirst = vi.fn().mockResolvedValue({
-    content: {
-      title: "Committed title",
-      consultantTitle: null,
-      presentation: [],
-      summary: "Committed summary",
-      highlightedItems: [],
-      language: "en",
-      skillGroups: [],
-      skills: [],
-      assignments: [],
-    },
-  });
+function buildDbWithEmployeeLookup(resumeRow: unknown, employeeId: string) {
+  const commitExecuteTakeFirst = vi.fn().mockResolvedValue({ tree_id: DEFAULT_TREE_ID });
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
@@ -163,8 +107,6 @@ function buildDbWithEmployeeLookup(
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
-    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
-    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     if (table === "resume_commits") return { select: commitSelect };
     return { leftJoin: resumeLeftJoin };
   });
@@ -178,31 +120,30 @@ function buildDbWithEmployeeLookup(
 // ---------------------------------------------------------------------------
 
 describe("getResume query function", () => {
-  it("returns a resume with its skills array for an admin", async () => {
-    const { db, commitExecuteTakeFirst } = buildDbMock(
-      RESUME_ROW,
-      [SKILL_ROW_1, SKILL_ROW_2],
-      [HIGHLIGHTED_ITEM_ROW_1]
-    );
-    commitExecuteTakeFirst.mockResolvedValue({
-      content: {
-        title: "Committed title",
-        consultantTitle: "Committed consultant",
-        presentation: ["Committed presentation"],
-        summary: "Committed summary",
-        highlightedItems: ["Committed highlight"],
-        language: "sv",
-        skillGroups: [
-          { name: "languages", sortOrder: 0 },
-          { name: "runtimes", sortOrder: 1 },
-        ],
-        skills: [
-          { name: "TypeScript", category: "languages", sortOrder: 0 },
-          { name: "Node.js", category: "runtimes", sortOrder: 1 },
-        ],
-        assignments: [],
-      },
-    });
+  const COMMITTED_CONTENT = {
+    title: "Committed title",
+    consultantTitle: "Committed consultant",
+    presentation: ["Committed presentation"],
+    summary: "Committed summary",
+    highlightedItems: ["Committed highlight"],
+    language: "sv",
+    skillGroups: [
+      { name: "languages", sortOrder: 0 },
+      { name: "runtimes", sortOrder: 1 },
+    ],
+    skills: [
+      { name: "TypeScript", category: "languages", sortOrder: 0 },
+      { name: "Node.js", category: "runtimes", sortOrder: 1 },
+    ],
+    assignments: [],
+  };
+
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue(COMMITTED_CONTENT as never);
+  });
+
+  it("returns resume fields from tree content for an admin", async () => {
+    const { db } = buildDbMock(RESUME_ROW);
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
@@ -229,22 +170,10 @@ describe("getResume query function", () => {
       expect.objectContaining({ name: "languages", sortOrder: 0 }),
       expect.objectContaining({ name: "runtimes", sortOrder: 1 }),
     ]);
-    expect(result.highlightedItems).toEqual(["Committed highlight"]);
-  });
-
-  it("returns highlighted items ordered by sort_order ascending", async () => {
-    const { db } = buildDbMock(RESUME_ROW, [], [HIGHLIGHTED_ITEM_ROW_1, HIGHLIGHTED_ITEM_ROW_2]);
-
-    const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
-
-    expect(result.highlightedItems).toEqual([
-      "Principal Engineer hos Acme",
-      "Tech Lead hos Beta",
-    ]);
   });
 
   it("includes mainBranchId and headCommitId from the LEFT JOIN", async () => {
-    const { db } = buildDbMock(RESUME_ROW, []);
+    const { db } = buildDbMock(RESUME_ROW);
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
@@ -254,7 +183,7 @@ describe("getResume query function", () => {
 
   it("returns null for mainBranchId and headCommitId when no branch exists", async () => {
     const nobranchRow = { ...RESUME_ROW, branch_id: null, head_commit_id: null };
-    const { db } = buildDbMock(nobranchRow, []);
+    const { db } = buildDbMock(nobranchRow);
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
@@ -262,25 +191,18 @@ describe("getResume query function", () => {
     expect(result.headCommitId).toBeNull();
   });
 
-  it("returns a resume with an empty skills array when no skills exist", async () => {
-    const { db } = buildDbMock(RESUME_ROW, []);
+  it("returns empty skills when commit has no tree_id", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
+    commitExecuteTakeFirst.mockResolvedValue({ tree_id: null });
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
 
     expect(result.skills).toEqual([]);
-  });
-
-  it("orders skills by sort_order ascending", async () => {
-    const { db, skillsOrderBy1, skillsOrderBy2 } = buildDbMock(RESUME_ROW, [SKILL_ROW_1, SKILL_ROW_2]);
-
-    await getResume(db, MOCK_ADMIN, RESUME_ID);
-
-    expect(skillsOrderBy1).toHaveBeenCalledWith("rsg.sort_order", "asc");
-    expect(skillsOrderBy2).toHaveBeenCalledWith("rs.sort_order", "asc");
+    expect(result.skillGroups).toEqual([]);
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
-    const { db } = buildDbMock(undefined, []);
+    const { db } = buildDbMock(undefined);
 
     await expect(getResume(db, MOCK_ADMIN, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "NOT_FOUND"
@@ -288,7 +210,7 @@ describe("getResume query function", () => {
   });
 
   it("consultant can fetch their own resume", async () => {
-    const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_1);
+    const { db } = buildDbWithEmployeeLookup(RESUME_ROW, EMPLOYEE_ID_1);
 
     const result = await getResume(db, MOCK_CONSULTANT, RESUME_ID);
 
@@ -296,13 +218,12 @@ describe("getResume query function", () => {
   });
 
   it("throws FORBIDDEN when consultant tries to fetch another employee's resume", async () => {
-    const { db } = buildDbWithEmployeeLookup(RESUME_ROW, [], EMPLOYEE_ID_2);
+    const { db } = buildDbWithEmployeeLookup(RESUME_ROW, EMPLOYEE_ID_2);
 
     await expect(getResume(db, MOCK_CONSULTANT_2, RESUME_ID)).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "FORBIDDEN"
     );
   });
-
 });
 
 // ---------------------------------------------------------------------------
@@ -311,26 +232,43 @@ describe("getResume query function", () => {
 
 describe("getResume — commit-first read (commitId provided)", () => {
   const EXACT_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440099";
+  const EXACT_TREE_ID = "550e8400-e29b-41d4-a716-000000000088";
 
-  it("returns content from the exact commit when commitId is provided", async () => {
-    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue({
+      title: "Default tree title",
+      consultantTitle: null,
+      presentation: [],
+      summary: null,
+      highlightedItems: [],
+      language: "en",
+      skillGroups: [],
+      skills: [],
+      assignments: [],
+    } as never);
+  });
+
+  it("returns content from tree when commitId is provided", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
+    const historicalContent = {
+      title: "Historical title",
+      consultantTitle: "Historical consultant",
+      presentation: ["Historical presentation"],
+      summary: "Historical summary",
+      highlightedItems: ["Historical highlight"],
+      language: "sv",
+      skillGroups: [{ name: "platforms", sortOrder: 0 }],
+      skills: [{ name: "AWS", category: "platforms", sortOrder: 0 }],
+      assignments: [],
+    };
     commitExecuteTakeFirst.mockResolvedValueOnce({
       id: EXACT_COMMIT_ID,
       resume_id: RESUME_ID,
-      content: {
-        title: "Historical title",
-        consultantTitle: "Historical consultant",
-        presentation: ["Historical presentation"],
-        summary: "Historical summary",
-        highlightedItems: ["Historical highlight"],
-        language: "sv",
-        skillGroups: [{ name: "platforms", sortOrder: 0 }],
-        skills: [{ name: "AWS", category: "platforms", sortOrder: 0 }],
-        assignments: [],
-      },
+      tree_id: EXACT_TREE_ID,
     });
+    vi.mocked(readTreeContent).mockResolvedValueOnce(historicalContent as never);
 
-    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID);
+    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, EXACT_COMMIT_ID);
 
     expect(result.title).toBe("Historical title");
     expect(result.consultantTitle).toBe("Historical consultant");
@@ -341,80 +279,43 @@ describe("getResume — commit-first read (commitId provided)", () => {
       expect.objectContaining({ resumeId: RESUME_ID, name: "platforms", sortOrder: 0 }),
     ]);
     expect(result.skills).toEqual([
-      expect.objectContaining({
-        resumeId: RESUME_ID,
-        name: "AWS",
-        category: "platforms",
-        sortOrder: 0,
-      }),
+      expect.objectContaining({ resumeId: RESUME_ID, name: "AWS", category: "platforms" }),
     ]);
     expect(result.skillGroups[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(result.skills[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
     expect(result.skills[0]?.groupId).toBe(result.skillGroups[0]?.id);
   });
 
-  it("does not mix live branch state into a commit view (detached read)", async () => {
-    const { db, commitExecuteTakeFirst, skillsWhere } = buildDbMock(RESUME_ROW, [
-      SKILL_ROW_1,
-      SKILL_ROW_2,
-    ]);
+  it("tree data wins over live resume row fields", async () => {
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
     commitExecuteTakeFirst.mockResolvedValueOnce({
       id: EXACT_COMMIT_ID,
       resume_id: RESUME_ID,
-      content: {
-        title: "Snapshot title",
-        consultantTitle: null,
-        presentation: [],
-        summary: "Snapshot summary",
-        highlightedItems: [],
-        language: "en",
-        skillGroups: [{ name: "snapshot-group", sortOrder: 0 }],
-        skills: [{ name: "Snapshot skill", category: "snapshot-group", sortOrder: 0 }],
-        assignments: [],
-      },
+      tree_id: EXACT_TREE_ID,
     });
-
-    const result = await getResume(db, MOCK_ADMIN, RESUME_ID, undefined, EXACT_COMMIT_ID);
-
-    // Title must come from the commit snapshot, not from the live resume row
-    expect(result.title).toBe("Snapshot title");
-    expect(result.title).not.toBe(RESUME_ROW.title);
-    expect(result.skills).toEqual([
-      expect.objectContaining({ name: "Snapshot skill", category: "snapshot-group" }),
-    ]);
-    expect(skillsWhere).not.toHaveBeenCalled();
-  });
-
-  it("uses the exact commit snapshot when commitId is provided", async () => {
-    const { db, commitExecuteTakeFirst, branchExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
-    commitExecuteTakeFirst.mockResolvedValueOnce({
-      id: EXACT_COMMIT_ID,
-      resume_id: RESUME_ID,
-      content: {
-        title: "Commit wins",
-        consultantTitle: null,
-        presentation: [],
-        summary: null,
-        highlightedItems: [],
-        language: "en",
-        skillGroups: [],
-        skills: [],
-        assignments: [],
-      },
-    });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      title: "Snapshot title",
+      consultantTitle: null,
+      presentation: [],
+      summary: "Snapshot summary",
+      highlightedItems: [],
+      language: "en",
+      skillGroups: [],
+      skills: [],
+      assignments: [],
+    } as never);
 
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID, EXACT_COMMIT_ID);
 
-    expect(result.title).toBe("Commit wins");
-    expect(branchExecuteTakeFirst).not.toHaveBeenCalled();
+    expect(result.title).toBe("Snapshot title");
+    expect(result.title).not.toBe(RESUME_ROW.title);
   });
 
   it("throws NOT_FOUND when the commit does not belong to the resume", async () => {
-    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
     commitExecuteTakeFirst.mockResolvedValueOnce({
       id: EXACT_COMMIT_ID,
-      resume_id: "550e8400-e29b-41d4-a716-000000000000", // different resume
-      content: {},
+      resume_id: "550e8400-e29b-41d4-a716-000000000000",
+      tree_id: EXACT_TREE_ID,
     });
 
     await expect(
@@ -425,7 +326,7 @@ describe("getResume — commit-first read (commitId provided)", () => {
   });
 
   it("throws NOT_FOUND when the commit does not exist", async () => {
-    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
     commitExecuteTakeFirst.mockResolvedValueOnce(undefined);
 
     await expect(
@@ -462,10 +363,10 @@ function buildDbMockWithTree(opts: {
       { id: "te4", tree_id: TREE_ID, entry_type: "highlighted_items", position: 3 },
     ],
     entryContentByEntryId = {
-      te1: { revision_id: "rv1", revision_type: "resume_metadata_revisions" },
-      te2: { revision_id: "rv2", revision_type: "presentation_revisions" },
-      te3: { revision_id: "rv3", revision_type: "summary_revisions" },
-      te4: { revision_id: "rv4", revision_type: "highlighted_item_revisions" },
+      te1: { revision_id: "rv1", revision_type: "resume_revision_metadata" },
+      te2: { revision_id: "rv2", revision_type: "resume_revision_presentation" },
+      te3: { revision_id: "rv3", revision_type: "resume_revision_summary" },
+      te4: { revision_id: "rv4", revision_type: "resume_revision_highlighted_item" },
     },
     revisionsByRevId = {
       rv1: { id: "rv1", title: "Tree title", language: "sv" },
@@ -537,6 +438,20 @@ function buildDbMockWithTree(opts: {
 }
 
 describe("getResume — tree-based read path (tree_id set)", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue({
+      title: "Tree title",
+      consultantTitle: null,
+      presentation: ["Tree paragraph"],
+      summary: "Tree summary",
+      highlightedItems: ["Tree highlight"],
+      language: "sv",
+      skillGroups: [],
+      skills: [],
+      assignments: [],
+    } as never);
+  });
+
   it("reads title from metadata revision when tree_id is set", async () => {
     const { db } = buildDbMockWithTree();
     const result = await getResume(db, MOCK_ADMIN, RESUME_ID);
@@ -581,8 +496,22 @@ describe("getResume — tree-based read path (tree_id set)", () => {
 // ---------------------------------------------------------------------------
 
 describe("createGetResumeHandler", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue({
+      title: "Handler title",
+      consultantTitle: null,
+      presentation: [],
+      summary: null,
+      highlightedItems: [],
+      language: "en",
+      skillGroups: [{ name: "languages", sortOrder: 0 }],
+      skills: [{ name: "TypeScript", category: "languages", sortOrder: 0 }],
+      assignments: [],
+    } as never);
+  });
+
   it("returns resume with skills for authenticated admin", async () => {
-    const { db } = buildDbMock(RESUME_ROW, [SKILL_ROW_1]);
+    const { db } = buildDbMock(RESUME_ROW);
     const handler = createGetResumeHandler(db);
 
     const result = await call(handler, { id: RESUME_ID }, {
@@ -595,7 +524,7 @@ describe("createGetResumeHandler", () => {
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {
-    const { db } = buildDbMock(RESUME_ROW, []);
+    const { db } = buildDbMock(RESUME_ROW);
     const handler = createGetResumeHandler(db);
 
     await expect(
@@ -606,23 +535,24 @@ describe("createGetResumeHandler", () => {
   });
 
   it("passes commitId through the handler to get an exact commit view", async () => {
-    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW, []);
+    const { db, commitExecuteTakeFirst } = buildDbMock(RESUME_ROW);
     const handler = createGetResumeHandler(db);
     commitExecuteTakeFirst.mockResolvedValueOnce({
       id: COMMIT_ID,
       resume_id: RESUME_ID,
-      content: {
-        title: "Handler commit snapshot",
-        consultantTitle: null,
-        presentation: [],
-        summary: null,
-        highlightedItems: [],
-        language: "en",
-        skillGroups: [],
-        skills: [],
-        assignments: [],
-      },
+      tree_id: DEFAULT_TREE_ID,
     });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      title: "Handler commit snapshot",
+      consultantTitle: null,
+      presentation: [],
+      summary: null,
+      highlightedItems: [],
+      language: "en",
+      skillGroups: [],
+      skills: [],
+      assignments: [],
+    } as never);
 
     const result = await call(handler, { id: RESUME_ID, commitId: COMMIT_ID }, {
       context: { user: MOCK_ADMIN },

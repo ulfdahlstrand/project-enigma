@@ -28,6 +28,7 @@ export async function readTreeContent(
   let presentation: string[] = [];
   let summary: string | null = null;
   let highlightedItems: string[] = [];
+  const education: ResumeCommitContent["education"] = [];
   const skillGroups: ResumeCommitContent["skillGroups"] = [];
   const skills: ResumeCommitContent["skills"] = [];
   const assignments: ResumeCommitContent["assignments"] = [];
@@ -46,7 +47,7 @@ export async function readTreeContent(
     switch (entry.entry_type) {
       case "metadata": {
         const row = await db
-          .selectFrom("resume_metadata_revisions")
+          .selectFrom("resume_revision_metadata")
           .select(["title", "language"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -59,7 +60,7 @@ export async function readTreeContent(
 
       case "consultant_title": {
         const row = await db
-          .selectFrom("consultant_title_revisions")
+          .selectFrom("resume_revision_consultant_title")
           .select(["value"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -69,7 +70,7 @@ export async function readTreeContent(
 
       case "presentation": {
         const row = await db
-          .selectFrom("presentation_revisions")
+          .selectFrom("resume_revision_presentation")
           .select(["paragraphs"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -79,7 +80,7 @@ export async function readTreeContent(
 
       case "summary": {
         const row = await db
-          .selectFrom("summary_revisions")
+          .selectFrom("resume_revision_summary")
           .select(["content"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -89,7 +90,7 @@ export async function readTreeContent(
 
       case "highlighted_items": {
         const row = await db
-          .selectFrom("highlighted_item_revisions")
+          .selectFrom("resume_revision_highlighted_item")
           .select(["items"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -99,7 +100,7 @@ export async function readTreeContent(
 
       case "skill_group": {
         const row = await db
-          .selectFrom("skill_group_revisions")
+          .selectFrom("resume_revision_skill_group")
           .select(["name", "sort_order"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
@@ -109,13 +110,13 @@ export async function readTreeContent(
 
       case "skill": {
         const row = await db
-          .selectFrom("skill_revisions")
+          .selectFrom("resume_revision_skill")
           .select(["name", "sort_order", "group_revision_id"])
           .where("id", "=", revisionId)
           .executeTakeFirst();
         if (row) {
           const group = await db
-            .selectFrom("skill_group_revisions")
+            .selectFrom("resume_revision_skill_group")
             .select(["name"])
             .where("id", "=", row.group_revision_id)
             .executeTakeFirst();
@@ -130,7 +131,7 @@ export async function readTreeContent(
 
       case "assignment": {
         const row = await db
-          .selectFrom("assignment_revisions")
+          .selectFrom("resume_revision_assignment")
           .select([
             "assignment_id",
             "client_name",
@@ -171,7 +172,22 @@ export async function readTreeContent(
         break;
       }
 
-      // education entries are read separately when building the CV view
+      case "education": {
+        const row = await db
+          .selectFrom("resume_revision_education")
+          .select(["type", "value", "sort_order"])
+          .where("id", "=", revisionId)
+          .executeTakeFirst();
+        if (row) {
+          education.push({
+            type: row.type,
+            value: row.value,
+            sortOrder: row.sort_order,
+          });
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -184,6 +200,7 @@ export async function readTreeContent(
     summary,
     highlightedItems,
     language,
+    education,
     skillGroups,
     skills,
     assignments,

@@ -77,7 +77,7 @@ export function ResumeSkillsPage({
     >
       <Box sx={{ position: "relative" }}>
       <ResumeDocumentPage title={title} language={language ?? undefined} page={page} totalPages={totalPages}>
-        {isEditing && !isSnapshotMode ? (
+        {isEditing && !isSnapshotMode && activeBranchId ? (
           <SkillsEditor
             resumeId={resumeId}
             branchId={activeBranchId}
@@ -91,6 +91,7 @@ export function ResumeSkillsPage({
           />
         ) : (
           <ResumeSkillsPageContent
+            language={language}
             employeeName={employeeName}
             skillGroups={skillGroups}
             skills={skills}

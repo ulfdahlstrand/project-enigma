@@ -96,9 +96,10 @@ export function useInlineResumeRevision({
   const updateBranchAssignment = useMutation({
     mutationFn: (input: Parameters<typeof orpc.updateBranchAssignment>[0]) => orpc.updateBranchAssignment(input),
     onSuccess: async () => {
-      if (activeBranchId) {
-        await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
-      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
+      ]);
     },
   });
 
@@ -521,8 +522,7 @@ export function useInlineResumeRevision({
             queryClient.invalidateQueries({
               queryKey: ["listAIConversations", "resume-revision-actions", activeBranchId],
             }),
-            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", currentSourceBranchId] }),
-            queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", data.resultBranchId] }),
+            queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
           ]);
 
           reset();

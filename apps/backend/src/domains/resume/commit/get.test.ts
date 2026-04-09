@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { getResumeCommit, createGetResumeCommitHandler } from "./get.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -17,12 +20,25 @@ const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 // Valid v4 UUID (Zod v4 requires version nibble 1-8 and variant bits)
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
 
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
+
+const DEFAULT_CONTENT = {
+  title: "Engineer",
+  consultantTitle: null,
+  presentation: [],
+  summary: null,
+  highlightedItems: [],
+  language: "en",
+  skillGroups: [],
+  skills: [],
+  assignments: [],
+};
+
 const COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
   parent_commit_id: null,
-  content: { title: "Engineer", skills: [], assignments: [], language: "en", presentation: [], summary: null, consultantTitle: null },
-  message: "Initial version",
+  tree_id: DEFAULT_TREE_ID,
   title: "Initial version",
   description: "",
   created_by: CREATOR_ID,
@@ -62,6 +78,10 @@ function buildDbMock(opts: { commitRow?: unknown; employeeId?: string | null } =
 // ---------------------------------------------------------------------------
 
 describe("getResumeCommit", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue(DEFAULT_CONTENT as never);
+  });
+
   it("returns the full commit including content for admin", async () => {
     const { db } = buildDbMock();
 
@@ -71,7 +91,7 @@ describe("getResumeCommit", () => {
       id: COMMIT_ID,
       resumeId: RESUME_ID,
       parentCommitId: null,
-      message: "Initial version",
+      title: "Initial version",
     });
     expect(result.content).toBeDefined();
   });
@@ -105,30 +125,26 @@ describe("getResumeCommit", () => {
   });
 
   it("normalises invalid legacy assignment fields in commit content", async () => {
-    const { db } = buildDbMock({
-      commitRow: {
-        ...COMMIT_ROW,
-        content: {
-          ...COMMIT_ROW.content,
-          assignments: [
-            {
-              assignmentId: "550e8400-e29b-41d4-a716-446655440055",
-              clientName: "Legacy Co",
-              role: "Consultant",
-              description: "Legacy description",
-              startDate: "2024-01-01",
-              endDate: undefined,
-              technologies: undefined,
-              isCurrent: false,
-              keywords: undefined,
-              type: undefined,
-              highlight: undefined,
-              sortOrder: undefined,
-            },
-          ],
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      ...DEFAULT_CONTENT,
+      assignments: [
+        {
+          assignmentId: "550e8400-e29b-41d4-a716-446655440055",
+          clientName: "Legacy Co",
+          role: "Consultant",
+          description: "Legacy description",
+          startDate: "2024-01-01",
+          endDate: undefined as unknown as null,
+          technologies: undefined as unknown as [],
+          isCurrent: false,
+          keywords: undefined as unknown as null,
+          type: undefined as unknown as null,
+          highlight: undefined as unknown as false,
+          sortOrder: undefined as unknown as null,
         },
-      },
-    });
+      ],
+    } as never);
+    const { db } = buildDbMock();
 
     const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
 
@@ -144,34 +160,30 @@ describe("getResumeCommit", () => {
   });
 
   it("normalises legacy assignment description arrays into paragraph text", async () => {
-    const { db } = buildDbMock({
-      commitRow: {
-        ...COMMIT_ROW,
-        content: {
-          ...COMMIT_ROW.content,
-          assignments: [
-            {
-              assignmentId: "550e8400-e29b-41d4-a716-446655440055",
-              clientName: "Legacy Co",
-              role: "Consultant",
-              description: ["First paragraph", "Second paragraph"],
-              startDate: "2024-01-01",
-              endDate: null,
-              technologies: [],
-              isCurrent: false,
-              keywords: null,
-              type: null,
-              highlight: false,
-              sortOrder: 0,
-            },
-          ],
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      ...DEFAULT_CONTENT,
+      assignments: [
+        {
+          assignmentId: "550e8400-e29b-41d4-a716-446655440055",
+          clientName: "Legacy Co",
+          role: "Consultant",
+          description: ["First paragraph", "Second paragraph"] as unknown as string,
+          startDate: "2024-01-01",
+          endDate: null,
+          technologies: [],
+          isCurrent: false,
+          keywords: null,
+          type: null,
+          highlight: false,
+          sortOrder: 0,
         },
-      },
-    });
+      ],
+    } as never);
+    const { db } = buildDbMock();
 
     const result = await getResumeCommit(db, MOCK_ADMIN, { commitId: COMMIT_ID });
 
-    expect(result.content.assignments[0]?.description).toBe("First paragraph\n\nSecond paragraph");
+    expect(result.content.assignments[0]?.description).toBe("First paragraph\nSecond paragraph");
   });
 });
 

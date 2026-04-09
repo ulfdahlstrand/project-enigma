@@ -1,5 +1,8 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types.js";
+import type { AuthUser } from "../auth/require-auth.js";
+import { saveResumeVersion } from "../domains/resume/commit/save.js";
+import { readBranchAssignmentContent } from "../domains/resume/lib/branch-assignment-content.js";
 
 export const INTEGRATION_ADMIN_USER = {
   id: "10000000-0000-4000-8000-000000000001",
@@ -48,28 +51,31 @@ export async function seedMainBranchAssignment(
     .returning(["id"])
     .executeTakeFirstOrThrow();
 
-  const branchAssignment = await db
-    .insertInto("branch_assignments")
-    .values({
-      branch_id: input.branchId,
-      assignment_id: assignment.id,
-      client_name: input.clientName,
-      role: input.role,
-      description: input.description,
-      start_date: input.startDate ?? new Date("2025-01-01T00:00:00.000Z"),
-      end_date: null,
-      technologies: ["TypeScript"],
-      is_current: true,
-      keywords: null,
-      type: null,
-      highlight: true,
-      sort_order: 0,
-    })
-    .returning(["id", "assignment_id"])
-    .executeTakeFirstOrThrow();
+  const branch = await readBranchAssignmentContent(db, input.branchId);
+  const startDate = (input.startDate ?? new Date("2025-01-01T00:00:00.000Z")).toISOString();
+  await saveResumeVersion(db, INTEGRATION_ADMIN_USER as AuthUser, {
+    branchId: input.branchId,
+    assignments: [
+      ...(branch?.content.assignments ?? []),
+      {
+        assignmentId: assignment.id,
+        clientName: input.clientName,
+        role: input.role,
+        description: input.description,
+        startDate,
+        endDate: null,
+        technologies: ["TypeScript"],
+        isCurrent: true,
+        keywords: null,
+        type: null,
+        highlight: true,
+        sortOrder: 0,
+      },
+    ],
+  });
 
   return {
-    branchAssignmentId: branchAssignment.id,
-    assignmentId: branchAssignment.assignment_id,
+    branchAssignmentId: assignment.id,
+    assignmentId: assignment.id,
   };
 }

@@ -12,15 +12,15 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 
   await sql`
     INSERT INTO resume_entry_types (name, revision_table) VALUES
-      ('metadata',          'resume_metadata_revisions'),
-      ('consultant_title',  'consultant_title_revisions'),
-      ('presentation',      'presentation_revisions'),
-      ('summary',           'summary_revisions'),
-      ('highlighted_items', 'highlighted_item_revisions'),
-      ('skill_group',       'skill_group_revisions'),
-      ('skill',             'skill_revisions'),
-      ('assignment',        'assignment_revisions'),
-      ('education',         'education_revisions')
+      ('metadata',          'resume_revision_metadata'),
+      ('consultant_title',  'resume_revision_consultant_title'),
+      ('presentation',      'resume_revision_presentation'),
+      ('summary',           'resume_revision_summary'),
+      ('highlighted_items', 'resume_revision_highlighted_item'),
+      ('skill_group',       'resume_revision_skill_group'),
+      ('skill',             'resume_revision_skill'),
+      ('assignment',        'resume_revision_assignment'),
+      ('education',         'resume_revision_education')
     ON CONFLICT (name) DO NOTHING
   `.execute(db);
 

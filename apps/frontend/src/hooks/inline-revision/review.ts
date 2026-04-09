@@ -86,7 +86,7 @@ type Params = {
       highlightedItems?: string[];
       skills?: ResumeSkill[];
   }) => Promise<unknown>;
-  updateBranchAssignment: (input: { id: string; description: string }) => Promise<unknown>;
+  updateBranchAssignment: (input: { branchId: string; id: string; description: string }) => Promise<unknown>;
   buildDraftPatchFromValues: (title: string, presentation: string, summary: string) => unknown;
 };
 
@@ -132,6 +132,7 @@ export function useInlineRevisionReview({
         setApplyingSuggestionId(suggestionId);
         try {
           await applySuggestionToAssignment(suggestion, {
+            branchId: activeBranchId,
             activeBranchId,
             sortedAssignments,
             queryClient,

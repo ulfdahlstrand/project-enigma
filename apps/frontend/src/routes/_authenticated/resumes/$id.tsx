@@ -98,12 +98,6 @@ export function ResumeDetailPage({
     enabled: !!resume?.employeeId,
   });
 
-  const { data: liveAssignments = [] } = useQuery({
-    queryKey: ["listBranchAssignmentsFull", activeBranchId],
-    queryFn: () => orpc.listBranchAssignmentsFull({ branchId: activeBranchId! }),
-    enabled: !!activeBranchId,
-  });
-
   const { data: education = [] } = useQuery({
     queryKey: ["listEducation", resume?.employeeId],
     queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
@@ -163,7 +157,10 @@ export function ResumeDetailPage({
       }),
     onSuccess: async (result) => {
       setNewAssignmentId(result.id);
-      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
+        queryClient.invalidateQueries({ queryKey: ["getResume", id] }),
+      ]);
     },
   });
 
@@ -201,10 +198,25 @@ export function ResumeDetailPage({
     draftHighlightedItemsRef.current = draftHighlightedItems;
   }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
-  const assignments = liveAssignments;
   const snapshotContent = isSnapshotMode ? selectedCommit?.content : null;
+  const snapshotEducation = snapshotContent?.education ?? resume?.education ?? [];
+  const resolvedEducation = snapshotEducation.length > 0
+    ? snapshotEducation.map((entry, index) => ({
+        id: `snapshot-education-${index}`,
+        employeeId: resume?.employeeId ?? "",
+        type: entry.type,
+        value: entry.value,
+        sortOrder: entry.sortOrder,
+        createdAt: "",
+        updatedAt: "",
+      }))
+    : education;
+  const assignments = (snapshotContent?.assignments ?? resume?.assignments ?? []).map((assignment) => ({
+    ...assignment,
+    id: assignment.assignmentId,
+  }));
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
-  const language = snapshotContent?.language ?? resume?.language;
+  const language = snapshotContent?.language ?? activeBranch?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;
@@ -212,7 +224,7 @@ export function ResumeDetailPage({
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
   const editableAssignments = sortedAssignments.map((assignment) => ({
     ...assignment,
-    assignmentId: assignment.assignmentId ?? assignment.id,
+    assignmentId: assignment.assignmentId,
   })) as EditorAssignmentRow[];
   const fallbackHighlightedItems = sortedAssignments
     .slice(0, COVER_HIGHLIGHT_COUNT)
@@ -330,28 +342,14 @@ export function ResumeDetailPage({
       sortOrder: skill.sortOrder ?? 0,
     })),
     assignments: sortedAssignments.map((assignment) => ({
-      id: "assignmentId" in assignment && typeof assignment.assignmentId === "string"
-        ? assignment.assignmentId
-        : assignment.id,
+      id: assignment.assignmentId,
       clientName: assignment.clientName,
       role: assignment.role,
-      description: "description" in assignment && typeof assignment.description === "string"
-        ? assignment.description
-        : "",
-      technologies: "technologies" in assignment && Array.isArray(assignment.technologies)
-        ? assignment.technologies
-        : [],
+      description: assignment.description,
+      technologies: assignment.technologies,
       isCurrent: assignment.isCurrent,
-      startDate: typeof assignment.startDate === "string"
-        ? assignment.startDate
-        : assignment.startDate instanceof Date
-          ? assignment.startDate.toISOString()
-          : null,
-      endDate: typeof assignment.endDate === "string"
-        ? assignment.endDate
-        : assignment.endDate instanceof Date
-          ? assignment.endDate.toISOString()
-          : null,
+      startDate: assignment.startDate,
+      endDate: assignment.endDate,
     })),
   };
   const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);
@@ -467,18 +465,20 @@ export function ResumeDetailPage({
     const patch = buildDraftPatch();
 
     if (isBranchBackedMode && activeBranchId) {
-      // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
+      // Branch edit: create a new commit with the overridden content.
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
-    } else {
-      if (!mainBranchId) {
-        updateResume.mutate(patch);
-        return;
-      }
-
-      // Main save must update the live resume and create a visible branch commit.
-      await updateResume.mutateAsync(patch);
-      await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
+      return;
     }
+
+    if (!mainBranchId) {
+      updateResume.mutate(patch);
+      return;
+    }
+
+    // Main branch save is tree-backed as well, so a single saveResumeVersion
+    // call should create the commit and advance HEAD without a separate live
+    // content write first.
+    await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
   };
 
   const handleSaveAsNewVersion = async (name: string) => {
@@ -749,9 +749,9 @@ export function ResumeDetailPage({
           skillsPage={skillsPage}
           skillGroups={skillGroups}
           skills={skills}
-          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          degrees={resolvedEducation.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={resolvedEducation.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={resolvedEducation.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           hasAssignments={hasAssignments}
@@ -790,9 +790,9 @@ export function ResumeDetailPage({
           skillsPage={skillsPage}
           skillGroups={skillGroups}
           skills={skills}
-          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          degrees={resolvedEducation.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={resolvedEducation.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={resolvedEducation.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           hasAssignments={hasAssignments}

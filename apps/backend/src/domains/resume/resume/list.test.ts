@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { createListResumesHandler, listResumes } from "./list.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Unit tests for the listResumes procedure.
@@ -47,19 +50,11 @@ const RESUME_ROW_2 = {
   head_commit_id: null,
 };
 
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
+
 const COMMIT_ROW_1 = {
   id: COMMIT_ID_1,
-  content: {
-    title: "Senior Backend Resume",
-    consultantTitle: "Tech Lead",
-    presentation: ["Committed presentation"],
-    summary: "Experienced backend engineer",
-    highlightedItems: [],
-    language: "en",
-    skillGroups: [],
-    skills: [],
-    assignments: [],
-  },
+  tree_id: DEFAULT_TREE_ID,
 };
 
 // ---------------------------------------------------------------------------
@@ -121,6 +116,20 @@ function buildDbWithEmployeeLookup(resumeRows: unknown[], employeeId: string) {
 // ---------------------------------------------------------------------------
 
 describe("listResumes query function", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue({
+      title: "Senior Backend Resume",
+      consultantTitle: "Tech Lead",
+      presentation: ["Committed presentation"],
+      summary: "Experienced backend engineer",
+      highlightedItems: [],
+      language: "en",
+      skillGroups: [],
+      skills: [],
+      assignments: [],
+    } as never);
+  });
+
   it("returns all resumes for admin with no filters", async () => {
     const { db } = buildSelectMock([RESUME_ROW_1, RESUME_ROW_2]);
 

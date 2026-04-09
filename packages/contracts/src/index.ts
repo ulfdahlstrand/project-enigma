@@ -11,9 +11,6 @@ import { resumeVersionRoutes } from "./domains/resume-versions/routes.js";
 import {
   healthInputSchema,
   healthOutputSchema,
-  listTestEntriesInputSchema,
-  listTestEntriesOutputSchema,
-  testEntrySchema,
 } from "./domains/system/schema.js";
 import { systemRoutes } from "./domains/system/routes.js";
 
@@ -50,16 +47,6 @@ export {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
-  createResumeSkillGroupInputSchema,
-  createResumeSkillGroupOutputSchema,
-  updateResumeSkillGroupInputSchema,
-  updateResumeSkillGroupOutputSchema,
-  createResumeSkillInputSchema,
-  createResumeSkillOutputSchema,
-  updateResumeSkillInputSchema,
-  updateResumeSkillOutputSchema,
-  deleteResumeSkillInputSchema,
-  deleteResumeSkillOutputSchema,
 } from "./resumes.js";
 export type { ResumeSkillGroup, ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 
@@ -226,11 +213,7 @@ export type {
 export {
   healthInputSchema,
   healthOutputSchema,
-  listTestEntriesInputSchema,
-  listTestEntriesOutputSchema,
-  testEntrySchema,
 } from "./domains/system/schema.js";
-export type { TestEntry } from "./domains/system/schema.js";
 
 // ---------------------------------------------------------------------------
 // Router contract

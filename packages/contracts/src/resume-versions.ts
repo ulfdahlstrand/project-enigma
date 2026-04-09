@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { educationTypeSchema } from "./education.js";
 
 // ---------------------------------------------------------------------------
 // Resume versioning schemas
@@ -7,7 +8,7 @@ import { z } from "zod";
 // Models git-inspired versioning concepts in plain language:
 //   resume_commit  → a saved version (immutable snapshot)
 //   resume_branch  → a variant (named line of development)
-//   branch_assignment → per-variant assignment linking
+//   branch assignment views → branch-scoped assignment content from commits
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,12 @@ export const resumeCommitAssignmentSchema = z.object({
   sortOrder: z.number().nullable(),
 });
 
+export const resumeCommitEducationSchema = z.object({
+  type: educationTypeSchema,
+  value: z.string(),
+  sortOrder: z.number(),
+});
+
 export const resumeCommitContentSchema = z.object({
   title: z.string(),
   consultantTitle: z.string().nullable(),
@@ -47,6 +54,7 @@ export const resumeCommitContentSchema = z.object({
   summary: z.string().nullable(),
   highlightedItems: z.array(z.string()).default([]),
   language: z.string(),
+  education: z.array(resumeCommitEducationSchema).default([]),
   skillGroups: z.array(resumeCommitSkillGroupSchema).default([]),
   skills: z.array(resumeCommitSkillSchema),
   assignments: z.array(resumeCommitAssignmentSchema),
@@ -63,7 +71,6 @@ export const resumeCommitSchema = z.object({
   resumeId: z.string().uuid(),
   parentCommitId: z.string().uuid().nullable(),
   content: resumeCommitContentSchema,
-  message: z.string(),
   title: z.string(),
   description: z.string(),
   createdBy: z.string().uuid().nullable(),
@@ -91,7 +98,7 @@ export const resumeBranchSchema = z.object({
 export type ResumeBranch = z.infer<typeof resumeBranchSchema>;
 
 // ---------------------------------------------------------------------------
-// BranchAssignment — per-variant assignment link
+// BranchAssignment — branch-scoped assignment view item
 // ---------------------------------------------------------------------------
 
 export const branchAssignmentSchema = z.object({
@@ -110,12 +117,9 @@ export type BranchAssignment = z.infer<typeof branchAssignmentSchema>;
 
 export const saveResumeVersionInputSchema = z.object({
   branchId: z.string().uuid(),
-  /** Short human-readable commit title. Takes precedence over `message` when both are provided. */
   title: z.string().optional(),
   /** Optional extended description for this commit. */
   description: z.string().optional(),
-  /** @deprecated Use `title` instead. Kept for backward compatibility. */
-  message: z.string().optional(),
   /** Optional content overrides — when provided, these values are stored in the
    *  commit instead of reading from the live resume record. Use this when saving
    *  branch-specific edits without touching the main resume. */
@@ -125,6 +129,7 @@ export const saveResumeVersionInputSchema = z.object({
   highlightedItems: z.array(z.string()).optional(),
   skillGroups: z.array(resumeCommitSkillGroupSchema).optional(),
   skills: z.array(resumeCommitSkillSchema).optional(),
+  assignments: z.array(resumeCommitAssignmentSchema).optional(),
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
@@ -163,9 +168,8 @@ export const listResumeCommitsOutputSchema = z.array(resumeCommitListItemSchema)
 // ---------------------------------------------------------------------------
 // forkResumeBranch schemas
 //
-// Creates a new branch forked from a specific commit. The new branch's HEAD
-// starts at the forked commit (inheriting its full resume snapshot), and its
-// branch_assignments are copied from the source branch.
+// Creates a new branch forked from a specific commit. The new branch starts
+// from that commit's snapshot through `forkedFromCommitId`.
 // ---------------------------------------------------------------------------
 
 export const forkResumeBranchInputSchema = z.object({

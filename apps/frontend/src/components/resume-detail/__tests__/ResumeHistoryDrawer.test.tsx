@@ -15,8 +15,8 @@ vi.mock("../../RouterButton", () => ({
 
 describe("ResumeHistoryDrawer", () => {
   const recentCommits = [
-    { id: "commit-3", message: "Current commit", createdAt: "2024-06-03T10:00:00Z" },
-    { id: "commit-2", message: "Previous commit", createdAt: "2024-06-02T10:00:00Z" },
+    { id: "commit-3", title: "Current commit", createdAt: "2024-06-03T10:00:00Z" },
+    { id: "commit-2", title: "Previous commit", createdAt: "2024-06-02T10:00:00Z" },
   ];
 
   it("highlights the currently viewed commit", async () => {

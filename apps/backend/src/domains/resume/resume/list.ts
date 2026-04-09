@@ -6,6 +6,7 @@ import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { listResumesInputSchema, listResumesOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -47,7 +48,6 @@ export async function listResumes(
       "r.id",
       "r.employee_id",
       "r.title",
-      "r.summary",
       "r.language",
       "r.is_main",
       "r.created_at",
@@ -77,12 +77,19 @@ export async function listResumes(
   const commitRows = headCommitIds.length > 0
     ? await db
         .selectFrom("resume_commits")
-        .select(["id", "content"])
+        .select(["id", "tree_id"])
         .where("id", "in", headCommitIds)
         .execute()
     : [];
-  const contentByCommitId = new Map(
-    commitRows.map((row) => [row.id, row.content as ResumeCommitContent]),
+
+  const contentByCommitId = new Map<string, ResumeCommitContent>();
+  await Promise.all(
+    commitRows
+      .filter((row) => row.tree_id !== null)
+      .map(async (row) => {
+        const content = await readTreeContent(db, row.tree_id!);
+        contentByCommitId.set(row.id, content);
+      }),
   );
 
   return rows.map((row) => ({
@@ -91,7 +98,7 @@ export async function listResumes(
     title: row.title,
     consultantTitle: row.head_commit_id ? (contentByCommitId.get(row.head_commit_id)?.consultantTitle ?? null) : null,
     presentation: row.head_commit_id ? (contentByCommitId.get(row.head_commit_id)?.presentation ?? []) : [],
-    summary: row.summary,
+    summary: row.head_commit_id ? (contentByCommitId.get(row.head_commit_id)?.summary ?? null) : null,
     highlightedItems: [],
     language: row.language,
     isMain: row.is_main,

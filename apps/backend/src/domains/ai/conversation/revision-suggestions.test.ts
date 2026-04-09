@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { persistRevisionToolCallSuggestions } from "./revision-suggestions.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+
+vi.mock("../../resume/lib/read-tree-content.js");
 
 type MockTableConfig = {
   currentSuggestions?: unknown[];
@@ -55,7 +58,7 @@ function buildDb(config: MockTableConfig = {}) {
     }
 
     if (table === "resume_commits") {
-      const commitRow = commitContent !== null ? { content: commitContent } : undefined;
+      const commitRow = commitContent !== null ? { tree_id: "tree-id-1" } : undefined;
       return createMockChain([], commitRow);
     }
 
@@ -81,11 +84,19 @@ function buildDb(config: MockTableConfig = {}) {
     }),
   });
 
+  if (commitContent !== null) {
+    vi.mocked(readTreeContent).mockResolvedValue(commitContent as Awaited<ReturnType<typeof readTreeContent>>);
+  }
+
   return {
     db: { selectFrom, deleteFrom, insertInto } as unknown as Kysely<Database>,
     insertedRows,
   };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("persistRevisionToolCallSuggestions", () => {
   it("links section suggestions to the matching persisted work item", async () => {

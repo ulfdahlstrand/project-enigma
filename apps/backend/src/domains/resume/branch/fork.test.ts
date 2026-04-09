@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { forkResumeBranch, createForkResumeBranchHandler } from "./fork.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -32,19 +35,25 @@ const SNAPSHOT_ASSIGNMENT = {
   sortOrder: 0,
 };
 
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
+
+const DEFAULT_CONTENT = {
+  title: "My Resume",
+  consultantTitle: "Senior Developer",
+  presentation: ["Para 1"],
+  summary: "Summary text",
+  highlightedItems: [],
+  language: "sv",
+  skillGroups: [],
+  skills: [],
+  assignments: [SNAPSHOT_ASSIGNMENT],
+};
+
 const COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
-  content: {
-    title: "My Resume",
-    consultantTitle: "Senior Developer",
-    presentation: ["Para 1"],
-    summary: "Summary text",
-    language: "sv",
-    skills: [],
-    assignments: [SNAPSHOT_ASSIGNMENT],
-  },
+  tree_id: DEFAULT_TREE_ID,
 };
 
 const NEW_BRANCH_ROW = {
@@ -127,6 +136,10 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("forkResumeBranch", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue(DEFAULT_CONTENT as never);
+  });
+
   it("creates a new branch forked from the given commit", async () => {
     const { db, branchInsertValues } = buildDbMock();
 
@@ -197,14 +210,8 @@ describe("forkResumeBranch", () => {
   });
 
   it("falls back to 'en' language when source branch has no language", async () => {
-    const commitWithNoLanguage = {
-      ...COMMIT_ROW,
-      content: {
-        ...COMMIT_ROW.content,
-        language: null,
-      },
-    };
-    const { db, branchInsertValues } = buildDbMock({ commitRow: commitWithNoLanguage });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, language: null as unknown as string } as never);
+    const { db, branchInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 
@@ -231,15 +238,8 @@ describe("forkResumeBranch", () => {
   });
 
   it("skips copying assignments if source branch has none", async () => {
-    const { db, copyInsertValues } = buildDbMock({
-      commitRow: {
-        ...COMMIT_ROW,
-        content: {
-          ...COMMIT_ROW.content,
-          assignments: [],
-        },
-      },
-    });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, assignments: [] } as never);
+    const { db, copyInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 

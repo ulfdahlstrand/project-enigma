@@ -8,7 +8,9 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { buildCommitTree } from "../lib/build-commit-tree.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type { saveResumeVersionInputSchema, saveResumeVersionOutputSchema } from "@cv-tool/contracts";
+import { listEducation } from "../../education/education/list.js";
 
 // ---------------------------------------------------------------------------
 // saveResumeVersion — query logic
@@ -75,8 +77,8 @@ function summarizeCommitChanges(
  * Creates an immutable snapshot (commit) of the current state of a resume
  * branch. Advances the branch's head_commit_id to the new commit.
  *
- * The snapshot captures: resume scalar fields, skills, and all assignments
- * currently linked to the branch via branch_assignments.
+ * The snapshot captures the branch's latest tree-backed content, optionally
+ * applying any field overrides provided in the save request.
  *
  * Access rules:
  *   - Admins can save any branch.
@@ -84,7 +86,7 @@ function summarizeCommitChanges(
  *
  * @param db    - Kysely instance (real or mock).
  * @param user  - The authenticated user.
- * @param input - { branchId, message? }
+ * @param input - { branchId, title?, description? }
  * @throws ORPCError("NOT_FOUND")  if the branch does not exist.
  * @throws ORPCError("FORBIDDEN")  if a consultant does not own the resume.
  */
@@ -103,9 +105,9 @@ export async function saveResumeVersion(
       "rb.id",
       "rb.resume_id",
       "rb.head_commit_id",
+      "rb.forked_from_commit_id",
       "r.employee_id",
       "r.title",
-      "r.summary",
       "r.language",
     ])
     .where("rb.id", "=", input.branchId)
@@ -119,78 +121,34 @@ export async function saveResumeVersion(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const headCommit = branch.head_commit_id
+  const baseCommitId = branch.head_commit_id ?? branch.forked_from_commit_id ?? null;
+
+  const headCommitRow = baseCommitId
     ? await db
         .selectFrom("resume_commits")
-        .select(["content"])
-        .where("id", "=", branch.head_commit_id)
+        .select(["tree_id"])
+        .where("id", "=", baseCommitId)
         .executeTakeFirst()
     : null;
 
-  const baseContent = (headCommit?.content as ResumeCommitContent | undefined) ?? {
-      title: branch.title,
-      consultantTitle: null,
-      presentation: [],
-      summary: branch.summary,
-      highlightedItems: [],
-      language: branch.language,
-      skillGroups: [],
-      skills: [],
-      assignments: [],
-  };
+  const baseContent: ResumeCommitContent = headCommitRow?.tree_id
+    ? await readTreeContent(db, headCommitRow.tree_id)
+    : {
+        title: branch.title,
+        consultantTitle: null,
+        presentation: [],
+        summary: null,
+        highlightedItems: [],
+        language: branch.language,
+        education: await listEducation(db, branch.employee_id).then((rows) =>
+          rows.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
+        ),
+        skillGroups: [],
+        skills: [],
+        assignments: [],
+      };
 
-  const shouldReadLegacySkills =
-    headCommit === null && (input.skillGroups === undefined || input.skills === undefined);
-
-  const skillGroups = shouldReadLegacySkills
-    ? await db
-        .selectFrom("resume_skill_groups")
-        .select(["id", "name", "sort_order"])
-        .where("resume_id", "=", branch.resume_id)
-        .orderBy("sort_order", "asc")
-        .execute()
-    : [];
-
-  const skillRows = shouldReadLegacySkills
-    ? await db
-        .selectFrom("resume_skills as rs")
-        .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-        .select([
-          "rs.name",
-          "rs.sort_order",
-          "rs.group_id",
-          "rsg.name as category",
-        ])
-        .where("rs.resume_id", "=", branch.resume_id)
-        .orderBy("rsg.sort_order", "asc")
-        .orderBy("rs.sort_order", "asc")
-        .execute()
-    : [];
-
-  // Fetch assignments linked to this branch — all content is now in branch_assignments.
-  // Soft-deleted assignments are excluded (deleted_at IS NULL guard).
-  const assignmentRows = await db
-    .selectFrom("branch_assignments as ba")
-    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-    .select([
-      "ba.assignment_id",
-      "ba.client_name",
-      "ba.role",
-      "ba.description",
-      "ba.start_date",
-      "ba.end_date",
-      "ba.technologies",
-      "ba.is_current",
-      "ba.keywords",
-      "ba.type",
-      "ba.highlight",
-      "ba.sort_order",
-    ])
-    .where("ba.branch_id", "=", input.branchId)
-    .where("a.deleted_at", "is", null)
-    .orderBy("ba.sort_order", "asc")
-    .execute();
-
+  const liveEducation = await listEducation(db, branch.employee_id);
   const content: ResumeCommitContent = {
     title: baseContent.title,
     consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
@@ -198,59 +156,42 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
-    skillGroups: input.skillGroups
-      ?? (headCommit
-        ? baseContent.skillGroups ?? []
-        : skillGroups.map((group) => ({
-            name: group.name,
-            sortOrder: group.sort_order,
-          }))),
-    skills: (input.skills
-      ?? (headCommit
-        ? baseContent.skills ?? []
-        : skillRows.map((s) => ({
-            name: s.name,
-            category: s.category,
-            sortOrder: s.sort_order,
-          })))).map((skill) => ({
+    education:
+      baseContent.education?.length > 0
+        ? baseContent.education
+        : liveEducation.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
+    skillGroups: input.skillGroups ?? baseContent.skillGroups ?? [],
+    skills: (input.skills ?? baseContent.skills ?? []).map((skill) => ({
       name: skill.name,
       category: skill.category,
       sortOrder: skill.sortOrder,
     })),
-    assignments: assignmentRows.map((a) => ({
-      assignmentId: a.assignment_id,
-      clientName: a.client_name,
-      role: a.role,
-      description: a.description,
-      startDate: a.start_date instanceof Date ? a.start_date.toISOString() : String(a.start_date),
-      endDate: a.end_date instanceof Date ? a.end_date.toISOString() : (a.end_date ? String(a.end_date) : null),
-      technologies: a.technologies ?? [],
-      isCurrent: a.is_current,
-      keywords: a.keywords,
-      type: a.type,
-      highlight: a.highlight,
-      sortOrder: a.sort_order,
-    })),
+    assignments: input.assignments !== undefined
+      ? input.assignments
+      : baseContent.assignments ?? [],
   };
 
   const generatedMetadata = summarizeCommitChanges(baseContent, content);
-  const title = input.title?.trim() || input.message?.trim() || generatedMetadata.title;
+  const title = input.title?.trim() || generatedMetadata.title;
   const description = input.description?.trim() || generatedMetadata.description;
-  const message = input.message?.trim() || title;
 
   // Atomically insert commit and update branch HEAD
   const commit = await db.transaction().execute(async (trx) => {
-    const treeId = await buildCommitTree(trx, branch.resume_id, branch.employee_id, content);
+    const treeId = await buildCommitTree(
+      trx,
+      branch.resume_id,
+      branch.employee_id,
+      content,
+      headCommitRow?.tree_id ?? null,
+    );
 
     const newCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: branch.resume_id,
-        content: JSON.stringify(content),
         tree_id: treeId,
         title,
         description,
-        message,
         created_by: user.id,
       })
       .returningAll()
@@ -280,8 +221,7 @@ export async function saveResumeVersion(
     id: commit.id,
     resumeId: commit.resume_id,
     parentCommitId: branch.head_commit_id,
-    content: commit.content as unknown as ResumeCommitContent,
-    message: commit.message,
+    content,
     title: commit.title,
     description: commit.description,
     createdBy: commit.created_by,

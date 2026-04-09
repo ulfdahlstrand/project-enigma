@@ -7,6 +7,8 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readBranchAssignmentContent } from "../lib/branch-assignment-content.js";
+import { upsertBranchContentFromLive } from "../lib/upsert-branch-content-from-live.js";
 import type { updateBranchAssignmentInputSchema, updateBranchAssignmentOutputSchema } from "@cv-tool/contracts";
 
 type UpdateBranchAssignmentInput = z.infer<typeof updateBranchAssignmentInputSchema>;
@@ -19,62 +21,69 @@ export async function updateBranchAssignment(
 ): Promise<UpdateBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  const existing = await db
-    .selectFrom("branch_assignments as ba")
-    .innerJoin("resume_branches as rb", "rb.id", "ba.branch_id")
-    .innerJoin("resumes as r", "r.id", "rb.resume_id")
-    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-    .select(["ba.id", "r.employee_id", "a.employee_id as assignment_employee_id"])
-    .where("ba.id", "=", input.id)
-    .where("a.deleted_at", "is", null)
-    .executeTakeFirst();
+  const branch = await readBranchAssignmentContent(db, input.branchId);
 
-  if (existing === undefined) {
+  if (branch === null) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (ownerEmployeeId !== null && existing.employee_id !== ownerEmployeeId) {
+  if (ownerEmployeeId !== null && branch.employeeId !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
-  const updates: Record<string, unknown> = { updated_at: new Date() };
-  if (input.clientName !== undefined) updates.client_name = input.clientName;
-  if (input.role !== undefined) updates.role = input.role;
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.startDate !== undefined) updates.start_date = new Date(input.startDate);
-  if (input.endDate !== undefined) updates.end_date = input.endDate ? new Date(input.endDate) : null;
-  if (input.technologies !== undefined) updates.technologies = input.technologies;
-  if (input.isCurrent !== undefined) updates.is_current = input.isCurrent;
-  if (input.keywords !== undefined) updates.keywords = input.keywords;
-  if (input.type !== undefined) updates.type = input.type;
-  if (input.highlight !== undefined) updates.highlight = input.highlight;
-  if (input.sortOrder !== undefined) updates.sort_order = input.sortOrder;
+  const existing = branch.content.assignments.find((assignment) =>
+    assignment.assignmentId === input.id,
+  );
+  if (!existing) {
+    throw new ORPCError("NOT_FOUND");
+  }
 
-  const updated = await db
-    .updateTable("branch_assignments")
-    .set(updates)
-    .where("id", "=", input.id)
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  const nextAssignments = branch.content.assignments.map((assignment) =>
+    assignment.assignmentId === input.id
+      ? {
+          ...assignment,
+          ...(input.clientName !== undefined ? { clientName: input.clientName } : {}),
+          ...(input.role !== undefined ? { role: input.role } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
+          ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
+          ...(input.technologies !== undefined ? { technologies: input.technologies } : {}),
+          ...(input.isCurrent !== undefined ? { isCurrent: input.isCurrent } : {}),
+          ...(input.keywords !== undefined ? { keywords: input.keywords } : {}),
+          ...(input.type !== undefined ? { type: input.type } : {}),
+          ...(input.highlight !== undefined ? { highlight: input.highlight } : {}),
+          ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        }
+      : assignment,
+  );
+
+  await upsertBranchContentFromLive(db, {
+    resumeId: branch.resumeId,
+    branchId: branch.branchId,
+    userId: user.id,
+    assignments: nextAssignments,
+  });
+
+  const updated = nextAssignments.find((assignment) => assignment.assignmentId === input.id)!;
 
   return {
-    id: updated.id,
-    assignmentId: updated.assignment_id,
-    branchId: updated.branch_id,
-    employeeId: existing.assignment_employee_id,
-    clientName: updated.client_name,
+    id: updated.assignmentId,
+    assignmentId: updated.assignmentId,
+    branchId: branch.branchId,
+    employeeId: branch.employeeId,
+    clientName: updated.clientName,
     role: updated.role,
     description: updated.description,
-    startDate: updated.start_date,
-    endDate: updated.end_date,
+    startDate: updated.startDate,
+    endDate: updated.endDate,
     technologies: updated.technologies,
-    isCurrent: updated.is_current,
+    isCurrent: updated.isCurrent,
     keywords: updated.keywords,
     type: updated.type,
     highlight: updated.highlight,
-    sortOrder: updated.sort_order,
-    createdAt: updated.created_at,
-    updatedAt: updated.updated_at,
+    sortOrder: updated.sortOrder,
+    createdAt: branch.createdAt,
+    updatedAt: new Date(),
   };
 }
 
