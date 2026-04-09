@@ -453,18 +453,20 @@ export function ResumeDetailPage({
     const patch = buildDraftPatch();
 
     if (isBranchBackedMode && activeBranchId) {
-      // Branch edit: create a new commit with the overridden content — does NOT touch the live resume
+      // Branch edit: create a new commit with the overridden content.
       await saveVersion.mutateAsync({ branchId: activeBranchId, ...patch });
-    } else {
-      if (!mainBranchId) {
-        updateResume.mutate(patch);
-        return;
-      }
-
-      // Main save must update the live resume and create a visible branch commit.
-      await updateResume.mutateAsync(patch);
-      await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
+      return;
     }
+
+    if (!mainBranchId) {
+      updateResume.mutate(patch);
+      return;
+    }
+
+    // Main branch save is tree-backed as well, so a single saveResumeVersion
+    // call should create the commit and advance HEAD without a separate live
+    // content write first.
+    await saveVersion.mutateAsync({ branchId: mainBranchId, ...patch });
   };
 
   const handleSaveAsNewVersion = async (name: string) => {
