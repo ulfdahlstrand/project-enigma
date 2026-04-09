@@ -8,9 +8,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { diffResumeCommits } from "../lib/resume-diff.js";
-import {
-  resumeCommitContentSchema,
-} from "@cv-tool/contracts";
+import { readTreeContent } from "../lib/read-tree-content.js";
 import type {
   compareResumeCommitsInputSchema,
   compareResumeCommitsOutputSchema,
@@ -48,13 +46,13 @@ export async function compareResumeCommits(
     db
       .selectFrom("resume_commits as rc")
       .innerJoin("resumes as r", "r.id", "rc.resume_id")
-      .select(["rc.id", "rc.resume_id", "rc.content", "r.employee_id"])
+      .select(["rc.id", "rc.resume_id", "rc.tree_id", "r.employee_id"])
       .where("rc.id", "=", input.baseCommitId)
       .executeTakeFirst(),
     db
       .selectFrom("resume_commits as rc")
       .innerJoin("resumes as r", "r.id", "rc.resume_id")
-      .select(["rc.id", "rc.resume_id", "rc.content", "r.employee_id"])
+      .select(["rc.id", "rc.resume_id", "rc.tree_id", "r.employee_id"])
       .where("rc.id", "=", input.headCommitId)
       .executeTakeFirst(),
   ]);
@@ -76,8 +74,15 @@ export async function compareResumeCommits(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const baseContent = resumeCommitContentSchema.parse(baseRow.content);
-  const headContent = resumeCommitContentSchema.parse(headRow.content);
+  if (!baseRow.tree_id || !headRow.tree_id) {
+    throw new ORPCError("BAD_REQUEST", { message: "One or more commits use a legacy format" });
+  }
+
+  const [baseContent, headContent] = await Promise.all([
+    readTreeContent(db, baseRow.tree_id),
+    readTreeContent(db, headRow.tree_id),
+  ]);
+
   const diff = diffResumeCommits(baseContent, headContent);
 
   return {

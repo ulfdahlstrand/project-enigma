@@ -68,13 +68,11 @@ export async function updateResume(
 
   const set: {
     title?: string;
-    summary?: string | null;
     language?: string;
     is_main?: boolean;
   } = {};
 
   if (input.title !== undefined) set.title = input.title;
-  if (input.summary !== undefined) set.summary = input.summary;
   if (input.language !== undefined) set.language = input.language;
   if (input.isMain !== undefined) set.is_main = input.isMain;
 
@@ -90,30 +88,6 @@ export async function updateResume(
       throw new ORPCError("NOT_FOUND");
     }
 
-    if (input.highlightedItems !== undefined) {
-      await trx
-        .deleteFrom("resume_highlighted_items")
-        .where("resume_id", "=", input.id)
-        .execute();
-
-      const nextHighlightedItems = input.highlightedItems
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-      if (nextHighlightedItems.length > 0) {
-        await trx
-          .insertInto("resume_highlighted_items")
-          .values(
-            nextHighlightedItems.map((text, index) => ({
-              resume_id: input.id,
-              text,
-              sort_order: index,
-            })),
-          )
-          .execute();
-      }
-    }
-
     const nextBranchContent = mainBranchId !== null
       ? await upsertBranchContentFromLive(trx, {
         resumeId: input.id,
@@ -121,6 +95,8 @@ export async function updateResume(
         userId: user.id,
         ...(input.consultantTitle !== undefined ? { consultantTitle: input.consultantTitle } : {}),
         ...(input.presentation !== undefined ? { presentation: input.presentation } : {}),
+        ...(input.summary !== undefined ? { summary: input.summary } : {}),
+        ...(input.highlightedItems !== undefined ? { highlightedItems: input.highlightedItems.map((s) => s.trim()).filter(Boolean) } : {}),
       })
       : null;
 
@@ -131,21 +107,14 @@ export async function updateResume(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const highlightedItemRows = await db
-    .selectFrom("resume_highlighted_items")
-    .select(["text"])
-    .where("resume_id", "=", input.id)
-    .orderBy("sort_order", "asc")
-    .execute();
-
   return {
     id: updatedResume.id,
     employeeId: updatedResume.employee_id,
     title: updatedResume.title,
     consultantTitle: branchContent?.consultantTitle ?? null,
     presentation: branchContent?.presentation ?? [],
-    summary: updatedResume.summary,
-    highlightedItems: highlightedItemRows.map((item) => item.text),
+    summary: branchContent?.summary ?? null,
+    highlightedItems: branchContent?.highlightedItems ?? [],
     language: updatedResume.language,
     isMain: updatedResume.is_main,
     createdAt: updatedResume.created_at,

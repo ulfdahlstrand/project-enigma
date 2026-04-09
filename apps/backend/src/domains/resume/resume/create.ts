@@ -3,10 +3,11 @@ import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
 import type { Kysely } from "kysely";
-import type { Database } from "../../../db/types.js";
+import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { buildCommitTree } from "../lib/build-commit-tree.js";
 import type { createResumeInputSchema, createResumeOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -52,7 +53,6 @@ export async function createResume(
         employee_id: input.employeeId,
         title: input.title,
         language,
-        summary: input.summary ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -62,7 +62,7 @@ export async function createResume(
       .insertInto("resume_branches")
       .values({
         resume_id: newResume.id,
-        name: "main",
+        name: "default",
         language,
         is_main: true,
         head_commit_id: null,
@@ -73,24 +73,28 @@ export async function createResume(
       .executeTakeFirstOrThrow();
 
     // 3. Create the root commit (empty snapshot)
-    const initialContent = JSON.stringify({
+    const initialContent: ResumeCommitContent = {
       title: newResume.title,
       consultantTitle: null,
       presentation: [],
-      summary: newResume.summary,
+      summary: input.summary ?? null,
       highlightedItems: [],
       language,
+      education: [],
       skillGroups: [],
       skills: [],
       assignments: [],
-    });
+    };
+
+    const treeId = await buildCommitTree(trx, newResume.id, input.employeeId, initialContent);
 
     const rootCommit = await trx
       .insertInto("resume_commits")
       .values({
         resume_id: newResume.id,
-        content: initialContent,
-        message: "initial",
+        tree_id: treeId,
+        title: "initial",
+        description: "",
         created_by: user.id,
       })
       .returningAll()
@@ -112,7 +116,7 @@ export async function createResume(
     title: resume.title,
     consultantTitle: null,
     presentation: [],
-    summary: resume.summary,
+    summary: input.summary ?? null,
     highlightedItems: [],
     language: resume.language,
     isMain: resume.is_main,
@@ -120,8 +124,10 @@ export async function createResume(
     headCommitId: branch.head_commit_id,
     createdAt: resume.created_at,
     updatedAt: resume.updated_at,
+    education: [],
     skillGroups: [],
     skills: [],
+    assignments: [],
   };
 }
 

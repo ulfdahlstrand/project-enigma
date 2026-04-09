@@ -1,9 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { buildExportData } from "./build-export-data.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+import { filterDeletedAssignments } from "../../resume/lib/branch-assignment-content.js";
+
+vi.mock("../../resume/lib/read-tree-content.js");
+vi.mock("../../resume/lib/branch-assignment-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -13,50 +18,29 @@ const EMPLOYEE_ID = "550e8400-e29b-41d4-a716-446655440011";
 const EMPLOYEE_ID_2 = "550e8400-e29b-41d4-a716-446655440012";
 const RESUME_ID = "550e8400-e29b-41d4-a716-446655440021";
 const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
+const TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
 
 const RESUME_ROW = {
   id: RESUME_ID,
   employee_id: EMPLOYEE_ID,
   summary: null,
   language: "en",
+  branch_name: "default",
   head_commit_id: COMMIT_ID,
   forked_from_commit_id: null,
 };
 
 const EMPLOYEE_ROW = {
-  id: EMPLOYEE_ID,
   name: "Alice Smith",
   email: "alice@example.com",
   profile_image_data_url: "data:image/png;base64,display",
 };
 
-const SKILL_ROWS = [
-  { name: "TypeScript", category: "Languages", sort_order: 1 },
-];
-
-const ASSIGNMENT_ROWS = [
-  {
-    role: "Engineer",
-    client_name: "Acme Corp",
-    start_date: "2020-01-01",
-    end_date: null,
-    is_current: true,
-    type: null,
-    technologies: ["TypeScript"],
-    keywords: null,
-    description: "Built things",
-  },
-];
-
 const EDUCATION_ROWS = [
   { type: "degree", value: "BSc Computer Science", sort_order: 1 },
 ];
 
-const HIGHLIGHTED_ITEM_ROWS = [
-  { text: "Engineer hos Acme Corp" },
-];
-
-const COMMIT_CONTENT = {
+const TREE_CONTENT = {
   title: "Senior Engineer",
   consultantTitle: "Tech Lead",
   presentation: ["Expert consultant"],
@@ -84,9 +68,13 @@ const COMMIT_CONTENT = {
 };
 
 const COMMIT_ROW = {
-  id: COMMIT_ID,
   resume_id: RESUME_ID,
-  content: COMMIT_CONTENT,
+  tree_id: TREE_ID,
+};
+
+const BRANCH_ROW = {
+  id: "550e8400-e29b-41d4-a716-446655440061",
+  name: "default",
 };
 
 // ---------------------------------------------------------------------------
@@ -96,21 +84,17 @@ const COMMIT_ROW = {
 function buildDbMock(opts: {
   resumeRow?: unknown;
   employeeRow?: unknown;
-  skillRows?: unknown[];
-  assignmentRows?: unknown[];
   educationRows?: unknown[];
-  highlightedItemRows?: unknown[];
   commitRow?: unknown;
+  branchRow?: unknown;
   resolveEmployeeId?: string | null;
 } = {}) {
   const {
     resumeRow = RESUME_ROW,
     employeeRow = EMPLOYEE_ROW,
-    skillRows = SKILL_ROWS,
-    assignmentRows = ASSIGNMENT_ROWS,
     educationRows = EDUCATION_ROWS,
-    highlightedItemRows = HIGHLIGHTED_ITEM_ROWS,
     commitRow = COMMIT_ROW,
+    branchRow = BRANCH_ROW,
     resolveEmployeeId = null,
   } = opts;
 
@@ -119,19 +103,17 @@ function buildDbMock(opts: {
   const empByEmailExec = vi.fn().mockResolvedValue(empByEmailResult);
   const empByEmailWhere = vi.fn().mockReturnValue({ executeTakeFirst: empByEmailExec });
 
-  // Employee by id chain (selects ["id","name","email"])
+  // Employee by id chain (selects array of fields)
   const empByIdExec = vi.fn().mockResolvedValue(employeeRow);
   const empByIdWhere = vi.fn().mockReturnValue({ executeTakeFirst: empByIdExec });
 
-  // Dispatch: when select receives a string it's resolveEmployeeId ("id");
-  // when it receives an array it's the full employee lookup.
   const empSelectDispatch = vi.fn().mockImplementation((fields: unknown) => {
     return Array.isArray(fields)
       ? { where: empByIdWhere }
       : { where: empByEmailWhere };
   });
 
-  // Resume chain (used both as `select(...)` for ownership check and `selectAll()` in buildFromLive)
+  // Resume chain
   const resolvedResume = resumeRow === null ? undefined : resumeRow;
   const resumeExecFirst = vi.fn().mockResolvedValue(resolvedResume);
   const resumeExecFirstOrThrow = vi.fn().mockResolvedValue(resolvedResume);
@@ -140,32 +122,12 @@ function buildDbMock(opts: {
     executeTakeFirstOrThrow: resumeExecFirstOrThrow,
   });
   const resumeSelect = vi.fn().mockReturnValue({ where: resumeWhere });
-  const resumeSelectAll = vi.fn().mockReturnValue({ where: resumeWhere });
   const resumeLeftJoin = vi.fn().mockReturnValue({ select: resumeSelect });
 
-  // Commit chain
+  // Commit chain (returns tree_id)
   const commitExec = vi.fn().mockResolvedValue(commitRow === null ? undefined : commitRow);
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExec });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
-
-  // Skills chain
-  const skillsExec = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExec });
-  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
-  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
-  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
-
-  // Assignments chain — two innerJoins (resume_branches + assignments), three wheres, two orderBys
-  const assignExec = vi.fn().mockResolvedValue(assignmentRows);
-  const assignOrderBy2 = vi.fn().mockReturnValue({ execute: assignExec });
-  const assignOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignOrderBy2 });
-  const assignWhere3 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
-  const assignWhere2 = vi.fn().mockReturnValue({ where: assignWhere3 });
-  const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2 });
-  const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere1 });
-  const assignInnerJoin2 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
-  const assignInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: assignInnerJoin2 });
 
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);
@@ -173,21 +135,13 @@ function buildDbMock(opts: {
   const eduWhere = vi.fn().mockReturnValue({ orderBy: eduOrderBy });
   const eduSelectAll = vi.fn().mockReturnValue({ where: eduWhere });
 
-  // Highlighted items chain
-  const highlightedExec = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExec });
-  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
-  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
-
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelectDispatch };
-    if (table === "resumes") return { select: resumeSelect, selectAll: resumeSelectAll };
+    if (table === "resumes") return { select: resumeSelect };
     if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
-    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
-    if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
+    if (table === "resume_branches") return { select: resumeSelect };
     if (table === "education") return { selectAll: eduSelectAll };
-    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     throw new Error(`Unexpected table: ${table}`);
   });
 
@@ -199,6 +153,12 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("buildExportData — live path (no commitId)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
+  });
+
   it("returns mapped export data for admin", async () => {
     const { db } = buildDbMock();
 
@@ -210,12 +170,27 @@ describe("buildExportData — live path (no commitId)", () => {
     expect(result.resumeId).toBe(RESUME_ID);
     expect(result.employeeId).toBe(EMPLOYEE_ID);
     expect(result.commitId).toBeNull();
+    expect(result.language).toBe("sv");
+    expect(result.branchName).toBe("default");
     expect(result.consultantTitle).toBe("Tech Lead");
     expect(result.presentation).toEqual(["Expert consultant"]);
-    expect(result.skills).toHaveLength(1);
+    expect(result.skills).toEqual([{ name: "Go", category: null }]);
+    expect(result.highlightedItems).toEqual(["Lead hos Beta Inc"]);
     expect(result.assignments).toHaveLength(1);
     expect(result.education).toHaveLength(1);
-    expect(result.highlightedItems).toEqual(["Engineer hos Acme Corp"]);
+  });
+
+  it("returns empty skills/highlights when no HEAD commit exists", async () => {
+    const resumeWithNoCommit = { ...RESUME_ROW, head_commit_id: null, forked_from_commit_id: null };
+    const { db } = buildDbMock({ resumeRow: resumeWithNoCommit });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined);
+
+    expect(result.skills).toEqual([]);
+    expect(result.highlightedItems).toEqual([]);
+    expect(result.consultantTitle).toBe("");
+    expect(result.presentation).toEqual([]);
+    expect(vi.mocked(readTreeContent)).not.toHaveBeenCalled();
   });
 
   it("throws NOT_FOUND when resume does not exist", async () => {
@@ -252,24 +227,30 @@ describe("buildExportData — live path (no commitId)", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildExportData — snapshot path (commitId provided)", () => {
-  it("returns data from commit snapshot, not live tables", async () => {
-    const { db } = buildDbMock({ commitRow: COMMIT_ROW });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
+  });
 
-    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID);
+  it("returns data from commit tree, not live tables", async () => {
+    const { db } = buildDbMock();
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID, BRANCH_ROW.id);
 
     expect(result.commitId).toBe(COMMIT_ID);
+    expect(result.branchName).toBe("default");
     expect(result.profileImageDataUrl).toBe("data:image/png;base64,display");
     expect(result.language).toBe("sv");
     expect(result.consultantTitle).toBe("Tech Lead");
-    expect(result.skills).toHaveLength(1);
-    expect(result.skills[0].name).toBe("Go");
+    expect(result.skills).toEqual([{ name: "Go", category: null }]);
     expect(result.assignments).toHaveLength(1);
-    expect(result.assignments[0].client_name).toBe("Beta Inc");
+    expect(result.assignments[0]?.client_name).toBe("Beta Inc");
     expect(result.highlightedItems).toEqual(["Lead hos Beta Inc"]);
   });
 
   it("education is still fetched live in snapshot path", async () => {
-    const { db } = buildDbMock({ commitRow: COMMIT_ROW });
+    const { db } = buildDbMock();
 
     const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID);
 
@@ -289,11 +270,9 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
   });
 
   it("throws BAD_REQUEST when commit belongs to a different resume", async () => {
-    const wrongResumeCommit = {
-      ...COMMIT_ROW,
-      resume_id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
-    };
-    const { db } = buildDbMock({ commitRow: wrongResumeCommit });
+    const { db } = buildDbMock({
+      commitRow: { ...COMMIT_ROW, resume_id: "ffffffff-ffff-ffff-ffff-ffffffffffff" },
+    });
 
     await expect(
       buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID)

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resumeCommitAssignmentSchema, resumeCommitEducationSchema } from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
 // Resume schemas
@@ -47,6 +48,8 @@ export const resumeSchema = z.object({
 export const resumeWithSkillsSchema = resumeSchema.extend({
   skillGroups: z.array(resumeSkillGroupSchema),
   skills: z.array(resumeSkillSchema),
+  assignments: z.array(resumeCommitAssignmentSchema).default([]),
+  education: z.array(resumeCommitEducationSchema).default([]),
 });
 
 // ---------------------------------------------------------------------------
@@ -118,77 +121,6 @@ export const updateResumeOutputSchema = resumeSchema;
 
 export const deleteResumeInputSchema = z.object({ id: z.string().uuid() });
 export const deleteResumeOutputSchema = z.object({ deleted: z.literal(true) });
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// createResumeSkillGroup schemas
-// ---------------------------------------------------------------------------
-
-export const createResumeSkillGroupInputSchema = z.object({
-  resumeId: z.string().uuid(),
-  name: z.string().min(1),
-  sortOrder: z.number().int().optional(),
-});
-
-export const createResumeSkillGroupOutputSchema = resumeSkillGroupSchema;
-
-// ---------------------------------------------------------------------------
-// updateResumeSkillGroup schemas
-// ---------------------------------------------------------------------------
-
-export const updateResumeSkillGroupInputSchema = z
-  .object({
-    id: z.string().uuid(),
-    name: z.string().min(1).optional(),
-    sortOrder: z.number().int().optional(),
-  })
-  .refine(
-    (d) => d.name !== undefined || d.sortOrder !== undefined,
-    { message: "At least one field must be provided" },
-  );
-
-export const updateResumeSkillGroupOutputSchema = resumeSkillGroupSchema;
-
-// ---------------------------------------------------------------------------
-// createResumeSkill schemas
-// ---------------------------------------------------------------------------
-
-export const createResumeSkillInputSchema = z.object({
-  resumeId: z.string().uuid(),
-  groupId: z.string().uuid(),
-  name: z.string().min(1),
-  sortOrder: z.number().int().optional(),
-});
-
-export const createResumeSkillOutputSchema = resumeSkillSchema;
-
-// ---------------------------------------------------------------------------
-// updateResumeSkill schemas
-// ---------------------------------------------------------------------------
-
-export const updateResumeSkillInputSchema = z
-  .object({
-    id: z.string().uuid(),
-    name: z.string().min(1).optional(),
-    groupId: z.string().uuid().optional(),
-    sortOrder: z.number().int().optional(),
-  })
-  .refine(
-    (d) =>
-      d.name !== undefined ||
-      d.groupId !== undefined ||
-      d.sortOrder !== undefined,
-    { message: "At least one field must be provided" }
-  );
-
-export const updateResumeSkillOutputSchema = resumeSkillSchema;
-
-// ---------------------------------------------------------------------------
-// deleteResumeSkill schemas
-// ---------------------------------------------------------------------------
-
-export const deleteResumeSkillInputSchema = z.object({ id: z.string().uuid() });
-export const deleteResumeSkillOutputSchema = z.object({ deleted: z.literal(true) });
 
 // ---------------------------------------------------------------------------
 // Inferred TypeScript types

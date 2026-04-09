@@ -5,6 +5,7 @@ import type {
   Database,
   NewAIRevisionWorkItem,
 } from "../../../db/types.js";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 
 type WorkItemToolName =
   | "set_revision_work_items"
@@ -357,12 +358,12 @@ export async function replacePersistedAutomaticBroadRevisionWorkItems(
     scope: "whole_resume" | "all_assignments";
   },
 ) {
-  const assignments = await db
-    .selectFrom("branch_assignments")
-    .select(["assignment_id as assignmentId", "client_name as clientName", "role"])
-    .where("branch_id", "=", input.branchId)
-    .orderBy("sort_order", "asc")
-    .execute();
+  const branch = await readBranchAssignmentContent(db, input.branchId);
+  const assignments = (branch?.content.assignments ?? []).map((assignment) => ({
+    assignmentId: assignment.assignmentId,
+    clientName: assignment.clientName,
+    role: assignment.role,
+  }));
 
   const items = buildAutomaticBroadRevisionWorkItems(input.scope, assignments);
   await replacePersistedRevisionWorkItems(db, {

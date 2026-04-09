@@ -4,8 +4,10 @@ import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { RefObject } from "react";
 import { ConsultantAvatar } from "../ConsultantAvatar";
+import { getResumeLanguageTranslations } from "./resume-language-translations";
 
 interface ResumeCoverPageContentProps {
+  language?: string | null | undefined;
   employeeName: string;
   profileImageDataUrl: string | null;
   consultantTitle: string | null;
@@ -25,6 +27,7 @@ interface ResumeCoverPageContentProps {
 }
 
 export function ResumeCoverPageContent({
+  language,
   employeeName,
   profileImageDataUrl,
   consultantTitle,
@@ -43,6 +46,7 @@ export function ResumeCoverPageContent({
   onDraftHighlightedItemsChange,
 }: ResumeCoverPageContentProps) {
   const { t } = useTranslation("common");
+  const labels = getResumeLanguageTranslations(language);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100%", pt: "112px" }}>
@@ -116,7 +120,7 @@ export function ResumeCoverPageContent({
                   variant="caption"
                   sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
                 >
-                  {t("resume.detail.specialSkillsHeading").toUpperCase()}
+                  {labels.specialSkillsHeading}
                 </Typography>
                 {isEditing ? (
                   <TextField
@@ -143,7 +147,7 @@ export function ResumeCoverPageContent({
                   variant="caption"
                   sx={{ fontWeight: 700, letterSpacing: "0.08em", display: "block", mb: 0.75 }}
                 >
-                  {t("resume.detail.highlightedExperienceHeading").toUpperCase()}
+                  {labels.experienceSummaryHeading}
                 </Typography>
                 {isEditing ? (
                   <TextField

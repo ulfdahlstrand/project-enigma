@@ -8,6 +8,7 @@ import type {
 } from "../../../db/types.js";
 import { parseRevisionToolArguments } from "./revision-tools.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 
 type SuggestionToolName =
   | "set_assignment_suggestions"
@@ -61,33 +62,11 @@ async function fetchOriginalTexts(
   db: Kysely<Database>,
   branchId: string,
 ): Promise<OriginalTextMap> {
-  const branch = await db
-    .selectFrom("resume_branches")
-    .select(["head_commit_id", "forked_from_commit_id"])
-    .where("id", "=", branchId)
-    .executeTakeFirst();
-
-  const commitId = branch?.head_commit_id ?? branch?.forked_from_commit_id ?? null;
-  let content: ResumeCommitContent | null = null;
-
-  if (commitId) {
-    const commit = await db
-      .selectFrom("resume_commits")
-      .select("content")
-      .where("id", "=", commitId)
-      .executeTakeFirst();
-    content = commit?.content ?? null;
-  }
-
-  const rawAssignments = await db
-    .selectFrom("branch_assignments")
-    .select(["assignment_id", "description"])
-    .where("branch_id", "=", branchId)
-    .execute();
-
+  const branch = await readBranchAssignmentContent(db, branchId);
+  const content: ResumeCommitContent | null = branch?.content ?? null;
   const assignments = new Map<string, string>();
-  for (const a of rawAssignments) {
-    assignments.set(a.assignment_id, a.description);
+  for (const assignment of content?.assignments ?? []) {
+    assignments.set(assignment.assignmentId, assignment.description);
   }
 
   return {

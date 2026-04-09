@@ -111,8 +111,7 @@ const GRAPH = {
       id: "commit-id-1",
       resumeId: "resume-id-1",
       parentCommitId: null,
-      message: "Initial version",
-      title: "",
+      title: "Initial version",
       description: "",
       createdAt: "2024-06-01T10:00:00Z",
     },
@@ -120,7 +119,6 @@ const GRAPH = {
       id: "commit-id-2",
       resumeId: "resume-id-1",
       parentCommitId: "commit-id-1",
-      message: "",
       title: "",
       description: "",
       createdAt: "2024-06-02T10:00:00Z",
@@ -129,8 +127,7 @@ const GRAPH = {
       id: "commit-id-3",
       resumeId: "resume-id-1",
       parentCommitId: "commit-id-1",
-      message: "Swedish version",
-      title: "",
+      title: "Swedish version",
       description: "",
       createdAt: "2024-06-03T10:00:00Z",
     },
@@ -138,8 +135,7 @@ const GRAPH = {
       id: "commit-id-4",
       resumeId: "resume-id-1",
       parentCommitId: "commit-id-3",
-      message: "German version",
-      title: "",
+      title: "German version",
       description: "",
       createdAt: "2024-06-04T10:00:00Z",
     },
@@ -163,8 +159,7 @@ const GRAPH_WITH_MERGE = {
       id: "commit-id-5",
       resumeId: "resume-id-1",
       parentCommitId: "commit-id-2",
-      message: "Merge Swedish variant",
-      title: "",
+      title: "Merge Swedish variant",
       description: "",
       createdAt: "2024-06-05T10:00:00Z",
     },
@@ -510,6 +505,19 @@ describe("UX improvements", () => {
     renderPage();
     await screen.findByText("Initial version");
     expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
+  });
+
+  it("navigates to a GitHub-like compare range for the selected branch", async () => {
+    const user = userEvent.setup();
+    renderPage("branch-id-2");
+
+    await screen.findByText("Swedish version");
+    await user.click(screen.getByRole("button", { name: enCommon.resume.history.compareButton }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/compare/$range",
+      params: { id: "resume-id-1", range: "main...Swedish Variant" },
+    });
   });
 
   it("disables merge and delete actions for the main branch", async () => {

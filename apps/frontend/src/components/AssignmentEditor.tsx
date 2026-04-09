@@ -19,9 +19,9 @@ import { orpc } from "../orpc-client";
 // ---------------------------------------------------------------------------
 
 export interface AssignmentRow {
-  /** branch_assignment id — used for content updates */
+  /** Row id used by the current caller. May or may not equal assignmentId. */
   id: string;
-  /** assignment identity id — used for deletion */
+  /** Stable assignment identity id used for branch-scoped content updates. */
   assignmentId: string;
   clientName: string;
   role: string;
@@ -35,6 +35,7 @@ export interface AssignmentRow {
 
 interface AssignmentEditorProps {
   assignments: AssignmentRow[];
+  branchId: string;
   queryKey: readonly unknown[];
   /** Canvas element (position:relative) used to portal AI FABs outside the paper. */
   canvasEl?: HTMLElement | null;
@@ -87,7 +88,7 @@ function buildDraft(a: AssignmentRow): DraftState {
 // AssignmentEditor
 // ---------------------------------------------------------------------------
 
-export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, onAutoEditConsumed }: AssignmentEditorProps) {
+export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, autoEditId, onAutoEditConsumed }: AssignmentEditorProps) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
 
@@ -101,7 +102,7 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
 
   useEffect(() => {
     if (!autoEditId) return;
-    const target = assignments.find((a) => a.id === autoEditId);
+    const target = assignments.find((a) => a.id === autoEditId || a.assignmentId === autoEditId);
     if (!target) return;
     startEdit(target);
     onAutoEditConsumed?.();
@@ -124,11 +125,14 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
     onSuccess: async () => {
       setConfirmDeleteId(null);
       cancelEdit();
-      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
     },
   });
 
-  // All content edits go through updateBranchAssignment (id = branch_assignment id)
+  // All content edits are scoped to the active branch and assignment identity.
   const updateMutation = useMutation({
     mutationFn: (input: Parameters<typeof orpc.updateBranchAssignment>[0]) =>
       orpc.updateBranchAssignment(input),
@@ -136,7 +140,10 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
       setEditingId(null);
       setDraft(null);
       setSaveError(false);
-      await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
     },
     onError: () => setSaveError(true),
   });
@@ -155,8 +162,10 @@ export function AssignmentEditor({ assignments, queryKey, canvasEl, autoEditId, 
 
   const handleSave = (original: AssignmentRow) => {
     if (!draft) return;
-    // id here is the branch_assignment id
-    const patch: Parameters<typeof orpc.updateBranchAssignment>[0] = { id: original.id };
+    const patch: Parameters<typeof orpc.updateBranchAssignment>[0] = {
+      branchId,
+      id: original.assignmentId,
+    };
 
     if (draft.role !== original.role) patch.role = draft.role;
     if (draft.clientName !== original.clientName) patch.clientName = draft.clientName;

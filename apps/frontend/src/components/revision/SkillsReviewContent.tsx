@@ -11,7 +11,7 @@ export type SkillsReviewSection = {
 
 export type SkillsReviewValue = {
   suggestionId: string;
-  mode: "group_order" | "group_contents";
+  mode: "group_order" | "group_contents" | "group_rename";
   targetCategory?: string;
   originalSections: SkillsReviewSection[];
   suggestedSections: SkillsReviewSection[];
@@ -78,6 +78,8 @@ function SideBySideSkillsReview({ value }: { value: SkillsReviewValue }) {
   const { t } = useTranslation("common");
   const helperText = value.mode === "group_order"
     ? "Only the order of the groups changes in this suggestion."
+    : value.mode === "group_rename"
+      ? `Only the group name changes for ${value.targetCategory ?? "the selected group"} in this suggestion.`
     : `Only ${value.targetCategory ?? "the selected group"} changes in this suggestion.`;
 
   return (
@@ -103,6 +105,9 @@ function SideBySideSkillsReview({ value }: { value: SkillsReviewValue }) {
 
 function sectionsToText(sections: SkillsReviewSection[], mode: SkillsReviewValue["mode"]) {
   if (mode === "group_order") {
+    return sections.map((s) => s.heading).join(", ");
+  }
+  if (mode === "group_rename") {
     return sections.map((s) => s.heading).join(", ");
   }
   return sections.flatMap((s) => s.items).join(", ");

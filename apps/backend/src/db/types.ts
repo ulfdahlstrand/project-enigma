@@ -38,7 +38,6 @@ export interface ResumeTable {
   id: Generated<string>;
   employee_id: string;
   title: string;
-  summary: string | null;
   language: Generated<string>;
   is_main: Generated<boolean>;
   created_at: Generated<Date>;
@@ -49,30 +48,8 @@ export type Resume = Selectable<ResumeTable>;
 export type NewResume = Insertable<ResumeTable>;
 export type ResumeUpdate = Updateable<ResumeTable>;
 
-export interface ResumeSkillGroupTable {
-  id: Generated<string>;
-  resume_id: string;
-  name: string;
-  sort_order: Generated<number>;
-}
 
-export type ResumeSkillGroup = Selectable<ResumeSkillGroupTable>;
-export type NewResumeSkillGroup = Insertable<ResumeSkillGroupTable>;
-export type ResumeSkillGroupUpdate = Updateable<ResumeSkillGroupTable>;
-
-export interface ResumeSkillTable {
-  id: Generated<string>;
-  resume_id: string;
-  group_id: string;
-  name: string;
-  sort_order: Generated<number>;
-}
-
-export type ResumeSkill = Selectable<ResumeSkillTable>;
-export type NewResumeSkill = Insertable<ResumeSkillTable>;
-export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
-
-/** Identity-only record. All mutable content lives in branch_assignments. */
+/** Identity-only record. Branch-specific content lives in resume snapshots. */
 export interface AssignmentTable {
   id: Generated<string>;
   employee_id: string;
@@ -126,6 +103,11 @@ export interface ResumeCommitContent {
   summary: string | null;
   highlightedItems: string[];
   language: string;
+  education: Array<{
+    type: EducationType;
+    value: string;
+    sortOrder: number;
+  }>;
   skillGroups: Array<{
     name: string;
     sortOrder: number;
@@ -158,9 +140,8 @@ export interface ResumeCommitContent {
 export interface ResumeCommitTable {
   id: Generated<string>;
   resume_id: string;
-  /** Full resume snapshot. Read type is the parsed object; insert/update accept JSON string. */
-  content: ColumnType<ResumeCommitContent, string, string>;
-  message: Generated<string>;
+  /** Points to the commit's immutable tree in the Git-inspired content model. */
+  tree_id: string | null;
   /** Short human-readable title for this commit (e.g. "ai(suggestion): …"). */
   title: Generated<string>;
   /** Optional extended description; empty string for most automated commits. */
@@ -204,35 +185,6 @@ export interface ResumeBranchTable {
 export type ResumeBranch = Selectable<ResumeBranchTable>;
 export type NewResumeBranch = Insertable<ResumeBranchTable>;
 export type ResumeBranchUpdate = Updateable<ResumeBranchTable>;
-
-/**
- * Per-branch assignment content. Each row owns the full content for one
- * assignment on one branch — editing is branch-specific.
- */
-export interface BranchAssignmentTable {
-  id: Generated<string>;
-  branch_id: string;
-  assignment_id: string;
-  // Content columns (branch-specific)
-  client_name: string;
-  role: string;
-  description: Generated<string>;
-  start_date: Date;
-  end_date: Date | null;
-  technologies: ColumnType<string[], string[], string[]>;
-  is_current: Generated<boolean>;
-  keywords: string | null;
-  type: string | null;
-  // Curation columns
-  highlight: Generated<boolean>;
-  sort_order: number | null;
-  created_at: Generated<Date>;
-  updated_at: Generated<Date>;
-}
-
-export type BranchAssignment = Selectable<BranchAssignmentTable>;
-export type NewBranchAssignment = Insertable<BranchAssignmentTable>;
-export type BranchAssignmentUpdate = Updateable<BranchAssignmentTable>;
 
 // ---------------------------------------------------------------------------
 // AI assistant tables
@@ -369,27 +321,141 @@ export type UserSession = Selectable<UserSessionTable>;
 export type NewUserSession = Insertable<UserSessionTable>;
 export type UserSessionUpdate = Updateable<UserSessionTable>;
 
-export interface ResumeHighlightedItemTable {
+
+// ---------------------------------------------------------------------------
+// Git-inspired content model — tree layer
+// ---------------------------------------------------------------------------
+
+export interface ResumeEntryTypeTable {
   id: Generated<string>;
-  resume_id: string;
-  text: string;
-  sort_order: Generated<number>;
+  name: string;
+  revision_table: string;
 }
 
-export type ResumeHighlightedItem = Selectable<ResumeHighlightedItemTable>;
-export type NewResumeHighlightedItem = Insertable<ResumeHighlightedItemTable>;
+export interface ResumeTreeTable {
+  id: Generated<string>;
+  created_at: Generated<Date>;
+}
+
+export interface ResumeTreeEntryTable {
+  id: Generated<string>;
+  tree_id: string;
+  entry_type: string;
+  position: number;
+}
+
+export interface ResumeTreeEntryContentTable {
+  entry_id: string;
+  revision_id: string;
+  revision_type: string;
+}
+
+// ---------------------------------------------------------------------------
+// Git-inspired content model — revision tables
+// ---------------------------------------------------------------------------
+
+export interface ResumeMetadataRevisionTable {
+  id: Generated<string>;
+  title: string;
+  language: string;
+  created_at: Generated<Date>;
+}
+
+export interface ConsultantTitleRevisionTable {
+  id: Generated<string>;
+  value: string;
+  created_at: Generated<Date>;
+}
+
+export interface PresentationRevisionTable {
+  id: Generated<string>;
+  paragraphs: string[];
+  created_at: Generated<Date>;
+}
+
+export interface SummaryRevisionTable {
+  id: Generated<string>;
+  content: string;
+  created_at: Generated<Date>;
+}
+
+export interface HighlightedItemRevisionTable {
+  id: Generated<string>;
+  items: string[];
+  created_at: Generated<Date>;
+}
+
+export interface SkillGroupRevisionTable {
+  id: Generated<string>;
+  name: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export interface SkillRevisionTable {
+  id: Generated<string>;
+  name: string;
+  group_revision_id: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export interface AssignmentRevisionTable {
+  id: Generated<string>;
+  assignment_id: string;
+  client_name: string;
+  role: string;
+  description: Generated<string>;
+  technologies: ColumnType<string[], string[], string[]>;
+  start_date: Date;
+  end_date: Date | null;
+  is_current: Generated<boolean>;
+  sort_order: number | null;
+  created_at: Generated<Date>;
+}
+
+export interface EducationRevisionTable {
+  id: Generated<string>;
+  employee_id: string;
+  type: EducationType;
+  value: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+}
+
+export type ResumeEntryType = Selectable<ResumeEntryTypeTable>;
+export type ResumeTree = Selectable<ResumeTreeTable>;
+export type NewResumeTree = Insertable<ResumeTreeTable>;
+export type ResumeTreeEntry = Selectable<ResumeTreeEntryTable>;
+export type NewResumeTreeEntry = Insertable<ResumeTreeEntryTable>;
+export type ResumeTreeEntryContent = Selectable<ResumeTreeEntryContentTable>;
+export type NewResumeTreeEntryContent = Insertable<ResumeTreeEntryContentTable>;
+export type ResumeMetadataRevision = Selectable<ResumeMetadataRevisionTable>;
+export type NewResumeMetadataRevision = Insertable<ResumeMetadataRevisionTable>;
+export type ConsultantTitleRevision = Selectable<ConsultantTitleRevisionTable>;
+export type NewConsultantTitleRevision = Insertable<ConsultantTitleRevisionTable>;
+export type PresentationRevision = Selectable<PresentationRevisionTable>;
+export type NewPresentationRevision = Insertable<PresentationRevisionTable>;
+export type SummaryRevision = Selectable<SummaryRevisionTable>;
+export type NewSummaryRevision = Insertable<SummaryRevisionTable>;
+export type HighlightedItemRevision = Selectable<HighlightedItemRevisionTable>;
+export type NewHighlightedItemRevision = Insertable<HighlightedItemRevisionTable>;
+export type SkillGroupRevision = Selectable<SkillGroupRevisionTable>;
+export type NewSkillGroupRevision = Insertable<SkillGroupRevisionTable>;
+export type SkillRevision = Selectable<SkillRevisionTable>;
+export type NewSkillRevision = Insertable<SkillRevisionTable>;
+export type AssignmentRevision = Selectable<AssignmentRevisionTable>;
+export type NewAssignmentRevision = Insertable<AssignmentRevisionTable>;
+export type EducationRevision = Selectable<EducationRevisionTable>;
+export type NewEducationRevision = Insertable<EducationRevisionTable>;
 
 export interface Database {
   employees: EmployeeTable;
-  resume_highlighted_items: ResumeHighlightedItemTable;
   users: UserTable;
   resumes: ResumeTable;
-  resume_skills: ResumeSkillTable;
-  resume_skill_groups: ResumeSkillGroupTable;
   resume_commits: ResumeCommitTable;
   resume_commit_parents: ResumeCommitParentTable;
   resume_branches: ResumeBranchTable;
-  branch_assignments: BranchAssignmentTable;
   assignments: AssignmentTable;
   education: EducationTable;
   export_records: ExportRecordTable;
@@ -399,6 +465,20 @@ export interface Database {
   ai_revision_work_items: AIRevisionWorkItemTable;
   ai_revision_suggestions: AIRevisionSuggestionTable;
   user_sessions: UserSessionTable;
+  // Git-inspired content model
+  resume_entry_types: ResumeEntryTypeTable;
+  resume_trees: ResumeTreeTable;
+  resume_tree_entries: ResumeTreeEntryTable;
+  resume_tree_entry_content: ResumeTreeEntryContentTable;
+  resume_revision_metadata: ResumeMetadataRevisionTable;
+  resume_revision_consultant_title: ConsultantTitleRevisionTable;
+  resume_revision_presentation: PresentationRevisionTable;
+  resume_revision_summary: SummaryRevisionTable;
+  resume_revision_highlighted_item: HighlightedItemRevisionTable;
+  resume_revision_skill_group: SkillGroupRevisionTable;
+  resume_revision_skill: SkillRevisionTable;
+  resume_revision_assignment: AssignmentRevisionTable;
+  resume_revision_education: EducationRevisionTable;
 }
 
 // ---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ const TRANSLATIONS: Record<string, PdfTranslations> = {
     present: "Present",
     technologies: "TECHNOLOGIES",
     keywords: "KEYWORDS",
-    educationHeading: "Övrigt",
+    educationHeading: "OTHER",
     degrees: "DEGREES",
     certifications: "CERTIFICATIONS",
     languages: "LANGUAGES",

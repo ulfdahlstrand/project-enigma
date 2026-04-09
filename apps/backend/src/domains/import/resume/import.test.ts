@@ -5,6 +5,7 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { importCv, createImportCvHandler } from "./import.js";
 import { upsertBranchContentFromLive } from "../../resume/lib/upsert-branch-content-from-live.js";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 
 vi.mock("../../resume/lib/upsert-branch-content-from-live.js", () => ({
   upsertBranchContentFromLive: vi.fn().mockResolvedValue({
@@ -18,6 +19,10 @@ vi.mock("../../resume/lib/upsert-branch-content-from-live.js", () => ({
     skills: [],
     assignments: [],
   }),
+}));
+
+vi.mock("../../resume/lib/branch-assignment-content.js", () => ({
+  readBranchAssignmentContent: vi.fn().mockResolvedValue(null),
 }));
 
 const EMP_ID = "550e8400-e29b-41d4-a716-446655440011";
@@ -61,11 +66,9 @@ const MAIN_RESUME = { id: "resume-main-id" };
 
 function buildDb({
   mainResume = undefined,
-  existingAssignment = undefined,
   existingEducation = undefined,
 }: {
   mainResume?: { id: string } | undefined;
-  existingAssignment?: { id: string } | undefined;
   existingEducation?: { id: string } | undefined;
 } = {}): MockDb {
   const insertExecute = vi.fn().mockResolvedValue(undefined);
@@ -76,10 +79,9 @@ function buildDb({
   const insertInto = vi.fn().mockReturnValue({ values: insertValues });
 
   // selectFrom chain
-  // Call order: 1) main resume lookup (executeTakeFirst), 2) assignment duplicate check (executeTakeFirst), 3+) education
+  // Call order: 1) main resume lookup, then education duplicate checks.
   const selectExecuteTakeFirst = vi.fn()
     .mockResolvedValueOnce(mainResume)
-    .mockResolvedValueOnce(existingAssignment)
     .mockResolvedValue(existingEducation);
 
   // Used for main branch lookup (executeTakeFirstOrThrow)
@@ -127,6 +129,12 @@ function buildDb({
   return db;
 }
 
+function currentUpsertAssignments() {
+  const calls = vi.mocked(upsertBranchContentFromLive).mock.calls;
+  const latest = calls.at(-1)?.[1] as { assignments?: unknown[] } | undefined;
+  return latest?.assignments ?? [];
+}
+
 describe("importCv — assignments", () => {
   it("creates assignment from valid period", async () => {
     const db = buildDb();
@@ -157,18 +165,50 @@ describe("importCv — assignments", () => {
   });
 
   it("skips duplicate assignments", async () => {
-    const db = buildDb({ existingAssignment: { id: "existing-id" } });
+    const db = buildDb({ mainResume: MAIN_RESUME });
+    vi.mocked(readBranchAssignmentContent).mockResolvedValueOnce({
+      branchId: BRANCH_ID,
+      resumeId: MAIN_RESUME.id,
+      employeeId: EMP_ID,
+      title: "Existing resume",
+      language: "en",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      content: {
+        title: "Existing resume",
+        consultantTitle: null,
+        presentation: [],
+        summary: null,
+        highlightedItems: [],
+        language: "en",
+        education: [],
+        skillGroups: [],
+        skills: [],
+        assignments: [{
+          assignmentId: "existing-assignment",
+          clientName: "Acme Corp",
+          role: "Senior Developer",
+          description: "Old text",
+          startDate: "2023-01-01T00:00:00.000Z",
+          endDate: "2023-12-31T00:00:00.000Z",
+          technologies: [],
+          isCurrent: false,
+          keywords: null,
+          type: null,
+          highlight: false,
+          sortOrder: null,
+        }],
+      },
+    });
     const result = await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     expect(result.assignmentsSkipped).toBe(1);
     expect(result.assignmentsCreated).toBe(0);
   });
 
-  it("passes description directly to the assignment insert", async () => {
+  it("passes description directly into branch content upsert", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
-    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { description: string };
-    expect(passedValues.description).toBe("Built things.\n\nImproved performance.");
+    const assignments = currentUpsertAssignments() as Array<{ description: string }>;
+    expect(assignments[0]?.description).toBe("Built things.\n\nImproved performance.");
   });
 
   it("uses 'Unknown' when client is empty", async () => {
@@ -178,28 +218,32 @@ describe("importCv — assignments", () => {
       assignments: [{ ...BASE_CV_JSON.assignments[0]!, client: "   " }],
     };
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: cv });
-    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
-    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { client_name: string };
-    expect(passedValues.client_name).toBe("Unknown");
+    const assignments = currentUpsertAssignments() as Array<{ clientName: string }>;
+    expect(assignments[0]?.clientName).toBe("Unknown");
   });
 
   it("uses technologies array directly", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    // calls[0] = assignments identity insert, calls[1] = branch_assignments content insert
-    const passedValues = db._mocks.insertValues.mock.calls[1]?.[0] as { technologies: string[] };
-    expect(passedValues.technologies).toEqual(["TypeScript", "Node.js"]);
+    const assignments = currentUpsertAssignments() as Array<{ technologies: string[] }>;
+    expect(assignments[0]?.technologies).toEqual(["TypeScript", "Node.js"]);
   });
 
-  it("links new assignments to branch_assignments via transaction", async () => {
+  it("persists new assignments into the main branch content", async () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
-    // Find the branch_assignments insert call
-    const branchAssignCall = db._mocks.insertValues.mock.calls.find(
-      (call) => (call[0] as { branch_id?: string }).branch_id !== undefined
-    )?.[0] as { branch_id: string; assignment_id: string } | undefined;
-    expect(branchAssignCall?.branch_id).toBe(BRANCH_ID);
-    expect(branchAssignCall?.assignment_id).toBeDefined();
+    expect(upsertBranchContentFromLive).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        branchId: BRANCH_ID,
+        assignments: expect.arrayContaining([
+          expect.objectContaining({
+            assignmentId: "new-id",
+            clientName: "Acme Corp",
+          }),
+        ]),
+      }),
+    );
   });
 });
 
@@ -255,7 +299,7 @@ describe("importCv — resume", () => {
     const db = buildDb({ mainResume: MAIN_RESUME });
     await importCv(db, { employeeId: EMP_ID, language: "en", cvJson: BASE_CV_JSON });
     const assignmentInsert = db._mocks.insertValues.mock.calls.find(
-      (call) => (call[0] as { client_name?: string }).client_name !== undefined
+      (call) => (call[0] as { employee_id?: string }).employee_id === EMP_ID
     )?.[0] as Record<string, unknown> | undefined;
     expect(assignmentInsert).toBeDefined();
     expect(assignmentInsert?.resume_id).toBeUndefined();

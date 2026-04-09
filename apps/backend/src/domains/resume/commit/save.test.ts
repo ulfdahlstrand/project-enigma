@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { saveResumeVersion, createSaveResumeVersionHandler } from "./save.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -18,11 +21,13 @@ const COMMIT_ID = "550e8400-e29b-41d4-a716-446655440041";
 const ASSIGNMENT_ID = "550e8400-e29b-41d4-a716-446655440051";
 // Valid v4 UUID (Zod v4 requires version nibble 1-8 and variant bits)
 const CREATOR_ID = "550e8400-e29b-41d4-a716-446655440099";
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
 
 const BRANCH_ROW = {
   id: BRANCH_ID,
   resume_id: RESUME_ID,
   head_commit_id: null,
+  forked_from_commit_id: null,
   employee_id: EMPLOYEE_ID_1,
   title: "Senior Engineer",
   summary: "Strong backend focus",
@@ -43,21 +48,6 @@ const SKILL_GROUP_ROW = {
   sort_order: 0,
 };
 
-const ASSIGNMENT_ROW = {
-  assignment_id: ASSIGNMENT_ID,
-  client_name: "ACME Corp",
-  role: "Backend Engineer",
-  description: "Built APIs",
-  start_date: new Date("2023-01-01"),
-  end_date: null,
-  technologies: ["Node.js", "PostgreSQL"],
-  is_current: true,
-  keywords: null,
-  type: null,
-  highlight: true,
-  sort_order: 0,
-};
-
 const INSERTED_COMMIT = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
@@ -71,9 +61,23 @@ const INSERTED_COMMIT = {
     language: "en",
     skillGroups: [{ name: "languages", sortOrder: 0 }],
     skills: [{ name: "TypeScript", category: "languages", sortOrder: 0 }],
-    assignments: [],
+    assignments: [
+      {
+        assignmentId: ASSIGNMENT_ID,
+        clientName: "ACME Corp",
+        role: "Backend Engineer",
+        description: "Built APIs",
+        startDate: "2023-01-01T00:00:00.000Z",
+        endDate: null,
+        technologies: ["Node.js", "PostgreSQL"],
+        isCurrent: true,
+        keywords: null,
+        type: null,
+        highlight: true,
+        sortOrder: 0,
+      },
+    ],
   },
-  message: "My version",
   title: "My version",
   description: "",
   created_by: CREATOR_ID,
@@ -87,18 +91,12 @@ const INSERTED_COMMIT = {
 function buildDbMock(opts: {
   branchRow?: unknown;
   headCommitRow?: unknown;
-  skillGroupRows?: unknown[];
-  skillRows?: unknown[];
-  assignmentRows?: unknown[];
   insertedCommit?: unknown;
   employeeId?: string | null;
 } = {}) {
   const {
     branchRow = BRANCH_ROW,
-    headCommitRow = { content: INSERTED_COMMIT.content },
-    skillGroupRows = [SKILL_GROUP_ROW],
-    skillRows = [SKILL_ROW],
-    assignmentRows = [ASSIGNMENT_ROW],
+    headCommitRow = { tree_id: DEFAULT_TREE_ID },
     insertedCommit = INSERTED_COMMIT,
     employeeId = null,
   } = opts;
@@ -107,6 +105,13 @@ function buildDbMock(opts: {
   const empExecuteTakeFirst = vi.fn().mockResolvedValue(employeeId ? { id: employeeId } : undefined);
   const empWhere = vi.fn().mockReturnValue({ executeTakeFirst: empExecuteTakeFirst });
   const empSelect = vi.fn().mockReturnValue({ where: empWhere });
+
+  const educationExecute = vi.fn().mockResolvedValue([]);
+  const educationOrderByThird = vi.fn().mockReturnValue({ execute: educationExecute });
+  const educationOrderBySecond = vi.fn().mockReturnValue({ orderBy: educationOrderByThird });
+  const educationOrderByFirst = vi.fn().mockReturnValue({ orderBy: educationOrderBySecond });
+  const educationWhere = vi.fn().mockReturnValue({ orderBy: educationOrderByFirst });
+  const educationSelectAll = vi.fn().mockReturnValue({ where: educationWhere });
 
   // Branch + resume join query
   const branchExecuteTakeFirst = vi.fn().mockResolvedValue(resolvedBranch);
@@ -119,28 +124,6 @@ function buildDbMock(opts: {
   const headCommitWhere = vi.fn().mockReturnValue({ executeTakeFirst: headCommitExecuteTakeFirst });
   const headCommitSelect = vi.fn().mockReturnValue({ where: headCommitWhere });
 
-  // Skill groups query
-  const skillGroupsExecute = vi.fn().mockResolvedValue(skillGroupRows);
-  const skillGroupsOrderBy = vi.fn().mockReturnValue({ execute: skillGroupsExecute });
-  const skillGroupsWhere = vi.fn().mockReturnValue({ orderBy: skillGroupsOrderBy });
-  const skillGroupsSelect = vi.fn().mockReturnValue({ where: skillGroupsWhere });
-
-  // Skills query
-  const skillsExecute = vi.fn().mockResolvedValue(skillRows);
-  const skillsOrderBy2 = vi.fn().mockReturnValue({ execute: skillsExecute });
-  const skillsOrderBy1 = vi.fn().mockReturnValue({ orderBy: skillsOrderBy2 });
-  const skillsWhere = vi.fn().mockReturnValue({ orderBy: skillsOrderBy1 });
-  const skillsSelect = vi.fn().mockReturnValue({ where: skillsWhere });
-  const skillsInnerJoin = vi.fn().mockReturnValue({ select: skillsSelect });
-
-  // Assignments query — joins assignments table for soft-delete filter (two where calls)
-  const assignmentsExecute = vi.fn().mockResolvedValue(assignmentRows);
-  const assignmentsOrderBy = vi.fn().mockReturnValue({ execute: assignmentsExecute });
-  const assignmentsWhere2 = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy });
-  const assignmentsWhere1 = vi.fn().mockReturnValue({ where: assignmentsWhere2 });
-  const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
-  const assignmentsInnerJoin = vi.fn().mockReturnValue({ select: assignmentsSelect });
-
   // Insert resume_commits
   const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedCommit);
   const insertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: insertExecuteTakeFirstOrThrow });
@@ -150,10 +133,22 @@ function buildDbMock(opts: {
   const parentInsertExecute = vi.fn().mockResolvedValue(undefined);
   const parentInsertValues = vi.fn().mockReturnValue({ execute: parentInsertExecute });
 
+  // Generic insert stub for revision/tree tables introduced by buildCommitTree.
+  // Returns a fixed revision UUID so the function completes without error.
+  const treeInsertReturning = vi.fn().mockReturnValue({
+    executeTakeFirstOrThrow: vi.fn().mockResolvedValue({ id: "00000000-0000-4000-8000-000000000099" }),
+  });
+  const treeInsertExecute = vi.fn().mockResolvedValue(undefined);
+  const treeInsertValues = vi.fn().mockReturnValue({
+    returning: treeInsertReturning,
+    execute: treeInsertExecute,
+  });
+
   const insertInto = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_commits") return { values: insertValues };
     if (table === "resume_commit_parents") return { values: parentInsertValues };
-    return { values: insertValues };
+    // All revision/tree tables from buildCommitTree
+    return { values: treeInsertValues };
   });
 
   // Update branch
@@ -165,17 +160,27 @@ function buildDbMock(opts: {
   // Transaction
   const transaction = vi.fn().mockImplementation(() => ({
     execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
-      const trx = { insertInto, updateTable };
+      const treeBaseExecute = vi.fn().mockResolvedValue([]);
+      const treeBaseOrderBy = vi.fn().mockReturnValue({ execute: treeBaseExecute });
+      const treeBaseWhere = vi.fn().mockReturnValue({ orderBy: treeBaseOrderBy });
+      const treeBaseSelect = vi.fn().mockReturnValue({ where: treeBaseWhere });
+      const treeBaseInnerJoin = vi.fn().mockReturnValue({ select: treeBaseSelect });
+      const trx = {
+        insertInto,
+        updateTable,
+        selectFrom: vi.fn().mockImplementation((table: string) => {
+          if (table === "resume_tree_entries as rte") return { innerJoin: treeBaseInnerJoin };
+          return { innerJoin: branchInnerJoin, select: headCommitSelect };
+        }),
+      };
       return fn(trx);
     }),
   }));
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
+    if (table === "education") return { selectAll: educationSelectAll };
     if (table === "resume_commits") return { select: headCommitSelect };
-    if (table === "resume_skill_groups") return { select: skillGroupsSelect };
-    if (table === "resume_skills as rs") return { innerJoin: skillsInnerJoin };
-    if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
     // resume_branches join
     return { innerJoin: branchInnerJoin };
   });
@@ -189,48 +194,47 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("saveResumeVersion", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue(INSERTED_COMMIT.content as never);
+  });
+
   it("creates a commit with the current resume state and advances HEAD", async () => {
     const { db, insertValues, updateSet } = buildDbMock();
 
-    await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID, message: "My version" });
+    await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID, title: "My version" });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         resume_id: RESUME_ID,
-        message: "My version",
+        title: "My version",
         created_by: MOCK_ADMIN.id,
       })
     );
     expect(updateSet).toHaveBeenCalledWith({ head_commit_id: COMMIT_ID });
   });
 
-  it("uses empty string message when no message provided", async () => {
+  it("uses generated title when no title provided", async () => {
     const { db, insertValues } = buildDbMock();
 
     await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Update skills and assignments",
-        message: "Update skills and assignments",
-        description: "Updated skills and assignments.",
+        title: "Save resume version",
+        description: "Saved the current resume snapshot without content changes.",
       })
     );
   });
 
-  it("generates summary metadata for scalar content changes when message is omitted", async () => {
+  it("generates summary metadata for scalar content changes when title is omitted", async () => {
     const { db, insertValues } = buildDbMock({
-      headCommitRow: {
-        content: {
-          ...INSERTED_COMMIT.content,
-          presentation: ["Old presentation"],
-          summary: "Old summary",
-        },
-      },
-      skillGroupRows: [],
-      skillRows: [],
-      assignmentRows: [],
+      headCommitRow: { tree_id: DEFAULT_TREE_ID },
     });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      ...INSERTED_COMMIT.content,
+      presentation: ["Old presentation"],
+      summary: "Old summary",
+    } as never);
 
     await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,
@@ -241,29 +245,34 @@ describe("saveResumeVersion", () => {
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Update presentation and summary",
-        message: "Update presentation and summary",
         description: "Updated presentation and summary.",
       })
     );
   });
 
-  it("snapshot content includes skills and assignments", async () => {
-    const { db, insertValues } = buildDbMock();
+  it("starts from an empty assignments snapshot when the branch has no base commit", async () => {
+    const { db } = buildDbMock();
 
-    await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+    const result = await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
 
-    const callArg = insertValues.mock.calls[0][0];
-    const content = JSON.parse(callArg.content);
+    expect(result.content.assignments).toEqual([]);
+  });
 
-    expect(content.skillGroups).toEqual([{ name: "languages", sortOrder: 0 }]);
-    expect(content.skills).toHaveLength(1);
-    expect(content.skills[0]).toMatchObject({ name: "TypeScript", category: "languages" });
-    expect(content.assignments).toHaveLength(1);
-    expect(content.assignments[0]).toMatchObject({
-      assignmentId: ASSIGNMENT_ID,
-      clientName: "ACME Corp",
-      highlight: true,
+  it("uses forked commit content as base for the first save on a branch", async () => {
+    const forkedBranchRow = {
+      ...BRANCH_ROW,
+      forked_from_commit_id: "550e8400-e29b-41d4-a716-446655440081",
+    };
+    const { db } = buildDbMock({
+      branchRow: forkedBranchRow,
+      headCommitRow: { tree_id: DEFAULT_TREE_ID },
     });
+
+    const result = await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+
+    expect(result.content.assignments).toHaveLength(1);
+    expect(result.content.skills).toHaveLength(1);
+    expect(vi.mocked(readTreeContent)).toHaveBeenCalledWith(db, DEFAULT_TREE_ID);
   });
 
   it("sets parent_commit_id to the current HEAD of the branch", async () => {
@@ -300,30 +309,27 @@ describe("saveResumeVersion", () => {
   });
 
   it("uses content overrides when provided, ignoring live resume fields", async () => {
-    const { db, insertValues } = buildDbMock();
+    const { db } = buildDbMock();
 
-    await saveResumeVersion(db, MOCK_ADMIN, {
+    const result = await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,
       consultantTitle: "Principal Engineer",
       presentation: ["Overridden paragraph"],
       summary: "Overridden summary",
     });
 
-    const callArg = insertValues.mock.calls[0][0];
-    const content = JSON.parse(callArg.content);
-
-    expect(content.consultantTitle).toBe("Principal Engineer");
-    expect(content.presentation).toEqual(["Overridden paragraph"]);
-    expect(content.summary).toBe("Overridden summary");
+    expect(result.content.consultantTitle).toBe("Principal Engineer");
+    expect(result.content.presentation).toEqual(["Overridden paragraph"]);
+    expect(result.content.summary).toBe("Overridden summary");
     // Non-overridden fields still come from live resume
-    expect(content.title).toBe("Senior Engineer");
-    expect(content.language).toBe("en");
+    expect(result.content.title).toBe("Senior Engineer");
+    expect(result.content.language).toBe("en");
   });
 
   it("uses skills overrides when provided", async () => {
-    const { db, insertValues } = buildDbMock();
+    const { db } = buildDbMock();
 
-    await saveResumeVersion(db, MOCK_ADMIN, {
+    const result = await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,
       skills: [
         { name: "Team leadership", category: "Management", sortOrder: 0 },
@@ -331,30 +337,37 @@ describe("saveResumeVersion", () => {
       ],
     });
 
-    const content = JSON.parse(insertValues.mock.calls[0][0].content);
-    expect(content.skills).toEqual([
+    expect(result.content.skills).toEqual([
       { name: "Team leadership", category: "Management", sortOrder: 0 },
       { name: "Stakeholder management", category: "Management", sortOrder: 1 },
     ]);
   });
 
   it("allows setting consultantTitle to null via override", async () => {
-    const { db, insertValues } = buildDbMock({
-      headCommitRow: {
-        content: {
-          ...INSERTED_COMMIT.content,
-          consultantTitle: "Old Title",
-        },
-      },
-    });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      ...INSERTED_COMMIT.content,
+      consultantTitle: "Old Title",
+    } as never);
+    const { db } = buildDbMock();
 
-    await saveResumeVersion(db, MOCK_ADMIN, {
+    const result = await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,
       consultantTitle: null,
     });
 
-    const content = JSON.parse(insertValues.mock.calls[0][0].content);
-    expect(content.consultantTitle).toBeNull();
+    expect(result.content.consultantTitle).toBeNull();
+  });
+
+  it("includes tree_id in the commit insert", async () => {
+    const { db, insertValues } = buildDbMock();
+
+    await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tree_id: expect.any(String),
+      })
+    );
   });
 
   it("throws FORBIDDEN when consultant tries to save another employee's branch", async () => {

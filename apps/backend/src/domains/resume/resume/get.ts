@@ -9,6 +9,8 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { getResumeOutputSchema } from "@cv-tool/contracts";
+import { filterDeletedAssignments } from "../lib/branch-assignment-content.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
 // getResume — query logic
@@ -86,7 +88,6 @@ export async function getResume(
       "r.id",
       "r.employee_id",
       "r.title",
-      "r.summary",
       "r.language",
       "r.is_main",
       "r.created_at",
@@ -112,7 +113,7 @@ export async function getResume(
     // that exact commit. This is a detached view, so snapshot data must win.
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select(["id", "resume_id", "content"])
+      .select(["id", "resume_id", "tree_id"])
       .where("id", "=", commitId)
       .executeTakeFirst();
 
@@ -120,17 +121,22 @@ export async function getResume(
       throw new ORPCError("NOT_FOUND");
     }
 
-    snapshotContent = commitRow.content as ResumeCommitContent;
+    if (commitRow.tree_id) {
+      snapshotContent = await readTreeContent(db, commitRow.tree_id);
+    }
   } else if (resumeRow.head_commit_id) {
     const commitRow = await db
       .selectFrom("resume_commits")
-      .select("content")
+      .select(["tree_id"])
       .where("id", "=", resumeRow.head_commit_id)
       .executeTakeFirst();
-    snapshotContent = commitRow?.content ?? null;
+    if (commitRow?.tree_id) {
+      snapshotContent = await readTreeContent(db, commitRow.tree_id);
+    }
   }
 
   if (snapshotContent !== null) {
+    const snapshotAssignments = await filterDeletedAssignments(db, snapshotContent.assignments ?? []);
     const snapshotSkills = buildSnapshotSkills(id, snapshotContent);
 
     return {
@@ -139,7 +145,7 @@ export async function getResume(
       title: snapshotContent.title ?? resumeRow.title,
       consultantTitle: snapshotContent.consultantTitle ?? null,
       presentation: snapshotContent.presentation ?? [],
-      summary: snapshotContent.summary ?? resumeRow.summary,
+      summary: snapshotContent.summary ?? null,
       highlightedItems: snapshotContent.highlightedItems ?? [],
       language: snapshotContent.language ?? resumeRow.language,
       isMain: resumeRow.is_main,
@@ -147,75 +153,32 @@ export async function getResume(
       headCommitId: resumeRow.head_commit_id ?? null,
       createdAt: resumeRow.created_at,
       updatedAt: resumeRow.updated_at,
+      education: snapshotContent.education ?? [],
       skillGroups: snapshotSkills.skillGroups,
       skills: snapshotSkills.skills,
+      assignments: snapshotAssignments,
     };
   }
 
-  const skillRows = await db
-    .selectFrom("resume_skills as rs")
-    .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-    .select([
-      "rs.id",
-      "rs.resume_id",
-      "rs.group_id",
-      "rs.name",
-      "rs.sort_order",
-      "rsg.name as group_name",
-      "rsg.sort_order as group_sort_order",
-    ])
-    .where("rs.resume_id", "=", id)
-    .orderBy("rsg.sort_order", "asc")
-    .orderBy("rs.sort_order", "asc")
-    .execute();
-
-  const liveSkillGroups = skillRows.reduce<Array<{
-    id: string;
-    resumeId: string;
-    name: string;
-    sortOrder: number;
-  }>>((acc, row) => {
-    if (acc.some((group) => group.id === row.group_id)) {
-      return acc;
-    }
-    return [...acc, {
-      id: row.group_id,
-      resumeId: row.resume_id,
-      name: row.group_name,
-      sortOrder: row.group_sort_order,
-    }];
-  }, []);
-
-  const highlightedItemRows = await db
-    .selectFrom("resume_highlighted_items")
-    .select(["text"])
-    .where("resume_id", "=", id)
-    .orderBy("sort_order", "asc")
-    .execute();
-
+  // No tree-backed commit — return resume metadata with empty content arrays.
   return {
     id: resumeRow.id,
     employeeId: resumeRow.employee_id,
     title: resumeRow.title,
     consultantTitle: null,
     presentation: [],
-    summary: resumeRow.summary,
-    highlightedItems: highlightedItemRows.map((item) => item.text),
+    summary: null,
+    highlightedItems: [],
     language: resumeRow.language,
     isMain: resumeRow.is_main,
     mainBranchId: resumeRow.branch_id ?? null,
     headCommitId: resumeRow.head_commit_id ?? null,
     createdAt: resumeRow.created_at,
     updatedAt: resumeRow.updated_at,
-    skillGroups: liveSkillGroups,
-    skills: skillRows.map((s) => ({
-      id: s.id,
-      resumeId: s.resume_id,
-      groupId: s.group_id,
-      name: s.name,
-      category: s.group_name,
-      sortOrder: s.sort_order,
-    })),
+    education: [],
+    skillGroups: [],
+    skills: [],
+    assignments: [],
   };
 }
 

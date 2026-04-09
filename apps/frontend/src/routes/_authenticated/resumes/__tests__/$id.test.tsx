@@ -21,6 +21,7 @@ import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../../test-utils/render";
+import { getResumeLanguageTranslations } from "../../../../components/resume-detail/resume-language-translations";
 import { Route, ResumeDetailPage, getResumeQueryKey } from "../$id";
 
 // ---------------------------------------------------------------------------
@@ -164,6 +165,16 @@ const MAIN_BRANCH = {
   createdAt: "2024-01-01T00:00:00Z",
 };
 
+const SWEDISH_BRANCH = {
+  id: "branch-sv-1",
+  resumeId: TEST_RESUME_ID,
+  name: "Swedish",
+  isMain: false,
+  language: "sv",
+  headCommitId: "commit-2",
+  createdAt: "2024-02-01T00:00:00Z",
+};
+
 beforeEach(() => {
   mockListBranchAssignmentsFull.mockResolvedValue([]);
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH]);
@@ -219,6 +230,36 @@ describe("Resume detail rendering", () => {
     expect(chips.length).toBeGreaterThan(0);
   });
 
+  it("prefers the active branch language over the resume language", async () => {
+    mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, SWEDISH_BRANCH]);
+    mockGetResume.mockResolvedValue({
+      ...TEST_RESUME,
+      language: "en",
+    });
+    mockGetResumeCommit.mockResolvedValue({ id: "commit-2", content: {} });
+
+    const queryClient = buildTestQueryClient();
+    renderWithProviders(<ResumeDetailPage forcedBranchId={SWEDISH_BRANCH.id} />, { queryClient });
+
+    const chips = await screen.findAllByText("SV");
+    expect(chips.length).toBeGreaterThan(0);
+  });
+
+  it("renders document headings in the active branch language instead of the UI language", async () => {
+    mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, SWEDISH_BRANCH]);
+    mockGetResume.mockResolvedValue({
+      ...TEST_RESUME,
+      language: "en",
+    });
+    mockGetResumeCommit.mockResolvedValue({ id: "commit-2", content: {} });
+
+    const queryClient = buildTestQueryClient();
+    renderWithProviders(<ResumeDetailPage forcedBranchId={SWEDISH_BRANCH.id} />, { queryClient });
+
+    expect(await screen.findByText("Konsultprofil")).toBeInTheDocument();
+    expect(screen.queryByText(enCommon.resume.detail.consultantProfileLabel)).toBeNull();
+  });
+
   it("renders the summary text", async () => {
     renderPage();
     const summary = await screen.findByText(TEST_RESUME.summary!);
@@ -234,7 +275,7 @@ describe("Skills list", () => {
   it("renders the consultant profile label on the skills page", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    const label = await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
+    const label = await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).consultantProfile);
     expect(label).toBeInTheDocument();
   });
 
@@ -242,7 +283,7 @@ describe("Skills list", () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
     // Wait for skills page to render, then query synchronously to avoid stale refs
-    await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
+    await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).consultantProfile);
     for (const skill of TEST_RESUME.skills) {
       expect(screen.getByText(skill.name)).toBeInTheDocument();
     }
@@ -472,7 +513,7 @@ describe("Assignments section", () => {
   it("renders the assignments heading when assignments exist", async () => {
     mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
-    const heading = await screen.findByText(enCommon.resume.detail.assignmentsHeading);
+    const heading = await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).experienceHeading);
     expect(heading).toBeInTheDocument();
   });
 
@@ -480,7 +521,7 @@ describe("Assignments section", () => {
     mockListBranchAssignmentsFull.mockResolvedValue([]);
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
-    expect(screen.queryByText(enCommon.resume.detail.assignmentsHeading)).toBeNull();
+    expect(screen.queryByText(getResumeLanguageTranslations(TEST_RESUME.language).experienceHeading)).toBeNull();
   });
 
   it("renders role heading for each assignment", async () => {

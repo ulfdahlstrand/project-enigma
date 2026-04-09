@@ -11,6 +11,7 @@ import {
   formatCommitTimestamp,
   getBranchX,
   getCommitY,
+  shouldRenderBranchLane,
   TREE_COMMIT_GAP,
   TREE_NODE_OUTER_RADIUS,
   TREE_NODE_GAP_RADIUS,
@@ -90,8 +91,9 @@ export function HistoryBranchGraph({
       const isSelected = branch.id === selectedBranchId;
       const lineColor = isSelected ? branchColor : `${branchColor}99`;
       const lineWidth = isSelected ? 2.5 : 1.5;
+      const hasRenderedCommits = shouldRenderBranchLane(branchCommits);
 
-      if (branchCommits.length > 0) {
+      if (hasRenderedCommits) {
         const firstCommit = branchCommits[0];
         const lastCommit = branchCommits[branchCommits.length - 1];
         if (firstCommit && lastCommit) {
@@ -104,6 +106,7 @@ export function HistoryBranchGraph({
         }
       }
 
+      if (!hasRenderedCommits) return;
       if (!branch.forkedFromCommitId) return;
       const baseCommit = commitsById.get(branch.forkedFromCommitId);
       if (!baseCommit) return;
@@ -227,7 +230,7 @@ export function HistoryBranchGraph({
 
         {graphLayout.orderedCommits.map((commit) => {
           const commitY = getCommitY(graphLayout.commitIndexById, commit.id);
-          const commitLabel = commit.title || commit.message || t("resume.history.defaultMessage");
+          const commitLabel = commit.title || t("resume.history.defaultMessage");
           const commitBranchId = graphLayout.branchIdByCommitId.get(commit.id);
           const branch = commitBranchId ? graphLayout.branchById.get(commitBranchId) : null;
           const isHead = branch ? commit.id === branch.headCommitId : false;

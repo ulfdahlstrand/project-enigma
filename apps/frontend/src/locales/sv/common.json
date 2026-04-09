@@ -355,7 +355,10 @@
       "toLabel": "Till (nyare)",
       "compareButton": "Jämför",
       "fieldLabel": "Fält",
-      "noSelectionHint": "Välj två versioner ovan för att se vad som ändrats mellan dem."
+      "noSelectionHint": "Välj två versioner ovan för att se vad som ändrats mellan dem.",
+      "branchGroupLabel": "Grenar",
+      "commitGroupLabel": "Commits",
+      "emptyBranch": "ingen head-commit"
     },
     "saveVersion": {
       "button": "Spara version",

@@ -7,6 +7,8 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { readBranchAssignmentContent } from "../lib/branch-assignment-content.js";
+import { upsertBranchContentFromLive } from "../lib/upsert-branch-content-from-live.js";
 import type { addBranchAssignmentInputSchema, addBranchAssignmentOutputSchema } from "@cv-tool/contracts";
 
 type AddBranchAssignmentInput = z.infer<typeof addBranchAssignmentInputSchema>;
@@ -19,18 +21,13 @@ export async function addBranchAssignment(
 ): Promise<AddBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
-  const branch = await db
-    .selectFrom("resume_branches as rb")
-    .innerJoin("resumes as r", "r.id", "rb.resume_id")
-    .select(["rb.id", "r.employee_id"])
-    .where("rb.id", "=", input.branchId)
-    .executeTakeFirst();
+  const branch = await readBranchAssignmentContent(db, input.branchId);
 
-  if (branch === undefined) {
+  if (branch === null) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (ownerEmployeeId !== null && branch.employee_id !== ownerEmployeeId) {
+  if (ownerEmployeeId !== null && branch.employeeId !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
@@ -45,48 +42,50 @@ export async function addBranchAssignment(
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (assignment.employee_id !== branch.employee_id) {
+  if (assignment.employee_id !== branch.employeeId) {
     throw new ORPCError("FORBIDDEN");
   }
 
-  const row = await db
-    .insertInto("branch_assignments")
-    .values({
-      branch_id: input.branchId,
-      assignment_id: input.assignmentId,
-      client_name: input.clientName,
-      role: input.role,
-      description: input.description ?? "",
-      start_date: new Date(input.startDate),
-      end_date: input.endDate ? new Date(input.endDate) : null,
-      technologies: input.technologies ?? [],
-      is_current: input.isCurrent ?? false,
-      keywords: input.keywords ?? null,
-      type: input.type ?? null,
-      highlight: input.highlight ?? false,
-      sort_order: input.sortOrder ?? null,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  const nextAssignment = {
+    assignmentId: input.assignmentId,
+    clientName: input.clientName,
+    role: input.role,
+    description: input.description ?? "",
+    startDate: input.startDate,
+    endDate: input.endDate ?? null,
+    technologies: input.technologies ?? [],
+    isCurrent: input.isCurrent ?? false,
+    keywords: input.keywords ?? null,
+    type: input.type ?? null,
+    highlight: input.highlight ?? false,
+    sortOrder: input.sortOrder ?? null,
+  };
+
+  await upsertBranchContentFromLive(db, {
+    resumeId: branch.resumeId,
+    branchId: branch.branchId,
+    userId: user.id,
+    assignments: [...branch.content.assignments, nextAssignment],
+  });
 
   return {
-    id: row.id,
-    assignmentId: row.assignment_id,
-    branchId: row.branch_id,
+    id: nextAssignment.assignmentId,
+    assignmentId: nextAssignment.assignmentId,
+    branchId: branch.branchId,
     employeeId: assignment.employee_id,
-    clientName: row.client_name,
-    role: row.role,
-    description: row.description,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    technologies: row.technologies,
-    isCurrent: row.is_current,
-    keywords: row.keywords,
-    type: row.type,
-    highlight: row.highlight,
-    sortOrder: row.sort_order,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    clientName: nextAssignment.clientName,
+    role: nextAssignment.role,
+    description: nextAssignment.description,
+    startDate: nextAssignment.startDate,
+    endDate: nextAssignment.endDate,
+    technologies: nextAssignment.technologies,
+    isCurrent: nextAssignment.isCurrent,
+    keywords: nextAssignment.keywords,
+    type: nextAssignment.type,
+    highlight: nextAssignment.highlight,
+    sortOrder: nextAssignment.sortOrder,
+    createdAt: branch.createdAt,
+    updatedAt: new Date(),
   };
 }
 

@@ -8,9 +8,8 @@ import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 /**
  * Soft-deletes an assignment identity by setting deleted_at = NOW().
  *
- * This marks the assignment as deleted across ALL branches — the underlying
- * branch_assignments rows are retained (for audit / undo) but will be
- * filtered out of all read queries that check deleted_at IS NULL.
+ * This marks the assignment as deleted across ALL branches. Branch snapshots
+ * filter soft-deleted assignment identities out of subsequent reads.
  *
  * Unlike removeBranchAssignment (which unlinks from a single branch),
  * deleteAssignment is a global operation that effectively removes the

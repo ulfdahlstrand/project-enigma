@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
@@ -7,19 +7,7 @@ import { createUpdateResumeHandler, updateResume } from "./update.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
 import { upsertBranchContentFromLive } from "../lib/upsert-branch-content-from-live.js";
 
-vi.mock("../lib/upsert-branch-content-from-live.js", () => ({
-  upsertBranchContentFromLive: vi.fn().mockResolvedValue({
-    title: "Updated Backend Resume",
-    consultantTitle: "Updated consultant title",
-    presentation: ["Updated presentation"],
-    summary: "Updated summary",
-    highlightedItems: [],
-    language: "en",
-    skillGroups: [],
-    skills: [],
-    assignments: [],
-  }),
-}));
+vi.mock("../lib/upsert-branch-content-from-live.js");
 
 // ---------------------------------------------------------------------------
 // Unit tests for the updateResume procedure.
@@ -40,91 +28,56 @@ const UPDATED_RESUME_ROW = {
   updated_at: new Date("2025-04-01T00:00:00.000Z"),
 };
 
-const HIGHLIGHTED_ITEM_ROWS = [
-  { text: "Principal Engineer hos Acme" },
-  { text: "Tech Lead hos Beta" },
-];
+const BRANCH_CONTENT = {
+  title: "Updated Backend Resume",
+  consultantTitle: "Updated consultant title",
+  presentation: ["Updated presentation"],
+  summary: "Updated summary",
+  highlightedItems: ["Principal Engineer hos Acme", "Tech Lead hos Beta"],
+  language: "en",
+  skillGroups: [],
+  skills: [],
+  assignments: [],
+};
 
 // ---------------------------------------------------------------------------
 // Mock builder helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Builds a mock that handles: optional resume lookup for ownership check +
- * the UPDATE chain.
- */
-function buildUpdateMock(
-  resumeLookupRow: unknown,
-  updatedRow: unknown,
-  highlightedItemRows: unknown[] = [],
-) {
-  const mainBranchLookupExecuteTakeFirst = vi.fn().mockResolvedValue({ id: "main-branch-id" });
+function buildUpdateMock(updatedRow: unknown) {
   const mainBranchLookupChain = {
     select: vi.fn(),
     where: vi.fn(),
-    executeTakeFirst: mainBranchLookupExecuteTakeFirst,
+    executeTakeFirst: vi.fn().mockResolvedValue({ id: "main-branch-id" }),
   };
   mainBranchLookupChain.select.mockReturnValue(mainBranchLookupChain);
   mainBranchLookupChain.where.mockReturnValue(mainBranchLookupChain);
 
-  // UPDATE chain
   const executeTakeFirst = vi.fn().mockResolvedValue(updatedRow);
   const returningAll = vi.fn().mockReturnValue({ executeTakeFirst });
   const updateWhere = vi.fn().mockReturnValue({ returningAll });
   const set = vi.fn().mockReturnValue({ where: updateWhere });
   const updateTable = vi.fn().mockReturnValue({ set });
 
-  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
-  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
-  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
-
-  const deleteExecute = vi.fn().mockResolvedValue(undefined);
-  const deleteWhere = vi.fn().mockReturnValue({ execute: deleteExecute });
-  const deleteFrom = vi.fn().mockReturnValue({ where: deleteWhere });
-
-  const insertExecute = vi.fn().mockResolvedValue(undefined);
-  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
-  const insertInto = vi.fn().mockReturnValue({ values: insertValues });
-
-  const trx = { updateTable, deleteFrom, insertInto };
+  const trx = { updateTable };
   const transactionExecute = vi.fn().mockImplementation(async (callback: (trx: typeof trx) => Promise<unknown>) => callback(trx));
   const transaction = vi.fn().mockReturnValue({ execute: transactionExecute });
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_branches") return mainBranchLookupChain;
-    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
 
   const db = { updateTable, selectFrom, transaction } as unknown as Kysely<Database>;
-  return {
-    db,
-    updateTable,
-    set,
-    updateWhere,
-    returningAll,
-    executeTakeFirst,
-    mainBranchLookupExecuteTakeFirst,
-    deleteFrom,
-    insertInto,
-    insertValues,
-  };
+  return { db, set };
 }
 
-/** Builds a db mock that also handles the employee lookup (for consultant auth). */
-function buildDbWithEmployeeLookup(
-  resumeLookupRow: unknown,
-  updatedRow: unknown,
-  employeeId: string,
-  highlightedItemRows: unknown[] = [],
-) {
-  const resumeLookupExecuteTakeFirst = vi.fn().mockResolvedValue(resumeLookupRow);
+function buildDbWithEmployeeLookup(resumeLookupRow: unknown, updatedRow: unknown, employeeId: string) {
   const resumeLookupChain = {
     leftJoin: vi.fn(),
     select: vi.fn(),
     where: vi.fn(),
-    executeTakeFirst: resumeLookupExecuteTakeFirst,
+    executeTakeFirst: vi.fn().mockResolvedValue(resumeLookupRow),
   };
   resumeLookupChain.leftJoin.mockReturnValue(resumeLookupChain);
   resumeLookupChain.select.mockReturnValue(resumeLookupChain);
@@ -136,20 +89,7 @@ function buildDbWithEmployeeLookup(
   const set = vi.fn().mockReturnValue({ where: updateWhere });
   const updateTable = vi.fn().mockReturnValue({ set });
 
-  const highlightedExecute = vi.fn().mockResolvedValue(highlightedItemRows);
-  const highlightedOrderBy = vi.fn().mockReturnValue({ execute: highlightedExecute });
-  const highlightedWhere = vi.fn().mockReturnValue({ orderBy: highlightedOrderBy });
-  const highlightedSelect = vi.fn().mockReturnValue({ where: highlightedWhere });
-
-  const deleteExecute = vi.fn().mockResolvedValue(undefined);
-  const deleteWhere = vi.fn().mockReturnValue({ execute: deleteExecute });
-  const deleteFrom = vi.fn().mockReturnValue({ where: deleteWhere });
-
-  const insertExecute = vi.fn().mockResolvedValue(undefined);
-  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
-  const insertInto = vi.fn().mockReturnValue({ values: insertValues });
-
-  const trx = { updateTable, deleteFrom, insertInto };
+  const trx = { updateTable };
   const transactionExecute = vi.fn().mockImplementation(async (callback: (trx: typeof trx) => Promise<unknown>) => callback(trx));
   const transaction = vi.fn().mockReturnValue({ execute: transactionExecute });
 
@@ -160,7 +100,6 @@ function buildDbWithEmployeeLookup(
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resumes as r") return resumeLookupChain;
-    if (table === "resume_highlighted_items") return { select: highlightedSelect };
     return {};
   });
 
@@ -173,11 +112,12 @@ function buildDbWithEmployeeLookup(
 // ---------------------------------------------------------------------------
 
 describe("updateResume query function", () => {
+  beforeEach(() => {
+    vi.mocked(upsertBranchContentFromLive).mockResolvedValue(BRANCH_CONTENT);
+  });
+
   it("uses branch content for consultant title and presentation in output", async () => {
-    const { db } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW
-    );
+    const { db } = buildUpdateMock(UPDATED_RESUME_ROW);
 
     const result = await updateResume(db, MOCK_ADMIN, {
       id: RESUME_ID,
@@ -191,28 +131,19 @@ describe("updateResume query function", () => {
   });
 
   it("updates title only and returns the updated resume row", async () => {
-    const { db, set } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW
-    );
+    const { db, set } = buildUpdateMock(UPDATED_RESUME_ROW);
+
     const result = await updateResume(db, MOCK_ADMIN, {
       id: RESUME_ID,
       title: "Updated Backend Resume",
     });
 
-    expect(result).toMatchObject({
-      id: RESUME_ID,
-      title: "Updated Backend Resume",
-      isMain: true,
-    });
+    expect(result).toMatchObject({ id: RESUME_ID, title: "Updated Backend Resume", isMain: true });
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ title: "Updated Backend Resume" }));
   });
 
-  it("throws NOT_FOUND when the resume does not exist (update returns undefined)", async () => {
-    const { db } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      undefined
-    );
+  it("throws NOT_FOUND when the resume does not exist", async () => {
+    const { db } = buildUpdateMock(undefined);
 
     await expect(
       updateResume(db, MOCK_ADMIN, { id: RESUME_ID, title: "Ghost" })
@@ -222,23 +153,16 @@ describe("updateResume query function", () => {
   });
 
   it("consultant updates their own resume successfully", async () => {
-    const { db } = buildDbWithEmployeeLookup(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW,
-      EMPLOYEE_ID_1
-    );
+    const { db } = buildDbWithEmployeeLookup({ employee_id: EMPLOYEE_ID_1 }, UPDATED_RESUME_ROW, EMPLOYEE_ID_1);
+
     const result = await updateResume(db, MOCK_CONSULTANT, { id: RESUME_ID, title: "Updated" });
 
     expect(result.id).toBe(RESUME_ID);
   });
 
   it("throws FORBIDDEN when consultant tries to update another employee's resume", async () => {
-    // Resume belongs to EMPLOYEE_ID_1, consultant maps to EMPLOYEE_ID_2
-    const { db } = buildDbWithEmployeeLookup(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW,
-      EMPLOYEE_ID_2
-    );
+    const { db } = buildDbWithEmployeeLookup({ employee_id: EMPLOYEE_ID_1 }, UPDATED_RESUME_ROW, EMPLOYEE_ID_2);
+
     await expect(
       updateResume(db, MOCK_CONSULTANT_2, { id: RESUME_ID, title: "Hack" })
     ).rejects.toSatisfy(
@@ -247,11 +171,8 @@ describe("updateResume query function", () => {
   });
 
   it("maps DB snake_case fields to camelCase in output", async () => {
-    const { db } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW,
-      HIGHLIGHTED_ITEM_ROWS,
-    );
+    const { db } = buildUpdateMock(UPDATED_RESUME_ROW);
+
     const result = await updateResume(db, MOCK_ADMIN, { id: RESUME_ID, title: "Updated" });
 
     expect(result).toMatchObject({
@@ -259,30 +180,25 @@ describe("updateResume query function", () => {
       isMain: true,
       createdAt: UPDATED_RESUME_ROW.created_at,
       updatedAt: UPDATED_RESUME_ROW.updated_at,
-      highlightedItems: ["Principal Engineer hos Acme", "Tech Lead hos Beta"],
     });
     expect(result).not.toHaveProperty("employee_id");
     expect(result).not.toHaveProperty("is_main");
   });
 
-  it("persists highlighted items when provided", async () => {
-    const { db, deleteFrom, insertInto, insertValues } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW,
-      HIGHLIGHTED_ITEM_ROWS,
-    );
+  it("passes highlightedItems to upsertBranchContentFromLive and returns them", async () => {
+    const { db } = buildUpdateMock(UPDATED_RESUME_ROW);
 
     const result = await updateResume(db, MOCK_ADMIN, {
       id: RESUME_ID,
       highlightedItems: [" Principal Engineer hos Acme ", "", "Tech Lead hos Beta"],
     });
 
-    expect(deleteFrom).toHaveBeenCalledWith("resume_highlighted_items");
-    expect(insertInto).toHaveBeenCalledWith("resume_highlighted_items");
-    expect(insertValues).toHaveBeenCalledWith([
-      { resume_id: RESUME_ID, text: "Principal Engineer hos Acme", sort_order: 0 },
-      { resume_id: RESUME_ID, text: "Tech Lead hos Beta", sort_order: 1 },
-    ]);
+    expect(upsertBranchContentFromLive).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        highlightedItems: ["Principal Engineer hos Acme", "Tech Lead hos Beta"],
+      })
+    );
     expect(result.highlightedItems).toEqual(["Principal Engineer hos Acme", "Tech Lead hos Beta"]);
   });
 });
@@ -292,11 +208,12 @@ describe("updateResume query function", () => {
 // ---------------------------------------------------------------------------
 
 describe("createUpdateResumeHandler", () => {
+  beforeEach(() => {
+    vi.mocked(upsertBranchContentFromLive).mockResolvedValue(BRANCH_CONTENT);
+  });
+
   it("updates a resume for authenticated admin", async () => {
-    const { db } = buildUpdateMock(
-      { employee_id: EMPLOYEE_ID_1 },
-      UPDATED_RESUME_ROW
-    );
+    const { db } = buildUpdateMock(UPDATED_RESUME_ROW);
     const handler = createUpdateResumeHandler(db);
 
     const result = await call(
@@ -310,7 +227,7 @@ describe("createUpdateResumeHandler", () => {
   });
 
   it("throws UNAUTHORIZED when no user in context", async () => {
-    const { db } = buildUpdateMock({ employee_id: EMPLOYEE_ID_1 }, UPDATED_RESUME_ROW);
+    const { db } = buildUpdateMock(UPDATED_RESUME_ROW);
     const handler = createUpdateResumeHandler(db);
 
     await expect(

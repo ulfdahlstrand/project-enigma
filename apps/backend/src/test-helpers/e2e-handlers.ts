@@ -207,37 +207,37 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
   });
 
   const skillsToCreate = body.skills ?? [];
-  const skillGroups = new Map<string, string>();
-  for (const [index, skill] of skillsToCreate.entries()) {
-    const groupName = skill.category?.trim() || "Other";
-    let groupId = skillGroups.get(groupName);
-    if (!groupId) {
-      groupId = randomUUID();
-      skillGroups.set(groupName, groupId);
-      await db
-        .insertInto("resume_skill_groups")
-        .values({
-          id: groupId,
-          resume_id: resume.id,
-          name: groupName,
-          sort_order: skill.sortOrder ?? index,
-        })
-        .execute();
-    }
-    await db
-      .insertInto("resume_skills")
-      .values({
-        id: randomUUID(),
-        resume_id: resume.id,
-        group_id: groupId,
-        name: skill.name ?? `Skill ${index + 1}`,
-        sort_order: skill.sortOrder ?? index,
-      })
-      .execute();
+  if (skillsToCreate.length > 0 && resume.mainBranchId) {
+    const skillGroupNames = [...new Set(skillsToCreate.map((s) => s.category?.trim() || "Other"))];
+    const skillGroups = skillGroupNames.map((name, i) => ({ name, sortOrder: i }));
+    const skills = skillsToCreate.map((skill, index) => ({
+      name: skill.name ?? `Skill ${index + 1}`,
+      category: skill.category?.trim() || "Other",
+      sortOrder: skill.sortOrder ?? index,
+    }));
+    await saveResumeVersion(db, user, {
+      branchId: resume.mainBranchId,
+      skills,
+      skillGroups,
+    });
   }
 
   let assignmentId: string | null = null;
   const assignmentIds: string[] = [];
+  const snapshotAssignments: Array<{
+    assignmentId: string;
+    clientName: string;
+    role: string;
+    description: string;
+    startDate: string;
+    endDate: string | null;
+    technologies: string[];
+    isCurrent: boolean;
+    keywords: string | null;
+    type: string | null;
+    highlight: boolean;
+    sortOrder: number | null;
+  }> = [];
 
   const assignmentsToCreate = body.skipAssignment
     ? []
@@ -259,32 +259,29 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
       .values({ id: createdAssignmentId, employee_id: employeeId })
       .execute();
 
-    await db
-      .insertInto("branch_assignments")
-      .values({
-        branch_id: resume.mainBranchId!,
-        assignment_id: createdAssignmentId,
-        client_name: assignmentInput.clientName ?? `Assignment ${index + 1}`,
-        role: assignmentInput.role ?? "Consultant",
-        description: assignmentInput.description ?? `Assignment ${index + 1} description.`,
-        start_date: new Date(`2025-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`),
-        end_date: null,
-        technologies: ["TypeScript"],
-        is_current: index === 0,
-        keywords: null,
-        type: null,
-        highlight: true,
-        sort_order: index,
-      })
-      .execute();
+    snapshotAssignments.push({
+      assignmentId: createdAssignmentId,
+      clientName: assignmentInput.clientName ?? `Assignment ${index + 1}`,
+      role: assignmentInput.role ?? "Consultant",
+      description: assignmentInput.description ?? `Assignment ${index + 1} description.`,
+      startDate: `2025-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+      endDate: null,
+      technologies: ["TypeScript"],
+      isCurrent: index === 0,
+      keywords: null,
+      type: null,
+      highlight: true,
+      sortOrder: index,
+    });
   }
 
   const savedCommit = await saveResumeVersion(db, user, {
     branchId: resume.mainBranchId!,
-    message: "bootstrap revision fixture",
+    title: "bootstrap revision fixture",
     consultantTitle: body.consultantTitle ?? "Tech Lead / Senior Engineer",
     presentation: body.presentationParagraphs ?? [],
     summary: body.summary ?? null,
+    assignments: snapshotAssignments,
   });
 
   res.writeHead(200, { "Content-Type": "application/json" });
@@ -322,19 +319,24 @@ export async function e2eRevisionStateHandler(req: IncomingMessage, res: ServerR
 
   const commits = await db
     .selectFrom("resume_commits")
-    .select(["id", "message", "title", "description"])
+    .select(["id", "title", "description"])
     .where("resume_id", "=", resumeId)
     .orderBy("created_at", "asc")
     .execute();
 
   const mainBranch = branches.find((branch) => branch.is_main);
-  const mainCommit = mainBranch?.head_commit_id
-    ? await db
-        .selectFrom("resume_commits")
-        .select(["id", "content"])
-        .where("id", "=", mainBranch.head_commit_id)
-        .executeTakeFirst()
-    : null;
+  let mainContent = null;
+  if (mainBranch?.head_commit_id) {
+    const commitRow = await db
+      .selectFrom("resume_commits")
+      .select("tree_id")
+      .where("id", "=", mainBranch.head_commit_id)
+      .executeTakeFirst();
+    if (commitRow?.tree_id) {
+      const { readTreeContent } = await import("../domains/resume/lib/read-tree-content.js");
+      mainContent = await readTreeContent(db, commitRow.tree_id);
+    }
+  }
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({
@@ -342,10 +344,10 @@ export async function e2eRevisionStateHandler(req: IncomingMessage, res: ServerR
     commits,
     mainBranchId: mainBranch?.id ?? null,
     mainHeadCommitId: mainBranch?.head_commit_id ?? null,
-    mainConsultantTitle: mainCommit?.content.consultantTitle ?? null,
-    mainPresentation: mainCommit?.content.presentation ?? [],
-    mainSummary: mainCommit?.content.summary ?? null,
-    mainSkills: mainCommit?.content.skills ?? [],
-    mainAssignments: mainCommit?.content.assignments ?? [],
+    mainConsultantTitle: mainContent?.consultantTitle ?? null,
+    mainPresentation: mainContent?.presentation ?? [],
+    mainSummary: mainContent?.summary ?? null,
+    mainSkills: mainContent?.skills ?? [],
+    mainAssignments: mainContent?.assignments ?? [],
   }));
 }

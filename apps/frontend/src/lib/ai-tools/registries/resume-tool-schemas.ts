@@ -43,7 +43,7 @@ const revisionSuggestionSkillSchema = z.object({
 });
 
 const revisionSuggestionSkillScopeSchema = z.object({
-  type: z.enum(["group_order", "group_contents"]),
+  type: z.enum(["group_order", "group_contents", "group_rename"]),
   category: z.string().min(1).optional(),
 });
 

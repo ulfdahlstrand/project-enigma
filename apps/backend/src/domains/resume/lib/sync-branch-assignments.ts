@@ -14,18 +14,6 @@ function isValidDateString(s: unknown): s is string {
   return !isNaN(d.getTime());
 }
 
-function normaliseAssignmentDescription(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === "string")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
-  return typeof value === "string" ? value : "";
-}
-
 /**
  * Normalises AI-generated assignment content so it can be safely persisted.
  *
@@ -78,56 +66,13 @@ export async function normaliseAssignmentIds(
 }
 
 /**
- * Syncs the branch_assignments table from a commit's JSONB content.
- * Upserts all assignments in the content into branch_assignments for the
- * given branch, preserving the branch_id + assignment_id uniqueness constraint.
- *
- * Call this after any operation that advances a branch's HEAD commit and
- * should be reflected in the live branch_assignments view.
+ * Legacy no-op kept temporarily so older tests/imports still resolve while the
+ * application finishes moving away from the `branch_assignments` table.
  */
 export async function syncBranchAssignmentsFromContent(
-  db: Kysely<Database>,
-  branchId: string,
-  content: ResumeCommitContent
+  _db: Kysely<Database>,
+  _branchId: string,
+  _content: ResumeCommitContent
 ): Promise<void> {
-  if (content.assignments.length === 0) return;
-
-  await db
-    .insertInto("branch_assignments")
-    .values(
-      content.assignments.map((a) => ({
-        branch_id: branchId,
-        assignment_id: a.assignmentId,
-        client_name: a.clientName,
-        role: a.role,
-        description: normaliseAssignmentDescription(a.description),
-        start_date: isValidDateString(a.startDate)
-          ? new Date(a.startDate)
-          : new Date(),
-        end_date: isValidDateString(a.endDate) ? new Date(a.endDate!) : null,
-        technologies: a.technologies,
-        is_current: a.isCurrent,
-        keywords: a.keywords ?? null,
-        type: a.type ?? null,
-        highlight: a.highlight,
-        sort_order: a.sortOrder ?? null,
-      }))
-    )
-    .onConflict((oc) =>
-      oc.columns(["branch_id", "assignment_id"]).doUpdateSet((eb) => ({
-        client_name: eb.ref("excluded.client_name"),
-        role: eb.ref("excluded.role"),
-        description: eb.ref("excluded.description"),
-        start_date: eb.ref("excluded.start_date"),
-        end_date: eb.ref("excluded.end_date"),
-        technologies: eb.ref("excluded.technologies"),
-        is_current: eb.ref("excluded.is_current"),
-        keywords: eb.ref("excluded.keywords"),
-        type: eb.ref("excluded.type"),
-        highlight: eb.ref("excluded.highlight"),
-        sort_order: eb.ref("excluded.sort_order"),
-        updated_at: new Date(),
-      }))
-    )
-    .execute();
+  return;
 }

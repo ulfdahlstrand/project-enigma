@@ -24,8 +24,11 @@ import {
   buildHelpMessage,
   buildExplainMessage,
   buildStatusMessage,
+  isManualResumeRequest,
 } from "./revision-workflow-engine.js";
 import { classifyDecision, setPendingDecision } from "./pending-decision.js";
+import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { deriveNextActionOrchestrationMessageFromWorkItems } from "./action-orchestration.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -157,6 +160,40 @@ export async function sendAIMessage(
     };
   }
 
+  const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
+  let effectiveUserMessage = input.userMessage;
+
+  if (
+    isRevisionConversation
+    && !isInternalUserMessage
+    && !conversation.pending_decision
+    && isManualResumeRequest(trimmedUserMessage)
+  ) {
+    const persistedWorkItems = await listPersistedRevisionWorkItems(db, input.conversationId);
+    const orchestrationMessage = deriveNextActionOrchestrationMessageFromWorkItems(
+      persistedWorkItems.map((item) => ({
+        id: item.work_item_id,
+        title: item.title,
+        description: item.description,
+        section: item.section,
+        ...(item.assignment_id ? { assignmentId: item.assignment_id } : {}),
+        status: item.status,
+        ...(item.note ? { note: item.note } : {}),
+      })),
+    );
+
+    if (orchestrationMessage) {
+      effectiveUserMessage = `${INTERNAL_AUTOSTART_PREFIX} ${orchestrationMessage}`;
+
+      await insertAIDelivery(db, {
+        conversationId: input.conversationId,
+        kind: "internal_message",
+        role: "user",
+        content: effectiveUserMessage,
+      });
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Pending decision gate
   //
@@ -247,9 +284,8 @@ export async function sendAIMessage(
     return message;
   }
 
-  const isRevisionConversation = conversation.entity_type === "resume-revision-actions";
-
   const revisionTools = isRevisionConversation ? buildRevisionOpenAITools() : undefined;
+  openAIMessages[openAIMessages.length - 1] = { role: "user", content: effectiveUserMessage };
   let assistantMessage = await callOpenAI(openAIMessages, revisionTools);
   let assistantContent = assistantMessage.content ?? "";
 
@@ -305,7 +341,7 @@ export async function sendAIMessage(
     const result = await runRevisionWorkflow(db, {
       conversationId: input.conversationId,
       conversation,
-      userMessage: input.userMessage,
+      userMessage: effectiveUserMessage,
       existingMessages,
       openAIMessages,
       firstAssistantMessage: assistantMessage,

@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ORPCError } from "@orpc/server";
 import { call } from "@orpc/server";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { forkResumeBranch, createForkResumeBranchHandler } from "./fork.js";
 import { MOCK_ADMIN, MOCK_CONSULTANT, MOCK_CONSULTANT_2 } from "../../../test-helpers/mock-users.js";
+import { readTreeContent } from "../lib/read-tree-content.js";
+
+vi.mock("../lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -32,19 +35,25 @@ const SNAPSHOT_ASSIGNMENT = {
   sortOrder: 0,
 };
 
+const DEFAULT_TREE_ID = "550e8400-e29b-41d4-a716-000000000099";
+
+const DEFAULT_CONTENT = {
+  title: "My Resume",
+  consultantTitle: "Senior Developer",
+  presentation: ["Para 1"],
+  summary: "Summary text",
+  highlightedItems: [],
+  language: "sv",
+  skillGroups: [],
+  skills: [],
+  assignments: [SNAPSHOT_ASSIGNMENT],
+};
+
 const COMMIT_ROW = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
-  content: {
-    title: "My Resume",
-    consultantTitle: "Senior Developer",
-    presentation: ["Para 1"],
-    summary: "Summary text",
-    language: "sv",
-    skills: [],
-    assignments: [SNAPSHOT_ASSIGNMENT],
-  },
+  tree_id: DEFAULT_TREE_ID,
 };
 
 const NEW_BRANCH_ROW = {
@@ -58,10 +67,6 @@ const NEW_BRANCH_ROW = {
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
 };
-
-const SOURCE_ASSIGNMENTS = [
-  { assignment_id: SNAPSHOT_ASSIGNMENT.assignmentId, highlight: true, sort_order: 0 },
-];
 
 // ---------------------------------------------------------------------------
 // Mock builder
@@ -91,35 +96,23 @@ function buildDbMock(opts: {
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
   const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
 
-  // Branch insert (inside transaction)
+  // Branch insert
   const branchInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(newBranchRow);
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
 
-  // Copy assignments insert (inside transaction)
-  const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
-  const copyInsertValues = vi.fn().mockReturnValue({ execute: copyInsertExecute });
-
   const insertInto = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_branches") return { values: branchInsertValues };
-    if (table === "branch_assignments") return { values: copyInsertValues };
     return {};
   });
-
-  const transaction = vi.fn().mockImplementation(() => ({
-    execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
-      const trx = { insertInto };
-      return fn(trx);
-    }),
-  }));
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     return { innerJoin: commitInnerJoin };
   });
 
-  const db = { selectFrom, transaction } as unknown as Kysely<Database>;
-  return { db, branchInsertValues, copyInsertValues, commitWhere };
+  const db = { selectFrom, insertInto } as unknown as Kysely<Database>;
+  return { db, branchInsertValues, commitWhere };
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +120,10 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("forkResumeBranch", () => {
+  beforeEach(() => {
+    vi.mocked(readTreeContent).mockResolvedValue(DEFAULT_CONTENT as never);
+  });
+
   it("creates a new branch forked from the given commit", async () => {
     const { db, branchInsertValues } = buildDbMock();
 
@@ -197,14 +194,8 @@ describe("forkResumeBranch", () => {
   });
 
   it("falls back to 'en' language when source branch has no language", async () => {
-    const commitWithNoLanguage = {
-      ...COMMIT_ROW,
-      content: {
-        ...COMMIT_ROW.content,
-        language: null,
-      },
-    };
-    const { db, branchInsertValues } = buildDbMock({ commitRow: commitWithNoLanguage });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, language: null as unknown as string } as never);
+    const { db, branchInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 
@@ -213,37 +204,21 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("copies branch_assignments from the commit snapshot to the new branch", async () => {
-    const { db, copyInsertValues } = buildDbMock();
+  it("forks without copying separate branch-assignment rows", async () => {
+    const { db } = buildDbMock();
 
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(copyInsertValues).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          branch_id: NEW_BRANCH_ID,
-          assignment_id: SOURCE_ASSIGNMENTS[0].assignment_id,
-          highlight: true,
-          sort_order: 0,
-        }),
-      ])
-    );
+    await expect(
+      forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" })
+    ).resolves.toMatchObject({ id: NEW_BRANCH_ID, forkedFromCommitId: COMMIT_ID });
   });
 
-  it("skips copying assignments if source branch has none", async () => {
-    const { db, copyInsertValues } = buildDbMock({
-      commitRow: {
-        ...COMMIT_ROW,
-        content: {
-          ...COMMIT_ROW.content,
-          assignments: [],
-        },
-      },
-    });
+  it("still succeeds when the source snapshot has no assignments", async () => {
+    vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, assignments: [] } as never);
+    const { db } = buildDbMock();
 
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(copyInsertValues).not.toHaveBeenCalled();
+    await expect(
+      forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" })
+    ).resolves.toMatchObject({ id: NEW_BRANCH_ID });
   });
 
   it("throws NOT_FOUND when commit does not exist", async () => {
