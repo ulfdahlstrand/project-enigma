@@ -363,10 +363,10 @@ function buildDbMockWithTree(opts: {
       { id: "te4", tree_id: TREE_ID, entry_type: "highlighted_items", position: 3 },
     ],
     entryContentByEntryId = {
-      te1: { revision_id: "rv1", revision_type: "resume_metadata_revisions" },
-      te2: { revision_id: "rv2", revision_type: "presentation_revisions" },
-      te3: { revision_id: "rv3", revision_type: "summary_revisions" },
-      te4: { revision_id: "rv4", revision_type: "highlighted_item_revisions" },
+      te1: { revision_id: "rv1", revision_type: "resume_revision_metadata" },
+      te2: { revision_id: "rv2", revision_type: "resume_revision_presentation" },
+      te3: { revision_id: "rv3", revision_type: "resume_revision_summary" },
+      te4: { revision_id: "rv4", revision_type: "resume_revision_highlighted_item" },
     },
     revisionsByRevId = {
       rv1: { id: "rv1", title: "Tree title", language: "sv" },

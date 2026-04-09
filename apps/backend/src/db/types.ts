@@ -471,15 +471,15 @@ export interface Database {
   resume_trees: ResumeTreeTable;
   resume_tree_entries: ResumeTreeEntryTable;
   resume_tree_entry_content: ResumeTreeEntryContentTable;
-  resume_metadata_revisions: ResumeMetadataRevisionTable;
-  consultant_title_revisions: ConsultantTitleRevisionTable;
-  presentation_revisions: PresentationRevisionTable;
-  summary_revisions: SummaryRevisionTable;
-  highlighted_item_revisions: HighlightedItemRevisionTable;
-  skill_group_revisions: SkillGroupRevisionTable;
-  skill_revisions: SkillRevisionTable;
-  assignment_revisions: AssignmentRevisionTable;
-  education_revisions: EducationRevisionTable;
+  resume_revision_metadata: ResumeMetadataRevisionTable;
+  resume_revision_consultant_title: ConsultantTitleRevisionTable;
+  resume_revision_presentation: PresentationRevisionTable;
+  resume_revision_summary: SummaryRevisionTable;
+  resume_revision_highlighted_item: HighlightedItemRevisionTable;
+  resume_revision_skill_group: SkillGroupRevisionTable;
+  resume_revision_skill: SkillRevisionTable;
+  resume_revision_assignment: AssignmentRevisionTable;
+  resume_revision_education: EducationRevisionTable;
 }
 
 // ---------------------------------------------------------------------------

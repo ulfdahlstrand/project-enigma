@@ -7,15 +7,15 @@
  * consecutive commits.
  *
  * Tables created:
- *   resume_metadata_revisions      — title, language
- *   consultant_title_revisions     — value TEXT
- *   presentation_revisions         — paragraphs TEXT[]
- *   summary_revisions              — content TEXT
- *   highlighted_item_revisions     — items TEXT[]
- *   skill_group_revisions          — name, sort_order
- *   skill_revisions                — name, group_revision_id, sort_order
- *   assignment_revisions           — all assignment fields
- *   education_revisions            — type, value, sort_order (snapshot of employee education)
+ *   resume_revision_metadata      — title, language
+ *   resume_revision_consultant_title     — value TEXT
+ *   resume_revision_presentation         — paragraphs TEXT[]
+ *   resume_revision_summary              — content TEXT
+ *   resume_revision_highlighted_item     — items TEXT[]
+ *   resume_revision_skill_group          — name, sort_order
+ *   resume_revision_skill                — name, group_revision_id, sort_order
+ *   resume_revision_assignment           — all assignment fields
+ *   resume_revision_education            — type, value, sort_order (snapshot of employee education)
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -66,11 +66,11 @@ describe("AC2 – up() and down() exports", () => {
   });
 });
 
-// ── AC 3: resume_metadata_revisions ──────────────────────────────────────────
+// ── AC 3: resume_revision_metadata ──────────────────────────────────────────
 
-describe("AC3 – resume_metadata_revisions", () => {
-  it("creates resume_metadata_revisions", () => {
-    expect(migrationSource).toContain("resume_metadata_revisions");
+describe("AC3 – resume_revision_metadata", () => {
+  it("creates resume_revision_metadata", () => {
+    expect(migrationSource).toContain("resume_revision_metadata");
   });
 
   it("has title and language columns", () => {
@@ -83,11 +83,11 @@ describe("AC3 – resume_metadata_revisions", () => {
   });
 });
 
-// ── AC 4: consultant_title_revisions ─────────────────────────────────────────
+// ── AC 4: resume_revision_consultant_title ─────────────────────────────────────────
 
-describe("AC4 – consultant_title_revisions", () => {
-  it("creates consultant_title_revisions", () => {
-    expect(migrationSource).toContain("consultant_title_revisions");
+describe("AC4 – resume_revision_consultant_title", () => {
+  it("creates resume_revision_consultant_title", () => {
+    expect(migrationSource).toContain("resume_revision_consultant_title");
   });
 
   it("has value column", () => {
@@ -95,11 +95,11 @@ describe("AC4 – consultant_title_revisions", () => {
   });
 });
 
-// ── AC 5: presentation_revisions ─────────────────────────────────────────────
+// ── AC 5: resume_revision_presentation ─────────────────────────────────────────────
 
-describe("AC5 – presentation_revisions", () => {
-  it("creates presentation_revisions", () => {
-    expect(migrationSource).toContain("presentation_revisions");
+describe("AC5 – resume_revision_presentation", () => {
+  it("creates resume_revision_presentation", () => {
+    expect(migrationSource).toContain("resume_revision_presentation");
   });
 
   it("has paragraphs column as text array", () => {
@@ -108,11 +108,11 @@ describe("AC5 – presentation_revisions", () => {
   });
 });
 
-// ── AC 6: summary_revisions ───────────────────────────────────────────────────
+// ── AC 6: resume_revision_summary ───────────────────────────────────────────────────
 
-describe("AC6 – summary_revisions", () => {
-  it("creates summary_revisions", () => {
-    expect(migrationSource).toContain("summary_revisions");
+describe("AC6 – resume_revision_summary", () => {
+  it("creates resume_revision_summary", () => {
+    expect(migrationSource).toContain("resume_revision_summary");
   });
 
   it("has content column", () => {
@@ -120,11 +120,11 @@ describe("AC6 – summary_revisions", () => {
   });
 });
 
-// ── AC 7: highlighted_item_revisions ─────────────────────────────────────────
+// ── AC 7: resume_revision_highlighted_item ─────────────────────────────────────────
 
-describe("AC7 – highlighted_item_revisions", () => {
-  it("creates highlighted_item_revisions", () => {
-    expect(migrationSource).toContain("highlighted_item_revisions");
+describe("AC7 – resume_revision_highlighted_item", () => {
+  it("creates resume_revision_highlighted_item", () => {
+    expect(migrationSource).toContain("resume_revision_highlighted_item");
   });
 
   it("has items column as text array", () => {
@@ -133,11 +133,11 @@ describe("AC7 – highlighted_item_revisions", () => {
   });
 });
 
-// ── AC 8: skill_group_revisions ───────────────────────────────────────────────
+// ── AC 8: resume_revision_skill_group ───────────────────────────────────────────────
 
-describe("AC8 – skill_group_revisions", () => {
-  it("creates skill_group_revisions", () => {
-    expect(migrationSource).toContain("skill_group_revisions");
+describe("AC8 – resume_revision_skill_group", () => {
+  it("creates resume_revision_skill_group", () => {
+    expect(migrationSource).toContain("resume_revision_skill_group");
   });
 
   it("has name and sort_order columns", () => {
@@ -146,11 +146,11 @@ describe("AC8 – skill_group_revisions", () => {
   });
 });
 
-// ── AC 9: skill_revisions ─────────────────────────────────────────────────────
+// ── AC 9: resume_revision_skill ─────────────────────────────────────────────────────
 
-describe("AC9 – skill_revisions", () => {
-  it("creates skill_revisions", () => {
-    expect(migrationSource).toContain("skill_revisions");
+describe("AC9 – resume_revision_skill", () => {
+  it("creates resume_revision_skill", () => {
+    expect(migrationSource).toContain("resume_revision_skill");
   });
 
   it("has name and sort_order columns", () => {
@@ -158,17 +158,17 @@ describe("AC9 – skill_revisions", () => {
     expect(migrationSource).toContain("sort_order");
   });
 
-  it("has group_revision_id referencing skill_group_revisions", () => {
+  it("has group_revision_id referencing resume_revision_skill_group", () => {
     expect(migrationSource).toContain("group_revision_id");
-    expect(migrationSource).toContain("skill_group_revisions");
+    expect(migrationSource).toContain("resume_revision_skill_group");
   });
 });
 
-// ── AC 10: assignment_revisions ───────────────────────────────────────────────
+// ── AC 10: resume_revision_assignment ───────────────────────────────────────────────
 
-describe("AC10 – assignment_revisions", () => {
-  it("creates assignment_revisions", () => {
-    expect(migrationSource).toContain("assignment_revisions");
+describe("AC10 – resume_revision_assignment", () => {
+  it("creates resume_revision_assignment", () => {
+    expect(migrationSource).toContain("resume_revision_assignment");
   });
 
   it("has assignment_id referencing the assignments entity table", () => {
@@ -201,11 +201,11 @@ describe("AC10 – assignment_revisions", () => {
   });
 });
 
-// ── AC 11: education_revisions ────────────────────────────────────────────────
+// ── AC 11: resume_revision_education ────────────────────────────────────────────────
 
-describe("AC11 – education_revisions", () => {
-  it("creates education_revisions", () => {
-    expect(migrationSource).toContain("education_revisions");
+describe("AC11 – resume_revision_education", () => {
+  it("creates resume_revision_education", () => {
+    expect(migrationSource).toContain("resume_revision_education");
   });
 
   it("has employee_id to tie the snapshot to an employee", () => {
@@ -226,15 +226,15 @@ describe("AC11 – education_revisions", () => {
 
 describe("AC12 – down() drops all revision tables", () => {
   const tables = [
-    "education_revisions",
-    "assignment_revisions",
-    "skill_revisions",
-    "skill_group_revisions",
-    "highlighted_item_revisions",
-    "summary_revisions",
-    "presentation_revisions",
-    "consultant_title_revisions",
-    "resume_metadata_revisions",
+    "resume_revision_education",
+    "resume_revision_assignment",
+    "resume_revision_skill",
+    "resume_revision_skill_group",
+    "resume_revision_highlighted_item",
+    "resume_revision_summary",
+    "resume_revision_presentation",
+    "resume_revision_consultant_title",
+    "resume_revision_metadata",
   ];
 
   for (const table of tables) {

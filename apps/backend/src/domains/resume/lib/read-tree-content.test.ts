@@ -43,14 +43,14 @@ const ALL_ENTRIES = [
 ];
 
 const ENTRY_CONTENT_MAP: Record<string, { revision_id: string; revision_type: string }> = {
-  e1: { revision_id: "r1", revision_type: "resume_metadata_revisions" },
-  e2: { revision_id: "r2", revision_type: "consultant_title_revisions" },
-  e3: { revision_id: "r3", revision_type: "presentation_revisions" },
-  e4: { revision_id: "r4", revision_type: "summary_revisions" },
-  e5: { revision_id: "r5", revision_type: "highlighted_item_revisions" },
-  e6: { revision_id: "r6", revision_type: "skill_group_revisions" },
-  e7: { revision_id: "r7", revision_type: "skill_revisions" },
-  e8: { revision_id: "r8", revision_type: "assignment_revisions" },
+  e1: { revision_id: "r1", revision_type: "resume_revision_metadata" },
+  e2: { revision_id: "r2", revision_type: "resume_revision_consultant_title" },
+  e3: { revision_id: "r3", revision_type: "resume_revision_presentation" },
+  e4: { revision_id: "r4", revision_type: "resume_revision_summary" },
+  e5: { revision_id: "r5", revision_type: "resume_revision_highlighted_item" },
+  e6: { revision_id: "r6", revision_type: "resume_revision_skill_group" },
+  e7: { revision_id: "r7", revision_type: "resume_revision_skill" },
+  e8: { revision_id: "r8", revision_type: "resume_revision_assignment" },
 };
 
 const REVISION_DATA: Record<string, unknown> = {

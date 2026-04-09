@@ -102,68 +102,68 @@ describe("buildCommitTree", () => {
     expect(insertInto).toHaveBeenCalledWith("resume_trees");
   });
 
-  it("inserts resume_metadata_revisions with title and language", async () => {
+  it("inserts resume_revision_metadata with title and language", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
-    expect(insertInto).toHaveBeenCalledWith("resume_metadata_revisions");
+    expect(insertInto).toHaveBeenCalledWith("resume_revision_metadata");
     const call = (insertInto as ReturnType<typeof vi.fn>).mock.calls.find(
-      ([table]: [string]) => table === "resume_metadata_revisions"
+      ([table]: [string]) => table === "resume_revision_metadata"
     );
     expect(call).toBeDefined();
   });
 
-  it("inserts consultant_title_revisions when consultantTitle is set", async () => {
+  it("inserts resume_revision_consultant_title when consultantTitle is set", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
-    expect(insertInto).toHaveBeenCalledWith("consultant_title_revisions");
+    expect(insertInto).toHaveBeenCalledWith("resume_revision_consultant_title");
   });
 
-  it("inserts presentation_revisions with paragraphs", async () => {
+  it("inserts resume_revision_presentation with paragraphs", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
-    expect(insertInto).toHaveBeenCalledWith("presentation_revisions");
+    expect(insertInto).toHaveBeenCalledWith("resume_revision_presentation");
   });
 
-  it("inserts summary_revisions with content", async () => {
+  it("inserts resume_revision_summary with content", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
-    expect(insertInto).toHaveBeenCalledWith("summary_revisions");
+    expect(insertInto).toHaveBeenCalledWith("resume_revision_summary");
   });
 
-  it("inserts highlighted_item_revisions with items", async () => {
+  it("inserts resume_revision_highlighted_item with items", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
-    expect(insertInto).toHaveBeenCalledWith("highlighted_item_revisions");
+    expect(insertInto).toHaveBeenCalledWith("resume_revision_highlighted_item");
   });
 
-  it("inserts skill_group_revisions for each skill group", async () => {
+  it("inserts resume_revision_skill_group for each skill group", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
     const calls = (insertInto as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([table]: [string]) => table === "skill_group_revisions"
+      ([table]: [string]) => table === "resume_revision_skill_group"
     );
     expect(calls).toHaveLength(CONTENT.skillGroups.length);
   });
 
-  it("inserts skill_revisions for each skill", async () => {
+  it("inserts resume_revision_skill for each skill", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
     const calls = (insertInto as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([table]: [string]) => table === "skill_revisions"
+      ([table]: [string]) => table === "resume_revision_skill"
     );
     expect(calls).toHaveLength(CONTENT.skills.length);
   });
 
-  it("inserts assignment_revisions for each assignment", async () => {
+  it("inserts resume_revision_assignment for each assignment", async () => {
     const { trx, insertInto } = buildTrxMock();
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
     const calls = (insertInto as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([table]: [string]) => table === "assignment_revisions"
+      ([table]: [string]) => table === "resume_revision_assignment"
     );
     expect(calls).toHaveLength(CONTENT.assignments.length);
   });
 
-  it("inserts education_revisions (may be zero when no education data)", async () => {
+  it("inserts resume_revision_education (may be zero when no education data)", async () => {
     const { trx, insertInto } = buildTrxMock();
     // education comes from employee data, not content — an empty array is valid
     await buildCommitTree(trx, RESUME_ID, EMPLOYEE_ID, CONTENT);
@@ -204,7 +204,7 @@ describe("buildCommitTree", () => {
     const trx = {
       insertInto: vi.fn().mockImplementation((table: string) => ({
         values: vi.fn().mockImplementation((row: unknown) => {
-          if (table === "resume_metadata_revisions") captured.push(row);
+          if (table === "resume_revision_metadata") captured.push(row);
           return {
             returning: vi.fn().mockReturnValue({
               executeTakeFirstOrThrow: vi.fn().mockResolvedValue({ id: REVISION_ID }),
@@ -229,7 +229,7 @@ describe("buildCommitTree", () => {
     const trx = {
       insertInto: vi.fn().mockImplementation((table: string) => ({
         values: vi.fn().mockImplementation((row: unknown) => {
-          if (table === "assignment_revisions") captured.push(row);
+          if (table === "resume_revision_assignment") captured.push(row);
           return {
             returning: vi.fn().mockReturnValue({
               executeTakeFirstOrThrow: vi.fn().mockResolvedValue({ id: REVISION_ID }),
@@ -254,7 +254,7 @@ describe("buildCommitTree", () => {
     const trx = {
       insertInto: vi.fn().mockImplementation((table: string) => ({
         values: vi.fn().mockImplementation((row: unknown) => {
-          if (table === "summary_revisions") captured.push(row);
+          if (table === "resume_revision_summary") captured.push(row);
           return {
             returning: vi.fn().mockReturnValue({
               executeTakeFirstOrThrow: vi.fn().mockResolvedValue({ id: REVISION_ID }),

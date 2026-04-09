@@ -53,59 +53,59 @@ export async function buildCommitTree(
 
   // ── metadata ──────────────────────────────────────────────────────────────
   const { id: metadataRevId } = await trx
-    .insertInto("resume_metadata_revisions")
+    .insertInto("resume_revision_metadata")
     .values({ title: content.title, language: content.language })
     .returning("id")
     .executeTakeFirstOrThrow();
-  await addEntry("metadata", "resume_metadata_revisions", metadataRevId);
+  await addEntry("metadata", "resume_revision_metadata", metadataRevId);
 
   // ── consultant_title ──────────────────────────────────────────────────────
   if (content.consultantTitle !== null && content.consultantTitle !== undefined) {
     const { id: ctRevId } = await trx
-      .insertInto("consultant_title_revisions")
+      .insertInto("resume_revision_consultant_title")
       .values({ value: content.consultantTitle })
       .returning("id")
       .executeTakeFirstOrThrow();
-    await addEntry("consultant_title", "consultant_title_revisions", ctRevId);
+    await addEntry("consultant_title", "resume_revision_consultant_title", ctRevId);
   }
 
   // ── presentation ──────────────────────────────────────────────────────────
   const { id: presentationRevId } = await trx
-    .insertInto("presentation_revisions")
+    .insertInto("resume_revision_presentation")
     .values({ paragraphs: content.presentation ?? [] })
     .returning("id")
     .executeTakeFirstOrThrow();
-  await addEntry("presentation", "presentation_revisions", presentationRevId);
+  await addEntry("presentation", "resume_revision_presentation", presentationRevId);
 
   // ── summary ───────────────────────────────────────────────────────────────
   if (content.summary !== null && content.summary !== undefined) {
     const { id: summaryRevId } = await trx
-      .insertInto("summary_revisions")
+      .insertInto("resume_revision_summary")
       .values({ content: content.summary })
       .returning("id")
       .executeTakeFirstOrThrow();
-    await addEntry("summary", "summary_revisions", summaryRevId);
+    await addEntry("summary", "resume_revision_summary", summaryRevId);
   }
 
   // ── highlighted_items ─────────────────────────────────────────────────────
   const { id: highlightedRevId } = await trx
-    .insertInto("highlighted_item_revisions")
+    .insertInto("resume_revision_highlighted_item")
     .values({ items: content.highlightedItems ?? [] })
     .returning("id")
     .executeTakeFirstOrThrow();
-  await addEntry("highlighted_items", "highlighted_item_revisions", highlightedRevId);
+  await addEntry("highlighted_items", "resume_revision_highlighted_item", highlightedRevId);
 
   // ── skill_groups ──────────────────────────────────────────────────────────
   // Track inserted group revision IDs by name for use in the skills loop below.
   const groupRevIdByName = new Map<string, string>();
   for (const group of content.skillGroups) {
     const { id: groupRevId } = await trx
-      .insertInto("skill_group_revisions")
+      .insertInto("resume_revision_skill_group")
       .values({ name: group.name, sort_order: group.sortOrder })
       .returning("id")
       .executeTakeFirstOrThrow();
     groupRevIdByName.set(group.name, groupRevId);
-    await addEntry("skill_group", "skill_group_revisions", groupRevId);
+    await addEntry("skill_group", "resume_revision_skill_group", groupRevId);
   }
 
   // ── skills ────────────────────────────────────────────────────────────────
@@ -116,11 +116,11 @@ export async function buildCommitTree(
       "00000000-0000-0000-0000-000000000000";
 
     const { id: skillRevId } = await trx
-      .insertInto("skill_revisions")
+      .insertInto("resume_revision_skill")
       .values({ name: skill.name, group_revision_id: groupRevId, sort_order: skill.sortOrder })
       .returning("id")
       .executeTakeFirstOrThrow();
-    await addEntry("skill", "skill_revisions", skillRevId);
+    await addEntry("skill", "resume_revision_skill", skillRevId);
   }
 
   // ── assignments ───────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ export async function buildCommitTree(
     const endDate = assignment.endDate ? new Date(assignment.endDate) : null;
 
     const { id: assignmentRevId } = await trx
-      .insertInto("assignment_revisions")
+      .insertInto("resume_revision_assignment")
       .values({
         assignment_id: assignment.assignmentId,
         client_name: assignment.clientName,
@@ -145,13 +145,13 @@ export async function buildCommitTree(
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    await addEntry("assignment", "assignment_revisions", assignmentRevId);
+    await addEntry("assignment", "resume_revision_assignment", assignmentRevId);
   }
 
   // ── education (snapshot from employee record) ─────────────────────────────
   for (const edu of content.education ?? []) {
     const { id: eduRevId } = await trx
-      .insertInto("education_revisions")
+      .insertInto("resume_revision_education")
       .values({
         employee_id: employeeId,
         type: edu.type,
@@ -160,7 +160,7 @@ export async function buildCommitTree(
       })
       .returning("id")
       .executeTakeFirstOrThrow();
-    await addEntry("education", "education_revisions", eduRevId);
+    await addEntry("education", "resume_revision_education", eduRevId);
   }
 
   return treeId;

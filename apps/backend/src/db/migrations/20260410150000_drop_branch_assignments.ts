@@ -6,7 +6,7 @@ import { sql } from "kysely";
 //
 // The application no longer reads or writes the legacy branch_assignments
 // table. Branch-scoped assignment content now lives in resume commit trees
-// (assignment_revisions inside resume_trees), so the old table is dead weight.
+// (resume_revision_assignment inside resume_trees), so the old table is dead weight.
 //
 // This migration removes the table and its indexes. The down migration
 // recreates the last known schema so we can roll back safely if needed.
