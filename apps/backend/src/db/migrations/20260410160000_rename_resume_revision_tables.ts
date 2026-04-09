@@ -25,15 +25,9 @@ async function renameTables(db: Kysely<unknown>, direction: "forward" | "backwar
   const pairs = direction === "forward" ? TABLE_RENAMES : TABLE_RENAMES.map(([from, to]) => [to, from] as const);
 
   for (const [from, to] of pairs) {
-    await sql`
-      DO $$
-      BEGIN
-        IF to_regclass(${from}) IS NOT NULL AND to_regclass(${to}) IS NULL THEN
-          EXECUTE 'ALTER TABLE ' || quote_ident(${from}) || ' RENAME TO ' || quote_ident(${to});
-        END IF;
-      END
-      $$;
-    `.execute(db);
+    await sql.raw(
+      `ALTER TABLE IF EXISTS "${from}" RENAME TO "${to}"`
+    ).execute(db);
   }
 }
 
