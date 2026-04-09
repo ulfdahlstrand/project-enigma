@@ -61,6 +61,10 @@ export function getSuggestionOriginalText(
   }
 
   if (isSkillsSection(section)) {
+    if (hydratedSuggestion.skillScope?.type === "group_rename" && hydratedSuggestion.skillScope.category) {
+      return hydratedSuggestion.skillScope.category;
+    }
+
     if (hydratedSuggestion.skillScope?.type === "group_contents" && hydratedSuggestion.skillScope.category) {
       const targetCategory = normalizeSkillCategory(hydratedSuggestion.skillScope.category);
       const targetGroup = groupSkillsByCategory(deps.skills).find((group) => group.category === targetCategory);
@@ -204,6 +208,28 @@ export async function applySuggestionToSkills(
     const remainingGroups = currentSkillGroups.filter((group) => !desiredCategoryOrder.includes(group.category));
 
     nextSkills = resequenceSkillGroups([...reorderedGroups, ...remainingGroups]);
+  } else if (
+    hydratedSuggestion.skillScope?.type === "group_rename"
+    && hydratedSuggestion.skillScope.category
+  ) {
+    const targetCategory = normalizeSkillCategory(hydratedSuggestion.skillScope.category);
+    const currentGroup = currentSkillGroups.find((group) => group.category === targetCategory);
+    const suggestedGroup = groupSkillsByCategory(hydratedSuggestion.skills).find((group) =>
+      group.skills.length === (currentGroup?.skills.length ?? -1)
+      && group.skills.every((skill, index) => skill.name === currentGroup?.skills[index]?.name),
+    );
+
+    if (currentGroup && suggestedGroup) {
+      nextSkills = resequenceSkillGroups(currentSkillGroups.map((group) =>
+        group.category === targetCategory
+          ? {
+              ...group,
+              category: suggestedGroup.category,
+              skills: group.skills.map((skill) => ({ ...skill, category: suggestedGroup.category })),
+            }
+          : group,
+      ));
+    }
   } else if (
     hydratedSuggestion.skillScope?.type === "group_contents"
     && hydratedSuggestion.skillScope.category

@@ -41,14 +41,14 @@ function normalizeSuggestionSkillScope(skillScope: unknown) {
   }
 
   const row = skillScope as Record<string, unknown>;
-  if (row.type !== "group_order" && row.type !== "group_contents") {
+  if (row.type !== "group_order" && row.type !== "group_contents" && row.type !== "group_rename") {
     return undefined;
   }
 
   const type = row.type;
 
   return {
-    type: type as "group_order" | "group_contents",
+    type: type as "group_order" | "group_contents" | "group_rename",
     ...(typeof row.category === "string" ? { category: row.category } : {}),
   };
 }

@@ -31,6 +31,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import EditIcon from "@mui/icons-material/Edit";
 import SortIcon from "@mui/icons-material/Sort";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
@@ -89,6 +90,8 @@ export function SkillsEditor({
   const [draggingSkillId, setDraggingSkillId] = useState<string | null>(null);
   const [draftSkillOrder, setDraftSkillOrder] = useState<Record<string, string[]>>({});
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editGroupName, setEditGroupName] = useState("");
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -157,6 +160,7 @@ export function SkillsEditor({
 
   const renderCategoryBlock = (groupId: string, cat: string, catSkills: SkillRow[]) => {
     const isSorting = sortingGroupId === groupId;
+    const isEditingGroup = editingGroupId === groupId;
     const orderedSkillIds = draftSkillOrder[groupId] ?? catSkills.map((skill) => skill.id);
     const orderedSkills = orderedSkillIds
       .map((skillId: string) => catSkills.find((skill: SkillRow) => skill.id === skillId))
@@ -164,13 +168,66 @@ export function SkillsEditor({
 
     return (
     <Box key={groupId} sx={{ mb: 2.5, minWidth: 0 }}>
-      <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
-        <Typography
-          variant="caption"
-          sx={{ fontWeight: 700, letterSpacing: "0.06em", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-        >
-          {(cat || t("resume.detail.skillsHeading")).toUpperCase()}
-        </Typography>
+      <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0, gap: 1 }}>
+        {isEditingGroup ? (
+          <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", flex: 1, minWidth: 0 }}>
+            <TextField
+              value={editGroupName}
+              onChange={(event) => setEditGroupName(event.target.value)}
+              size="small"
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && editGroupName.trim()) {
+                  editor.updateGroupMutation.mutate(
+                    { id: groupId, name: editGroupName.trim() },
+                    { onSuccess: () => setEditingGroupId(null) },
+                  );
+                }
+                if (event.key === "Escape") {
+                  setEditingGroupId(null);
+                }
+              }}
+              sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5, fontWeight: 700 } }}
+            />
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => {
+                if (!editGroupName.trim()) return;
+                editor.updateGroupMutation.mutate(
+                  { id: groupId, name: editGroupName.trim() },
+                  { onSuccess: () => setEditingGroupId(null) },
+                );
+              }}
+              disabled={!editGroupName.trim() || editor.updateGroupMutation.isPending}
+            >
+              <CheckIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => setEditingGroupId(null)}>
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Box>
+        ) : (
+          <Typography
+            variant="caption"
+            sx={{ fontWeight: 700, letterSpacing: "0.06em", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
+            {(cat || t("resume.detail.skillsHeading")).toUpperCase()}
+          </Typography>
+        )}
+        <Tooltip title={t("resume.edit.skillEditButton")}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              setEditingGroupId(groupId);
+              setEditGroupName(cat);
+            }}
+            sx={{ p: 0.25 }}
+            disabled={isEditingGroup || isSorting}
+          >
+            <EditIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
         <Tooltip title={t("resume.edit.skillAddButton")}>
           <IconButton size="small" onClick={() => editor.startAddingToCategory(groupId)} sx={{ p: 0.25 }}>
             <AddIcon sx={{ fontSize: 16 }} />
@@ -327,17 +384,67 @@ export function SkillsEditor({
                   {index + 1}
                 </Typography>
                 <Box sx={{ flex: 1, bgcolor: "action.hover", px: 1.5, py: 0.75, minWidth: 0 }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                  >
-                    {(group.category || t("resume.detail.skillsHeading")).toUpperCase()}
-                  </Typography>
+                  {editingGroupId === group.id ? (
+                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+                      <TextField
+                        value={editGroupName}
+                        onChange={(event) => setEditGroupName(event.target.value)}
+                        size="small"
+                        autoFocus
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && editGroupName.trim()) {
+                            editor.updateGroupMutation.mutate(
+                              { id: group.id, name: editGroupName.trim() },
+                              { onSuccess: () => setEditingGroupId(null) },
+                            );
+                          }
+                          if (event.key === "Escape") {
+                            setEditingGroupId(null);
+                          }
+                        }}
+                        sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5, fontWeight: 700 } }}
+                      />
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        disabled={!editGroupName.trim() || editor.updateGroupMutation.isPending}
+                        onClick={() => {
+                          if (!editGroupName.trim()) return;
+                          editor.updateGroupMutation.mutate(
+                            { id: group.id, name: editGroupName.trim() },
+                            { onSuccess: () => setEditingGroupId(null) },
+                          );
+                        }}
+                      >
+                        <CheckIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setEditingGroupId(null)}>
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {(group.category || t("resume.detail.skillsHeading")).toUpperCase()}
+                    </Typography>
+                  )}
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                   {t("resume.edit.skillsCount", { count: group.skills.length })}
                 </Typography>
                 <Box sx={{ display: "flex" }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setEditingGroupId(group.id);
+                      setEditGroupName(group.category);
+                    }}
+                    disabled={editor.isReordering || editingGroupId === group.id}
+                  >
+                    <EditIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
                   <IconButton
                     size="small"
                     onClick={() => setConfirmDeleteGroupId(group.id)}

@@ -166,6 +166,62 @@ function parseSuggestedGroupContents(
   };
 }
 
+function parseSuggestedGroupRename(
+  suggestedText: string,
+  currentSkills: SkillLike[],
+) {
+  const [rawCategory, rawItems] = suggestedText.split(":");
+  if (!rawCategory || !rawItems) {
+    return null;
+  }
+
+  const currentGroups = groupSkillsByCategory(currentSkills);
+  const desiredNames = rawItems
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (desiredNames.length === 0) {
+    return null;
+  }
+
+  const desiredNameSet = new Set(desiredNames.map((item) => item.toLowerCase()));
+  const matchingGroup = currentGroups.find((group) => {
+    if (group.skills.length !== desiredNames.length) {
+      return false;
+    }
+
+    return group.skills.every((skill) => desiredNameSet.has(skill.name.trim().toLowerCase()));
+  });
+
+  if (!matchingGroup) {
+    return null;
+  }
+
+  const nextCategory = rawCategory.trim();
+  if (!nextCategory || normalizeSkillsLabel(nextCategory) === normalizeSkillsLabel(matchingGroup.category)) {
+    return null;
+  }
+
+  const nextGroups = currentGroups.map((group) =>
+    group.category === matchingGroup.category
+      ? {
+          ...group,
+          category: nextCategory,
+          skills: group.skills.map((skill) => ({ ...skill, category: nextCategory })),
+        }
+      : group,
+  );
+
+  return {
+    skills: resequenceSkillGroups(nextGroups),
+    skillScope: {
+      type: "group_rename" as const,
+      category: matchingGroup.category,
+    },
+  };
+}
+
 function parseSuggestedFlatSkillsList(
   suggestedText: string,
   currentSkills: SkillLike[],
@@ -232,6 +288,11 @@ export function hydrateSkillsSuggestion(
     return suggestion;
   }
 
+  const parsedGroupRename = parseSuggestedGroupRename(suggestion.suggestedText, currentSkills);
+  if (parsedGroupRename) {
+    return { ...suggestion, skills: parsedGroupRename.skills, skillScope: parsedGroupRename.skillScope };
+  }
+
   const parsedGroupContents = parseSuggestedGroupContents(suggestion.suggestedText, currentSkills);
   if (parsedGroupContents) {
     return { ...suggestion, skills: parsedGroupContents.skills, skillScope: parsedGroupContents.skillScope };
@@ -279,6 +340,27 @@ export function buildSkillsReviewValue(
       mode: "group_order",
       originalSections: originalGroups.map((group) => ({ heading: group.heading, items: [] })),
       suggestedSections: suggestedGroups.map((group) => ({ heading: group.heading, items: [] })),
+    };
+  }
+
+  if (suggestion.skillScope?.type === "group_rename" && suggestion.skillScope.category) {
+    const targetCategory = normalizeSkillsLabel(suggestion.skillScope.category);
+    const originalSection = originalGroups.find(
+      (group) => normalizeSkillsLabel(group.heading) === targetCategory,
+    );
+    const suggestedSection = suggestedGroups.find(
+      (group) => group.items.length === (originalSection?.items.length ?? -1)
+        && group.items.every((item) => originalSection?.items.includes(item)),
+    );
+    const displayCategory =
+      originalSection?.heading ?? suggestedSection?.heading ?? suggestion.skillScope.category;
+
+    return {
+      suggestionId: suggestion.id,
+      mode: "group_rename",
+      targetCategory: displayCategory,
+      originalSections: originalSection ? [{ heading: originalSection.heading, items: [] }] : [],
+      suggestedSections: suggestedSection ? [{ heading: suggestedSection.heading, items: [] }] : [],
     };
   }
 
