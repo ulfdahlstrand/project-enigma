@@ -3,8 +3,8 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 // Assignment schemas
 //
-// After the branch-content migration, `assignments` is an identity-only table.
-// All mutable content lives in `branch_assignments`.
+// `assignments` is an identity-only table. Branch-specific assignment content
+// lives in the current branch snapshot.
 // ---------------------------------------------------------------------------
 
 /** Identity-only record — no content fields. */
@@ -17,7 +17,7 @@ export const assignmentSchema = z.object({
 export type Assignment = z.infer<typeof assignmentSchema>;
 
 // ---------------------------------------------------------------------------
-// createAssignment — branchId is required; content goes into branch_assignments
+// createAssignment — branchId is required; content is added to the branch snapshot
 // ---------------------------------------------------------------------------
 
 export const createAssignmentInputSchema = z.object({
@@ -35,11 +35,11 @@ export const createAssignmentInputSchema = z.object({
   highlight: z.boolean().default(false),
 });
 
-// createAssignment returns the full branch-assignment content (not identity-only)
-// so the caller has everything needed to update the UI.
+// createAssignment returns the full branch assignment content so the caller has
+// everything needed to update the UI.
 export const createAssignmentOutputSchema = z.object({
-  id: z.string().uuid(),           // branch_assignment id
-  assignmentId: z.string().uuid(), // assignment identity id
+  id: z.string().uuid(),
+  assignmentId: z.string().uuid(),
   branchId: z.string().uuid(),
   employeeId: z.string().uuid(),
   clientName: z.string(),

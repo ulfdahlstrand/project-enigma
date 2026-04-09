@@ -33,20 +33,6 @@ const EMPLOYEE_ROW = {
   profile_image_data_url: "data:image/png;base64,display",
 };
 
-const ASSIGNMENT_ROWS = [
-  {
-    role: "Engineer",
-    client_name: "Acme Corp",
-    start_date: "2020-01-01",
-    end_date: null,
-    is_current: true,
-    type: null,
-    technologies: ["TypeScript"],
-    keywords: null,
-    description: "Built things",
-  },
-];
-
 const EDUCATION_ROWS = [
   { type: "degree", value: "BSc Computer Science", sort_order: 1 },
 ];
@@ -90,7 +76,6 @@ const COMMIT_ROW = {
 function buildDbMock(opts: {
   resumeRow?: unknown;
   employeeRow?: unknown;
-  assignmentRows?: unknown[];
   educationRows?: unknown[];
   commitRow?: unknown;
   resolveEmployeeId?: string | null;
@@ -98,7 +83,6 @@ function buildDbMock(opts: {
   const {
     resumeRow = RESUME_ROW,
     employeeRow = EMPLOYEE_ROW,
-    assignmentRows = ASSIGNMENT_ROWS,
     educationRows = EDUCATION_ROWS,
     commitRow = COMMIT_ROW,
     resolveEmployeeId = null,
@@ -135,17 +119,6 @@ function buildDbMock(opts: {
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExec });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
-  // Assignments chain
-  const assignExec = vi.fn().mockResolvedValue(assignmentRows);
-  const assignOrderBy2 = vi.fn().mockReturnValue({ execute: assignExec });
-  const assignOrderBy1 = vi.fn().mockReturnValue({ orderBy: assignOrderBy2 });
-  const assignWhere3 = vi.fn().mockReturnValue({ orderBy: assignOrderBy1 });
-  const assignWhere2 = vi.fn().mockReturnValue({ where: assignWhere3 });
-  const assignWhere1 = vi.fn().mockReturnValue({ where: assignWhere2 });
-  const assignSelectAll = vi.fn().mockReturnValue({ where: assignWhere1 });
-  const assignInnerJoin2 = vi.fn().mockReturnValue({ selectAll: assignSelectAll });
-  const assignInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: assignInnerJoin2 });
-
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);
   const eduOrderBy = vi.fn().mockReturnValue({ execute: eduExec });
@@ -157,7 +130,6 @@ function buildDbMock(opts: {
     if (table === "resumes") return { select: resumeSelect };
     if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
-    if (table === "branch_assignments as ba") return { innerJoin: assignInnerJoin1 };
     if (table === "education") return { selectAll: eduSelectAll };
     throw new Error(`Unexpected table: ${table}`);
   });

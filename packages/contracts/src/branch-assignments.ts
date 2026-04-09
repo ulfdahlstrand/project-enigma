@@ -4,9 +4,8 @@ import { branchAssignmentSchema } from "./resume-versions.js";
 // ---------------------------------------------------------------------------
 // BranchAssignment schemas
 //
-// Per-branch assignment content CRUD. After the branch-content migration,
-// branch_assignments owns all mutable assignment content. Editing always
-// targets a specific branch_assignment row so changes are branch-isolated.
+// Per-branch assignment content CRUD backed by the branch's current commit
+// content. Editing remains branch-isolated without a dedicated table.
 // ---------------------------------------------------------------------------
 
 export const branchAssignmentItemSchema = branchAssignmentSchema;
@@ -17,8 +16,8 @@ export type BranchAssignmentItem = z.infer<typeof branchAssignmentItemSchema>;
 // ---------------------------------------------------------------------------
 
 export const fullBranchAssignmentSchema = z.object({
-  id: z.string().uuid(),           // branch_assignment id (used for updates/removes)
-  assignmentId: z.string().uuid(), // assignment identity id (used for delete)
+  id: z.string().uuid(),           // assignment identity id (used for updates/removes)
+  assignmentId: z.string().uuid(),
   branchId: z.string().uuid(),
   employeeId: z.string().uuid(),
   clientName: z.string(),
@@ -85,6 +84,7 @@ export const addBranchAssignmentOutputSchema = fullBranchAssignmentSchema;
 // ---------------------------------------------------------------------------
 
 export const removeBranchAssignmentInputSchema = z.object({
+  branchId: z.string().uuid(),
   id: z.string().uuid(),
 });
 
@@ -98,6 +98,7 @@ export const removeBranchAssignmentOutputSchema = z.object({
 
 export const updateBranchAssignmentInputSchema = z
   .object({
+    branchId: z.string().uuid(),
     id: z.string().uuid(),
     // Content fields
     clientName: z.string().min(1).optional(),

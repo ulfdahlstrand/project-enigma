@@ -4,6 +4,7 @@ import { sortAssignments } from "@cv-tool/utils";
 import type { Database } from "../../../db/types.js";
 import type { AuthUser } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
+import { filterDeletedAssignments } from "../../resume/lib/branch-assignment-content.js";
 import { readTreeContent } from "../../resume/lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
@@ -100,23 +101,12 @@ async function buildFromLive(
 
   const snapshotCommitId = resume.head_commit_id ?? resume.forked_from_commit_id ?? null;
 
-  const [employee, assignments, education, commitRow] = await Promise.all([
+  const [employee, education, commitRow] = await Promise.all([
     db
       .selectFrom("employees")
       .select(["name", "email", "profile_image_data_url"])
       .where("id", "=", employeeId)
       .executeTakeFirst(),
-    db
-      .selectFrom("branch_assignments as ba")
-      .innerJoin("resume_branches as rb", "rb.id", "ba.branch_id")
-      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-      .selectAll("ba")
-      .where("rb.resume_id", "=", resumeId)
-      .where("rb.is_main", "=", true)
-      .where("a.deleted_at", "is", null)
-      .orderBy("ba.is_current", "desc")
-      .orderBy("ba.start_date", "desc")
-      .execute(),
     db
       .selectFrom("education")
       .selectAll()
@@ -135,6 +125,9 @@ async function buildFromLive(
   const content = commitRow?.tree_id
     ? await readTreeContent(db, commitRow.tree_id)
     : null;
+  const assignments = content
+    ? await filterDeletedAssignments(db, content.assignments ?? [])
+    : [];
 
   return {
     name: employee?.name ?? "Unknown",
@@ -146,7 +139,19 @@ async function buildFromLive(
     summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],
     skills: (content?.skills ?? []).map((s) => ({ name: s.name, category: s.category })),
-    assignments: mapAssignments(assignments),
+    assignments: mapAssignments(
+      assignments.map((a) => ({
+        role: a.role,
+        client_name: a.clientName,
+        start_date: a.startDate,
+        end_date: a.endDate,
+        is_current: a.isCurrent,
+        type: a.type,
+        technologies: a.technologies,
+        keywords: a.keywords,
+        description: a.description,
+      })),
+    ),
     education: education.map((e) => ({ type: e.type, value: e.value })),
   };
 }
@@ -193,6 +198,7 @@ async function buildFromSnapshot(
   }
 
   const content = await readTreeContent(db, commitRow.tree_id);
+  const assignments = await filterDeletedAssignments(db, content.assignments ?? []);
 
   return {
     name: employee?.name ?? "Unknown",
@@ -205,7 +211,7 @@ async function buildFromSnapshot(
     highlightedItems: content.highlightedItems ?? [],
     skills: content.skills.map((s) => ({ name: s.name, category: s.category })),
     assignments: sortAssignments(
-      content.assignments.map((a) => ({
+      assignments.map((a) => ({
         role: a.role,
         client_name: a.clientName,
         start_date: a.startDate,

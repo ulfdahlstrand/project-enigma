@@ -6,7 +6,7 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
-import { normaliseAssignmentIds, syncBranchAssignmentsFromContent } from "../lib/sync-branch-assignments.js";
+import { normaliseAssignmentIds } from "../lib/sync-branch-assignments.js";
 import { syncLiveResumeFromContent } from "../lib/sync-live-resume-from-content.js";
 import { readTreeContent } from "../lib/read-tree-content.js";
 import { buildCommitTree } from "../lib/build-commit-tree.js";
@@ -124,9 +124,6 @@ export async function finaliseResumeBranch(
       .set({ head_commit_id: mergeCommit.id })
       .where("id", "=", sourceBranch.id)
       .execute();
-
-    await syncBranchAssignmentsFromContent(trx, sourceBranch.id, normalisedContent);
-
     const sourceBranchMeta = await trx
       .selectFrom("resume_branches")
       .select(["is_main"])

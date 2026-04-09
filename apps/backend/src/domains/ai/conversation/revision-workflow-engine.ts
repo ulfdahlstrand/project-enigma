@@ -17,6 +17,7 @@ import type { Kysely } from "kysely";
 import type OpenAI from "openai";
 import type { Database } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 import { withSpan } from "../../../infra/tracing.js";
 import { setPendingDecision } from "./pending-decision.js";
 import {
@@ -267,13 +268,8 @@ async function countAssignmentsForBranch(
   db: Kysely<Database>,
   branchId: string,
 ) {
-  const rows = await db
-    .selectFrom("branch_assignments")
-    .select("assignment_id")
-    .where("branch_id", "=", branchId)
-    .execute();
-
-  return rows.length;
+  const branch = await readBranchAssignmentContent(db, branchId);
+  return branch?.content.assignments.length ?? 0;
 }
 
 function nextOpenWorkItem<T extends {

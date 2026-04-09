@@ -98,12 +98,6 @@ export function ResumeDetailPage({
     enabled: !!resume?.employeeId,
   });
 
-  const { data: liveAssignments = [] } = useQuery({
-    queryKey: ["listBranchAssignmentsFull", activeBranchId],
-    queryFn: () => orpc.listBranchAssignmentsFull({ branchId: activeBranchId! }),
-    enabled: !!activeBranchId,
-  });
-
   const { data: education = [] } = useQuery({
     queryKey: ["listEducation", resume?.employeeId],
     queryFn: () => orpc.listEducation({ employeeId: resume!.employeeId }),
@@ -163,7 +157,10 @@ export function ResumeDetailPage({
       }),
     onSuccess: async (result) => {
       setNewAssignmentId(result.id);
-      await queryClient.invalidateQueries({ queryKey: ["listBranchAssignmentsFull", activeBranchId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
+        queryClient.invalidateQueries({ queryKey: ["getResume", id] }),
+      ]);
     },
   });
 
@@ -201,8 +198,11 @@ export function ResumeDetailPage({
     draftHighlightedItemsRef.current = draftHighlightedItems;
   }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
-  const assignments = liveAssignments;
   const snapshotContent = isSnapshotMode ? selectedCommit?.content : null;
+  const assignments = (snapshotContent?.assignments ?? resume?.assignments ?? []).map((assignment) => ({
+    ...assignment,
+    id: assignment.assignmentId,
+  }));
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
   const language = snapshotContent?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
@@ -212,7 +212,7 @@ export function ResumeDetailPage({
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
   const editableAssignments = sortedAssignments.map((assignment) => ({
     ...assignment,
-    assignmentId: assignment.assignmentId ?? assignment.id,
+    assignmentId: assignment.assignmentId,
   })) as EditorAssignmentRow[];
   const fallbackHighlightedItems = sortedAssignments
     .slice(0, COVER_HIGHLIGHT_COUNT)
@@ -330,28 +330,14 @@ export function ResumeDetailPage({
       sortOrder: skill.sortOrder ?? 0,
     })),
     assignments: sortedAssignments.map((assignment) => ({
-      id: "assignmentId" in assignment && typeof assignment.assignmentId === "string"
-        ? assignment.assignmentId
-        : assignment.id,
+      id: assignment.assignmentId,
       clientName: assignment.clientName,
       role: assignment.role,
-      description: "description" in assignment && typeof assignment.description === "string"
-        ? assignment.description
-        : "",
-      technologies: "technologies" in assignment && Array.isArray(assignment.technologies)
-        ? assignment.technologies
-        : [],
+      description: assignment.description,
+      technologies: assignment.technologies,
       isCurrent: assignment.isCurrent,
-      startDate: typeof assignment.startDate === "string"
-        ? assignment.startDate
-        : assignment.startDate instanceof Date
-          ? assignment.startDate.toISOString()
-          : null,
-      endDate: typeof assignment.endDate === "string"
-        ? assignment.endDate
-        : assignment.endDate instanceof Date
-          ? assignment.endDate.toISOString()
-          : null,
+      startDate: assignment.startDate,
+      endDate: assignment.endDate,
     })),
   };
   const totalPages = 1 + (showSkillsPage ? 1 : 0) + (hasAssignments ? 1 : 0);

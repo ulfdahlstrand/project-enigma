@@ -7,6 +7,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { parsePeriod } from "../lib/parse-period.js";
 import type { importCvInputSchema } from "@cv-tool/contracts";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 import { upsertBranchContentFromLive } from "../../resume/lib/upsert-branch-content-from-live.js";
 
 type ImportCvInput = z.infer<typeof importCvInputSchema>;
@@ -78,11 +79,13 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
 
   // ---------------------------------------------------------------------------
   // 3. Import assignments — skip duplicates (same employee + client + role + start)
-  //    Each new assignment is atomically linked to the main branch via branch_assignments.
+  //    Persist imported content into the main branch tree.
   // ---------------------------------------------------------------------------
 
   let assignmentsCreated = 0;
   let assignmentsSkipped = 0;
+  const existingBranchContent = await readBranchAssignmentContent(db, mainBranch.id);
+  const nextAssignments = [...(existingBranchContent?.content.assignments ?? [])];
 
   for (const a of assignments) {
     const clientName = a.client.trim() || "Unknown";
@@ -107,19 +110,13 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       isCurrent = period.isCurrent;
     }
 
-    // Duplicate check — assignment already exists for this employee on the main branch
-    const existing = await db
-      .selectFrom("branch_assignments as ba")
-      .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-      .select("ba.id")
-      .where("a.employee_id", "=", employeeId)
-      .where("a.deleted_at", "is", null)
-      .where("ba.client_name", "=", clientName)
-      .where("ba.role", "=", a.role.trim())
-      .where("ba.start_date", "=", startDate)
-      .executeTakeFirst();
+    const duplicate = nextAssignments.some((assignment) =>
+      assignment.clientName === clientName
+      && assignment.role === a.role.trim()
+      && assignment.startDate.slice(0, 10) === startDate.toISOString().slice(0, 10),
+    );
 
-    if (existing) {
+    if (duplicate) {
       assignmentsSkipped++;
       continue;
     }
@@ -129,30 +126,25 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     const technologies = a.technologies.map((t) => t.trim()).filter(Boolean);
     const keywords = a.keywords.join(", ") || null;
 
-    await db.transaction().execute(async (trx) => {
-      const newAssignment = await trx
-        .insertInto("assignments")
-        .values({ employee_id: employeeId })
-        .returning("id")
-        .executeTakeFirstOrThrow();
+    const newAssignment = await db
+      .insertInto("assignments")
+      .values({ employee_id: employeeId })
+      .returning("id")
+      .executeTakeFirstOrThrow();
 
-      await trx
-        .insertInto("branch_assignments")
-        .values({
-          branch_id: mainBranch.id,
-          assignment_id: newAssignment.id,
-          client_name: clientName,
-          role: a.role.trim(),
-          description,
-          start_date: startDate,
-          end_date: endDate,
-          is_current: isCurrent,
-          technologies,
-          keywords,
-          type: a.type ?? null,
-          highlight: a.highlight ?? false,
-        })
-        .execute();
+    nextAssignments.push({
+      assignmentId: newAssignment.id,
+      clientName,
+      role: a.role.trim(),
+      description,
+      startDate: startDate.toISOString(),
+      endDate: endDate?.toISOString() ?? null,
+      technologies,
+      isCurrent: isCurrent,
+      keywords,
+      type: a.type ?? null,
+      highlight: a.highlight ?? false,
+      sortOrder: null,
     });
 
     assignmentsCreated++;
@@ -235,6 +227,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     userId: null,
     consultantTitle: consultant.title || null,
     presentation: consultant.presentation,
+    assignments: nextAssignments,
     ...(importedSkills.length > 0 ? { skills: importedSkills, skillGroups: importedSkillGroups } : {}),
   });
 

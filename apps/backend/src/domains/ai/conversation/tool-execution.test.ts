@@ -38,52 +38,40 @@ const COMMIT_CONTENT = {
     { name: "Go", category: "Languages", sortOrder: 2 },
     { name: "Kubernetes", category: "Infrastructure", sortOrder: 3 },
   ],
-};
-
-const ASSIGNMENT_ROW = {
-  assignment_id: ASSIGNMENT_ID,
-  client_name: "Acme Corp",
-  role: "Lead Engineer",
-  description: "Led the migration to microservices.",
-  technologies: ["TypeScript", "Docker"],
-  is_current: false,
-  start_date: new Date("2023-01-01"),
-  end_date: new Date("2024-01-01"),
-  sort_order: 0,
+  assignments: [
+    {
+      assignmentId: ASSIGNMENT_ID,
+      clientName: "Acme Corp",
+      role: "Lead Engineer",
+      description: "Led the migration to microservices.",
+      technologies: ["TypeScript", "Docker"],
+      isCurrent: false,
+      startDate: "2023-01-01",
+      endDate: "2024-01-01",
+      keywords: null,
+      type: null,
+      highlight: false,
+      sortOrder: 0,
+    },
+  ],
 };
 
 /**
  * Build a minimal Kysely mock that returns the given branch data.
  *
- * The DB is queried in three sequential chains inside buildResumeSnapshotFromBranch:
+ * The DB is queried in two sequential chains inside buildResumeSnapshotFromBranch:
  *   1. resume_branches → inner joins → executeTakeFirst()
  *   2. resume_commits   → executeTakeFirst()
- *   3. branch_assignments → execute()
  */
 function buildDb({
   branchRow = BRANCH_ROW as unknown,
   commitContent = COMMIT_CONTENT,
-  assignments = [ASSIGNMENT_ROW],
   revisionWorkItems = [] as unknown[],
 }: {
   branchRow?: unknown;
   commitContent?: typeof COMMIT_CONTENT | null;
-  assignments?: typeof ASSIGNMENT_ROW[];
   revisionWorkItems?: unknown[];
 } = {}) {
-  // Query 3: branch_assignments
-  const assignmentExecute = vi.fn().mockResolvedValue(assignments);
-  const assignmentQuery = {
-    selectAll: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockReturnValue({ execute: assignmentExecute }),
-        }),
-      }),
-    }),
-    innerJoin: vi.fn().mockReturnThis(),
-  };
-
   const revisionWorkItemsExecute = vi.fn().mockResolvedValue(revisionWorkItems);
   const revisionWorkItemsQuery = {
     selectAll: vi.fn().mockReturnValue({
@@ -121,7 +109,6 @@ function buildDb({
     const i = callIndex++;
     if (i === 0) return branchQuery;
     if (i === 1) return commitQuery;
-    if (i === 2) return assignmentQuery;
     return revisionWorkItemsQuery;
   });
 

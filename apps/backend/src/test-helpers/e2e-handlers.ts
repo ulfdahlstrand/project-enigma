@@ -224,6 +224,20 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
 
   let assignmentId: string | null = null;
   const assignmentIds: string[] = [];
+  const snapshotAssignments: Array<{
+    assignmentId: string;
+    clientName: string;
+    role: string;
+    description: string;
+    startDate: string;
+    endDate: string | null;
+    technologies: string[];
+    isCurrent: boolean;
+    keywords: string | null;
+    type: string | null;
+    highlight: boolean;
+    sortOrder: number | null;
+  }> = [];
 
   const assignmentsToCreate = body.skipAssignment
     ? []
@@ -245,24 +259,20 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
       .values({ id: createdAssignmentId, employee_id: employeeId })
       .execute();
 
-    await db
-      .insertInto("branch_assignments")
-      .values({
-        branch_id: resume.mainBranchId!,
-        assignment_id: createdAssignmentId,
-        client_name: assignmentInput.clientName ?? `Assignment ${index + 1}`,
-        role: assignmentInput.role ?? "Consultant",
-        description: assignmentInput.description ?? `Assignment ${index + 1} description.`,
-        start_date: new Date(`2025-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`),
-        end_date: null,
-        technologies: ["TypeScript"],
-        is_current: index === 0,
-        keywords: null,
-        type: null,
-        highlight: true,
-        sort_order: index,
-      })
-      .execute();
+    snapshotAssignments.push({
+      assignmentId: createdAssignmentId,
+      clientName: assignmentInput.clientName ?? `Assignment ${index + 1}`,
+      role: assignmentInput.role ?? "Consultant",
+      description: assignmentInput.description ?? `Assignment ${index + 1} description.`,
+      startDate: `2025-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+      endDate: null,
+      technologies: ["TypeScript"],
+      isCurrent: index === 0,
+      keywords: null,
+      type: null,
+      highlight: true,
+      sortOrder: index,
+    });
   }
 
   const savedCommit = await saveResumeVersion(db, user, {
@@ -271,6 +281,7 @@ export async function e2eBootstrapRevisionHandler(req: IncomingMessage, res: Ser
     consultantTitle: body.consultantTitle ?? "Tech Lead / Senior Engineer",
     presentation: body.presentationParagraphs ?? [],
     summary: body.summary ?? null,
+    assignments: snapshotAssignments,
   });
 
   res.writeHead(200, { "Content-Type": "application/json" });

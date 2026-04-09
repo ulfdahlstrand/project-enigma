@@ -4,6 +4,7 @@ import { logger } from "../../../infra/logger.js";
 import { withSpan } from "../../../infra/tracing.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { filterDeletedAssignments } from "../../resume/lib/branch-assignment-content.js";
 import { readTreeContent } from "../../resume/lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
@@ -88,15 +89,9 @@ async function buildResumeSnapshotFromBranch(
       .executeTakeFirst();
     content = commit?.tree_id ? await readTreeContent(db, commit.tree_id) : null;
   }
-
-  const rawAssignments = await db
-    .selectFrom("branch_assignments as ba")
-    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-    .selectAll("ba")
-    .where("ba.branch_id", "=", branchId)
-    .where("a.deleted_at", "is", null)
-    .orderBy("ba.sort_order", "asc")
-    .execute();
+  const assignments = content
+    ? await filterDeletedAssignments(db, content.assignments ?? [])
+    : [];
 
   return {
     resumeId: branch.resumeId,
@@ -108,15 +103,15 @@ async function buildResumeSnapshotFromBranch(
     presentation: content?.presentation ?? [],
     summary: content?.summary ?? null,
     skills: content?.skills ?? [],
-    assignments: rawAssignments.map((a) => ({
-      id: a.assignment_id,
-      clientName: a.client_name,
+    assignments: assignments.map((a) => ({
+      id: a.assignmentId,
+      clientName: a.clientName,
       role: a.role,
       description: a.description,
       technologies: a.technologies,
-      isCurrent: a.is_current,
-      startDate: a.start_date ? a.start_date.toISOString().slice(0, 10) : null,
-      endDate: a.end_date ? a.end_date.toISOString().slice(0, 10) : null,
+      isCurrent: a.isCurrent,
+      startDate: a.startDate ? a.startDate.slice(0, 10) : null,
+      endDate: a.endDate ? a.endDate.slice(0, 10) : null,
     })),
   };
 }

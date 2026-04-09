@@ -42,8 +42,7 @@ function normaliseRevisionBranchName(name: string): string {
  * Creates a new branch forked from a specific commit.
  *
  * The new branch's HEAD starts at the forked commit (inheriting its full
- * resume snapshot), and its branch_assignments are copied from the source
- * branch so the user starts with the same assignment curation.
+ * resume snapshot) through `forked_from_commit_id`.
  *
  * Access rules:
  *   - Admins can fork any branch.
@@ -89,51 +88,22 @@ export async function forkResumeBranch(
 
   const commitContent = await readTreeContent(db, commit.tree_id);
 
-  // Create the new branch and copy assignments atomically.
+  // Create the new branch atomically.
   // No initial commit is created — the branch starts empty (headCommitId = null)
   // and the fork point is tracked via forkedFromCommitId.
-  const newBranch = await db.transaction().execute(async (trx) => {
-    const branch = await trx
-      .insertInto("resume_branches")
-      .values({
-        resume_id: commit.resume_id,
-        name: normaliseRevisionBranchName(input.name),
-        language: commitContent.language ?? "en",
-        is_main: false,
-        head_commit_id: null,
-        forked_from_commit_id: input.fromCommitId,
-        created_by: user.id,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    // Copy branch assignments from the forked commit snapshot so forking works
-    // even when the source branch has been deleted.
-    if (commitContent.assignments.length > 0) {
-      await trx
-        .insertInto("branch_assignments")
-        .values(
-          commitContent.assignments.map((assignment) => ({
-            branch_id: branch.id,
-            assignment_id: assignment.assignmentId,
-            client_name: assignment.clientName,
-            role: assignment.role,
-            description: assignment.description,
-            start_date: new Date(assignment.startDate),
-            end_date: assignment.endDate ? new Date(assignment.endDate) : null,
-            technologies: assignment.technologies,
-            is_current: assignment.isCurrent,
-            keywords: assignment.keywords,
-            type: assignment.type,
-            highlight: assignment.highlight,
-            sort_order: assignment.sortOrder,
-          }))
-        )
-        .execute();
-    }
-
-    return branch;
-  });
+  const newBranch = await db
+    .insertInto("resume_branches")
+    .values({
+      resume_id: commit.resume_id,
+      name: normaliseRevisionBranchName(input.name),
+      language: commitContent.language ?? "en",
+      is_main: false,
+      head_commit_id: null,
+      forked_from_commit_id: input.fromCommitId,
+      created_by: user.id,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   return {
     id: newBranch.id,

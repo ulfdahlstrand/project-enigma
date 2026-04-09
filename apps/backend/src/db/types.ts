@@ -49,7 +49,7 @@ export type NewResume = Insertable<ResumeTable>;
 export type ResumeUpdate = Updateable<ResumeTable>;
 
 
-/** Identity-only record. All mutable content lives in branch_assignments. */
+/** Identity-only record. Branch-specific content lives in resume snapshots. */
 export interface AssignmentTable {
   id: Generated<string>;
   employee_id: string;

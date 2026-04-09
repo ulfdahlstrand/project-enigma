@@ -9,6 +9,7 @@ import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import type { getResumeOutputSchema } from "@cv-tool/contracts";
+import { filterDeletedAssignments } from "../lib/branch-assignment-content.js";
 import { readTreeContent } from "../lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
@@ -135,6 +136,7 @@ export async function getResume(
   }
 
   if (snapshotContent !== null) {
+    const snapshotAssignments = await filterDeletedAssignments(db, snapshotContent.assignments ?? []);
     const snapshotSkills = buildSnapshotSkills(id, snapshotContent);
 
     return {
@@ -153,6 +155,7 @@ export async function getResume(
       updatedAt: resumeRow.updated_at,
       skillGroups: snapshotSkills.skillGroups,
       skills: snapshotSkills.skills,
+      assignments: snapshotAssignments,
     };
   }
 
@@ -173,6 +176,7 @@ export async function getResume(
     updatedAt: resumeRow.updated_at,
     skillGroups: [],
     skills: [],
+    assignments: [],
   };
 }
 

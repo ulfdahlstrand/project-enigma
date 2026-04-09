@@ -7,7 +7,7 @@ import { z } from "zod";
 // Models git-inspired versioning concepts in plain language:
 //   resume_commit  → a saved version (immutable snapshot)
 //   resume_branch  → a variant (named line of development)
-//   branch_assignment → per-variant assignment linking
+//   branch assignment views → branch-scoped assignment content from commits
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ export const resumeBranchSchema = z.object({
 export type ResumeBranch = z.infer<typeof resumeBranchSchema>;
 
 // ---------------------------------------------------------------------------
-// BranchAssignment — per-variant assignment link
+// BranchAssignment — branch-scoped assignment view item
 // ---------------------------------------------------------------------------
 
 export const branchAssignmentSchema = z.object({
@@ -125,6 +125,7 @@ export const saveResumeVersionInputSchema = z.object({
   highlightedItems: z.array(z.string()).optional(),
   skillGroups: z.array(resumeCommitSkillGroupSchema).optional(),
   skills: z.array(resumeCommitSkillSchema).optional(),
+  assignments: z.array(resumeCommitAssignmentSchema).optional(),
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
@@ -163,9 +164,8 @@ export const listResumeCommitsOutputSchema = z.array(resumeCommitListItemSchema)
 // ---------------------------------------------------------------------------
 // forkResumeBranch schemas
 //
-// Creates a new branch forked from a specific commit. The new branch's HEAD
-// starts at the forked commit (inheriting its full resume snapshot), and its
-// branch_assignments are copied from the source branch.
+// Creates a new branch forked from a specific commit. The new branch starts
+// from that commit's snapshot through `forkedFromCommitId`.
 // ---------------------------------------------------------------------------
 
 export const forkResumeBranchInputSchema = z.object({

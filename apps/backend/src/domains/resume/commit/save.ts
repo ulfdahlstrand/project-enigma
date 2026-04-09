@@ -76,8 +76,8 @@ function summarizeCommitChanges(
  * Creates an immutable snapshot (commit) of the current state of a resume
  * branch. Advances the branch's head_commit_id to the new commit.
  *
- * The snapshot captures: resume scalar fields, skills, and all assignments
- * currently linked to the branch via branch_assignments.
+ * The snapshot captures the branch's latest tree-backed content, optionally
+ * applying any field overrides provided in the save request.
  *
  * Access rules:
  *   - Admins can save any branch.
@@ -141,30 +141,6 @@ export async function saveResumeVersion(
         assignments: [],
       };
 
-  // Fetch assignments linked to this branch — all content is now in branch_assignments.
-  // Soft-deleted assignments are excluded (deleted_at IS NULL guard).
-  const assignmentRows = await db
-    .selectFrom("branch_assignments as ba")
-    .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-    .select([
-      "ba.assignment_id",
-      "ba.client_name",
-      "ba.role",
-      "ba.description",
-      "ba.start_date",
-      "ba.end_date",
-      "ba.technologies",
-      "ba.is_current",
-      "ba.keywords",
-      "ba.type",
-      "ba.highlight",
-      "ba.sort_order",
-    ])
-    .where("ba.branch_id", "=", input.branchId)
-    .where("a.deleted_at", "is", null)
-    .orderBy("ba.sort_order", "asc")
-    .execute();
-
   const content: ResumeCommitContent = {
     title: baseContent.title,
     consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
@@ -178,20 +154,9 @@ export async function saveResumeVersion(
       category: skill.category,
       sortOrder: skill.sortOrder,
     })),
-    assignments: assignmentRows.map((a) => ({
-      assignmentId: a.assignment_id,
-      clientName: a.client_name,
-      role: a.role,
-      description: a.description,
-      startDate: a.start_date instanceof Date ? a.start_date.toISOString() : String(a.start_date),
-      endDate: a.end_date instanceof Date ? a.end_date.toISOString() : (a.end_date ? String(a.end_date) : null),
-      technologies: a.technologies ?? [],
-      isCurrent: a.is_current,
-      keywords: a.keywords,
-      type: a.type,
-      highlight: a.highlight,
-      sortOrder: a.sort_order,
-    })),
+    assignments: input.assignments !== undefined
+      ? input.assignments
+      : baseContent.assignments ?? [],
   };
 
   const generatedMetadata = summarizeCommitChanges(baseContent, content);

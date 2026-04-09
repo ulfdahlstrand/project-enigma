@@ -47,21 +47,6 @@ const SKILL_GROUP_ROW = {
   sort_order: 0,
 };
 
-const ASSIGNMENT_ROW = {
-  assignment_id: ASSIGNMENT_ID,
-  client_name: "ACME Corp",
-  role: "Backend Engineer",
-  description: "Built APIs",
-  start_date: new Date("2023-01-01"),
-  end_date: null,
-  technologies: ["Node.js", "PostgreSQL"],
-  is_current: true,
-  keywords: null,
-  type: null,
-  highlight: true,
-  sort_order: 0,
-};
-
 const INSERTED_COMMIT = {
   id: COMMIT_ID,
   resume_id: RESUME_ID,
@@ -75,7 +60,22 @@ const INSERTED_COMMIT = {
     language: "en",
     skillGroups: [{ name: "languages", sortOrder: 0 }],
     skills: [{ name: "TypeScript", category: "languages", sortOrder: 0 }],
-    assignments: [],
+    assignments: [
+      {
+        assignmentId: ASSIGNMENT_ID,
+        clientName: "ACME Corp",
+        role: "Backend Engineer",
+        description: "Built APIs",
+        startDate: "2023-01-01T00:00:00.000Z",
+        endDate: null,
+        technologies: ["Node.js", "PostgreSQL"],
+        isCurrent: true,
+        keywords: null,
+        type: null,
+        highlight: true,
+        sortOrder: 0,
+      },
+    ],
   },
   message: "My version",
   title: "My version",
@@ -91,14 +91,12 @@ const INSERTED_COMMIT = {
 function buildDbMock(opts: {
   branchRow?: unknown;
   headCommitRow?: unknown;
-  assignmentRows?: unknown[];
   insertedCommit?: unknown;
   employeeId?: string | null;
 } = {}) {
   const {
     branchRow = BRANCH_ROW,
     headCommitRow = { tree_id: DEFAULT_TREE_ID },
-    assignmentRows = [ASSIGNMENT_ROW],
     insertedCommit = INSERTED_COMMIT,
     employeeId = null,
   } = opts;
@@ -118,14 +116,6 @@ function buildDbMock(opts: {
   const headCommitExecuteTakeFirst = vi.fn().mockResolvedValue(headCommitRow);
   const headCommitWhere = vi.fn().mockReturnValue({ executeTakeFirst: headCommitExecuteTakeFirst });
   const headCommitSelect = vi.fn().mockReturnValue({ where: headCommitWhere });
-
-  // Assignments query — joins assignments table for soft-delete filter (two where calls)
-  const assignmentsExecute = vi.fn().mockResolvedValue(assignmentRows);
-  const assignmentsOrderBy = vi.fn().mockReturnValue({ execute: assignmentsExecute });
-  const assignmentsWhere2 = vi.fn().mockReturnValue({ orderBy: assignmentsOrderBy });
-  const assignmentsWhere1 = vi.fn().mockReturnValue({ where: assignmentsWhere2 });
-  const assignmentsSelect = vi.fn().mockReturnValue({ where: assignmentsWhere1 });
-  const assignmentsInnerJoin = vi.fn().mockReturnValue({ select: assignmentsSelect });
 
   // Insert resume_commits
   const insertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(insertedCommit);
@@ -171,7 +161,6 @@ function buildDbMock(opts: {
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     if (table === "resume_commits") return { select: headCommitSelect };
-    if (table === "branch_assignments as ba") return { innerJoin: assignmentsInnerJoin };
     // resume_branches join
     return { innerJoin: branchInnerJoin };
   });
@@ -211,26 +200,22 @@ describe("saveResumeVersion", () => {
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Update assignments",
-        message: "Update assignments",
-        description: "Updated assignments.",
+        title: "Save resume version",
+        message: "Save resume version",
+        description: "Saved the current resume snapshot without content changes.",
       })
     );
   });
 
   it("generates summary metadata for scalar content changes when message is omitted", async () => {
     const { db, insertValues } = buildDbMock({
-      headCommitRow: {
-        content: {
-          ...INSERTED_COMMIT.content,
-          presentation: ["Old presentation"],
-          summary: "Old summary",
-        },
-      },
-      skillGroupRows: [],
-      skillRows: [],
-      assignmentRows: [],
+      headCommitRow: { tree_id: DEFAULT_TREE_ID },
     });
+    vi.mocked(readTreeContent).mockResolvedValueOnce({
+      ...INSERTED_COMMIT.content,
+      presentation: ["Old presentation"],
+      summary: "Old summary",
+    } as never);
 
     await saveResumeVersion(db, MOCK_ADMIN, {
       branchId: BRANCH_ID,

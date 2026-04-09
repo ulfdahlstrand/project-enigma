@@ -120,15 +120,16 @@ export function applySuggestionTextToDraft(
 export async function applySuggestionToAssignment(
   suggestion: Suggestion,
   deps: {
+    branchId: string | null;
     activeBranchId: string | null;
     sortedAssignments: ResumeAssignmentLike[];
     queryClient: QueryClient;
-    updateBranchAssignment: (input: { id: string; description: string }) => Promise<unknown>;
+    updateBranchAssignment: (input: { branchId: string; id: string; description: string }) => Promise<unknown>;
     saveVersion: (input: { branchId: string; title: string }) => Promise<unknown>;
     buildCommitMessage: (suggestion: Suggestion) => string;
   },
 ) {
-  if (!suggestion.assignmentId || !deps.activeBranchId) {
+  if (!suggestion.assignmentId || !deps.activeBranchId || !deps.branchId) {
     return false;
   }
 
@@ -141,20 +142,12 @@ export async function applySuggestionToAssignment(
     return false;
   }
 
-  const branchAssignmentId = targetAssignment.id;
   const nextDescription = suggestion.suggestedText.trim();
-  const assignmentsQueryKey = ["listBranchAssignmentsFull", deps.activeBranchId] as const;
-  const previousAssignments = deps.queryClient.getQueryData<ResumeAssignmentLike[]>(assignmentsQueryKey);
-
-  deps.queryClient.setQueryData<ResumeAssignmentLike[]>(assignmentsQueryKey, (prev) =>
-    (prev ?? []).map((assignment) =>
-      assignment.id === branchAssignmentId ? { ...assignment, description: nextDescription } : assignment,
-    ),
-  );
 
   try {
     await deps.updateBranchAssignment({
-      id: branchAssignmentId,
+      branchId: deps.branchId,
+      id: targetAssignment.id,
       description: nextDescription,
     });
     await deps.saveVersion({
@@ -163,7 +156,6 @@ export async function applySuggestionToAssignment(
     });
     return true;
   } catch (error) {
-    deps.queryClient.setQueryData(assignmentsQueryKey, previousAssignments);
     throw error;
   }
 }

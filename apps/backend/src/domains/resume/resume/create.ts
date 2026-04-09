@@ -124,6 +124,7 @@ export async function createResume(
     updatedAt: resume.updated_at,
     skillGroups: [],
     skills: [],
+    assignments: [],
   };
 }
 

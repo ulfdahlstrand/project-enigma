@@ -13,17 +13,29 @@ interface UpsertBranchContentFromLiveParams {
   highlightedItems?: string[];
   skillGroups?: Array<{ name: string; sortOrder: number }>;
   skills?: Array<{ name: string; category: string | null; sortOrder: number }>;
+  assignments?: ResumeCommitContent["assignments"];
 }
 
 export async function upsertBranchContentFromLive(
   db: Kysely<Database>,
   params: UpsertBranchContentFromLiveParams,
 ): Promise<ResumeCommitContent> {
-  const { resumeId, branchId, userId, consultantTitle, presentation, summary, highlightedItems, skillGroups, skills } = params;
+  const {
+    resumeId,
+    branchId,
+    userId,
+    consultantTitle,
+    presentation,
+    summary,
+    highlightedItems,
+    skillGroups,
+    skills,
+    assignments,
+  } = params;
 
   const branchRow = await db
     .selectFrom("resume_branches")
-    .select(["id", "head_commit_id"])
+    .select(["id", "head_commit_id", "forked_from_commit_id"])
     .where("id", "=", branchId)
     .executeTakeFirstOrThrow();
 
@@ -33,11 +45,11 @@ export async function upsertBranchContentFromLive(
       .select(["employee_id", "title", "language"])
       .where("id", "=", resumeId)
       .executeTakeFirstOrThrow(),
-    branchRow.head_commit_id
+    branchRow.head_commit_id ?? branchRow.forked_from_commit_id
       ? db
         .selectFrom("resume_commits")
         .select(["tree_id"])
-        .where("id", "=", branchRow.head_commit_id)
+        .where("id", "=", branchRow.head_commit_id ?? branchRow.forked_from_commit_id!)
         .executeTakeFirst()
       : Promise.resolve(undefined),
   ]);
@@ -61,7 +73,7 @@ export async function upsertBranchContentFromLive(
     language: resumeRow.language,
     skillGroups: skillGroups !== undefined ? skillGroups : previousContent?.skillGroups ?? [],
     skills: skills !== undefined ? skills : previousContent?.skills ?? [],
-    assignments: previousContent?.assignments ?? [],
+    assignments: assignments !== undefined ? assignments : previousContent?.assignments ?? [],
   };
 
   const treeId = await buildCommitTree(db, resumeId, resumeRow.employee_id, content);

@@ -75,6 +75,7 @@ export function ResumeAssignmentsPage({
         {isEditing && showFullAssignments ? (
           <AssignmentEditor
             assignments={assignments}
+            branchId={activeBranchId!}
             queryKey={["listBranchAssignmentsFull", activeBranchId]}
             canvasEl={canvasEl}
             autoEditId={newAssignmentId}

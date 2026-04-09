@@ -72,7 +72,7 @@ const QUERY_KEY = ["listBranchAssignmentsFull", "branch-1"] as const;
 
 function renderEditor(assignments = [A1, A2]) {
   return renderWithProviders(
-    <AssignmentEditor assignments={assignments} queryKey={QUERY_KEY} />
+    <AssignmentEditor assignments={assignments} branchId="branch-1" queryKey={QUERY_KEY} />
   );
 }
 
