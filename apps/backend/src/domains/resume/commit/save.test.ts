@@ -27,6 +27,7 @@ const BRANCH_ROW = {
   id: BRANCH_ID,
   resume_id: RESUME_ID,
   head_commit_id: null,
+  forked_from_commit_id: null,
   employee_id: EMPLOYEE_ID_1,
   title: "Senior Engineer",
   summary: "Strong backend focus",
@@ -243,6 +244,23 @@ describe("saveResumeVersion", () => {
       clientName: "ACME Corp",
       highlight: true,
     });
+  });
+
+  it("uses forked commit content as base for the first save on a branch", async () => {
+    const forkedBranchRow = {
+      ...BRANCH_ROW,
+      forked_from_commit_id: "550e8400-e29b-41d4-a716-446655440081",
+    };
+    const { db } = buildDbMock({
+      branchRow: forkedBranchRow,
+      headCommitRow: { tree_id: DEFAULT_TREE_ID },
+    });
+
+    const result = await saveResumeVersion(db, MOCK_ADMIN, { branchId: BRANCH_ID });
+
+    expect(result.content.assignments).toHaveLength(1);
+    expect(result.content.skills).toHaveLength(1);
+    expect(vi.mocked(readTreeContent)).toHaveBeenCalledWith(db, DEFAULT_TREE_ID);
   });
 
   it("sets parent_commit_id to the current HEAD of the branch", async () => {

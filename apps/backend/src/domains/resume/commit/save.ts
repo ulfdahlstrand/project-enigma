@@ -104,6 +104,7 @@ export async function saveResumeVersion(
       "rb.id",
       "rb.resume_id",
       "rb.head_commit_id",
+      "rb.forked_from_commit_id",
       "r.employee_id",
       "r.title",
       "r.language",
@@ -119,11 +120,13 @@ export async function saveResumeVersion(
     throw new ORPCError("FORBIDDEN");
   }
 
-  const headCommitRow = branch.head_commit_id
+  const baseCommitId = branch.head_commit_id ?? branch.forked_from_commit_id ?? null;
+
+  const headCommitRow = baseCommitId
     ? await db
         .selectFrom("resume_commits")
         .select(["tree_id"])
-        .where("id", "=", branch.head_commit_id)
+        .where("id", "=", baseCommitId)
         .executeTakeFirst()
     : null;
 
