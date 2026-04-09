@@ -2,16 +2,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { persistRevisionToolCallSuggestions } from "./revision-suggestions.js";
-import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 
-vi.mock("../../resume/lib/read-tree-content.js");
+vi.mock("../../resume/lib/branch-assignment-content.js");
 
 type MockTableConfig = {
   currentSuggestions?: unknown[];
   workItems?: unknown[];
-  branch?: { head_commit_id: string | null; forked_from_commit_id: string | null } | null;
-  commitContent?: unknown | null;
-  branchAssignments?: Array<{ assignment_id: string; description: string }>;
+  branchContent?: unknown | null;
 };
 
 function createMockChain(executeResult: unknown[], takefirstResult: unknown) {
@@ -37,9 +35,7 @@ function buildDb(config: MockTableConfig = {}) {
         status: "pending",
       },
     ],
-    branch = null,
-    commitContent = null,
-    branchAssignments = [],
+    branchContent = null,
   } = config;
 
   const insertedRows: unknown[][] = [];
@@ -51,19 +47,6 @@ function buildDb(config: MockTableConfig = {}) {
 
     if (table === "ai_revision_work_items") {
       return createMockChain(workItems as unknown[], undefined);
-    }
-
-    if (table === "resume_branches") {
-      return createMockChain([], branch);
-    }
-
-    if (table === "resume_commits") {
-      const commitRow = commitContent !== null ? { tree_id: "tree-id-1" } : undefined;
-      return createMockChain([], commitRow);
-    }
-
-    if (table === "branch_assignments") {
-      return createMockChain(branchAssignments, undefined);
     }
 
     throw new Error(`Unexpected table: ${table}`);
@@ -84,9 +67,19 @@ function buildDb(config: MockTableConfig = {}) {
     }),
   });
 
-  if (commitContent !== null) {
-    vi.mocked(readTreeContent).mockResolvedValue(commitContent as Awaited<ReturnType<typeof readTreeContent>>);
-  }
+  vi.mocked(readBranchAssignmentContent).mockResolvedValue(
+    branchContent === null
+      ? null
+      : {
+          branchId: "branch-1",
+          resumeId: "resume-1",
+          employeeId: "employee-1",
+          title: "Resume",
+          language: "en",
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          content: branchContent as NonNullable<Awaited<ReturnType<typeof readBranchAssignmentContent>>>["content"],
+        },
+  );
 
   return {
     db: { selectFrom, deleteFrom, insertInto } as unknown as Kysely<Database>,
@@ -135,12 +128,13 @@ describe("persistRevisionToolCallSuggestions", () => {
     const originalText = "This is the original presentation text.";
 
     const { db, insertedRows } = buildDb({
-      branch: { head_commit_id: "commit-1", forked_from_commit_id: null },
-      commitContent: {
+      branchContent: {
         title: "Senior Developer",
         consultantTitle: null,
         presentation: [originalText],
         summary: null,
+        education: [],
+        skillGroups: [],
         skills: [],
         assignments: [],
         highlightedItems: [],
@@ -175,12 +169,13 @@ describe("persistRevisionToolCallSuggestions", () => {
     const originalText = "  Some text with surrounding whitespace  ";
 
     const { db, insertedRows } = buildDb({
-      branch: { head_commit_id: "commit-1", forked_from_commit_id: null },
-      commitContent: {
+      branchContent: {
         title: "Developer",
         consultantTitle: null,
         presentation: [originalText],
         summary: null,
+        education: [],
+        skillGroups: [],
         skills: [],
         assignments: [],
         highlightedItems: [],
@@ -211,12 +206,13 @@ describe("persistRevisionToolCallSuggestions", () => {
 
   it("keeps suggestions whose suggestedText differs from the original", async () => {
     const { db, insertedRows } = buildDb({
-      branch: { head_commit_id: "commit-1", forked_from_commit_id: null },
-      commitContent: {
+      branchContent: {
         title: "Developer",
         consultantTitle: null,
         presentation: ["Original text."],
         summary: null,
+        education: [],
+        skillGroups: [],
         skills: [],
         assignments: [],
         highlightedItems: [],
@@ -249,10 +245,31 @@ describe("persistRevisionToolCallSuggestions", () => {
     const originalDescription = "Led a team of developers building microservices.";
 
     const { db, insertedRows } = buildDb({
-      branch: { head_commit_id: null, forked_from_commit_id: null },
-      branchAssignments: [
-        { assignment_id: "assignment-abc", description: originalDescription },
-      ],
+      branchContent: {
+        title: "Developer",
+        consultantTitle: null,
+        presentation: [],
+        summary: null,
+        education: [],
+        skillGroups: [],
+        skills: [],
+        highlightedItems: [],
+        language: "en",
+        assignments: [{
+          assignmentId: "assignment-abc",
+          clientName: "Acme",
+          role: "Lead",
+          description: originalDescription,
+          startDate: "2024-01-01",
+          endDate: null,
+          technologies: [],
+          isCurrent: true,
+          keywords: null,
+          type: null,
+          highlight: false,
+          sortOrder: null,
+        }],
+      },
       workItems: [
         {
           work_item_id: "work-item-1",
@@ -288,7 +305,7 @@ describe("persistRevisionToolCallSuggestions", () => {
 
   it("saves suggestions when no branch content is available", async () => {
     const { db, insertedRows } = buildDb({
-      branch: null,
+      branchContent: null,
     });
 
     await persistRevisionToolCallSuggestions(db, {

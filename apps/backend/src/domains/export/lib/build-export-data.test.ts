@@ -140,6 +140,7 @@ function buildDbMock(opts: {
     if (table === "resumes") return { select: resumeSelect };
     if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
+    if (table === "resume_branches") return { select: resumeSelect };
     if (table === "education") return { selectAll: eduSelectAll };
     throw new Error(`Unexpected table: ${table}`);
   });

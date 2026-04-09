@@ -68,10 +68,6 @@ const NEW_BRANCH_ROW = {
   created_at: new Date("2026-01-01T00:00:00.000Z"),
 };
 
-const SOURCE_ASSIGNMENTS = [
-  { assignment_id: SNAPSHOT_ASSIGNMENT.assignmentId, highlight: true, sort_order: 0 },
-];
-
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -100,35 +96,23 @@ function buildDbMock(opts: {
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
   const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
 
-  // Branch insert (inside transaction)
+  // Branch insert
   const branchInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(newBranchRow);
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
   const branchInsertValues = vi.fn().mockReturnValue({ returningAll: branchInsertReturningAll });
 
-  // Copy assignments insert (inside transaction)
-  const copyInsertExecute = vi.fn().mockResolvedValue(undefined);
-  const copyInsertValues = vi.fn().mockReturnValue({ execute: copyInsertExecute });
-
   const insertInto = vi.fn().mockImplementation((table: string) => {
     if (table === "resume_branches") return { values: branchInsertValues };
-    if (table === "branch_assignments") return { values: copyInsertValues };
     return {};
   });
-
-  const transaction = vi.fn().mockImplementation(() => ({
-    execute: vi.fn().mockImplementation(async (fn: (trx: unknown) => Promise<unknown>) => {
-      const trx = { insertInto };
-      return fn(trx);
-    }),
-  }));
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
     return { innerJoin: commitInnerJoin };
   });
 
-  const db = { selectFrom, transaction } as unknown as Kysely<Database>;
-  return { db, branchInsertValues, copyInsertValues, commitWhere };
+  const db = { selectFrom, insertInto } as unknown as Kysely<Database>;
+  return { db, branchInsertValues, commitWhere };
 }
 
 // ---------------------------------------------------------------------------
@@ -220,30 +204,21 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("copies branch_assignments from the commit snapshot to the new branch", async () => {
-    const { db, copyInsertValues } = buildDbMock();
+  it("forks without copying separate branch-assignment rows", async () => {
+    const { db } = buildDbMock();
 
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(copyInsertValues).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          branch_id: NEW_BRANCH_ID,
-          assignment_id: SOURCE_ASSIGNMENTS[0].assignment_id,
-          highlight: true,
-          sort_order: 0,
-        }),
-      ])
-    );
+    await expect(
+      forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" })
+    ).resolves.toMatchObject({ id: NEW_BRANCH_ID, forkedFromCommitId: COMMIT_ID });
   });
 
-  it("skips copying assignments if source branch has none", async () => {
+  it("still succeeds when the source snapshot has no assignments", async () => {
     vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, assignments: [] } as never);
-    const { db, copyInsertValues } = buildDbMock();
+    const { db } = buildDbMock();
 
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(copyInsertValues).not.toHaveBeenCalled();
+    await expect(
+      forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" })
+    ).resolves.toMatchObject({ id: NEW_BRANCH_ID });
   });
 
   it("throws NOT_FOUND when commit does not exist", async () => {

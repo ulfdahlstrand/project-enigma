@@ -151,8 +151,8 @@ describe("normaliseAssignmentIds", () => {
 });
 
 describe("syncBranchAssignmentsFromContent", () => {
-  it("joins legacy description arrays before writing branch assignments", async () => {
-    const { db, values } = buildSyncDbMock();
+  it("is a legacy no-op while branch assignment rows are retired", async () => {
+    const { db, values, insertInto } = buildSyncDbMock();
     const content = {
       assignments: [{
         assignmentId: VALID_UUID,
@@ -172,10 +172,7 @@ describe("syncBranchAssignmentsFromContent", () => {
 
     await syncBranchAssignmentsFromContent(db, "branch-1", content);
 
-    expect(values).toHaveBeenCalledWith([
-      expect.objectContaining({
-        description: "First paragraph\n\nSecond paragraph",
-      }),
-    ]);
+    expect(insertInto).not.toHaveBeenCalled();
+    expect(values).not.toHaveBeenCalled();
   });
 });

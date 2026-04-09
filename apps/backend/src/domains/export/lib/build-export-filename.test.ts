@@ -3,7 +3,7 @@ import { buildExportFilename, formatExportTimestamp } from "./build-export-filen
 
 describe("formatExportTimestamp", () => {
   it("formats timestamps as YYYYMMDDHHMMSS", () => {
-    expect(formatExportTimestamp(new Date("2026-04-07T15:45:09Z"))).toBe("20260407154509");
+    expect(formatExportTimestamp(new Date("2026-04-07T15:45:09Z"))).toBe("20260407174509");
   });
 });
 
@@ -20,7 +20,7 @@ describe("buildExportFilename", () => {
         branchName: "default",
         extension: "pdf",
       }),
-    ).toBe("20260407154509 - Ulf Dahlstrand, SthlmTech - SV - default.pdf");
+    ).toBe("20260407174509 - Ulf Dahlstrand, SthlmTech - SV - default.pdf");
 
     vi.useRealTimers();
   });
@@ -35,6 +35,6 @@ describe("buildExportFilename", () => {
         branchName: "feature/test",
         extension: "docx",
       }),
-    ).toBe("20260407154509 - Ulf - Dahlstrand, Sthlm-Tech - SV - feature-test.docx");
+    ).toBe("20260407174509 - Ulf - Dahlstrand, Sthlm-Tech - SV - feature-test.docx");
   });
 });

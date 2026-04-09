@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationsDir = __dirname;
 
 const migrationSource = readFileSync(
-  join(migrationsDir, "20260410120000_drop_resume_commits_content.ts"),
+  join(migrationsDir, "20260410180000_drop_resume_commits_content.ts"),
   "utf-8",
 );
 
@@ -18,9 +18,9 @@ describe("AC1 – Migration file naming convention", () => {
     expect(files.find((f) => pattern.test(f))).toBeDefined();
   });
 
-  it("is exactly 20260410120000_drop_resume_commits_content.ts", () => {
+  it("is exactly 20260410180000_drop_resume_commits_content.ts", () => {
     const files = readdirSync(migrationsDir).filter((f) => !f.endsWith(".test.ts"));
-    expect(files).toContain("20260410120000_drop_resume_commits_content.ts");
+    expect(files).toContain("20260410180000_drop_resume_commits_content.ts");
   });
 });
 
@@ -40,11 +40,11 @@ describe("AC2 – up() and down() exports", () => {
 
 describe("AC3 – up() drops the content column", () => {
   it("targets resume_commits table", () => {
-    expect(migrationSource).toContain('.alterTable("resume_commits")');
+    expect(migrationSource).toMatch(/ALTER\s+TABLE\s+resume_commits/i);
   });
 
   it("drops the content column", () => {
-    expect(migrationSource).toContain('.dropColumn("content")');
+    expect(migrationSource).toMatch(/DROP\s+COLUMN\s+IF\s+EXISTS\s+content/i);
   });
 });
 

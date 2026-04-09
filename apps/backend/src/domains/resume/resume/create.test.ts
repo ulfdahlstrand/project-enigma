@@ -49,7 +49,8 @@ const ROOT_COMMIT_ROW = {
   resume_id: RESUME_ID,
   parent_commit_id: null,
   tree_id: TREE_ID,
-  message: "initial",
+  title: "initial",
+  description: "",
   created_by: MOCK_ADMIN.id,
   created_at: new Date("2025-03-01T00:00:00.000Z"),
 };
@@ -195,7 +196,8 @@ describe("createResume query function", () => {
       expect.objectContaining({
         resume_id: RESUME_ID,
         tree_id: TREE_ID,
-        message: "initial",
+        title: "initial",
+        description: "",
         created_by: MOCK_ADMIN.id,
       })
     );

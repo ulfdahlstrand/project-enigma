@@ -4,8 +4,12 @@ import type { Database } from "../../../db/types.js";
 import { executeBackendInspectTool, BACKEND_INSPECT_TOOLS } from "./tool-execution.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
 import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+import { filterDeletedAssignments } from "../../resume/lib/branch-assignment-content.js";
 
 vi.mock("../../resume/lib/read-tree-content.js");
+vi.mock("../../resume/lib/branch-assignment-content.js", () => ({
+  filterDeletedAssignments: vi.fn(),
+}));
 
 // ---------------------------------------------------------------------------
 // Shared IDs
@@ -59,9 +63,7 @@ const COMMIT_CONTENT = {
 /**
  * Build a minimal Kysely mock that returns the given branch data.
  *
- * The DB is queried in two sequential chains inside buildResumeSnapshotFromBranch:
- *   1. resume_branches → inner joins → executeTakeFirst()
- *   2. resume_commits   → executeTakeFirst()
+ * The DB is queried by table name across snapshot building and work-item listing.
  */
 function buildDb({
   branchRow = BRANCH_ROW as unknown,
@@ -81,7 +83,6 @@ function buildDb({
     }),
   };
 
-  // Query 2: resume_commits
   const commitExecuteTakeFirst = vi
     .fn()
     .mockResolvedValue(commitContent !== null ? { tree_id: "tree-id-1" } : undefined);
@@ -91,7 +92,6 @@ function buildDb({
     }),
   };
 
-  // Query 1: resume_branches
   const branchExecuteTakeFirst = vi.fn().mockResolvedValue(branchRow);
   const branchQuery = {
     innerJoin: vi.fn().mockReturnThis(),
@@ -103,13 +103,26 @@ function buildDb({
   if (commitContent !== null) {
     vi.mocked(readTreeContent).mockResolvedValue(commitContent as Awaited<ReturnType<typeof readTreeContent>>);
   }
+  vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
 
-  let callIndex = 0;
-  const selectFrom = vi.fn().mockImplementation(() => {
-    const i = callIndex++;
-    if (i === 0) return branchQuery;
-    if (i === 1) return commitQuery;
-    return revisionWorkItemsQuery;
+  const selectFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === "resume_branches as rb") return branchQuery;
+    if (table === "resume_commits") return commitQuery;
+    if (table === "ai_revision_work_items") return revisionWorkItemsQuery;
+    if (table === "assignments") {
+      return {
+        select: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              execute: vi.fn().mockResolvedValue(
+                commitContent?.assignments?.map((assignment) => ({ id: assignment.assignmentId })) ?? [],
+              ),
+            }),
+          }),
+        }),
+      };
+    }
+    throw new Error(`Unexpected table: ${table}`);
   });
 
   return { selectFrom } as unknown as Kysely<Database>;
