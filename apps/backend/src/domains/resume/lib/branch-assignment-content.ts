@@ -12,6 +12,7 @@ const EMPTY_CONTENT = (
   summary: null,
   highlightedItems: [],
   language,
+  education: [],
   skillGroups: [],
   skills: [],
   assignments: [],

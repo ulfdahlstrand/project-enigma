@@ -28,6 +28,7 @@ export async function readTreeContent(
   let presentation: string[] = [];
   let summary: string | null = null;
   let highlightedItems: string[] = [];
+  const education: ResumeCommitContent["education"] = [];
   const skillGroups: ResumeCommitContent["skillGroups"] = [];
   const skills: ResumeCommitContent["skills"] = [];
   const assignments: ResumeCommitContent["assignments"] = [];
@@ -171,7 +172,22 @@ export async function readTreeContent(
         break;
       }
 
-      // education entries are read separately when building the CV view
+      case "education": {
+        const row = await db
+          .selectFrom("education_revisions")
+          .select(["type", "value", "sort_order"])
+          .where("id", "=", revisionId)
+          .executeTakeFirst();
+        if (row) {
+          education.push({
+            type: row.type,
+            value: row.value,
+            sortOrder: row.sort_order,
+          });
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -184,6 +200,7 @@ export async function readTreeContent(
     summary,
     highlightedItems,
     language,
+    education,
     skillGroups,
     skills,
     assignments,

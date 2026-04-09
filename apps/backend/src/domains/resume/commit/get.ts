@@ -29,6 +29,7 @@ function normaliseCommitContent(content: ResumeCommitContent): ResumeCommitConte
     presentation: Array.isArray(content.presentation) ? content.presentation : [],
     summary: content.summary ?? null,
     highlightedItems: Array.isArray(content.highlightedItems) ? content.highlightedItems : [],
+    education: Array.isArray(content.education) ? content.education : [],
     skills: Array.isArray(content.skills) ? content.skills : [],
     assignments: Array.isArray(content.assignments)
       ? content.assignments.map((assignment) => ({

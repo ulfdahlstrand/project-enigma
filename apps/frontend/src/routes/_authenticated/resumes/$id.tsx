@@ -199,6 +199,18 @@ export function ResumeDetailPage({
   }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
   const snapshotContent = isSnapshotMode ? selectedCommit?.content : null;
+  const snapshotEducation = snapshotContent?.education ?? resume?.education ?? [];
+  const resolvedEducation = snapshotEducation.length > 0
+    ? snapshotEducation.map((entry, index) => ({
+        id: `snapshot-education-${index}`,
+        employeeId: resume?.employeeId ?? "",
+        type: entry.type,
+        value: entry.value,
+        sortOrder: entry.sortOrder,
+        createdAt: "",
+        updatedAt: "",
+      }))
+    : education;
   const assignments = (snapshotContent?.assignments ?? resume?.assignments ?? []).map((assignment) => ({
     ...assignment,
     id: assignment.assignmentId,
@@ -737,9 +749,9 @@ export function ResumeDetailPage({
           skillsPage={skillsPage}
           skillGroups={skillGroups}
           skills={skills}
-          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          degrees={resolvedEducation.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={resolvedEducation.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={resolvedEducation.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           hasAssignments={hasAssignments}
@@ -778,9 +790,9 @@ export function ResumeDetailPage({
           skillsPage={skillsPage}
           skillGroups={skillGroups}
           skills={skills}
-          degrees={education.filter((e) => e.type === "degree").map((e) => e.value)}
-          certifications={education.filter((e) => e.type === "certification").map((e) => e.value)}
-          languages={education.filter((e) => e.type === "language").map((e) => e.value)}
+          degrees={resolvedEducation.filter((e) => e.type === "degree").map((e) => e.value)}
+          certifications={resolvedEducation.filter((e) => e.type === "certification").map((e) => e.value)}
+          languages={resolvedEducation.filter((e) => e.type === "language").map((e) => e.value)}
           isSnapshotMode={isSnapshotMode}
           getResumeQueryKey={getResumeQueryKey}
           hasAssignments={hasAssignments}

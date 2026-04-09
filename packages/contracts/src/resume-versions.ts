@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { educationTypeSchema } from "./education.js";
 
 // ---------------------------------------------------------------------------
 // Resume versioning schemas
@@ -40,6 +41,12 @@ export const resumeCommitAssignmentSchema = z.object({
   sortOrder: z.number().nullable(),
 });
 
+export const resumeCommitEducationSchema = z.object({
+  type: educationTypeSchema,
+  value: z.string(),
+  sortOrder: z.number(),
+});
+
 export const resumeCommitContentSchema = z.object({
   title: z.string(),
   consultantTitle: z.string().nullable(),
@@ -47,6 +54,7 @@ export const resumeCommitContentSchema = z.object({
   summary: z.string().nullable(),
   highlightedItems: z.array(z.string()).default([]),
   language: z.string(),
+  education: z.array(resumeCommitEducationSchema).default([]),
   skillGroups: z.array(resumeCommitSkillGroupSchema).default([]),
   skills: z.array(resumeCommitSkillSchema),
   assignments: z.array(resumeCommitAssignmentSchema),

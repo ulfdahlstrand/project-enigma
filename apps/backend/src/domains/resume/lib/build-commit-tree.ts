@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import type { Database, EducationType, ResumeCommitContent } from "../../../db/types.js";
+import type { Database, ResumeCommitContent } from "../../../db/types.js";
 
 /**
  * Builds an immutable commit tree for the given content and returns the tree_id.
@@ -17,14 +17,12 @@ import type { Database, EducationType, ResumeCommitContent } from "../../../db/t
  * @param resumeId   - ID of the resume this commit belongs to.
  * @param employeeId - ID of the employee who owns the resume (needed for education snapshot).
  * @param content    - The full content object being committed.
- * @param education  - Optional education rows to snapshot (default: []).
  */
 export async function buildCommitTree(
   trx: Kysely<Database>,
   resumeId: string,
   employeeId: string,
   content: ResumeCommitContent,
-  education: Array<{ type: EducationType; value: string; sortOrder: number }> = [],
 ): Promise<string> {
   const { id: treeId } = await trx
     .insertInto("resume_trees")
@@ -151,7 +149,7 @@ export async function buildCommitTree(
   }
 
   // ── education (snapshot from employee record) ─────────────────────────────
-  for (const edu of education) {
+  for (const edu of content.education ?? []) {
     const { id: eduRevId } = await trx
       .insertInto("education_revisions")
       .values({

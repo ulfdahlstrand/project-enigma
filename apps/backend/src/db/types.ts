@@ -103,6 +103,11 @@ export interface ResumeCommitContent {
   summary: string | null;
   highlightedItems: string[];
   language: string;
+  education: Array<{
+    type: EducationType;
+    value: string;
+    sortOrder: number;
+  }>;
   skillGroups: Array<{
     name: string;
     sortOrder: number;

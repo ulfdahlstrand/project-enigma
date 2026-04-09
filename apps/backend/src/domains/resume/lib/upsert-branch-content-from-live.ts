@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import type { Database, ResumeCommitContent } from "../../../db/types.js";
 import { readTreeContent } from "./read-tree-content.js";
 import { buildCommitTree } from "./build-commit-tree.js";
+import { listEducation } from "../../education/education/list.js";
 
 interface UpsertBranchContentFromLiveParams {
   resumeId: string;
@@ -57,6 +58,7 @@ export async function upsertBranchContentFromLive(
   const previousContent: ResumeCommitContent | undefined = headCommitRow?.tree_id
     ? await readTreeContent(db, headCommitRow.tree_id)
     : undefined;
+  const liveEducation = await listEducation(db, resumeRow.employee_id);
 
   const content: ResumeCommitContent = {
     title: resumeRow.title,
@@ -71,6 +73,9 @@ export async function upsertBranchContentFromLive(
       ? highlightedItems
       : previousContent?.highlightedItems ?? [],
     language: resumeRow.language,
+    education: previousContent?.education?.length
+      ? previousContent.education
+      : liveEducation.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
     skillGroups: skillGroups !== undefined ? skillGroups : previousContent?.skillGroups ?? [],
     skills: skills !== undefined ? skills : previousContent?.skills ?? [],
     assignments: assignments !== undefined ? assignments : previousContent?.assignments ?? [],

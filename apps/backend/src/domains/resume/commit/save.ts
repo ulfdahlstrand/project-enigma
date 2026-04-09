@@ -10,6 +10,7 @@ import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
 import { buildCommitTree } from "../lib/build-commit-tree.js";
 import { readTreeContent } from "../lib/read-tree-content.js";
 import type { saveResumeVersionInputSchema, saveResumeVersionOutputSchema } from "@cv-tool/contracts";
+import { listEducation } from "../../education/education/list.js";
 
 // ---------------------------------------------------------------------------
 // saveResumeVersion — query logic
@@ -139,11 +140,15 @@ export async function saveResumeVersion(
         summary: null,
         highlightedItems: [],
         language: branch.language,
+        education: await listEducation(db, branch.employee_id).then((rows) =>
+          rows.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
+        ),
         skillGroups: [],
         skills: [],
         assignments: [],
       };
 
+  const liveEducation = await listEducation(db, branch.employee_id);
   const content: ResumeCommitContent = {
     title: baseContent.title,
     consultantTitle: "consultantTitle" in input ? input.consultantTitle ?? null : baseContent.consultantTitle,
@@ -151,6 +156,10 @@ export async function saveResumeVersion(
     summary: "summary" in input ? input.summary ?? null : baseContent.summary,
     highlightedItems: input.highlightedItems ?? baseContent.highlightedItems ?? [],
     language: baseContent.language,
+    education:
+      baseContent.education?.length > 0
+        ? baseContent.education
+        : liveEducation.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
     skillGroups: input.skillGroups ?? baseContent.skillGroups ?? [],
     skills: (input.skills ?? baseContent.skills ?? []).map((skill) => ({
       name: skill.name,

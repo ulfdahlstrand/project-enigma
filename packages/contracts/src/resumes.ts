@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resumeCommitAssignmentSchema } from "./resume-versions.js";
+import { resumeCommitAssignmentSchema, resumeCommitEducationSchema } from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
 // Resume schemas
@@ -49,6 +49,7 @@ export const resumeWithSkillsSchema = resumeSchema.extend({
   skillGroups: z.array(resumeSkillGroupSchema),
   skills: z.array(resumeSkillSchema),
   assignments: z.array(resumeCommitAssignmentSchema).default([]),
+  education: z.array(resumeCommitEducationSchema).default([]),
 });
 
 // ---------------------------------------------------------------------------
