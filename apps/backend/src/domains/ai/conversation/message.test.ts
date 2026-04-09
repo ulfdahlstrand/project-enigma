@@ -11,6 +11,7 @@ import {
 import {
   requiresExplicitAssignmentWorkQueue,
   isWaitingForRevisionScopeDecision,
+  isManualResumeRequest,
 } from "./revision-workflow-engine.js";
 import * as toolExecution from "./tool-execution.js";
 import * as revisionWorkItems from "./revision-work-items.js";
@@ -388,31 +389,42 @@ describe("requiresExplicitAssignmentWorkQueue", () => {
   });
 });
 
+describe("isManualResumeRequest", () => {
+  it("returns true for natural-language resume prompts", () => {
+    expect(isManualResumeRequest("kan du återuppta det?")).toBe(true);
+    expect(isManualResumeRequest("fortsätt med nästa pending item")).toBe(true);
+    expect(isManualResumeRequest("please resume the remaining work")).toBe(true);
+  });
+
+  it("returns false for status-only prompts", () => {
+    expect(isManualResumeRequest("vad återstår?")).toBe(false);
+    expect(isManualResumeRequest("what is left?")).toBe(false);
+  });
+});
+
 describe("isWaitingForRevisionScopeDecision", () => {
-  it("returns true for branch confirmation followed by a yes/no instruction", () => {
+  it("returns true for a question about whether more changes are needed", () => {
+    expect(
+      isWaitingForRevisionScopeDecision(
+        "Behöver du fler ändringar efter detta?"
+      )
+    ).toBe(true);
+  });
+
+  it("returns true for a question about whether the current scope is enough", () => {
+    expect(
+      isWaitingForRevisionScopeDecision(
+        "Är det bara presentationen som ska ändras just nu?"
+      )
+    ).toBe(true);
+  });
+
+  it("returns false for branch-creation suggestions", () => {
     expect(
       isWaitingForRevisionScopeDecision(
         "Det låter som en bredare ändring. Vill du att jag skapar en dedikerad revisionsgren för detta? Svara med ja eller nej."
       )
-    ).toBe(true);
-  });
-
-  it("returns true for branch questions phrased as 'do it now' after mentioning a revision branch", () => {
-    expect(
-      isWaitingForRevisionScopeDecision(
-        "För att hantera rättstavningen i hela CV:t föreslår jag att vi skapar en dedikerad revisionsgren. Vill du att jag gör det nu?"
-      )
-    ).toBe(true);
-  });
-});
-
-describe("latest branch confirmation handling", () => {
-  it("treats an explicit yes after a branch question as branch confirmation context", () => {
-    expect(
-      isWaitingForRevisionScopeDecision(
-        'Det låter som en bred ändring. Vill du att jag skapar en dedikerad revisionsgren för detta?'
-      )
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -650,61 +662,6 @@ describe("sendAIMessage — backend tool-call loop", () => {
         ]),
       }),
     );
-
-    vi.restoreAllMocks();
-  });
-
-  it("autogenerates broad work items after the user rejects branch creation", async () => {
-    const openai = buildOpenAISequence([
-      { content: "Jag fortsätter med arbetskön." },
-      { content: "Kön är skapad." },
-    ]);
-
-    vi.spyOn(pendingDecisionModule, "classifyDecision").mockResolvedValue("no");
-
-    const db = buildRevisionDb({
-      conversationRow: { ...REVISION_CONVERSATION_ROW, pending_decision: "branch_creation" },
-      existingMessages: [
-        {
-          id: "user-broad-request",
-          conversation_id: CONV_ID,
-          role: "user",
-          content: "jag vill fixa rättstavning i hela cvt",
-          created_at: new Date(),
-        },
-        {
-          id: "assistant-branch-question",
-          conversation_id: CONV_ID,
-          role: "assistant",
-          content: "Eftersom din förfrågan gäller flera avsnitt i CV:t rekommenderar jag att vi skapar en dedikerad revisionsgren för detta. Vill du att jag skapar den grenen nu?",
-          created_at: new Date(),
-        },
-      ],
-      finalRow: {
-        ...FINAL_MSG_ROW,
-        content: "Kön är skapad.",
-      },
-    } as never);
-
-    const replaceAutoSpy = vi
-      .spyOn(revisionWorkItems, "replacePersistedAutomaticBroadRevisionWorkItems")
-      .mockResolvedValue([
-        {
-          id: "section-presentation",
-          title: "Review presentation",
-          description: "Check the presentation text for the requested revision goal.",
-          section: "presentation",
-          status: "pending",
-        },
-      ] as never);
-
-    const result = await sendAIMessage(db, openai, {
-      conversationId: CONV_ID,
-      userMessage: "nej",
-    });
-
-    expect(result.content).toBe("Kön är skapad.");
-    expect(replaceAutoSpy.mock.calls.length).toBeGreaterThan(0);
 
     vi.restoreAllMocks();
   });
@@ -956,6 +913,99 @@ describe("sendAIMessage — backend tool-call loop", () => {
     expect(orchestrationSpy).toHaveBeenCalled();
     expect(executeSpy).toHaveBeenCalled();
     expect(create.mock.calls.length).toBeGreaterThanOrEqual(3);
+
+    vi.restoreAllMocks();
+  });
+
+  it("uses internal autostart when the user explicitly asks to resume pending work", async () => {
+    const openai = buildOpenAISequence([
+      {
+        content: null,
+        tool_calls: [{
+          id: "call-follow-up",
+          type: "function",
+          function: {
+            name: "inspect_resume_section",
+            arguments: "{\"section\":\"presentation\"}",
+          },
+        }],
+      },
+      { content: "Nu återupptog jag nästa arbetsuppgift." },
+    ]);
+    const create = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    const db = buildRevisionDb({
+      finalRow: {
+        ...FINAL_MSG_ROW,
+        content: "Nu återupptog jag nästa arbetsuppgift.",
+      },
+    });
+
+    vi.spyOn(revisionWorkItems, "listPersistedRevisionWorkItems")
+      .mockResolvedValueOnce([
+        {
+          id: "row-1",
+          conversation_id: CONV_ID,
+          branch_id: BRANCH_ID,
+          work_item_id: "work-item-1",
+          title: "Review presentation",
+          description: "Check presentation text.",
+          section: "presentation",
+          assignment_id: null,
+          status: "pending",
+          note: null,
+          position: 0,
+          attempt_count: 0,
+          last_error: null,
+          payload: null,
+          completed_at: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ] as never)
+      .mockResolvedValueOnce([
+        {
+          id: "row-1",
+          conversation_id: CONV_ID,
+          branch_id: BRANCH_ID,
+          work_item_id: "work-item-1",
+          title: "Review presentation",
+          description: "Check presentation text.",
+          section: "presentation",
+          assignment_id: null,
+          status: "pending",
+          note: null,
+          position: 0,
+          attempt_count: 0,
+          last_error: null,
+          payload: null,
+          completed_at: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+
+    vi.spyOn(toolExecution, "executeBackendInspectTool").mockResolvedValue({
+      ok: true,
+      output: { section: "presentation", text: "Current text" },
+    });
+
+    const result = await sendAIMessage(db, openai, {
+      conversationId: CONV_ID,
+      userMessage: "kan du återuppta det?",
+    });
+
+    expect(result.content).toBe("Nu återupptog jag nästa arbetsuppgift.");
+    const allPromptContents = create.mock.calls.flatMap((call) => {
+      const args = call[0] as { messages?: Array<{ content?: string }> };
+      return (args.messages ?? []).map((message) => message.content ?? "");
+    });
+    const autostartPrompt = allPromptContents.find((content) =>
+      content.includes("[[internal_autostart]]"),
+    );
+    expect(autostartPrompt).toContain("Process only this work item now: work-item-1.");
 
     vi.restoreAllMocks();
   });

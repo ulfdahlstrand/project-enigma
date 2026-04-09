@@ -19,7 +19,6 @@ import type { Database } from "../../../db/types.js";
 import { logger } from "../../../infra/logger.js";
 import { readBranchAssignmentContent } from "../../resume/lib/branch-assignment-content.js";
 import { withSpan } from "../../../infra/tracing.js";
-import { setPendingDecision } from "./pending-decision.js";
 import {
   INTERNAL_AUTOSTART_PREFIX,
   INTERNAL_GUARDRAIL_PREFIX,
@@ -42,13 +41,11 @@ import {
   listPersistedRevisionWorkItems,
   persistRevisionToolCallWorkItems,
   replacePersistedRevisionWorkItems,
-  replacePersistedAutomaticBroadRevisionWorkItems,
 } from "./revision-work-items.js";
 import {
   listPersistedRevisionSuggestions,
   persistRevisionToolCallSuggestions,
 } from "./revision-suggestions.js";
-import { forkResumeBranch } from "../../resume/branch/fork.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -150,31 +147,28 @@ export function requiresExplicitAssignmentWorkQueue(messages: string[]) {
   return detectBroadRevisionScope(messages) !== null;
 }
 
-function messageAsksAboutBranchCreation(content: string) {
+export function isManualResumeRequest(content: string) {
   const normalized = normalizeScopeMessage(content);
-  const mentionsBranchContext =
-    normalized.includes("branch")
-    || normalized.includes("gren")
-    || normalized.includes("revisionsgren")
-    || normalized.includes("revision branch");
-  const asksToDoItNow =
-    normalized.includes("gör det nu")
-    || normalized.includes("ska jag göra det")
-    || normalized.includes("vill du att jag gör det")
-    || normalized.includes("do it now")
-    || normalized.includes("want me to do it");
 
-  return normalized.includes("skapa den nu")
-    || normalized.includes("skapa en ny branch")
-    || normalized.includes("skapa en ny gren")
-    || normalized.includes("skapa en ny revisionsgren")
-    || normalized.includes("ska vi skapa")
-    || normalized.includes("vill du att vi skapar")
-    || normalized.includes("vill du att jag skapar")
-    || (mentionsBranchContext && asksToDoItNow)
-    || normalized.includes("create it now")
-    || normalized.includes("create a new branch")
-    || normalized.includes("should we create");
+  return normalized === "fortsätt"
+    || normalized === "fortsätt."
+    || normalized === "continue"
+    || normalized === "continue."
+    || normalized.includes("återuppta")
+    || normalized.includes("resume")
+    || normalized.includes("continue with")
+    || normalized.includes("continue the")
+    || normalized.includes("fortsätt med")
+    || normalized.includes("kan du fortsätta")
+    || normalized.includes("kan du återuppta")
+    || normalized.includes("pick up where")
+    || normalized.includes("process the next")
+    || normalized.includes("next pending")
+    || normalized.includes("remaining work")
+    || normalized.includes("items som inte är processade")
+    || normalized.includes("ej processade")
+    || normalized.includes("unprocessed items")
+    || normalized.includes("pending items");
 }
 
 async function hasListedAssignmentsForConversation(
@@ -210,8 +204,6 @@ export function isWaitingForRevisionScopeDecision(content: string) {
     || normalized.includes("only change")
     || normalized.includes("after that");
 
-  const branchCreationQuestion = messageAsksAboutBranchCreation(content);
-
   const explicitlyRequestsYesNo =
     normalized.includes("svara med ja eller nej")
     || normalized.includes("answer yes or no");
@@ -220,7 +212,7 @@ export function isWaitingForRevisionScopeDecision(content: string) {
     return false;
   }
 
-  return asksAboutMoreChanges || asksAboutCurrentScope || branchCreationQuestion;
+  return asksAboutMoreChanges || asksAboutCurrentScope;
 }
 
 function parseRevisionWorkItemsFromInput(input: unknown) {
@@ -737,88 +729,6 @@ export async function buildStatusMessage(
 // Branch helpers
 // ---------------------------------------------------------------------------
 
-function slugifyRevisionGoal(goal: string) {
-  return goal
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-}
-
-function buildRevisionBranchNameFromGoal(goal: string) {
-  const slug = slugifyRevisionGoal(goal);
-  return slug ? `revision/${slug}` : "revision/untitled";
-}
-
-function buildBranchCreatedMessage(language: "sv" | "en", branchName: string) {
-  if (language === "sv") {
-    return `Jag öppnar nu en ny revisionsgren för det här arbetet: ${branchName}.`;
-  }
-
-  return `Opening a new revision branch for this work now: ${branchName}.`;
-}
-
-async function createRevisionBranchFromConversation(
-  db: Kysely<Database>,
-  conversation: {
-    id: string;
-    created_by: string;
-    entity_id: string;
-    entity_type: string;
-    system_prompt: string;
-  },
-  input: { goal: string },
-) {
-  if (conversation.entity_type !== "resume-revision-actions") {
-    throw new ORPCError("FAILED_PRECONDITION", {
-      message: "Revision branches can only be created from revision action conversations.",
-    });
-  }
-
-  const branch = await db
-    .selectFrom("resume_branches")
-    .select(["id", "head_commit_id", "forked_from_commit_id"])
-    .where("id", "=", conversation.entity_id)
-    .executeTakeFirst();
-
-  if (!branch) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Source branch not found for revision branch creation.",
-    });
-  }
-
-  const fromCommitId = branch.head_commit_id ?? branch.forked_from_commit_id;
-  if (!fromCommitId) {
-    throw new ORPCError("FAILED_PRECONDITION", {
-      message: "Missing fork point for revision branch creation.",
-    });
-  }
-
-  const user = await db
-    .selectFrom("users")
-    .selectAll()
-    .where("id", "=", conversation.created_by)
-    .executeTakeFirst();
-
-  if (!user) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Conversation owner not found.",
-    });
-  }
-
-  const newBranch = await forkResumeBranch(db, user, {
-    fromCommitId,
-    name: buildRevisionBranchNameFromGoal(input.goal),
-  });
-
-  return {
-    branchId: newBranch.id,
-    branchName: newBranch.name,
-    goal: input.goal,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Main revision workflow loop
 // ---------------------------------------------------------------------------
@@ -925,9 +835,6 @@ export async function runRevisionWorkflow(
   ]);
   const assignmentQueueRequired = broadRevisionScope !== null;
 
-  const branchCreationConfirmed = pendingDecisionAnswer === "yes";
-  const branchCreationRejected = pendingDecisionAnswer === "no";
-
   // Track consecutive guardrail retries per work item to prevent infinite loops.
   const guardrailRetryCountByItemId = new Map<string, number>();
 
@@ -984,57 +891,12 @@ export async function runRevisionWorkflow(
 
     let persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
 
-    if (
-      assignmentQueueRequired
-      && branchCreationRejected
-      && persistedWorkItems.length === 0
-    ) {
-      await replacePersistedAutomaticBroadRevisionWorkItems(db, {
-        conversationId,
-        branchId: conversation.entity_id,
-        scope: broadRevisionScope ?? "all_assignments",
-      });
-
-      persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
-    }
-
     if (revisionToolCalls.length > 0) {
-      // If the model is asking about branch creation in its text content but has not yet
-      // received an explicit user confirmation, do not process any tool calls. Show the
-      // branch question to the user and wait for their answer before continuing.
-      if (!branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
-        assistantRow = await persistAssistantMessage(assistantContent);
-        await setPendingDecision(db, conversationId, "branch_creation");
-        break;
-      }
-
-      if (branchCreationConfirmed) {
-        const isAllowedBranchStep =
-          revisionToolCalls.length === 1
-          && revisionToolCalls[0]?.toolName === "create_revision_branch";
-
-        if (!isAllowedBranchStep) {
-          const enforcementContent = `${INTERNAL_GUARDRAIL_PREFIX} The user has explicitly confirmed that a new revision branch should be created. Your next tool call must be create_revision_branch. Do not inspect assignments or emit suggestions yet. Return that tool call now.`;
-
-          await insertAIDelivery(db, {
-            conversationId,
-            kind: "internal_message",
-            role: "user",
-            content: enforcementContent,
-          });
-
-          openAIMessages.push({ role: "user", content: enforcementContent });
-          assistantMessage = await callOpenAI(openAIMessages, revisionTools);
-          assistantContent = assistantMessage.content ?? "";
-          continue;
-        }
-      }
-
       const assignmentsAlreadyListed = assignmentQueueRequired
         ? await hasListedAssignmentsForConversation(db, conversationId)
         : false;
 
-      if (assignmentQueueRequired && !branchCreationConfirmed && !branchCreationRejected && persistedWorkItems.length === 0) {
+      if (assignmentQueueRequired && persistedWorkItems.length === 0) {
         const currentToolNames = revisionToolCalls.map(
           (toolCall: { toolName: string }) => toolCall.toolName,
         );
@@ -1095,7 +957,7 @@ export async function runRevisionWorkflow(
         }
       }
 
-      if (!branchCreationConfirmed && persistedWorkItems.length === 0) {
+      if (persistedWorkItems.length === 0) {
         const currentToolNames = revisionToolCalls.map(
           (toolCall: { toolName: string }) => toolCall.toolName,
         );
@@ -1218,8 +1080,6 @@ export async function runRevisionWorkflow(
 
       const persistedToolCalls: Array<{ toolName: string; input?: unknown }> = [];
       const frontendToolCalls: Array<{ toolName: string; input?: unknown }> = [];
-      let branchHandoffCreated = false;
-
       for (const toolCall of revisionToolCalls) {
         await insertAIDelivery(db, {
           conversationId,
@@ -1375,82 +1235,6 @@ export async function runRevisionWorkflow(
           continue;
         }
 
-        if (toolCall.toolName === "create_revision_branch") {
-          if (!branchCreationConfirmed) {
-            const toolResult = {
-              ok: false,
-              error: "Branch creation requires an explicit user confirmation first.",
-            };
-
-            await insertAIDelivery(db, {
-              conversationId,
-              kind: "tool_result",
-              role: "tool",
-              toolName: toolCall.toolName,
-              payload: toolResult,
-              content: toolResult.error,
-            });
-
-            openAIMessages.push({
-              role: "assistant",
-              content: assistantMessage.content ?? "",
-              tool_calls: [{
-                id: toolCall.id,
-                type: "function",
-                function: {
-                  name: toolCall.toolName,
-                  arguments: JSON.stringify(toolCall.input ?? {}),
-                },
-              }],
-            });
-            openAIMessages.push({
-              role: "tool",
-              tool_call_id: toolCall.id,
-              content: JSON.stringify(toolResult),
-            });
-            continue;
-          }
-
-          const output = await createRevisionBranchFromConversation(db, conversation, {
-            goal:
-              toolCall.input
-              && typeof toolCall.input === "object"
-              && toolCall.input !== null
-              && "goal" in toolCall.input
-              && typeof (toolCall.input as { goal?: unknown }).goal === "string"
-                ? (toolCall.input as { goal: string }).goal
-                : "Revision branch",
-          });
-
-          const toolResult = { ok: true, output };
-          await insertAIDelivery(db, {
-            conversationId,
-            kind: "tool_result",
-            role: "tool",
-            toolName: toolCall.toolName,
-            payload: toolResult,
-            content: JSON.stringify(toolResult.output),
-          });
-
-          const assistantBranchRow = await persistAssistantMessage(
-            buildBranchCreatedMessage(
-              detectConversationLanguage(conversation.system_prompt),
-              output.branchName,
-            ),
-          );
-
-          await db
-            .updateTable("ai_conversations")
-            .set({ is_closed: true, updated_at: new Date() })
-            .where("id", "=", conversationId)
-            .execute();
-
-          assistantRow = assistantBranchRow;
-          assistantContent = assistantBranchRow.content;
-          branchHandoffCreated = true;
-          break;
-        }
-
         const persisted = await persistRevisionToolCallWorkItems(db, {
           conversationId,
           branchId: conversation.entity_id,
@@ -1538,10 +1322,6 @@ export async function runRevisionWorkflow(
       // iteration) will be the user-visible message. If the loop exhausts before that,
       // the empty-content fallback below produces a safe placeholder.
 
-      if (branchHandoffCreated) {
-        break;
-      }
-
       if (frontendToolCalls.length > 0) {
         assistantContent = buildLegacyAssistantToolCallContent(frontendToolCalls);
         assistantRow = await persistAssistantMessage(assistantContent);
@@ -1555,16 +1335,6 @@ export async function runRevisionWorkflow(
 
     persistedWorkItems = await listPersistedRevisionWorkItems(db, conversationId);
     const hasPendingWorkItems = nextOpenWorkItem(persistedWorkItems) !== null;
-
-    // Branch creation questions are always blocking — the user must answer before any work.
-    // Set pending_decision so the next sendAIMessage call classifies the user's reply.
-    if (!branchCreationConfirmed && !branchCreationRejected && messageAsksAboutBranchCreation(assistantContent)) {
-      if (!assistantRow || assistantRow.content !== assistantContent) {
-        assistantRow = await persistAssistantMessage(assistantContent);
-      }
-      await setPendingDecision(db, conversationId, "branch_creation");
-      break;
-    }
 
     if (isWaitingForRevisionScopeDecision(assistantContent)) {
       if (!hasPendingWorkItems) {
