@@ -52,7 +52,7 @@ export interface SkillGroupRow {
 
 interface SkillsEditorProps {
   resumeId: string;
-  branchId?: string | null;
+  branchId: string;
   skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
