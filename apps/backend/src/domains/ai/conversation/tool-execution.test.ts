@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { executeBackendInspectTool, BACKEND_INSPECT_TOOLS } from "./tool-execution.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
+
+vi.mock("../../resume/lib/read-tree-content.js");
 
 // ---------------------------------------------------------------------------
 // Shared IDs
@@ -93,7 +96,7 @@ function buildDb({
   // Query 2: resume_commits
   const commitExecuteTakeFirst = vi
     .fn()
-    .mockResolvedValue(commitContent !== null ? { content: commitContent } : undefined);
+    .mockResolvedValue(commitContent !== null ? { tree_id: "tree-id-1" } : undefined);
   const commitQuery = {
     select: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({ executeTakeFirst: commitExecuteTakeFirst }),
@@ -109,6 +112,10 @@ function buildDb({
     }),
   };
 
+  if (commitContent !== null) {
+    vi.mocked(readTreeContent).mockResolvedValue(commitContent as Awaited<ReturnType<typeof readTreeContent>>);
+  }
+
   let callIndex = 0;
   const selectFrom = vi.fn().mockImplementation(() => {
     const i = callIndex++;
@@ -120,6 +127,10 @@ function buildDb({
 
   return { selectFrom } as unknown as Kysely<Database>;
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function toolCall(toolName: string, input: Record<string, unknown> = {}): ToolCallPayload {
   return { type: "tool_call", toolName, input };

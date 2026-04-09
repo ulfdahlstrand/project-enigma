@@ -204,13 +204,13 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. Import skills — clear existing and reimport from skills section
+  // 5. Import skills — parse from skills section and write to tree via commit
   // ---------------------------------------------------------------------------
 
-  if (cvJson.skills) {
-    await db.deleteFrom("resume_skills").where("resume_id", "=", resumeId).execute();
-    await db.deleteFrom("resume_skill_groups").where("resume_id", "=", resumeId).execute();
+  const importedSkillGroups: Array<{ name: string; sortOrder: number }> = [];
+  const importedSkills: Array<{ name: string; category: string | null; sortOrder: number }> = [];
 
+  if (cvJson.skills) {
     let groupOrder = 0;
     for (const [category, value] of Object.entries(cvJson.skills)) {
       const names: string[] = Array.isArray(value)
@@ -219,29 +219,12 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
         ? [value]
         : [];
 
-      const group = await db
-        .insertInto("resume_skill_groups")
-        .values({
-          resume_id: resumeId,
-          name: category,
-          sort_order: groupOrder++,
-        })
-        .returning(["id"])
-        .executeTakeFirstOrThrow();
+      importedSkillGroups.push({ name: category, sortOrder: groupOrder++ });
 
       let skillOrder = 0;
       for (const name of names) {
         if (!name.trim()) continue;
-        await db
-          .insertInto("resume_skills")
-          .values({
-            resume_id: resumeId,
-            group_id: group.id,
-            name: name.trim(),
-            sort_order: skillOrder,
-          })
-          .execute();
-        skillOrder += 1;
+        importedSkills.push({ name: name.trim(), category, sortOrder: skillOrder++ });
       }
     }
   }
@@ -252,6 +235,7 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
     userId: null,
     consultantTitle: consultant.title || null,
     presentation: consultant.presentation,
+    ...(importedSkills.length > 0 ? { skills: importedSkills, skillGroups: importedSkillGroups } : {}),
   });
 
   return {

@@ -4,6 +4,7 @@ import { logger } from "../../../infra/logger.js";
 import { withSpan } from "../../../infra/tracing.js";
 import type { ToolCallPayload } from "./tool-parsing.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
 
 // ---------------------------------------------------------------------------
 // Backend-executable inspect tools
@@ -82,10 +83,10 @@ async function buildResumeSnapshotFromBranch(
   if (snapshotCommitId) {
     const commit = await db
       .selectFrom("resume_commits")
-      .select("content")
+      .select("tree_id")
       .where("id", "=", snapshotCommitId)
       .executeTakeFirst();
-    content = commit?.content ?? null;
+    content = commit?.tree_id ? await readTreeContent(db, commit.tree_id) : null;
   }
 
   const rawAssignments = await db

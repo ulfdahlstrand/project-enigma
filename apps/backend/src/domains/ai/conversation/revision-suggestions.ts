@@ -8,6 +8,7 @@ import type {
 } from "../../../db/types.js";
 import { parseRevisionToolArguments } from "./revision-tools.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
+import { readTreeContent } from "../../resume/lib/read-tree-content.js";
 
 type SuggestionToolName =
   | "set_assignment_suggestions"
@@ -73,10 +74,10 @@ async function fetchOriginalTexts(
   if (commitId) {
     const commit = await db
       .selectFrom("resume_commits")
-      .select("content")
+      .select("tree_id")
       .where("id", "=", commitId)
       .executeTakeFirst();
-    content = commit?.content ?? null;
+    content = commit?.tree_id ? await readTreeContent(db, commit.tree_id) : null;
   }
 
   const rawAssignments = await db

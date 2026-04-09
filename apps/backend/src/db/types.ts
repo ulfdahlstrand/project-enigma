@@ -49,28 +49,6 @@ export type Resume = Selectable<ResumeTable>;
 export type NewResume = Insertable<ResumeTable>;
 export type ResumeUpdate = Updateable<ResumeTable>;
 
-export interface ResumeSkillGroupTable {
-  id: Generated<string>;
-  resume_id: string;
-  name: string;
-  sort_order: Generated<number>;
-}
-
-export type ResumeSkillGroup = Selectable<ResumeSkillGroupTable>;
-export type NewResumeSkillGroup = Insertable<ResumeSkillGroupTable>;
-export type ResumeSkillGroupUpdate = Updateable<ResumeSkillGroupTable>;
-
-export interface ResumeSkillTable {
-  id: Generated<string>;
-  resume_id: string;
-  group_id: string;
-  name: string;
-  sort_order: Generated<number>;
-}
-
-export type ResumeSkill = Selectable<ResumeSkillTable>;
-export type NewResumeSkill = Insertable<ResumeSkillTable>;
-export type ResumeSkillUpdate = Updateable<ResumeSkillTable>;
 
 /** Identity-only record. All mutable content lives in branch_assignments. */
 export interface AssignmentTable {
@@ -369,15 +347,6 @@ export type UserSession = Selectable<UserSessionTable>;
 export type NewUserSession = Insertable<UserSessionTable>;
 export type UserSessionUpdate = Updateable<UserSessionTable>;
 
-export interface ResumeHighlightedItemTable {
-  id: Generated<string>;
-  resume_id: string;
-  text: string;
-  sort_order: Generated<number>;
-}
-
-export type ResumeHighlightedItem = Selectable<ResumeHighlightedItemTable>;
-export type NewResumeHighlightedItem = Insertable<ResumeHighlightedItemTable>;
 
 // ---------------------------------------------------------------------------
 // Git-inspired content model — tree layer
@@ -508,11 +477,8 @@ export type NewEducationRevision = Insertable<EducationRevisionTable>;
 
 export interface Database {
   employees: EmployeeTable;
-  resume_highlighted_items: ResumeHighlightedItemTable;
   users: UserTable;
   resumes: ResumeTable;
-  resume_skills: ResumeSkillTable;
-  resume_skill_groups: ResumeSkillGroupTable;
   resume_commits: ResumeCommitTable;
   resume_commit_parents: ResumeCommitParentTable;
   resume_branches: ResumeBranchTable;

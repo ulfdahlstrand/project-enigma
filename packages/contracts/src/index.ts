@@ -50,16 +50,6 @@ export {
   updateResumeOutputSchema,
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
-  createResumeSkillGroupInputSchema,
-  createResumeSkillGroupOutputSchema,
-  updateResumeSkillGroupInputSchema,
-  updateResumeSkillGroupOutputSchema,
-  createResumeSkillInputSchema,
-  createResumeSkillOutputSchema,
-  updateResumeSkillInputSchema,
-  updateResumeSkillOutputSchema,
-  deleteResumeSkillInputSchema,
-  deleteResumeSkillOutputSchema,
 } from "./resumes.js";
 export type { ResumeSkillGroup, ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
 

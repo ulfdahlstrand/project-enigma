@@ -9,13 +9,16 @@ interface UpsertBranchContentFromLiveParams {
   userId: string | null;
   consultantTitle?: string | null;
   presentation?: string[];
+  highlightedItems?: string[];
+  skillGroups?: Array<{ name: string; sortOrder: number }>;
+  skills?: Array<{ name: string; category: string | null; sortOrder: number }>;
 }
 
 export async function upsertBranchContentFromLive(
   db: Kysely<Database>,
   params: UpsertBranchContentFromLiveParams,
 ): Promise<ResumeCommitContent> {
-  const { resumeId, branchId, userId, consultantTitle, presentation } = params;
+  const { resumeId, branchId, userId, consultantTitle, presentation, highlightedItems, skillGroups, skills } = params;
 
   const branchRow = await db
     .selectFrom("resume_branches")
@@ -23,62 +26,20 @@ export async function upsertBranchContentFromLive(
     .where("id", "=", branchId)
     .executeTakeFirstOrThrow();
 
-  const [resumeRow, skillGroups, skillRows, assignmentRows, highlightedItemRows, headCommitRow] =
-    await Promise.all([
-      db
-        .selectFrom("resumes")
-        .select(["employee_id", "title", "summary", "language"])
-        .where("id", "=", resumeId)
-        .executeTakeFirstOrThrow(),
-      db
-        .selectFrom("resume_skill_groups")
-        .select(["name", "sort_order"])
-        .where("resume_id", "=", resumeId)
-        .orderBy("sort_order", "asc")
-        .execute(),
-      db
-        .selectFrom("resume_skills as rs")
-        .innerJoin("resume_skill_groups as rsg", "rsg.id", "rs.group_id")
-        .select(["rs.name", "rs.sort_order", "rsg.name as category"])
-        .where("rs.resume_id", "=", resumeId)
-        .orderBy("rsg.sort_order", "asc")
-        .orderBy("rs.sort_order", "asc")
-        .execute(),
-      db
-        .selectFrom("branch_assignments as ba")
-        .innerJoin("assignments as a", "a.id", "ba.assignment_id")
-        .select([
-          "ba.assignment_id",
-          "ba.client_name",
-          "ba.role",
-          "ba.description",
-          "ba.start_date",
-          "ba.end_date",
-          "ba.technologies",
-          "ba.is_current",
-          "ba.keywords",
-          "ba.type",
-          "ba.highlight",
-          "ba.sort_order",
-        ])
-        .where("ba.branch_id", "=", branchId)
-        .where("a.deleted_at", "is", null)
-        .orderBy("ba.sort_order", "asc")
-        .execute(),
-      db
-        .selectFrom("resume_highlighted_items")
-        .select(["text"])
-        .where("resume_id", "=", resumeId)
-        .orderBy("sort_order", "asc")
-        .execute(),
-      branchRow.head_commit_id
-        ? db
-          .selectFrom("resume_commits")
-          .select(["tree_id"])
-          .where("id", "=", branchRow.head_commit_id)
-          .executeTakeFirst()
-        : Promise.resolve(undefined),
-    ]);
+  const [resumeRow, headCommitRow] = await Promise.all([
+    db
+      .selectFrom("resumes")
+      .select(["employee_id", "title", "summary", "language"])
+      .where("id", "=", resumeId)
+      .executeTakeFirstOrThrow(),
+    branchRow.head_commit_id
+      ? db
+        .selectFrom("resume_commits")
+        .select(["tree_id"])
+        .where("id", "=", branchRow.head_commit_id)
+        .executeTakeFirst()
+      : Promise.resolve(undefined),
+  ]);
 
   const previousContent: ResumeCommitContent | undefined = headCommitRow?.tree_id
     ? await readTreeContent(db, headCommitRow.tree_id)
@@ -93,35 +54,13 @@ export async function upsertBranchContentFromLive(
       ? presentation
       : previousContent?.presentation ?? [],
     summary: resumeRow.summary,
-    highlightedItems: highlightedItemRows.map((item) => item.text),
+    highlightedItems: highlightedItems !== undefined
+      ? highlightedItems
+      : previousContent?.highlightedItems ?? [],
     language: resumeRow.language,
-    skillGroups: skillGroups.map((group) => ({
-      name: group.name,
-      sortOrder: group.sort_order,
-    })),
-    skills: skillRows.map((skill) => ({
-      name: skill.name,
-      category: skill.category,
-      sortOrder: skill.sort_order,
-    })),
-    assignments: assignmentRows.map((assignment) => ({
-      assignmentId: assignment.assignment_id,
-      clientName: assignment.client_name,
-      role: assignment.role,
-      description: assignment.description,
-      startDate: assignment.start_date instanceof Date
-        ? assignment.start_date.toISOString()
-        : String(assignment.start_date),
-      endDate: assignment.end_date instanceof Date
-        ? assignment.end_date.toISOString()
-        : (assignment.end_date ? String(assignment.end_date) : null),
-      technologies: assignment.technologies ?? [],
-      isCurrent: assignment.is_current,
-      keywords: assignment.keywords,
-      type: assignment.type,
-      highlight: assignment.highlight,
-      sortOrder: assignment.sort_order,
-    })),
+    skillGroups: skillGroups !== undefined ? skillGroups : previousContent?.skillGroups ?? [],
+    skills: skills !== undefined ? skills : previousContent?.skills ?? [],
+    assignments: previousContent?.assignments ?? [],
   };
 
   const treeId = await buildCommitTree(db, resumeId, resumeRow.employee_id, content);
