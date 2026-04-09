@@ -21,6 +21,7 @@ import {
   renderWithProviders,
   buildTestQueryClient,
 } from "../../../../test-utils/render";
+import { getResumeLanguageTranslations } from "../../../../components/resume-detail/resume-language-translations";
 import { Route, ResumeDetailPage, getResumeQueryKey } from "../$id";
 
 // ---------------------------------------------------------------------------
@@ -274,7 +275,7 @@ describe("Skills list", () => {
   it("renders the consultant profile label on the skills page", async () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
-    const label = await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
+    const label = await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).consultantProfile);
     expect(label).toBeInTheDocument();
   });
 
@@ -282,7 +283,7 @@ describe("Skills list", () => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();
     // Wait for skills page to render, then query synchronously to avoid stale refs
-    await screen.findByText(enCommon.resume.detail.consultantProfileLabel);
+    await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).consultantProfile);
     for (const skill of TEST_RESUME.skills) {
       expect(screen.getByText(skill.name)).toBeInTheDocument();
     }
@@ -512,7 +513,7 @@ describe("Assignments section", () => {
   it("renders the assignments heading when assignments exist", async () => {
     mockListBranchAssignmentsFull.mockResolvedValue(TEST_ASSIGNMENTS);
     renderPage();
-    const heading = await screen.findByText(enCommon.resume.detail.assignmentsHeading);
+    const heading = await screen.findByText(getResumeLanguageTranslations(TEST_RESUME.language).experienceHeading);
     expect(heading).toBeInTheDocument();
   });
 
@@ -520,7 +521,7 @@ describe("Assignments section", () => {
     mockListBranchAssignmentsFull.mockResolvedValue([]);
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
-    expect(screen.queryByText(enCommon.resume.detail.assignmentsHeading)).toBeNull();
+    expect(screen.queryByText(getResumeLanguageTranslations(TEST_RESUME.language).experienceHeading)).toBeNull();
   });
 
   it("renders role heading for each assignment", async () => {
