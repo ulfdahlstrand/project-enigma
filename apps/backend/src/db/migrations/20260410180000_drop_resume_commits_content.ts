@@ -14,10 +14,10 @@ import { sql } from "kysely";
 // ---------------------------------------------------------------------------
 
 export async function up(db: Kysely<unknown>): Promise<void> {
-  await db.schema
-    .alterTable("resume_commits")
-    .dropColumn("content")
-    .execute();
+  await sql`
+    ALTER TABLE resume_commits
+    DROP COLUMN IF EXISTS content
+  `.execute(db);
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
