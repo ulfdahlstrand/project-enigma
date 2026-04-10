@@ -1,20 +1,87 @@
-import { render, screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Route } from "../index";
+import { renderWithProviders } from "../../../../test-utils/render";
+
+vi.mock("../../../../orpc-client", () => ({
+  orpc: {
+    listAIPromptConfigs: vi.fn(),
+    updateAIPromptFragment: vi.fn(),
+  },
+}));
+
+import { orpc } from "../../../../orpc-client";
+
+const mockListAIPromptConfigs = orpc.listAIPromptConfigs as ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  mockListAIPromptConfigs.mockResolvedValue({
+    categories: [
+      {
+        id: "cat-1",
+        key: "frontend",
+        title: "Frontend Prompt Builders",
+        description: "Frontend prompts",
+        sortOrder: 0,
+        prompts: [
+          {
+            id: "prompt-1",
+            key: "frontend.assignment-assistant",
+            title: "Assignment assistant",
+            description: "Prompt for assignment improvements",
+            sourceFile: "apps/frontend/src/components/ai-assistant/lib/build-assignment-prompt.ts",
+            isEditable: true,
+            sortOrder: 0,
+            fragments: [
+              {
+                id: "fragment-1",
+                key: "system_template",
+                label: "System template",
+                content: "Current description: {{description}}",
+                sortOrder: 0,
+              },
+            ],
+          },
+          {
+            id: "prompt-2",
+            key: "backend.conversation-title",
+            title: "Conversation title generator",
+            description: "Prompt for short titles",
+            sourceFile: "apps/backend/src/domains/ai/lib/generate-title.ts",
+            isEditable: true,
+            sortOrder: 1,
+            fragments: [
+              {
+                id: "fragment-2",
+                key: "system_template",
+                label: "System template",
+                content: "You summarise conversations in 2–4 words.",
+                sortOrder: 0,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+});
 
 describe("admin prompt inventory page", () => {
-  it("renders the prompt inventory overview", () => {
+  it("renders the live prompt inventory overview", async () => {
     const Component = Route.options.component as ComponentType;
 
-    render(<Component />);
+    renderWithProviders(<Component />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Frontend Prompt Builders")).toBeInTheDocument();
+    });
 
     expect(screen.getByRole("heading", { name: "AI Prompt Inventory" })).toBeInTheDocument();
-    expect(screen.getByText("Frontend prompt builders")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "apps/frontend/src/components/ai-assistant/lib/build-resume-revision-prompt.ts",
+        "apps/frontend/src/components/ai-assistant/lib/build-assignment-prompt.ts",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Key cross-cutting rules")).toBeInTheDocument();
@@ -24,14 +91,18 @@ describe("admin prompt inventory page", () => {
     const user = userEvent.setup();
     const Component = Route.options.component as ComponentType;
 
-    render(<Component />);
+    renderWithProviders(<Component />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Conversation title generator")).toBeInTheDocument();
+    });
 
     await user.type(
       screen.getByRole("textbox", { name: "Search prompt locations" }),
       "generate-title",
     );
 
-    expect(screen.getByText("generate-title.ts")).toBeInTheDocument();
-    expect(screen.queryByText("build-assignment-prompt.ts")).not.toBeInTheDocument();
+    expect(screen.getByText("Conversation title generator")).toBeInTheDocument();
+    expect(screen.queryByText("Assignment assistant")).not.toBeInTheDocument();
   });
 });

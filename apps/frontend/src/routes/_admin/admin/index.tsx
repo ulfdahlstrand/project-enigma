@@ -1,5 +1,6 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
@@ -9,15 +10,17 @@ import ListItem from "@mui/material/ListItem";
 import TextField from "@mui/material/TextField";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import {
-  PROMPT_GLOBAL_RULES,
-  PROMPT_INVENTORY_SECTIONS,
   PROMPT_MODEL_CONFIGURATION,
-} from "../../../features/admin/prompt-inventory-data";
+  PROMPT_GLOBAL_RULES,
+} from "../../../features/admin/prompt-inventory-static";
+import { clearPromptConfigCache } from "../../../features/admin/prompt-config-client";
+import { orpc } from "../../../orpc-client";
 
 export const Route = createFileRoute("/_admin/admin/")({
   component: AdminPromptInventoryPage,
@@ -25,33 +28,55 @@ export const Route = createFileRoute("/_admin/admin/")({
 
 function AdminPromptInventoryPage() {
   const { t } = useTranslation("common");
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const normalizedQuery = query.trim().toLowerCase();
+  const promptConfigsQuery = useQuery({
+    queryKey: ["admin", "ai-prompt-configs"],
+    queryFn: () => orpc.listAIPromptConfigs({}),
+  });
+
+  const updateFragmentMutation = useMutation({
+    mutationFn: (input: { fragmentId: string; content: string }) => orpc.updateAIPromptFragment(input),
+    onSuccess: async () => {
+      clearPromptConfigCache();
+      await queryClient.invalidateQueries({ queryKey: ["admin", "ai-prompt-configs"] });
+    },
+  });
+
+  const categories = promptConfigsQuery.data?.categories ?? [];
 
   const filteredSections = useMemo(() => {
     if (!normalizedQuery) {
-      return PROMPT_INVENTORY_SECTIONS;
+      return categories;
     }
 
-    return PROMPT_INVENTORY_SECTIONS
-      .map((section) => ({
-        ...section,
-        items: section.items.filter((item) => {
-          const haystack = [item.title, item.file, ...item.bullets].join(" ").toLowerCase();
+    return categories
+      .map((category) => ({
+        ...category,
+        prompts: category.prompts.filter((prompt) => {
+          const haystack = [
+            category.title,
+            prompt.title,
+            prompt.sourceFile,
+            prompt.description ?? "",
+            ...prompt.fragments.flatMap((fragment) => [fragment.label, fragment.key, fragment.content]),
+          ].join(" ").toLowerCase();
           return haystack.includes(normalizedQuery);
         }),
       }))
-      .filter((section) => section.items.length > 0);
-  }, [normalizedQuery]);
+      .filter((category) => category.prompts.length > 0);
+  }, [categories, normalizedQuery]);
 
-  const totalLocations = PROMPT_INVENTORY_SECTIONS.reduce(
-    (count, section) => count + section.items.length,
+  const totalLocations = categories.reduce(
+    (count, category) => count + category.prompts.length,
     0,
   );
 
   const visibleLocations = filteredSections.reduce(
-    (count, section) => count + section.items.length,
+    (count, category) => count + category.prompts.length,
     0,
   );
 
@@ -80,7 +105,7 @@ function AdminPromptInventoryPage() {
 
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <Chip
-              label={t("admin.promptInventory.sectionCount", { count: PROMPT_INVENTORY_SECTIONS.length })}
+              label={t("admin.promptInventory.sectionCount", { count: categories.length })}
               variant="outlined"
             />
             <Chip
@@ -101,17 +126,30 @@ function AdminPromptInventoryPage() {
             fullWidth
           />
 
+          {promptConfigsQuery.isError && (
+            <Alert severity="error">Failed to load prompt definitions.</Alert>
+          )}
+
+          {promptConfigsQuery.isLoading && (
+            <Alert severity="info">Loading prompt definitions…</Alert>
+          )}
+
           {filteredSections.map((section) => (
-            <Card key={section.titleKey} variant="outlined">
+            <Card key={section.key} variant="outlined">
               <CardContent sx={{ p: 0 }}>
                 <Box sx={{ px: 3, py: 2 }}>
-                  <Typography variant="h6">{t(section.titleKey)}</Typography>
+                  <Typography variant="h6">{section.title}</Typography>
+                  {section.description && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                      {section.description}
+                    </Typography>
+                  )}
                 </Box>
                 <Divider />
                 <Stack spacing={0}>
-                  {section.items.map((item, index) => (
+                  {section.prompts.map((item, index) => (
                     <Box
-                      key={`${section.titleKey}-${item.file}`}
+                      key={`${section.key}-${item.key}`}
                       sx={{
                         px: 3,
                         py: 2,
@@ -122,6 +160,20 @@ function AdminPromptInventoryPage() {
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.75 }}>
                         {item.title}
                       </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Chip
+                          label={item.isEditable ? "Editable" : "Read only"}
+                          size="small"
+                          color={item.isEditable ? "primary" : "default"}
+                          variant="outlined"
+                        />
+                        <Chip label={item.key} size="small" variant="outlined" />
+                      </Stack>
+                      {item.description && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {item.description}
+                        </Typography>
+                      )}
                       <Typography
                         variant="body2"
                         sx={{
@@ -134,17 +186,77 @@ function AdminPromptInventoryPage() {
                           overflowX: "auto",
                         }}
                       >
-                        {item.file}
+                        {item.sourceFile}
                       </Typography>
-                      <List dense disablePadding>
-                        {item.bullets.map((bullet) => (
-                          <ListItem key={bullet} sx={{ display: "list-item", py: 0.25, pl: 2 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {bullet}
-                            </Typography>
-                          </ListItem>
-                        ))}
-                      </List>
+                      <Stack spacing={2}>
+                        {item.fragments.map((fragment) => {
+                          const draftValue = drafts[fragment.id] ?? fragment.content;
+                          const isDirty = draftValue !== fragment.content;
+
+                          return (
+                            <Box key={fragment.id}>
+                              <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
+                                {fragment.label}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ display: "block", mb: 1 }}
+                              >
+                                {fragment.key}
+                              </Typography>
+                              <TextField
+                                value={draftValue}
+                                onChange={(event) => {
+                                  setDrafts((current) => ({
+                                    ...current,
+                                    [fragment.id]: event.target.value,
+                                  }));
+                                }}
+                                multiline
+                                minRows={4}
+                                fullWidth
+                                disabled={!item.isEditable || updateFragmentMutation.isPending}
+                              />
+                              {item.isEditable && (
+                                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    disabled={!isDirty || updateFragmentMutation.isPending}
+                                    onClick={() => {
+                                      void updateFragmentMutation.mutateAsync({
+                                        fragmentId: fragment.id,
+                                        content: draftValue,
+                                      }).then(() => {
+                                        setDrafts((current) => ({
+                                          ...current,
+                                          [fragment.id]: draftValue,
+                                        }));
+                                      });
+                                    }}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    variant="text"
+                                    size="small"
+                                    disabled={!isDirty || updateFragmentMutation.isPending}
+                                    onClick={() => {
+                                      setDrafts((current) => ({
+                                        ...current,
+                                        [fragment.id]: fragment.content,
+                                      }));
+                                    }}
+                                  >
+                                    Reset
+                                  </Button>
+                                </Stack>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Stack>
                     </Box>
                   ))}
                 </Stack>

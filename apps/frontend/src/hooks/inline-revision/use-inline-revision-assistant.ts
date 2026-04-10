@@ -5,6 +5,7 @@ import {
   buildUnifiedRevisionKickoff,
   buildUnifiedRevisionAutoStart,
 } from "../../components/ai-assistant/lib/build-resume-revision-prompt";
+import { loadPromptFragments } from "../../features/admin/prompt-config-client";
 import {
   appendUniqueRevisionSuggestions,
   markWorkItemsCompletedFromSuggestions,
@@ -144,7 +145,7 @@ export function useInlineRevisionAssistant({
     .filter(Boolean)
     .join("\n\n");
 
-  const openRevisionAssistant = useCallback(({
+  const openRevisionAssistant = useCallback(async ({
     branchId,
     kickoffMessage,
     initialConversationId,
@@ -166,26 +167,30 @@ export function useInlineRevisionAssistant({
       return;
     }
 
+    const fragments = await loadPromptFragments("frontend.unified-revision");
+
     openAssistant({
       entityType: "resume-revision-actions",
       entityId: branchId,
       title: t("revision.inline.conversationTitle"),
       systemPrompt: buildUnifiedRevisionPrompt(language, {
         branchAlreadyCreated: branchAlreadyCreated ?? false,
-      }),
+      }, fragments.system_template !== undefined ? {
+        systemTemplate: fragments.system_template,
+      } : undefined),
       kickoffMessage: kickoffMessage ?? buildUnifiedRevisionKickoff({
         branchAlreadyCreated: branchAlreadyCreated ?? false,
         branchGoal,
-      }),
+      }, fragments.kickoff_message),
       ...(buildUnifiedRevisionAutoStart({
         branchAlreadyCreated: branchAlreadyCreated ?? false,
         branchGoal,
-      }) !== null
+      }, fragments.auto_start_message) !== null
         ? {
             autoStartMessage: buildUnifiedRevisionAutoStart({
               branchAlreadyCreated: branchAlreadyCreated ?? false,
               branchGoal,
-            })!,
+            }, fragments.auto_start_message)!,
           }
         : {}),
       initialConversationId,
