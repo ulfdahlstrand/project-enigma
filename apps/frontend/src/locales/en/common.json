@@ -17,7 +17,23 @@
   "nav": {
     "home": "Home",
     "employees": "Employees",
-    "resumes": "Resumes"
+    "resumes": "Resumes",
+    "adminGroup": "Admin",
+    "aiPromptInventory": "AI Prompt Inventory"
+  },
+  "admin": {
+    "promptInventory": {
+      "pageTitle": "AI Prompt Inventory",
+      "pageDescription": "A read-only inventory of where AI prompts, guardrails, tool descriptions, and model settings are currently hardcoded across the application.",
+      "readOnlyNotice": "This page is intentionally read-only for now. It gives admins a shared overview before prompts are moved to a database-backed model.",
+      "hardcodedChip": "Hardcoded in TypeScript",
+      "dbBackedChip": "Not DB-backed yet",
+      "frontendSection": "Frontend prompt builders",
+      "backendSection": "Backend prompt builders",
+      "infrastructureSection": "Infrastructure and storage",
+      "modelConfigTitle": "Model configuration",
+      "globalRulesTitle": "Key cross-cutting rules"
+    }
   },
   "employee": {
     "pageTitle": "Employees",

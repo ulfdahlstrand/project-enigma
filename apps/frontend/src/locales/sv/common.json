@@ -17,7 +17,23 @@
   "nav": {
     "home": "Hem",
     "employees": "Anställda",
-    "resumes": "Meritförteckningar"
+    "resumes": "Meritförteckningar",
+    "adminGroup": "Admin",
+    "aiPromptInventory": "AI-promptinventering"
+  },
+  "admin": {
+    "promptInventory": {
+      "pageTitle": "AI-promptinventering",
+      "pageDescription": "En skrivskyddad inventering av var AI-prompter, guardrails, verktygsbeskrivningar och modellinställningar i dag är hårdkodade i applikationen.",
+      "readOnlyNotice": "Den här sidan är medvetet skrivskyddad tills vidare. Den ger administratörer en gemensam överblick innan promptarna flyttas till en databasbackad modell.",
+      "hardcodedChip": "Hårdkodat i TypeScript",
+      "dbBackedChip": "Inte DB-backat ännu",
+      "frontendSection": "Frontendens promptbyggare",
+      "backendSection": "Backendens promptbyggare",
+      "infrastructureSection": "Infrastruktur och lagring",
+      "modelConfigTitle": "Modellkonfiguration",
+      "globalRulesTitle": "Viktiga gemensamma regler"
+    }
   },
   "employee": {
     "pageTitle": "Anställda",

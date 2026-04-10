@@ -10,9 +10,11 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import ListSubheader from "@mui/material/ListSubheader";
 import Typography from "@mui/material/Typography";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../auth/auth-context";
 import { UserMenu } from "./UserMenu";
 
 interface NavItem {
@@ -26,9 +28,54 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: "nav.resumes", to: "/resumes" },
 ];
 
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { labelKey: "nav.aiPromptInventory", to: "/admin" },
+];
+
 export function NavigationMenu() {
   const { t } = useTranslation("common");
   const { location } = useRouterState();
+  const { user } = useAuth();
+
+  const renderNavItems = (items: NavItem[]) =>
+    items.map(({ labelKey, to }) => {
+      const isActive =
+        to === "/"
+          ? location.pathname === "/"
+          : location.pathname.startsWith(to);
+
+      return (
+        <ListItem key={to} disablePadding>
+          <ListItemButton
+            component={Link}
+            to={to}
+            sx={{
+              borderRadius: "0 24px 24px 0",
+              mr: 2,
+              pl: 2,
+              py: 0.75,
+              bgcolor: isActive
+                ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
+                : "transparent",
+              "&:hover": {
+                bgcolor: isActive
+                  ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
+                  : "action.hover",
+              },
+            }}
+          >
+            <ListItemText
+              primary={t(labelKey)}
+              primaryTypographyProps={{
+                fontSize: "0.875rem",
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? "primary.main" : "text.primary",
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+      );
+    });
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
@@ -62,44 +109,30 @@ export function NavigationMenu() {
 
       {/* Nav items */}
       <List component="nav" disablePadding sx={{ pt: 1 }}>
-        {NAV_ITEMS.map(({ labelKey, to }) => {
-          const isActive =
-            to === "/"
-              ? location.pathname === "/"
-              : location.pathname.startsWith(to);
+        {renderNavItems(NAV_ITEMS)}
 
-          return (
-            <ListItem key={to} disablePadding>
-              <ListItemButton
-                component={Link}
-                to={to}
-                sx={{
-                  borderRadius: "0 24px 24px 0",
-                  mr: 2,
-                  pl: 2,
-                  py: 0.75,
-                  bgcolor: isActive
-                    ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
-                    : "transparent",
-                  "&:hover": {
-                    bgcolor: isActive
-                      ? (t) => t.palette.mode === "dark" ? "rgba(26,115,232,0.2)" : "#e8f0fe"
-                      : "action.hover",
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={t(labelKey)}
-                  primaryTypographyProps={{
-                    fontSize: "0.875rem",
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? "primary.main" : "text.primary",
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
+        {user?.role === "admin" && (
+          <>
+            <Divider sx={{ my: 1.5 }} />
+            <ListSubheader
+              disableSticky
+              sx={{
+                bgcolor: "transparent",
+                color: "text.secondary",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                lineHeight: 1.4,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                px: 2,
+                py: 0.5,
+              }}
+            >
+              {t("nav.adminGroup")}
+            </ListSubheader>
+            {renderNavItems(ADMIN_NAV_ITEMS)}
+          </>
+        )}
       </List>
 
       {/* User profile footer — pinned to bottom */}
