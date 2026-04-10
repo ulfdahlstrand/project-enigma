@@ -86,7 +86,7 @@ function AdminPromptInventoryPage() {
       <Box sx={{ p: 3 }}>
         <Stack spacing={3}>
           <Alert severity="info">
-            {t("admin.promptInventory.readOnlyNotice")}
+            {t("admin.promptInventory.manageNotice")}
           </Alert>
 
           <Stack
@@ -95,8 +95,8 @@ function AdminPromptInventoryPage() {
             useFlexGap
             flexWrap="wrap"
           >
-            <Chip label={t("admin.promptInventory.hardcodedChip")} color="primary" variant="outlined" />
-            <Chip label={t("admin.promptInventory.dbBackedChip")} variant="outlined" />
+            <Chip label={t("admin.promptInventory.dbBackedChip")} color="primary" variant="outlined" />
+            <Chip label={t("admin.promptInventory.editableChip")} variant="outlined" />
           </Stack>
 
           <Typography variant="body1" color="text.secondary">
@@ -109,7 +109,7 @@ function AdminPromptInventoryPage() {
               variant="outlined"
             />
             <Chip
-              label={t("admin.promptInventory.locationCount", { count: totalLocations })}
+              label={t("admin.promptInventory.promptCount", { count: totalLocations })}
               variant="outlined"
             />
             <Chip
@@ -127,11 +127,11 @@ function AdminPromptInventoryPage() {
           />
 
           {promptConfigsQuery.isError && (
-            <Alert severity="error">Failed to load prompt definitions.</Alert>
+            <Alert severity="error">{t("admin.promptInventory.loadError")}</Alert>
           )}
 
           {promptConfigsQuery.isLoading && (
-            <Alert severity="info">Loading prompt definitions…</Alert>
+            <Alert severity="info">{t("admin.promptInventory.loading")}</Alert>
           )}
 
           {filteredSections.map((section) => (
@@ -162,7 +162,9 @@ function AdminPromptInventoryPage() {
                       </Typography>
                       <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
                         <Chip
-                          label={item.isEditable ? "Editable" : "Read only"}
+                          label={item.isEditable
+                            ? t("admin.promptInventory.editableStatus")
+                            : t("admin.promptInventory.readOnlyStatus")}
                           size="small"
                           color={item.isEditable ? "primary" : "default"}
                           variant="outlined"
@@ -174,19 +176,8 @@ function AdminPromptInventoryPage() {
                           {item.description}
                         </Typography>
                       )}
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontFamily: "monospace",
-                          bgcolor: "action.hover",
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.75,
-                          mb: 1.5,
-                          overflowX: "auto",
-                        }}
-                      >
-                        {item.sourceFile}
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        {t("admin.promptInventory.systemFunctionLabel")}: {item.description ?? item.title}
                       </Typography>
                       <Stack spacing={2}>
                         {item.fragments.map((fragment) => {
@@ -236,7 +227,7 @@ function AdminPromptInventoryPage() {
                                       });
                                     }}
                                   >
-                                    Save
+                                    {t("admin.promptInventory.saveButton")}
                                   </Button>
                                   <Button
                                     variant="text"
@@ -249,7 +240,7 @@ function AdminPromptInventoryPage() {
                                       }));
                                     }}
                                   >
-                                    Reset
+                                    {t("admin.promptInventory.resetButton")}
                                   </Button>
                                 </Stack>
                               )}

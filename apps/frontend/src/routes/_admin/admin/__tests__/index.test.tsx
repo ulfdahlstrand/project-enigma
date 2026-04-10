@@ -78,12 +78,9 @@ describe("admin prompt inventory page", () => {
       expect(screen.getByText("Frontend Prompt Builders")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("heading", { name: "AI Prompt Inventory" })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "apps/frontend/src/components/ai-assistant/lib/build-assignment-prompt.ts",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Prompt Configuration" })).toBeInTheDocument();
+    expect(screen.getAllByText(/System function:/)).not.toHaveLength(0);
+    expect(screen.getByText("Prompt for assignment improvements")).toBeInTheDocument();
     expect(screen.getByText("Key cross-cutting rules")).toBeInTheDocument();
   });
 
@@ -98,7 +95,7 @@ describe("admin prompt inventory page", () => {
     });
 
     await user.type(
-      screen.getByRole("textbox", { name: "Search prompt locations" }),
+      screen.getByRole("textbox", { name: "Search prompt functions" }),
       "generate-title",
     );
 
