@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authenticated/resumes/index'
@@ -23,14 +24,20 @@ import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './route
 import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes/_authenticated/resumes/$id_/history/index'
 import { Route as AuthenticatedResumesIdEditIndexRouteImport } from './routes/_authenticated/resumes/$id_/edit/index'
 import { Route as AuthenticatedResumesIdCompareIndexRouteImport } from './routes/_authenticated/resumes/$id_/compare/index'
+import { Route as AdminAdminAssistantPromptsIndexRouteImport } from './routes/_admin/admin/assistant/prompts/index'
 import { Route as AuthenticatedResumesIdCompareRangeRouteImport } from './routes/_authenticated/resumes/$id_/compare/$range'
 import { Route as AuthenticatedResumesIdCommitCommitIdRouteImport } from './routes/_authenticated/resumes/$id_/commit/$commitId'
 import { Route as AuthenticatedResumesIdBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/branch/$branchId'
+import { Route as AdminAdminAssistantPromptsPromptIdRouteImport } from './routes/_admin/admin/assistant/prompts/$promptId'
 import { Route as AuthenticatedResumesIdHistoryBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/history/branch/$branchId'
 import { Route as AuthenticatedResumesIdEditBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/edit/branch/$branchId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -107,6 +114,12 @@ const AuthenticatedResumesIdCompareIndexRoute =
     path: '/resumes/$id/compare/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AdminAdminAssistantPromptsIndexRoute =
+  AdminAdminAssistantPromptsIndexRouteImport.update({
+    id: '/admin/assistant/prompts/',
+    path: '/admin/assistant/prompts/',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AuthenticatedResumesIdCompareRangeRoute =
   AuthenticatedResumesIdCompareRangeRouteImport.update({
     id: '/resumes/$id_/compare/$range',
@@ -124,6 +137,12 @@ const AuthenticatedResumesIdBranchBranchIdRoute =
     id: '/resumes/$id_/branch/$branchId',
     path: '/resumes/$id/branch/$branchId',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AdminAdminAssistantPromptsPromptIdRoute =
+  AdminAdminAssistantPromptsPromptIdRouteImport.update({
+    id: '/admin/assistant/prompts/$promptId',
+    path: '/admin/assistant/prompts/$promptId',
+    getParentRoute: () => AdminRoute,
   } as any)
 const AuthenticatedResumesIdHistoryBranchBranchIdRoute =
   AuthenticatedResumesIdHistoryBranchBranchIdRouteImport.update({
@@ -148,9 +167,11 @@ export interface FileRoutesByFullPath {
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/resumes/': typeof AuthenticatedResumesIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
+  '/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
   '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
@@ -168,9 +189,11 @@ export interface FileRoutesByTo {
   '/employees': typeof AuthenticatedEmployeesIndexRoute
   '/resumes': typeof AuthenticatedResumesIndexRoute
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
+  '/admin/assistant/prompts': typeof AdminAdminAssistantPromptsIndexRoute
   '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/edit': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/history': typeof AuthenticatedResumesIdHistoryIndexRoute
@@ -181,6 +204,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login/': typeof LoginIndexRoute
   '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
@@ -190,9 +214,11 @@ export interface FileRoutesById {
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
   '/_authenticated/employees/$id_/import': typeof AuthenticatedEmployeesIdImportRoute
+  '/_admin/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/_authenticated/resumes/$id_/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/_authenticated/resumes/$id_/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/_authenticated/resumes/$id_/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
+  '/_admin/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
   '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/_authenticated/resumes/$id_/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/_authenticated/resumes/$id_/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
@@ -212,9 +238,11 @@ export interface FileRouteTypes {
     | '/employees/'
     | '/resumes/'
     | '/employees/$id/import'
+    | '/admin/assistant/prompts/$promptId'
     | '/resumes/$id/branch/$branchId'
     | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare/$range'
+    | '/admin/assistant/prompts/'
     | '/resumes/$id/compare/'
     | '/resumes/$id/edit/'
     | '/resumes/$id/history/'
@@ -232,9 +260,11 @@ export interface FileRouteTypes {
     | '/employees'
     | '/resumes'
     | '/employees/$id/import'
+    | '/admin/assistant/prompts/$promptId'
     | '/resumes/$id/branch/$branchId'
     | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare/$range'
+    | '/admin/assistant/prompts'
     | '/resumes/$id/compare'
     | '/resumes/$id/edit'
     | '/resumes/$id/history'
@@ -244,6 +274,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_authenticated'
     | '/login/'
     | '/_authenticated/employees/$id'
@@ -253,9 +284,11 @@ export interface FileRouteTypes {
     | '/_authenticated/employees/'
     | '/_authenticated/resumes/'
     | '/_authenticated/employees/$id_/import'
+    | '/_admin/admin/assistant/prompts/$promptId'
     | '/_authenticated/resumes/$id_/branch/$branchId'
     | '/_authenticated/resumes/$id_/commit/$commitId'
     | '/_authenticated/resumes/$id_/compare/$range'
+    | '/_admin/admin/assistant/prompts/'
     | '/_authenticated/resumes/$id_/compare/'
     | '/_authenticated/resumes/$id_/edit/'
     | '/_authenticated/resumes/$id_/history/'
@@ -266,6 +299,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginIndexRoute: typeof LoginIndexRoute
 }
@@ -277,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -370,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResumesIdCompareIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_admin/admin/assistant/prompts/': {
+      id: '/_admin/admin/assistant/prompts/'
+      path: '/admin/assistant/prompts'
+      fullPath: '/admin/assistant/prompts/'
+      preLoaderRoute: typeof AdminAdminAssistantPromptsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_authenticated/resumes/$id_/compare/$range': {
       id: '/_authenticated/resumes/$id_/compare/$range'
       path: '/resumes/$id/compare/$range'
@@ -391,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResumesIdBranchBranchIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_admin/admin/assistant/prompts/$promptId': {
+      id: '/_admin/admin/assistant/prompts/$promptId'
+      path: '/admin/assistant/prompts/$promptId'
+      fullPath: '/admin/assistant/prompts/$promptId'
+      preLoaderRoute: typeof AdminAdminAssistantPromptsPromptIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_authenticated/resumes/$id_/history/branch/$branchId': {
       id: '/_authenticated/resumes/$id_/history/branch/$branchId'
       path: '/resumes/$id/history/branch/$branchId'
@@ -407,6 +462,19 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAdminAssistantPromptsPromptIdRoute: typeof AdminAdminAssistantPromptsPromptIdRoute
+  AdminAdminAssistantPromptsIndexRoute: typeof AdminAdminAssistantPromptsIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminAssistantPromptsPromptIdRoute:
+    AdminAdminAssistantPromptsPromptIdRoute,
+  AdminAdminAssistantPromptsIndexRoute: AdminAdminAssistantPromptsIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
@@ -460,6 +528,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginIndexRoute: LoginIndexRoute,
 }

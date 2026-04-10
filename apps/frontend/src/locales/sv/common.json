@@ -17,7 +17,36 @@
   "nav": {
     "home": "Hem",
     "employees": "Anställda",
-    "resumes": "Meritförteckningar"
+    "resumes": "Meritförteckningar",
+    "adminGroup": "Admin",
+    "aiPromptInventory": "AI-promptinventering"
+  },
+  "admin": {
+    "promptInventory": {
+      "pageTitle": "AI-promptkonfiguration",
+      "pageDescription": "Hantera promptmallarna som driver AI-funktionerna i systemet. Promptarna grupperas efter sin roll i produkten, inte efter källfil.",
+      "manageNotice": "Den här sidan visar de databasbackade promptdefinitioner som finns i systemet. Redigerbara promptar kan uppdateras direkt här.",
+      "editableChip": "Redigerbara promptar",
+      "dbBackedChip": "Lagrade i databasen",
+      "searchLabel": "Sök promptfunktioner",
+      "searchPlaceholder": "Sök på systemroll, prompttyp eller innehåll…",
+      "emptySearch": "Inga promptfunktioner matchade din sökning.",
+      "loading": "Laddar promptdefinitioner…",
+      "loadError": "Det gick inte att ladda promptdefinitionerna.",
+      "sectionCount_one": "{{count}} sektion",
+      "sectionCount_other": "{{count}} sektioner",
+      "promptCount_one": "{{count}} prompt",
+      "promptCount_other": "{{count}} promptar",
+      "visibleCount_one": "{{count}} synlig",
+      "visibleCount_other": "{{count}} synliga",
+      "editableStatus": "Redigerbar",
+      "readOnlyStatus": "Skrivskyddad",
+      "systemFunctionLabel": "Systemfunktion",
+      "saveButton": "Spara",
+      "resetButton": "Återställ",
+      "modelConfigTitle": "Modellkonfiguration",
+      "globalRulesTitle": "Viktiga gemensamma regler"
+    }
   },
   "employee": {
     "pageTitle": "Anställda",

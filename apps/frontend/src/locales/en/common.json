@@ -17,7 +17,36 @@
   "nav": {
     "home": "Home",
     "employees": "Employees",
-    "resumes": "Resumes"
+    "resumes": "Resumes",
+    "adminGroup": "Admin",
+    "aiPromptInventory": "AI Prompt Inventory"
+  },
+  "admin": {
+    "promptInventory": {
+      "pageTitle": "AI Prompt Configuration",
+      "pageDescription": "Manage the prompt templates that drive the AI features in the system. Prompts are grouped by role in the product, not by source file.",
+      "manageNotice": "This page shows the database-backed prompt definitions currently available in the system. Editable prompts can be updated directly here.",
+      "editableChip": "Editable prompts",
+      "dbBackedChip": "Stored in database",
+      "searchLabel": "Search prompt functions",
+      "searchPlaceholder": "Search by system role, prompt type, or content…",
+      "emptySearch": "No prompt functions matched your search.",
+      "loading": "Loading prompt definitions…",
+      "loadError": "Failed to load prompt definitions.",
+      "sectionCount_one": "{{count}} section",
+      "sectionCount_other": "{{count}} sections",
+      "promptCount_one": "{{count}} prompt",
+      "promptCount_other": "{{count}} prompts",
+      "visibleCount_one": "{{count}} visible",
+      "visibleCount_other": "{{count}} visible",
+      "editableStatus": "Editable",
+      "readOnlyStatus": "Read only",
+      "systemFunctionLabel": "System function",
+      "saveButton": "Save",
+      "resetButton": "Reset",
+      "modelConfigTitle": "Model configuration",
+      "globalRulesTitle": "Key cross-cutting rules"
+    }
   },
   "employee": {
     "pageTitle": "Employees",

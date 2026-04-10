@@ -12,6 +12,7 @@ import Button from "@mui/material/Button";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import { buildAssignmentPrompt, buildAssignmentKickoff } from "./ai-assistant/lib/build-assignment-prompt";
+import { loadPromptFragments } from "../features/admin/prompt-config-client";
 
 interface Props {
   assignmentId: string;
@@ -31,9 +32,10 @@ export function ImproveDescriptionButton({
   const { t } = useTranslation("common");
   const { openAssistant } = useAIAssistantContext();
 
-  const handleClick = () => {
+  const handleClick = async () => {
     const titleParts = [role, clientName].filter(Boolean);
     const title = titleParts.length > 0 ? titleParts.join(" @ ") : undefined;
+    const fragments = await loadPromptFragments("frontend.assignment-assistant");
     openAssistant({
       entityType: "assignment",
       entityId: assignmentId,
@@ -42,8 +44,10 @@ export function ImproveDescriptionButton({
         description,
         ...(role !== undefined && { role }),
         ...(clientName !== undefined && { clientName }),
-      }),
-      kickoffMessage: buildAssignmentKickoff(),
+      }, fragments.system_template !== undefined ? {
+        systemTemplate: fragments.system_template,
+      } : undefined),
+      kickoffMessage: buildAssignmentKickoff(fragments.kickoff_message),
       originalContent: description,
       onAccept,
     });

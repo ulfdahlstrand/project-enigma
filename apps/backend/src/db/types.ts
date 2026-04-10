@@ -302,6 +302,44 @@ export type NewAIRevisionSuggestion = Insertable<AIRevisionSuggestionTable>;
 export type AIRevisionSuggestionUpdate = Updateable<AIRevisionSuggestionTable>;
 
 // ---------------------------------------------------------------------------
+// AI prompt configuration tables
+// ---------------------------------------------------------------------------
+
+export interface AIPromptCategoryTable {
+  id: Generated<string>;
+  key: string;
+  title: string;
+  description: string | null;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface AIPromptDefinitionTable {
+  id: Generated<string>;
+  category_id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  source_file: string;
+  is_editable: Generated<boolean>;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface AIPromptFragmentTable {
+  id: Generated<string>;
+  prompt_definition_id: string;
+  key: string;
+  label: string;
+  content: string;
+  sort_order: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+// ---------------------------------------------------------------------------
 // user_sessions table
 // ---------------------------------------------------------------------------
 
@@ -320,6 +358,15 @@ export interface UserSessionTable {
 export type UserSession = Selectable<UserSessionTable>;
 export type NewUserSession = Insertable<UserSessionTable>;
 export type UserSessionUpdate = Updateable<UserSessionTable>;
+export type AIPromptCategory = Selectable<AIPromptCategoryTable>;
+export type NewAIPromptCategory = Insertable<AIPromptCategoryTable>;
+export type AIPromptCategoryUpdate = Updateable<AIPromptCategoryTable>;
+export type AIPromptDefinition = Selectable<AIPromptDefinitionTable>;
+export type NewAIPromptDefinition = Insertable<AIPromptDefinitionTable>;
+export type AIPromptDefinitionUpdate = Updateable<AIPromptDefinitionTable>;
+export type AIPromptFragment = Selectable<AIPromptFragmentTable>;
+export type NewAIPromptFragment = Insertable<AIPromptFragmentTable>;
+export type AIPromptFragmentUpdate = Updateable<AIPromptFragmentTable>;
 
 
 // ---------------------------------------------------------------------------
@@ -465,6 +512,9 @@ export interface Database {
   ai_message_deliveries: AIMessageDeliveryTable;
   ai_revision_work_items: AIRevisionWorkItemTable;
   ai_revision_suggestions: AIRevisionSuggestionTable;
+  ai_prompt_categories: AIPromptCategoryTable;
+  ai_prompt_definitions: AIPromptDefinitionTable;
+  ai_prompt_fragments: AIPromptFragmentTable;
   user_sessions: UserSessionTable;
   // Git-inspired content model
   resume_entry_types: ResumeEntryTypeTable;

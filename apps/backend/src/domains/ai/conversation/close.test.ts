@@ -22,6 +22,10 @@ function buildDb(
   messages: unknown[] = []
 ) {
   const execute = vi.fn().mockResolvedValue(undefined);
+  const promptFragments = [
+    { key: "system_template", content: "Generate a short conversation title." },
+  ];
+
   return {
     selectFrom: vi.fn().mockImplementation((table: string) => {
       if (table === "ai_conversations") {
@@ -29,6 +33,19 @@ function buildDb(
           select: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               executeTakeFirst: vi.fn().mockResolvedValue(conversation),
+            }),
+          }),
+        };
+      }
+      if (table === "ai_prompt_fragments as f") {
+        return {
+          innerJoin: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  execute: vi.fn().mockResolvedValue(promptFragments),
+                }),
+              }),
             }),
           }),
         };

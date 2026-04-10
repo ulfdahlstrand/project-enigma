@@ -1,3 +1,5 @@
+import { renderPromptTemplate } from "../../../features/admin/prompt-config-client";
+
 function buildLocaleInstruction(locale: string | undefined): string[] {
   if (!locale) return [];
 
@@ -16,8 +18,29 @@ type UnifiedRevisionPromptOptions = {
 export function buildUnifiedRevisionPrompt(
   locale: string | undefined,
   options?: UnifiedRevisionPromptOptions,
+  templates?: { systemTemplate?: string },
 ): string {
   const branchAlreadyCreated = options?.branchAlreadyCreated === true;
+
+  const localeInstructionBlock = buildLocaleInstruction(locale).join("\n");
+  const branchStartGuidance = branchAlreadyCreated
+    ? "This branch was already created because the user indicated that they want to keep working on several changes here."
+    : "In a brand-new or otherwise empty branch chat, start exactly as today: greet briefly and ask what the user wants to revise.";
+  const branchScopeGuidance = branchAlreadyCreated
+    ? "Do not ask again whether the user plans to make more changes after the current one. That is already known."
+    : "When the first concrete user request in that fresh chat is narrow and local, for example one section or one assignment, do not jump straight into inspection yet.";
+  const branchFollowupGuidance = branchAlreadyCreated
+    ? "Continue directly with the current revision scope, produce the needed suggestions, and then invite the user to say what else should be revised in this branch."
+    : "First ask one short follow-up question about scope, for example whether the user expects to keep making more edits after this one.";
+
+  if (templates?.systemTemplate) {
+    return renderPromptTemplate(templates.systemTemplate, {
+      locale_instruction_block: localeInstructionBlock,
+      branch_start_guidance: branchStartGuidance,
+      branch_scope_guidance: branchScopeGuidance,
+      branch_followup_guidance: branchFollowupGuidance,
+    });
+  }
 
   return [
     "You are helping the user revise their resume inside the resume editor.",
@@ -119,7 +142,27 @@ type UnifiedRevisionKickoffOptions = {
   branchGoal?: string | null | undefined;
 };
 
-export function buildUnifiedRevisionKickoff(options?: UnifiedRevisionKickoffOptions): string {
+export function buildUnifiedRevisionKickoff(
+  options?: UnifiedRevisionKickoffOptions,
+  template?: string,
+): string {
+  if (template) {
+    return renderPromptTemplate(template, {
+      existing_branch_line: options?.branchAlreadyCreated
+        ? "A dedicated revision branch has already been created for a broader revision effort."
+        : "",
+      branch_goal_line: options?.branchAlreadyCreated && options.branchGoal
+        ? `Current branch goal: ${options.branchGoal}`
+        : "",
+      existing_branch_followup: options?.branchAlreadyCreated
+        ? "Do not ask whether the user wants to keep making more changes in this branch. That is already decided.\nContinue directly with the current requested scope, then ask what else the user wants to revise next in this same branch."
+        : "",
+      default_kickoff_line: options?.branchAlreadyCreated
+        ? ""
+        : "Greet the user briefly, explain that you can keep helping in the same revision chat, and ask what they would like to revise first.",
+    }).trim();
+  }
+
   if (options?.branchAlreadyCreated) {
     return [
       "A dedicated revision branch has already been created for a broader revision effort.",
@@ -132,9 +175,18 @@ export function buildUnifiedRevisionKickoff(options?: UnifiedRevisionKickoffOpti
   return "Greet the user briefly, explain that you can keep helping in the same revision chat, and ask what they would like to revise first.";
 }
 
-export function buildUnifiedRevisionAutoStart(options?: UnifiedRevisionKickoffOptions): string | null {
+export function buildUnifiedRevisionAutoStart(
+  options?: UnifiedRevisionKickoffOptions,
+  template?: string,
+): string | null {
   if (!options?.branchAlreadyCreated || !options.branchGoal) {
     return null;
+  }
+
+  if (template) {
+    return renderPromptTemplate(template, {
+      branch_goal: options.branchGoal,
+    });
   }
 
   return [

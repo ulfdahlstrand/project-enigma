@@ -2,8 +2,10 @@ import { implement, ORPCError } from "@orpc/server";
 import OpenAI from "openai";
 import { contract } from "@cv-tool/contracts";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
+import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { buildImproveDescriptionPrompt } from "../lib/prompts.js";
+import { getAIPromptFragmentsByKey } from "../../system/index.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 1024;
@@ -14,13 +16,14 @@ const MAX_TOKENS = 1024;
  */
 export async function improveDescription(
   client: OpenAI,
-  input: { description: string; role?: string | undefined; clientName?: string | undefined }
+  input: { description: string; role?: string | undefined; clientName?: string | undefined },
+  templates?: { systemTemplate?: string; userTemplate?: string },
 ): Promise<{ improvedDescription: string }> {
   const { system, user } = buildImproveDescriptionPrompt({
     description: input.description,
     ...(input.role !== undefined && { role: input.role }),
     ...(input.clientName !== undefined && { clientName: input.clientName }),
-  });
+  }, templates);
 
   const response = await client.chat.completions.create({
     model: MODEL,
@@ -48,7 +51,16 @@ export const improveDescriptionHandler = implement(
   contract.improveDescription
 ).handler(async ({ input, context }) => {
   requireAuth(context as AuthContext);
-  return improveDescription(getOpenAIClient(), input);
+  const db = getDb();
+  const fragments = await getAIPromptFragmentsByKey(db, "backend.improve-description");
+  return improveDescription(
+    getOpenAIClient(),
+    input,
+    {
+      ...(fragments.system_template !== undefined ? { systemTemplate: fragments.system_template } : {}),
+      ...(fragments.user_template !== undefined ? { userTemplate: fragments.user_template } : {}),
+    },
+  );
 });
 
 /**
