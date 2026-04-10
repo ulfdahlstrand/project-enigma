@@ -19,6 +19,7 @@ import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authentic
 import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authenticated/resumes/$id'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
 import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
+import { Route as AuthenticatedAssistantExternalAiRouteImport } from './routes/_authenticated/assistant/external-ai'
 import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
 import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
 import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes/_authenticated/resumes/$id_/history/index'
@@ -82,6 +83,12 @@ const AuthenticatedEmployeesIdRoute =
   AuthenticatedEmployeesIdRouteImport.update({
     id: '/employees/$id',
     path: '/employees/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAssistantExternalAiRoute =
+  AuthenticatedAssistantExternalAiRouteImport.update({
+    id: '/assistant/external-ai',
+    path: '/assistant/external-ai',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedEmployeesIdImportRoute =
@@ -160,6 +167,7 @@ const AuthenticatedResumesIdEditBranchBranchIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login/': typeof LoginIndexRoute
+  '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginIndexRoute
+  '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/_admin': typeof AdminRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login/': typeof LoginIndexRoute
+  '/_authenticated/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
   '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/_authenticated/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/_authenticated/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login/'
+    | '/assistant/external-ai'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/assistant/external-ai'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/_admin'
     | '/_authenticated'
     | '/login/'
+    | '/_authenticated/assistant/external-ai'
     | '/_authenticated/employees/$id'
     | '/_authenticated/employees/new'
     | '/_authenticated/resumes/$id'
@@ -374,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/employees/$id'
       fullPath: '/employees/$id'
       preLoaderRoute: typeof AuthenticatedEmployeesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/assistant/external-ai': {
+      id: '/_authenticated/assistant/external-ai'
+      path: '/assistant/external-ai'
+      fullPath: '/assistant/external-ai'
+      preLoaderRoute: typeof AuthenticatedAssistantExternalAiRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/employees/$id_/import': {
@@ -477,6 +497,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAssistantExternalAiRoute: typeof AuthenticatedAssistantExternalAiRoute
   AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
   AuthenticatedResumesIdRoute: typeof AuthenticatedResumesIdRoute
@@ -496,6 +517,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAssistantExternalAiRoute: AuthenticatedAssistantExternalAiRoute,
   AuthenticatedEmployeesIdRoute: AuthenticatedEmployeesIdRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
   AuthenticatedResumesIdRoute: AuthenticatedResumesIdRoute,

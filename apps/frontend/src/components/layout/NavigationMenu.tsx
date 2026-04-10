@@ -28,6 +28,10 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: "nav.resumes", to: "/resumes" },
 ];
 
+const ASSISTANT_NAV_ITEMS: NavItem[] = [
+  { labelKey: "nav.externalAIConnections", to: "/assistant/external-ai" },
+];
+
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { labelKey: "nav.aiPromptInventory", to: "/admin/assistant/prompts" },
 ];
@@ -110,6 +114,25 @@ export function NavigationMenu() {
       {/* Nav items */}
       <List component="nav" disablePadding sx={{ pt: 1 }}>
         {renderNavItems(NAV_ITEMS)}
+
+        <Divider sx={{ my: 1.5 }} />
+        <ListSubheader
+          disableSticky
+          sx={{
+            bgcolor: "transparent",
+            color: "text.secondary",
+            fontSize: "0.75rem",
+            fontWeight: 700,
+            lineHeight: 1.4,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            px: 2,
+            py: 0.5,
+          }}
+        >
+          {t("nav.assistantGroup")}
+        </ListSubheader>
+        {renderNavItems(ASSISTANT_NAV_ITEMS)}
 
         {user?.role === "admin" && (
           <>

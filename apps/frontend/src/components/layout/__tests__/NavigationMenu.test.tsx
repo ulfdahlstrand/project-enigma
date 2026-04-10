@@ -46,11 +46,13 @@ describe("NavigationMenu", () => {
 
     render(<NavigationMenu />);
 
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("External AI Connections")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
     expect(screen.getByText("AI Prompt Inventory")).toBeInTheDocument();
   });
 
-  it("hides the admin section for consultant users", () => {
+  it("hides the admin section for consultant users but keeps assistant links", () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: "550e8400-e29b-41d4-a716-446655440000",
@@ -66,6 +68,8 @@ describe("NavigationMenu", () => {
 
     render(<NavigationMenu />);
 
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("External AI Connections")).toBeInTheDocument();
     expect(screen.queryByText("Admin")).not.toBeInTheDocument();
     expect(screen.queryByText("AI Prompt Inventory")).not.toBeInTheDocument();
   });
