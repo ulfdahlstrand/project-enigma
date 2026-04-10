@@ -86,6 +86,7 @@ const ALLOWED_ROUTES = [
   { method: "GET", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "List commits on a branch." },
   { method: "GET", path: "/resume-commits/{commitId}", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Read a specific commit snapshot." },
   { method: "POST", path: "/resume-commits/compare", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Compare two commits." },
+  { method: "PATCH", path: "/resume-branches/{branchId}/content", requiredScope: EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE, purpose: "Update branch-scoped consultant title, presentation, summary, and highlighted items." },
   { method: "POST", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_WRITE_SCOPE, purpose: "Create a new commit on a branch." },
   { method: "GET", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE, purpose: "List branch-scoped assignment content." },
   { method: "POST", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE, purpose: "Add a branch-scoped assignment entry." },

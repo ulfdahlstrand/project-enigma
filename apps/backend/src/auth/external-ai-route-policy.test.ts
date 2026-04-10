@@ -18,6 +18,7 @@ describe("getRequiredExternalAIScope", () => {
 
   it("maps write routes to write scopes", () => {
     expect(getRequiredExternalAIScope("POST", "/resume-commits/123/branches")).toBe("resume-branch:write");
+    expect(getRequiredExternalAIScope("PATCH", "/resume-branches/123/content")).toBe("resume-branch:write");
     expect(getRequiredExternalAIScope("POST", "/resume-branches/123/commits")).toBe("resume-commit:write");
     expect(getRequiredExternalAIScope("POST", "/resume-branches/123/assignments")).toBe("branch-assignment:write");
     expect(getRequiredExternalAIScope("PATCH", "/branch-assignments/123")).toBe("branch-assignment:write");
@@ -34,4 +35,3 @@ describe("getRequiredExternalAIScope", () => {
     expect(getRequiredExternalAIScope("DELETE", "/resume-branches/123")).toBeNull();
   });
 });
-

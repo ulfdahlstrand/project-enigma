@@ -133,6 +133,8 @@ export const saveResumeVersionInputSchema = z.object({
 });
 
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
+export type SaveResumeVersionInput = z.infer<typeof saveResumeVersionInputSchema>;
+export type SaveResumeVersionOutput = z.infer<typeof saveResumeVersionOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // updateResumeBranchSkills schemas
@@ -149,6 +151,39 @@ export const updateResumeBranchSkillsOutputSchema = z.object({
   skillGroups: z.array(resumeCommitSkillGroupSchema),
   skills: z.array(resumeCommitSkillSchema),
 });
+export type UpdateResumeBranchSkillsInput = z.infer<typeof updateResumeBranchSkillsInputSchema>;
+export type UpdateResumeBranchSkillsOutput = z.infer<typeof updateResumeBranchSkillsOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// updateResumeBranchContent schemas
+// ---------------------------------------------------------------------------
+
+export const updateResumeBranchContentInputSchema = z.object({
+  branchId: z.string().uuid(),
+  consultantTitle: z.string().nullable().optional(),
+  presentation: z.array(z.string()).optional(),
+  summary: z.string().nullable().optional(),
+  highlightedItems: z.array(z.string()).optional(),
+}).refine(
+  (input) =>
+    input.consultantTitle !== undefined
+    || input.presentation !== undefined
+    || input.summary !== undefined
+    || input.highlightedItems !== undefined,
+  {
+    message: "At least one branch content field must be provided",
+  },
+);
+
+export const updateResumeBranchContentOutputSchema = z.object({
+  branchId: z.string().uuid(),
+  consultantTitle: z.string().nullable(),
+  presentation: z.array(z.string()),
+  summary: z.string().nullable(),
+  highlightedItems: z.array(z.string()),
+});
+export type UpdateResumeBranchContentInput = z.infer<typeof updateResumeBranchContentInputSchema>;
+export type UpdateResumeBranchContentOutput = z.infer<typeof updateResumeBranchContentOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // getResumeCommit schemas
