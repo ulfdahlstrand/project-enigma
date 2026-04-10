@@ -1,7 +1,7 @@
 import { implement } from "@orpc/server";
-import { contract } from "@cv-tool/contracts";
-import type { ExternalAIScope } from "@cv-tool/contracts";
+import { contract, type ExternalAIPromptGuidance, type ExternalAIScope } from "@cv-tool/contracts";
 import { requireScope, type AuthContext } from "../../auth/require-auth.js";
+import { getDb } from "../../db/client.js";
 import {
   EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE,
   EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE,
@@ -15,6 +15,7 @@ import {
   EXTERNAL_AI_RESUME_COMMIT_WRITE_SCOPE,
   EXTERNAL_AI_RESUME_READ_SCOPE,
 } from "../../auth/external-ai-tokens.js";
+import { listAIPromptFragmentsByKeys } from "./ai-prompt-configs.js";
 
 const SHARED_GUIDANCE = [
   {
@@ -97,14 +98,62 @@ const ALLOWED_ROUTES = [
   { method: "DELETE", path: "/employees/{employeeId}/education/{id}", requiredScope: EXTERNAL_AI_EDUCATION_WRITE_SCOPE, purpose: "Delete an education entry." },
 ] as const;
 
-export function getExternalAIContext(context: AuthContext) {
-  requireScope(context, EXTERNAL_AI_CONTEXT_SCOPE);
+const EXTERNAL_PROMPT_GUIDANCE_CONFIGS = [
+  {
+    promptKey: "external-ai.shared-guidance",
+    key: "shared-resume-guidance",
+    title: "Shared resume revision guidance",
+    purpose: "Use these instructions for any external AI-driven resume revision workflow.",
+    appliesToSections: ["title", "consultant_title", "presentation", "summary", "highlighted_items", "skills", "skill_groups", "assignments", "education"],
+  },
+  {
+    promptKey: "external-ai.assignment-guidance",
+    key: "assignment-guidance",
+    title: "Assignment editing guidance",
+    purpose: "Use these instructions when revising or creating assignment content.",
+    appliesToSections: ["assignments"],
+  },
+  {
+    promptKey: "external-ai.presentation-guidance",
+    key: "presentation-guidance",
+    title: "Presentation editing guidance",
+    purpose: "Use these instructions when revising the presentation or consultant summary style.",
+    appliesToSections: ["presentation", "summary", "consultant_title"],
+  },
+] as const;
+
+export type ExternalAIContextLike = Pick<AuthContext, "user" | "externalAI">;
+
+export async function listExternalAIPromptGuidance(): Promise<ExternalAIPromptGuidance[]> {
+  const fragmentsByPromptKey = await listAIPromptFragmentsByKeys(
+    getDb(),
+    EXTERNAL_PROMPT_GUIDANCE_CONFIGS.map((config) => config.promptKey),
+  );
+
+  return EXTERNAL_PROMPT_GUIDANCE_CONFIGS.map((config) => ({
+    key: config.key,
+    title: config.title,
+    purpose: config.purpose,
+    appliesToSections: [...config.appliesToSections],
+    fragments: (fragmentsByPromptKey[config.promptKey] ?? []).map((fragment) => ({
+      key: fragment.key,
+      label: fragment.label,
+      content: fragment.content,
+    })),
+  })).filter((guidance) => guidance.fragments.length > 0);
+}
+
+export function getExternalAIContext(
+  context: ExternalAIContextLike,
+  promptGuidance: ExternalAIPromptGuidance[] = [],
+) {
+  requireScope(context as AuthContext, EXTERNAL_AI_CONTEXT_SCOPE);
   const scopes: ExternalAIScope[] = context.externalAI?.scopes?.length
     ? context.externalAI.scopes.filter((scope): scope is ExternalAIScope => typeof scope === "string")
     : [EXTERNAL_AI_CONTEXT_SCOPE];
 
   return {
-    guidanceVersion: "external-ai-context-v1",
+    guidanceVersion: "external-ai-context-v2",
     generatedAt: new Date().toISOString(),
     client: context.externalAI
       ? {
@@ -125,10 +174,11 @@ export function getExternalAIContext(context: AuthContext) {
       .map((route) => ({ ...route })),
     sharedGuidance: [...SHARED_GUIDANCE],
     safetyGuidance: [...SAFETY_GUIDANCE],
+    promptGuidance,
     supportedResumeSections: [...SUPPORTED_RESUME_SECTIONS],
   };
 }
 
 export const getExternalAIContextHandler = implement(contract.getExternalAIContext).handler(
-  async ({ context }) => getExternalAIContext(context as AuthContext),
+  async ({ context }) => getExternalAIContext(context as AuthContext, await listExternalAIPromptGuidance()),
 );

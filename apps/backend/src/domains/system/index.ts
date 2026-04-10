@@ -1,5 +1,6 @@
 export {
   getAIPromptFragmentsByKey,
+  listAIPromptFragmentsByKeys,
   listAIPromptConfigs,
   listAIPromptConfigsHandler,
   updateAIPromptFragment,

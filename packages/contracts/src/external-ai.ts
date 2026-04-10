@@ -97,6 +97,20 @@ export const externalAIAllowedRouteSchema = z.object({
   purpose: z.string().min(1),
 });
 
+export const externalAIPromptGuidanceFragmentSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  content: z.string(),
+});
+
+export const externalAIPromptGuidanceSchema = z.object({
+  key: z.string().min(1),
+  title: z.string().min(1),
+  purpose: z.string().min(1),
+  appliesToSections: z.array(z.string().min(1)),
+  fragments: z.array(externalAIPromptGuidanceFragmentSchema),
+});
+
 export const getExternalAIContextInputSchema = z.object({});
 
 export const getExternalAIContextOutputSchema = z.object({
@@ -111,6 +125,7 @@ export const getExternalAIContextOutputSchema = z.object({
   allowedRoutes: z.array(externalAIAllowedRouteSchema),
   sharedGuidance: z.array(externalAIContextEntrySchema),
   safetyGuidance: z.array(externalAIContextEntrySchema),
+  promptGuidance: z.array(externalAIPromptGuidanceSchema),
   supportedResumeSections: z.array(z.string().min(1)),
 });
 
@@ -129,5 +144,7 @@ export type RevokeExternalAIAuthorizationInput = z.infer<typeof revokeExternalAI
 export type RevokeExternalAIAuthorizationOutput = z.infer<typeof revokeExternalAIAuthorizationOutputSchema>;
 export type ExternalAIContextEntry = z.infer<typeof externalAIContextEntrySchema>;
 export type ExternalAIAllowedRoute = z.infer<typeof externalAIAllowedRouteSchema>;
+export type ExternalAIPromptGuidanceFragment = z.infer<typeof externalAIPromptGuidanceFragmentSchema>;
+export type ExternalAIPromptGuidance = z.infer<typeof externalAIPromptGuidanceSchema>;
 export type GetExternalAIContextInput = z.infer<typeof getExternalAIContextInputSchema>;
 export type GetExternalAIContextOutput = z.infer<typeof getExternalAIContextOutputSchema>;
