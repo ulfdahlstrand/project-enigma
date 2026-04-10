@@ -45,6 +45,25 @@ export const createEducationInputSchema = z.object({
 export const createEducationOutputSchema = educationSchema;
 
 // ---------------------------------------------------------------------------
+// updateEducation
+// ---------------------------------------------------------------------------
+
+export const updateEducationInputSchema = z
+  .object({
+    employeeId: z.string().uuid(),
+    id: z.string().uuid(),
+    type: educationTypeSchema.optional(),
+    value: z.string().min(1).max(500).optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .refine(
+    (d) => d.type !== undefined || d.value !== undefined || d.sortOrder !== undefined,
+    { message: "At least one field must be provided" },
+  );
+
+export const updateEducationOutputSchema = educationSchema;
+
+// ---------------------------------------------------------------------------
 // deleteEducation
 // ---------------------------------------------------------------------------
 

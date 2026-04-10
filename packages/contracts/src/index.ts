@@ -138,6 +138,8 @@ export {
   listEducationOutputSchema,
   createEducationInputSchema,
   createEducationOutputSchema,
+  updateEducationInputSchema,
+  updateEducationOutputSchema,
   deleteEducationInputSchema,
   deleteEducationOutputSchema,
 } from "./education.js";
@@ -173,6 +175,8 @@ export {
   branchAssignmentSchema,
   saveResumeVersionInputSchema,
   saveResumeVersionOutputSchema,
+  updateResumeBranchSkillsInputSchema,
+  updateResumeBranchSkillsOutputSchema,
   getResumeCommitInputSchema,
   getResumeCommitOutputSchema,
   listResumeCommitsInputSchema,

@@ -2,6 +2,8 @@ import { oc } from "@orpc/contract";
 import {
   saveResumeVersionInputSchema,
   saveResumeVersionOutputSchema,
+  updateResumeBranchSkillsInputSchema,
+  updateResumeBranchSkillsOutputSchema,
   getResumeCommitInputSchema,
   getResumeCommitOutputSchema,
   listResumeCommitsInputSchema,
@@ -25,6 +27,10 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-branches/{branchId}/commits" })
     .input(saveResumeVersionInputSchema)
     .output(saveResumeVersionOutputSchema),
+  updateResumeBranchSkills: oc
+    .route({ method: "PATCH", path: "/resume-branches/{branchId}/skills" })
+    .input(updateResumeBranchSkillsInputSchema)
+    .output(updateResumeBranchSkillsOutputSchema),
   getResumeCommit: oc
     .route({ method: "GET", path: "/resume-commits/{commitId}" })
     .input(getResumeCommitInputSchema)

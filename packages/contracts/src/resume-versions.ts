@@ -135,6 +135,22 @@ export const saveResumeVersionInputSchema = z.object({
 export const saveResumeVersionOutputSchema = resumeCommitSchema;
 
 // ---------------------------------------------------------------------------
+// updateResumeBranchSkills schemas
+// ---------------------------------------------------------------------------
+
+export const updateResumeBranchSkillsInputSchema = z.object({
+  branchId: z.string().uuid(),
+  skillGroups: z.array(resumeCommitSkillGroupSchema),
+  skills: z.array(resumeCommitSkillSchema),
+});
+
+export const updateResumeBranchSkillsOutputSchema = z.object({
+  branchId: z.string().uuid(),
+  skillGroups: z.array(resumeCommitSkillGroupSchema),
+  skills: z.array(resumeCommitSkillSchema),
+});
+
+// ---------------------------------------------------------------------------
 // getResumeCommit schemas
 // ---------------------------------------------------------------------------
 

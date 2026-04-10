@@ -15,6 +15,7 @@ import {
   updateResumeHandler,
   deleteResumeHandler,
   forkResumeBranchHandler,
+  updateResumeBranchSkillsHandler,
   finaliseResumeBranchHandler,
   deleteResumeBranchHandler,
   listResumeBranchesHandler,
@@ -34,6 +35,7 @@ import {
 import {
   listEducationHandler,
   createEducationHandler,
+  updateEducationHandler,
   deleteEducationHandler,
 } from "./domains/education/index.js";
 import { importCvHandler, parseCvDocxHandler } from "./domains/import/index.js";
@@ -97,6 +99,7 @@ export const router = implement(contract).router({
   deleteAssignment: deleteAssignmentHandler,
   listEducation: listEducationHandler,
   createEducation: createEducationHandler,
+  updateEducation: updateEducationHandler,
   deleteEducation: deleteEducationHandler,
   importCv: importCvHandler,
   parseCvDocx: parseCvDocxHandler,
@@ -104,6 +107,7 @@ export const router = implement(contract).router({
   exportResumePdf: exportResumePdfHandler,
   exportResumeDocx: exportResumeDocxHandler,
   saveResumeVersion: saveResumeVersionHandler,
+  updateResumeBranchSkills: updateResumeBranchSkillsHandler,
   getResumeCommit: getResumeCommitHandler,
   listResumeCommits: listResumeCommitsHandler,
   forkResumeBranch: forkResumeBranchHandler,

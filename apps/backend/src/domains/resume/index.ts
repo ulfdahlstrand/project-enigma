@@ -4,6 +4,7 @@ export { listResumesHandler } from "./resume/list.js";
 export { updateResumeHandler } from "./resume/update.js";
 export { deleteResumeHandler } from "./resume/delete.js";
 export { forkResumeBranchHandler } from "./branch/fork.js";
+export { updateResumeBranchSkillsHandler } from "./branch/update-skills.js";
 export { finaliseResumeBranchHandler } from "./branch/finalise.js";
 export { deleteResumeBranchHandler } from "./branch/delete.js";
 export { listResumeBranchesHandler } from "./branch/list.js";
