@@ -6,7 +6,7 @@ import { readBranchAssignmentContent } from "../domains/resume/lib/branch-assign
 
 export const INTEGRATION_ADMIN_USER = {
   id: "10000000-0000-4000-8000-000000000001",
-  google_sub: "integration-admin-sub",
+  azure_oid: "integration-admin-oid",
   email: "integration-admin@example.com",
   name: "Integration Admin",
   role: "admin" as const,

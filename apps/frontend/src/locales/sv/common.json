@@ -1,7 +1,7 @@
 {
   "welcome": "Välkommen till CV-verktyget",
   "auth": {
-    "signInWithGoogle": "Logga in med Google",
+    "signInWithMicrosoft": "Logga in med Microsoft",
     "signOut": "Logga ut",
     "loginSubtitle": "Skapa, underhåll och exportera konsult-CV:n.",
     "loginHelp": "Kontakta din administratör om du inte kan logga in.",

@@ -1,13 +1,15 @@
 /**
- * /login route — public page for Google OAuth sign-in.
+ * /login route — public page for Microsoft Entra sign-in.
  *
  * On successful authentication the backend issues the session cookie and the
  * frontend refreshes its current-session bootstrap state from the server.
  */
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { GoogleLogin } from "@react-oauth/google";
+import Button from "@mui/material/Button";
+import MicrosoftIcon from "@mui/icons-material/Microsoft";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { useMsal } from "@azure/msal-react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -15,6 +17,7 @@ import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../../auth/auth-context";
 import { ensureAuthSession } from "../../auth/session-store";
+import { loginRequest } from "../../auth/msal-config";
 
 export const Route = createFileRoute("/login/")({
   beforeLoad: async () => {
@@ -29,9 +32,30 @@ export const Route = createFileRoute("/login/")({
 export function LoginPage() {
   const { t } = useTranslation("common");
   const { login } = useAuth();
+  const { instance } = useMsal();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setError(false);
+
+    try {
+      const result = await instance.loginPopup(loginRequest);
+      const credential = result.idToken;
+
+      if (!credential) {
+        throw new Error("Missing id token");
+      }
+
+      await login(credential);
+      await navigate({ to: "/employees" });
+    } catch {
+      setError(true);
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Box
@@ -89,23 +113,13 @@ export function LoginPage() {
               </Typography>
             </Box>
           ) : (
-            <GoogleLogin
-              onSuccess={(response) => {
-                if (response.credential) {
-                  setIsLoading(true);
-                  setError(false);
-                  login(response.credential)
-                    .then(() => navigate({ to: "/employees" }))
-                    .catch(() => {
-                      setIsLoading(false);
-                      setError(true);
-                    });
-                } else {
-                  setError(true);
-                }
-              }}
-              onError={() => setError(true)}
-            />
+            <Button
+              variant="contained"
+              startIcon={<MicrosoftIcon />}
+              onClick={() => void handleLogin()}
+            >
+              {t("auth.signInWithMicrosoft")}
+            </Button>
           )}
         </Box>
 

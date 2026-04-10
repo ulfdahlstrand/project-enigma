@@ -24,7 +24,7 @@ export type UserRole = "admin" | "consultant";
 
 export interface UserTable {
   id: Generated<string>;
-  google_sub: string;
+  azure_oid: string | null;
   email: string;
   name: string;
   role: UserRole;

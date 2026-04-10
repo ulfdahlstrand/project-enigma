@@ -26,7 +26,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `VITE_API_URL=${backendBaseUrl} VITE_GOOGLE_CLIENT_ID=playwright-test npx vite --host 127.0.0.1 --port ${frontendPort}`,
+      command: `VITE_API_URL=${backendBaseUrl} VITE_ENTRA_CLIENT_ID=playwright-test-client VITE_ENTRA_TENANT_ID=playwright-test-tenant npx vite --host 127.0.0.1 --port ${frontendPort}`,
       cwd: "apps/frontend",
       url: `${frontendBaseUrl}/login`,
       reuseExistingServer: !process.env["CI"],

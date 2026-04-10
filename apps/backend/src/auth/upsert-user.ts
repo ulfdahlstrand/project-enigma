@@ -1,30 +1,64 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { getDb } from "../db/client.js";
-import type { AuthUser } from "./verify-google-token.js";
+import type { AuthUser } from "./verify-entra-token.js";
 import type { Database, User } from "../db/types.js";
 
 /**
- * Inserts a new user row on first login, or does nothing if the user already
- * exists (identified by google_sub). Always returns the persisted user row.
- *
- * Uses INSERT ... ON CONFLICT (google_sub) DO NOTHING so the operation is
- * idempotent and safe to call on every authenticated request.
+ * Upserts a user based on the Entra object id. Existing pre-Entra users are
+ * linked on first Entra login by normalized email to avoid duplicate accounts.
  */
 export async function upsertUser(
-  googleUser: AuthUser,
+  entraUser: AuthUser,
   db: Kysely<Database> = getDb(),
 ): Promise<User> {
+  const existingByOid = await db
+    .selectFrom("users")
+    .selectAll()
+    .where("azure_oid", "=", entraUser.oid)
+    .executeTakeFirst();
+
+  if (existingByOid) {
+    return db
+      .updateTable("users")
+      .set({
+        email: entraUser.email,
+        name: entraUser.name,
+      })
+      .where("id", "=", existingByOid.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
+  const normalizedEmail = entraUser.email.trim().toLowerCase();
+  const existingByEmail = normalizedEmail
+    ? await db
+        .selectFrom("users")
+        .selectAll()
+        .where((eb) => eb(sql`lower(email)`, "=", normalizedEmail))
+        .executeTakeFirst()
+    : undefined;
+
+  if (existingByEmail) {
+    return db
+      .updateTable("users")
+      .set({
+        azure_oid: entraUser.oid,
+        email: entraUser.email,
+        name: entraUser.name,
+      })
+      .where("id", "=", existingByEmail.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
   return db
     .insertInto("users")
     .values({
-      google_sub: googleUser.sub,
-      email: googleUser.email,
-      name: googleUser.name,
+      azure_oid: entraUser.oid,
+      email: entraUser.email,
+      name: entraUser.name,
       role: "consultant",
     })
-    .onConflict((oc) =>
-      oc.column("google_sub").doUpdateSet({ email: (eb) => eb.ref("excluded.email") })
-    )
-    .returning(["id", "google_sub", "email", "name", "role", "created_at"])
+    .returningAll()
     .executeTakeFirstOrThrow();
 }

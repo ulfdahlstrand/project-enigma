@@ -5,7 +5,7 @@ import { getCurrentSession, getCurrentSessionHandler } from "./current-session.j
 
 const MOCK_USER: User = {
   id: "550e8400-e29b-41d4-a716-446655440000",
-  google_sub: "google-sub-123",
+  azure_oid: "azure-oid-123",
   email: "alice@example.com",
   name: "Alice Example",
   role: "consultant",

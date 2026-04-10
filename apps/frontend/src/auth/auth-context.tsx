@@ -29,7 +29,7 @@ type AuthContextValue = {
   user: CurrentSessionUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (googleCredential: string) => Promise<void>;
+  login: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -46,12 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void ensureAuthSession();
   }, []);
 
-  const login = useCallback(async (googleCredential: string): Promise<void> => {
+  const login = useCallback(async (credential: string): Promise<void> => {
     const res = await fetch(`${apiUrl}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ credential: googleCredential }),
+      body: JSON.stringify({ credential }),
     });
     if (!res.ok) {
       throw new Error("Login failed");

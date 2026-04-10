@@ -2,7 +2,7 @@ import type { AuthUser } from "../auth/require-auth.js";
 
 export const MOCK_ADMIN: AuthUser = {
   id: "00000000-0000-0000-0000-000000000001",
-  google_sub: "google-sub-admin",
+  azure_oid: "azure-oid-admin",
   email: "admin@example.com",
   name: "Admin User",
   role: "admin",
@@ -11,7 +11,7 @@ export const MOCK_ADMIN: AuthUser = {
 
 export const MOCK_CONSULTANT: AuthUser = {
   id: "00000000-0000-0000-0000-000000000002",
-  google_sub: "google-sub-consultant",
+  azure_oid: "azure-oid-consultant",
   email: "consultant@example.com",
   name: "Consultant User",
   role: "consultant",
@@ -20,7 +20,7 @@ export const MOCK_CONSULTANT: AuthUser = {
 
 export const MOCK_CONSULTANT_2: AuthUser = {
   id: "00000000-0000-0000-0000-000000000003",
-  google_sub: "google-sub-consultant-2",
+  azure_oid: "azure-oid-consultant-2",
   email: "other@example.com",
   name: "Other Consultant",
   role: "consultant",

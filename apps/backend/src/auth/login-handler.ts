@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { verifyGoogleToken } from "./verify-google-token.js";
+import { verifyEntraToken } from "./verify-entra-token.js";
 import { upsertUser } from "./upsert-user.js";
 import { signAccessToken } from "./jwt.js";
 import {
@@ -16,7 +16,7 @@ const IS_PRODUCTION = process.env["NODE_ENV"] === "production";
 /**
  * POST /auth/login
  *
- * Body: { credential: string }  — Google ID token from @react-oauth/google
+ * Body: { credential: string }  — Entra ID token from the SPA login flow
  *
  * Response: { accessToken: string }
  * Cookie: cv_refresh_token (HttpOnly)
@@ -42,15 +42,15 @@ export async function loginHandler(req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  const googleUser = await verifyGoogleToken(body.credential);
-  if (!googleUser) {
+  const entraUser = await verifyEntraToken(body.credential);
+  if (!entraUser) {
     res.writeHead(401, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Invalid Google token" }));
+    res.end(JSON.stringify({ error: "Invalid Entra token" }));
     return;
   }
 
   const db = getDb();
-  const user = await upsertUser(googleUser, db);
+  const user = await upsertUser(entraUser, db);
 
   const rawRefreshToken = generateRefreshToken();
   const refreshHash = hashRefreshToken(rawRefreshToken);
