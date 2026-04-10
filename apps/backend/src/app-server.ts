@@ -12,6 +12,7 @@ import { testLoginHandler } from "./auth/test-login-handler.js";
 import { refreshHandler } from "./auth/refresh-handler.js";
 import { logoutHandler } from "./auth/logout-handler.js";
 import { resolveAuthContext } from "./auth/resolve-auth-context.js";
+import { getRequiredExternalAIScope } from "./auth/external-ai-route-policy.js";
 import type { User } from "./db/types.js";
 import { getDb } from "./db/client.js";
 import { logger } from "./infra/logger.js";
@@ -35,10 +36,6 @@ export type AppContext = {
     scopes: string[];
   } | null;
 };
-
-function isAllowedExternalAIRequest(method: string | undefined, url: string | undefined): boolean {
-  return method === "GET" && url === "/external-ai/context";
-}
 
 function buildErrorMeta(error: unknown) {
   if (error instanceof Error) {
@@ -161,10 +158,18 @@ export async function createAppServer() {
         req.headers["cookie"],
       );
       requestLogging.setUserId(authContext.user?.id ?? null);
-      if (authContext.externalAI && !isAllowedExternalAIRequest(req.method, req.url)) {
-        res.writeHead(403, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "External AI token is not allowed for this route" }));
-        return;
+      if (authContext.externalAI) {
+        const requiredScope = getRequiredExternalAIScope(req.method, req.url);
+        if (!requiredScope) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "External AI token is not allowed for this route" }));
+          return;
+        }
+        if (!authContext.externalAI.scopes.includes(requiredScope)) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "External AI token does not have the required scope" }));
+          return;
+        }
       }
       let result;
       try {

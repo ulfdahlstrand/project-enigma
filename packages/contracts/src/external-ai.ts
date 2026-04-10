@@ -1,6 +1,18 @@
 import { z } from "zod";
 
-export const externalAIScopeSchema = z.enum(["ai:context:read"]);
+export const externalAIScopeSchema = z.enum([
+  "ai:context:read",
+  "resume:read",
+  "resume-branch:read",
+  "resume-branch:write",
+  "resume-commit:read",
+  "resume-commit:write",
+  "branch-assignment:read",
+  "branch-assignment:write",
+  "branch-skill:write",
+  "education:read",
+  "education:write",
+]);
 
 export const externalAIClientSchema = z.object({
   id: z.string().uuid(),
@@ -19,6 +31,7 @@ export const listExternalAIClientsOutputSchema = z.object({
 export const createExternalAIAuthorizationInputSchema = z.object({
   clientKey: z.string().min(1),
   title: z.string().trim().min(1).max(255).nullable().optional(),
+  scopes: z.array(externalAIScopeSchema).min(1).optional(),
 });
 
 export const createExternalAIAuthorizationOutputSchema = z.object({

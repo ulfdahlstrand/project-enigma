@@ -47,7 +47,7 @@ export async function listExternalAIClients(db: Kysely<Database>) {
 export async function createExternalAIAuthorization(
   db: Kysely<Database>,
   userId: string,
-  input: { clientKey: string; title?: string | null },
+  input: { clientKey: string; title?: string | null; scopes?: ExternalAIScope[] },
 ) {
   const client = await db
     .selectFrom("external_ai_clients")
@@ -60,7 +60,14 @@ export async function createExternalAIAuthorization(
     throw new ORPCError("NOT_FOUND", { message: "External AI client not found" });
   }
 
-  const scopes: ExternalAIScope[] = [...DEFAULT_EXTERNAL_AI_SCOPES];
+  const requestedScopes = input.scopes?.length ? input.scopes : [...DEFAULT_EXTERNAL_AI_SCOPES];
+  const allowedScopes = new Set<ExternalAIScope>(DEFAULT_EXTERNAL_AI_SCOPES as unknown as ExternalAIScope[]);
+  const invalidScope = requestedScopes.find((scope) => !allowedScopes.has(scope));
+  if (invalidScope) {
+    throw new ORPCError("BAD_REQUEST", { message: `Unsupported external AI scope: ${invalidScope}` });
+  }
+
+  const scopes: ExternalAIScope[] = [...new Set(requestedScopes)];
   const challengeCode = generateExternalAIChallengeCode();
   const challengeExpiresAt = externalAIChallengeExpiresAt();
   const accessTokenExpiresAt = externalAIAccessTokenExpiresAt();
@@ -144,9 +151,9 @@ export async function exchangeExternalAILoginChallenge(
     throw new ORPCError("FORBIDDEN", { message: "Invalid external AI login challenge" });
   }
 
-  const scopes: ExternalAIScope[] = challenge.scopes.includes("ai:context:read")
-    ? ["ai:context:read"]
-    : ["ai:context:read"];
+  const scopes: ExternalAIScope[] = [...new Set(
+    challenge.scopes.filter((scope): scope is ExternalAIScope => typeof scope === "string"),
+  )];
 
   const rawAccessToken = generateExternalAIAccessToken();
   const accessTokenExpiresAt = externalAIAccessTokenExpiresAt();

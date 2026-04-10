@@ -9,7 +9,19 @@ import {
 } from "./external-ai.js";
 
 vi.mock("../../auth/external-ai-tokens.js", () => ({
-  DEFAULT_EXTERNAL_AI_SCOPES: ["ai:context:read"],
+  DEFAULT_EXTERNAL_AI_SCOPES: [
+    "ai:context:read",
+    "resume:read",
+    "resume-branch:read",
+    "resume-branch:write",
+    "resume-commit:read",
+    "resume-commit:write",
+    "branch-assignment:read",
+    "branch-assignment:write",
+    "branch-skill:write",
+    "education:read",
+    "education:write",
+  ],
   EXTERNAL_AI_CONTEXT_SCOPE: "ai:context:read",
   externalAIAccessTokenExpiresAt: vi.fn(() => new Date("2026-04-10T12:00:00Z")),
   externalAIAuthorizationExpiresAt: vi.fn(() => new Date("2026-05-10T12:00:00Z")),
@@ -148,7 +160,34 @@ describe("createExternalAIAuthorization", () => {
         authorizationId: "auth-1",
         challengeId: "challenge-1",
         challengeCode: "challenge-code",
-        scopes: ["ai:context:read"],
+        scopes: [
+          "ai:context:read",
+          "resume:read",
+          "resume-branch:read",
+          "resume-branch:write",
+          "resume-commit:read",
+          "resume-commit:write",
+          "branch-assignment:read",
+          "branch-assignment:write",
+          "branch-skill:write",
+          "education:read",
+          "education:write",
+        ],
+      }),
+    );
+  });
+
+  it("allows requesting a subset of supported scopes", async () => {
+    const db = buildCreateDb();
+
+    await expect(
+      createExternalAIAuthorization(db, "user-1", {
+        clientKey: "anthropic_claude",
+        scopes: ["ai:context:read", "resume:read"],
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        scopes: ["ai:context:read", "resume:read"],
       }),
     );
   });
@@ -162,7 +201,7 @@ describe("exchangeExternalAILoginChallenge", () => {
       challengeExpiresAt: new Date("2099-04-10T10:10:00Z"),
       challengeUsedAt: null,
       authorizationId: "auth-1",
-      scopes: ["ai:context:read"],
+      scopes: ["ai:context:read", "resume:read"],
       authorizationExpiresAt: new Date("2099-05-10T12:00:00Z"),
       authorizationRevokedAt: null,
       clientId: "client-1",
@@ -180,7 +219,7 @@ describe("exchangeExternalAILoginChallenge", () => {
     ).resolves.toEqual({
       accessToken: "eai_token",
       expiresAt: "2026-04-10T12:00:00.000Z",
-      scopes: ["ai:context:read"],
+      scopes: ["ai:context:read", "resume:read"],
       authorizationId: "auth-1",
       client: {
         id: "client-1",
