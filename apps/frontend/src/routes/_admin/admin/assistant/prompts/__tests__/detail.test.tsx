@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,7 +103,6 @@ describe("admin prompt detail page", () => {
   });
 
   it("saves edited fragment content", async () => {
-    const user = userEvent.setup();
     const Component = Route.options.component as ComponentType;
 
     renderWithProviders(<Component />);
@@ -113,12 +112,13 @@ describe("admin prompt detail page", () => {
     });
 
     const fields = screen.getAllByRole("textbox");
-    await user.clear(fields[0]!);
-    await user.type(fields[0]!, "Updated kickoff instructions");
+    fireEvent.change(fields[0]!, {
+      target: { value: "Updated kickoff instructions" },
+    });
     const saveButtons = screen
       .getAllByRole("button", { name: "Save" })
       .filter((button) => !button.hasAttribute("disabled"));
-    await user.click(saveButtons[0]!);
+    fireEvent.click(saveButtons[0]!);
 
     await waitFor(() => {
       expect(updateAIPromptFragmentMock).toHaveBeenCalledWith({
