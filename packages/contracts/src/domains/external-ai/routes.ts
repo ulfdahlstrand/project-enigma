@@ -1,5 +1,7 @@
 import { oc } from "@orpc/contract";
 import {
+  listExternalAIAuthorizationsInputSchema,
+  listExternalAIAuthorizationsOutputSchema,
   createExternalAIAuthorizationInputSchema,
   createExternalAIAuthorizationOutputSchema,
   exchangeExternalAILoginChallengeInputSchema,
@@ -17,6 +19,10 @@ export const externalAIRoutes = {
     .route({ method: "GET", path: "/auth/external-ai/clients" })
     .input(listExternalAIClientsInputSchema)
     .output(listExternalAIClientsOutputSchema),
+  listExternalAIAuthorizations: oc
+    .route({ method: "GET", path: "/auth/external-ai/authorizations" })
+    .input(listExternalAIAuthorizationsInputSchema)
+    .output(listExternalAIAuthorizationsOutputSchema),
   createExternalAIAuthorization: oc
     .route({ method: "POST", path: "/auth/external-ai/authorizations" })
     .input(createExternalAIAuthorizationInputSchema)

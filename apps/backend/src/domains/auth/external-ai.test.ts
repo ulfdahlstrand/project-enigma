@@ -4,6 +4,7 @@ import type { Database } from "../../db/types.js";
 import {
   createExternalAIAuthorization,
   exchangeExternalAILoginChallenge,
+  listExternalAIAuthorizations,
   listExternalAIClients,
   revokeExternalAIAuthorization,
 } from "./external-ai.js";
@@ -80,6 +81,16 @@ function buildCreateDb() {
   });
 
   return { selectFrom, insertInto } as unknown as Kysely<Database>;
+}
+
+function buildAuthorizationListDb(rows: unknown[]) {
+  const execute = vi.fn().mockResolvedValue(rows);
+  const orderBy = vi.fn().mockReturnValue({ execute });
+  const where = vi.fn().mockReturnValue({ orderBy });
+  const select = vi.fn().mockReturnValue({ where });
+  const innerJoin = vi.fn().mockReturnValue({ select });
+  const selectFrom = vi.fn().mockReturnValue({ innerJoin });
+  return { selectFrom } as unknown as Kysely<Database>;
 }
 
 function buildExchangeDb(existing: unknown) {
@@ -190,6 +201,50 @@ describe("createExternalAIAuthorization", () => {
         scopes: ["ai:context:read", "resume:read"],
       }),
     );
+  });
+});
+
+describe("listExternalAIAuthorizations", () => {
+  it("returns the user's external AI authorizations", async () => {
+    const db = buildAuthorizationListDb([
+      {
+        id: "auth-1",
+        title: "Claude connection",
+        scopes: ["ai:context:read", "resume:read"],
+        status: "active",
+        last_used_at: new Date("2026-04-10T12:00:00Z"),
+        expires_at: new Date("2026-05-10T12:00:00Z"),
+        revoked_at: null,
+        created_at: new Date("2026-04-10T10:00:00Z"),
+        clientId: "client-1",
+        clientKey: "anthropic_claude",
+        clientTitle: "Anthropic Claude",
+        clientDescription: "Claude",
+        clientIsActive: true,
+      },
+    ]);
+
+    await expect(listExternalAIAuthorizations(db, "user-1")).resolves.toEqual({
+      authorizations: [
+        {
+          id: "auth-1",
+          title: "Claude connection",
+          scopes: ["ai:context:read", "resume:read"],
+          status: "active",
+          lastUsedAt: "2026-04-10T12:00:00.000Z",
+          expiresAt: "2026-05-10T12:00:00.000Z",
+          revokedAt: null,
+          createdAt: "2026-04-10T10:00:00.000Z",
+          client: {
+            id: "client-1",
+            key: "anthropic_claude",
+            title: "Anthropic Claude",
+            description: "Claude",
+            isActive: true,
+          },
+        },
+      ],
+    });
   });
 });
 

@@ -28,6 +28,24 @@ export const listExternalAIClientsOutputSchema = z.object({
   clients: z.array(externalAIClientSchema),
 });
 
+export const externalAIAuthorizationSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().nullable(),
+  scopes: z.array(externalAIScopeSchema),
+  status: z.string().min(1),
+  lastUsedAt: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime(),
+  revokedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  client: externalAIClientSchema,
+});
+
+export const listExternalAIAuthorizationsInputSchema = z.object({});
+
+export const listExternalAIAuthorizationsOutputSchema = z.object({
+  authorizations: z.array(externalAIAuthorizationSchema),
+});
+
 export const createExternalAIAuthorizationInputSchema = z.object({
   clientKey: z.string().min(1),
   title: z.string().trim().min(1).max(255).nullable().optional(),
@@ -90,8 +108,11 @@ export const getExternalAIContextOutputSchema = z.object({
 
 export type ExternalAIScope = z.infer<typeof externalAIScopeSchema>;
 export type ExternalAIClient = z.infer<typeof externalAIClientSchema>;
+export type ExternalAIAuthorization = z.infer<typeof externalAIAuthorizationSchema>;
 export type ListExternalAIClientsInput = z.infer<typeof listExternalAIClientsInputSchema>;
 export type ListExternalAIClientsOutput = z.infer<typeof listExternalAIClientsOutputSchema>;
+export type ListExternalAIAuthorizationsInput = z.infer<typeof listExternalAIAuthorizationsInputSchema>;
+export type ListExternalAIAuthorizationsOutput = z.infer<typeof listExternalAIAuthorizationsOutputSchema>;
 export type CreateExternalAIAuthorizationInput = z.infer<typeof createExternalAIAuthorizationInputSchema>;
 export type CreateExternalAIAuthorizationOutput = z.infer<typeof createExternalAIAuthorizationOutputSchema>;
 export type ExchangeExternalAILoginChallengeInput = z.infer<typeof exchangeExternalAILoginChallengeInputSchema>;

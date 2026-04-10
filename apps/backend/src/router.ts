@@ -56,6 +56,7 @@ import {
 import {
   getCurrentSessionHandler,
   listExternalAIClientsHandler,
+  listExternalAIAuthorizationsHandler,
   createExternalAIAuthorizationHandler,
   exchangeExternalAILoginChallengeHandler,
   revokeExternalAIAuthorizationHandler,
@@ -78,6 +79,7 @@ import {
 export const router = implement(contract).router({
   health: healthHandler,
   listExternalAIClients: listExternalAIClientsHandler,
+  listExternalAIAuthorizations: listExternalAIAuthorizationsHandler,
   createExternalAIAuthorization: createExternalAIAuthorizationHandler,
   exchangeExternalAILoginChallenge: exchangeExternalAILoginChallengeHandler,
   revokeExternalAIAuthorization: revokeExternalAIAuthorizationHandler,

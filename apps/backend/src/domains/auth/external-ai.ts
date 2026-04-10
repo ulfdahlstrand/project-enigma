@@ -44,6 +44,53 @@ export async function listExternalAIClients(db: Kysely<Database>) {
   return { clients: rows.map(mapClient) };
 }
 
+export async function listExternalAIAuthorizations(
+  db: Kysely<Database>,
+  userId: string,
+) {
+  const rows = await db
+    .selectFrom("external_ai_authorizations as a")
+    .innerJoin("external_ai_clients as c", "c.id", "a.client_id")
+    .select([
+      "a.id",
+      "a.title",
+      "a.scopes",
+      "a.status",
+      "a.last_used_at",
+      "a.expires_at",
+      "a.revoked_at",
+      "a.created_at",
+      "c.id as clientId",
+      "c.key as clientKey",
+      "c.title as clientTitle",
+      "c.description as clientDescription",
+      "c.is_active as clientIsActive",
+    ])
+    .where("a.user_id", "=", userId)
+    .orderBy("a.created_at desc")
+    .execute();
+
+  return {
+    authorizations: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      scopes: row.scopes.filter((scope): scope is ExternalAIScope => typeof scope === "string"),
+      status: row.status,
+      lastUsedAt: row.last_used_at?.toISOString() ?? null,
+      expiresAt: row.expires_at.toISOString(),
+      revokedAt: row.revoked_at?.toISOString() ?? null,
+      createdAt: row.created_at.toISOString(),
+      client: {
+        id: row.clientId,
+        key: row.clientKey,
+        title: row.clientTitle,
+        description: row.clientDescription,
+        isActive: row.clientIsActive,
+      },
+    })),
+  };
+}
+
 export async function createExternalAIAuthorization(
   db: Kysely<Database>,
   userId: string,
@@ -243,12 +290,20 @@ export const listExternalAIClientsHandler = implement(contract.listExternalAICli
   },
 );
 
+export const listExternalAIAuthorizationsHandler = implement(contract.listExternalAIAuthorizations).handler(
+  async ({ context }) => {
+    const user = requireAuth(context as AuthContext);
+    return listExternalAIAuthorizations(getDb(), user.id);
+  },
+);
+
 export const createExternalAIAuthorizationHandler = implement(contract.createExternalAIAuthorization).handler(
   async ({ input, context }) => {
     const user = requireAuth(context as AuthContext);
     return createExternalAIAuthorization(getDb(), user.id, {
       clientKey: input.clientKey,
       title: input.title ?? null,
+      ...(input.scopes ? { scopes: input.scopes } : {}),
     });
   },
 );
