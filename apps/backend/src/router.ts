@@ -51,8 +51,15 @@ import {
   exportResumeDocxHandler,
   exportResumeMarkdownHandler,
 } from "./domains/export/index.js";
-import { getCurrentSessionHandler } from "./domains/auth/index.js";
 import {
+  getCurrentSessionHandler,
+  listExternalAIClientsHandler,
+  createExternalAIAuthorizationHandler,
+  exchangeExternalAILoginChallengeHandler,
+  revokeExternalAIAuthorizationHandler,
+} from "./domains/auth/index.js";
+import {
+  getExternalAIContextHandler,
   listAIPromptConfigsHandler,
   updateAIPromptFragmentHandler,
 } from "./domains/system/index.js";
@@ -68,6 +75,11 @@ import {
  */
 export const router = implement(contract).router({
   health: healthHandler,
+  listExternalAIClients: listExternalAIClientsHandler,
+  createExternalAIAuthorization: createExternalAIAuthorizationHandler,
+  exchangeExternalAILoginChallenge: exchangeExternalAILoginChallengeHandler,
+  revokeExternalAIAuthorization: revokeExternalAIAuthorizationHandler,
+  getExternalAIContext: getExternalAIContextHandler,
   listAIPromptConfigs: listAIPromptConfigsHandler,
   updateAIPromptFragment: updateAIPromptFragmentHandler,
   getCurrentSession: getCurrentSessionHandler,

@@ -4,6 +4,15 @@ import type { User } from "../db/types.js";
 export type AuthContext = {
   user: User | null;
   requestId?: string;
+  externalAI?: {
+    tokenId: string;
+    authorizationId: string;
+    clientId: string;
+    clientKey: string;
+    clientTitle: string;
+    clientDescription: string | null;
+    scopes: string[];
+  } | null;
 };
 /** Alias for User — used in CV procedures for clarity. */
 export type AuthUser = User;
@@ -27,6 +36,15 @@ export function requireAuth(context: AuthContext): User {
 export function requireAdmin(context: AuthContext): User {
   const user = requireAuth(context);
   if (user.role !== "admin") {
+    throw new ORPCError("FORBIDDEN");
+  }
+  return user;
+}
+
+export function requireScope(context: AuthContext, scope: string): User {
+  const user = requireAuth(context);
+  const externalAI = context.externalAI;
+  if (externalAI && !externalAI.scopes.includes(scope)) {
     throw new ORPCError("FORBIDDEN");
   }
   return user;

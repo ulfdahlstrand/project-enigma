@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { requireAdmin, requireAuth } from "./require-auth.js";
+import { requireAdmin, requireAuth, requireScope } from "./require-auth.js";
 import type { User } from "../db/types.js";
 
 const MOCK_USER: User = {
@@ -52,5 +52,51 @@ describe("requireAdmin", () => {
       expect((err as { code?: string }).code).toBe("FORBIDDEN");
       expect((err as { status?: number }).status).toBe(403);
     }
+  });
+});
+
+describe("requireScope", () => {
+  it("allows regular authenticated users without external ai scope checks", () => {
+    expect(requireScope({ user: MOCK_USER }, "ai:context:read")).toBe(MOCK_USER);
+  });
+
+  it("allows external ai users when the scope is present", () => {
+    expect(
+      requireScope(
+        {
+          user: MOCK_USER,
+          externalAI: {
+            tokenId: "token-1",
+            authorizationId: "auth-1",
+            clientId: "client-1",
+            clientKey: "anthropic_claude",
+            clientTitle: "Anthropic Claude",
+            clientDescription: null,
+            scopes: ["ai:context:read"],
+          },
+        },
+        "ai:context:read",
+      ),
+    ).toBe(MOCK_USER);
+  });
+
+  it("throws FORBIDDEN when an external ai token lacks the required scope", () => {
+    expect(() =>
+      requireScope(
+        {
+          user: MOCK_USER,
+          externalAI: {
+            tokenId: "token-1",
+            authorizationId: "auth-1",
+            clientId: "client-1",
+            clientKey: "anthropic_claude",
+            clientTitle: "Anthropic Claude",
+            clientDescription: null,
+            scopes: [],
+          },
+        },
+        "ai:context:read",
+      ),
+    ).toThrow();
   });
 });

@@ -1,0 +1,90 @@
+import { z } from "zod";
+
+export const externalAIScopeSchema = z.enum(["ai:context:read"]);
+
+export const externalAIClientSchema = z.object({
+  id: z.string().uuid(),
+  key: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().nullable(),
+  isActive: z.boolean(),
+});
+
+export const listExternalAIClientsInputSchema = z.object({});
+
+export const listExternalAIClientsOutputSchema = z.object({
+  clients: z.array(externalAIClientSchema),
+});
+
+export const createExternalAIAuthorizationInputSchema = z.object({
+  clientKey: z.string().min(1),
+  title: z.string().trim().min(1).max(255).nullable().optional(),
+});
+
+export const createExternalAIAuthorizationOutputSchema = z.object({
+  authorizationId: z.string().uuid(),
+  challengeId: z.string().uuid(),
+  challengeCode: z.string().min(1),
+  challengeExpiresAt: z.string().datetime(),
+  authorizationExpiresAt: z.string().datetime(),
+  accessTokenExpiresAt: z.string().datetime(),
+  scopes: z.array(externalAIScopeSchema),
+  client: externalAIClientSchema,
+});
+
+export const exchangeExternalAILoginChallengeInputSchema = z.object({
+  challengeId: z.string().uuid(),
+  challengeCode: z.string().min(1),
+});
+
+export const exchangeExternalAILoginChallengeOutputSchema = z.object({
+  accessToken: z.string().min(1),
+  expiresAt: z.string().datetime(),
+  scopes: z.array(externalAIScopeSchema),
+  authorizationId: z.string().uuid(),
+  client: externalAIClientSchema,
+});
+
+export const revokeExternalAIAuthorizationInputSchema = z.object({
+  authorizationId: z.string().uuid(),
+});
+
+export const revokeExternalAIAuthorizationOutputSchema = z.object({
+  success: z.literal(true),
+});
+
+export const externalAIContextEntrySchema = z.object({
+  key: z.string().min(1),
+  title: z.string().min(1),
+  content: z.string().min(1),
+});
+
+export const getExternalAIContextInputSchema = z.object({});
+
+export const getExternalAIContextOutputSchema = z.object({
+  guidanceVersion: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  client: externalAIClientSchema.nullable(),
+  scopes: z.array(externalAIScopeSchema),
+  workflow: z.object({
+    type: z.literal("external_api_revision"),
+    steps: z.array(z.string().min(1)),
+  }),
+  sharedGuidance: z.array(externalAIContextEntrySchema),
+  safetyGuidance: z.array(externalAIContextEntrySchema),
+  supportedResumeSections: z.array(z.string().min(1)),
+});
+
+export type ExternalAIScope = z.infer<typeof externalAIScopeSchema>;
+export type ExternalAIClient = z.infer<typeof externalAIClientSchema>;
+export type ListExternalAIClientsInput = z.infer<typeof listExternalAIClientsInputSchema>;
+export type ListExternalAIClientsOutput = z.infer<typeof listExternalAIClientsOutputSchema>;
+export type CreateExternalAIAuthorizationInput = z.infer<typeof createExternalAIAuthorizationInputSchema>;
+export type CreateExternalAIAuthorizationOutput = z.infer<typeof createExternalAIAuthorizationOutputSchema>;
+export type ExchangeExternalAILoginChallengeInput = z.infer<typeof exchangeExternalAILoginChallengeInputSchema>;
+export type ExchangeExternalAILoginChallengeOutput = z.infer<typeof exchangeExternalAILoginChallengeOutputSchema>;
+export type RevokeExternalAIAuthorizationInput = z.infer<typeof revokeExternalAIAuthorizationInputSchema>;
+export type RevokeExternalAIAuthorizationOutput = z.infer<typeof revokeExternalAIAuthorizationOutputSchema>;
+export type ExternalAIContextEntry = z.infer<typeof externalAIContextEntrySchema>;
+export type GetExternalAIContextInput = z.infer<typeof getExternalAIContextInputSchema>;
+export type GetExternalAIContextOutput = z.infer<typeof getExternalAIContextOutputSchema>;

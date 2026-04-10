@@ -33,7 +33,25 @@ function createDbMock(user: { id: string; azure_oid?: string | null; email: stri
   const executeTakeFirst = vi.fn().mockResolvedValue(user);
   const where = vi.fn().mockReturnValue({ executeTakeFirst });
   const selectAll = vi.fn().mockReturnValue({ where });
-  const selectFrom = vi.fn().mockReturnValue({ selectAll });
+  const externalExecuteTakeFirst = vi.fn().mockResolvedValue(null);
+  const externalQuery = {
+    where: vi.fn(),
+    executeTakeFirst: externalExecuteTakeFirst,
+  };
+  externalQuery.where.mockReturnValue(externalQuery);
+  const externalSelect = vi.fn().mockReturnValue(externalQuery);
+  const externalInnerJoin3 = vi.fn().mockReturnValue({ select: externalSelect });
+  const externalInnerJoin2 = vi.fn().mockReturnValue({ innerJoin: externalInnerJoin3 });
+  const externalInnerJoin1 = vi.fn().mockReturnValue({ innerJoin: externalInnerJoin2 });
+  const selectFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === "users") {
+      return { selectAll };
+    }
+    if (table === "external_ai_access_tokens as t") {
+      return { innerJoin: externalInnerJoin1 };
+    }
+    throw new Error(`Unexpected selectFrom table: ${table}`);
+  });
 
   return {
     db: { selectFrom } as unknown as Kysely<Database>,

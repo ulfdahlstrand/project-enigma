@@ -5,12 +5,28 @@ import {
   updateAIPromptFragmentInputSchema,
   updateAIPromptFragmentOutputSchema,
 } from "./ai-prompt-configs.js";
+import {
+  createExternalAIAuthorizationInputSchema,
+  createExternalAIAuthorizationOutputSchema,
+  exchangeExternalAILoginChallengeInputSchema,
+  exchangeExternalAILoginChallengeOutputSchema,
+  externalAIClientSchema,
+  externalAIContextEntrySchema,
+  externalAIScopeSchema,
+  getExternalAIContextInputSchema,
+  getExternalAIContextOutputSchema,
+  listExternalAIClientsInputSchema,
+  listExternalAIClientsOutputSchema,
+  revokeExternalAIAuthorizationInputSchema,
+  revokeExternalAIAuthorizationOutputSchema,
+} from "./external-ai.js";
 import { aiRoutes } from "./domains/ai/routes.js";
 import { assignmentRoutes } from "./domains/assignments/routes.js";
 import { authRoutes } from "./domains/auth/routes.js";
 import { branchAssignmentRoutes } from "./domains/branch-assignments/routes.js";
 import { educationRoutes } from "./domains/education/routes.js";
 import { employeeRoutes } from "./domains/employees/routes.js";
+import { externalAIRoutes } from "./domains/external-ai/routes.js";
 import { importExportRoutes } from "./domains/import-export/routes.js";
 import { resumeRoutes } from "./domains/resumes/routes.js";
 import { resumeVersionRoutes } from "./domains/resume-versions/routes.js";
@@ -44,6 +60,36 @@ export type {
   UpdateAIPromptFragmentInput,
   UpdateAIPromptFragmentOutput,
 } from "./ai-prompt-configs.js";
+export {
+  externalAIScopeSchema,
+  externalAIClientSchema,
+  listExternalAIClientsInputSchema,
+  listExternalAIClientsOutputSchema,
+  createExternalAIAuthorizationInputSchema,
+  createExternalAIAuthorizationOutputSchema,
+  exchangeExternalAILoginChallengeInputSchema,
+  exchangeExternalAILoginChallengeOutputSchema,
+  revokeExternalAIAuthorizationInputSchema,
+  revokeExternalAIAuthorizationOutputSchema,
+  externalAIContextEntrySchema,
+  getExternalAIContextInputSchema,
+  getExternalAIContextOutputSchema,
+} from "./external-ai.js";
+export type {
+  ExternalAIScope,
+  ExternalAIClient,
+  ListExternalAIClientsInput,
+  ListExternalAIClientsOutput,
+  CreateExternalAIAuthorizationInput,
+  CreateExternalAIAuthorizationOutput,
+  ExchangeExternalAILoginChallengeInput,
+  ExchangeExternalAILoginChallengeOutput,
+  RevokeExternalAIAuthorizationInput,
+  RevokeExternalAIAuthorizationOutput,
+  ExternalAIContextEntry,
+  GetExternalAIContextInput,
+  GetExternalAIContextOutput,
+} from "./external-ai.js";
 export {
   employeeSchema,
   listEmployeesOutputSchema,
@@ -248,6 +294,7 @@ export {
 export const contract = oc.router({
   ...systemRoutes,
   ...authRoutes,
+  ...externalAIRoutes,
   ...employeeRoutes,
   ...resumeRoutes,
   ...assignmentRoutes,
