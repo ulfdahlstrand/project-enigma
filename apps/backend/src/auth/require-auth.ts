@@ -23,3 +23,11 @@ export function requireAuth(context: AuthContext): User {
   }
   return context.user;
 }
+
+export function requireAdmin(context: AuthContext): User {
+  const user = requireAuth(context);
+  if (user.role !== "admin") {
+    throw new ORPCError("FORBIDDEN");
+  }
+  return user;
+}

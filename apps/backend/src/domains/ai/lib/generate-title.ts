@@ -8,7 +8,8 @@ const SUMMARY_MODEL = "gpt-4o";
  */
 export async function generateConversationTitle(
   openaiClient: OpenAI,
-  messages: Array<{ role: string; content: string }>
+  messages: Array<{ role: string; content: string }>,
+  systemPrompt?: string,
 ): Promise<string | null> {
   try {
     const transcript = messages
@@ -22,7 +23,8 @@ export async function generateConversationTitle(
         {
           role: "system",
           content:
-            "You summarise conversations in 2–4 words. Reply with only the summary, no punctuation.",
+            systemPrompt
+            ?? "You summarise conversations in 2–4 words. Reply with only the summary, no punctuation.",
         },
         {
           role: "user",

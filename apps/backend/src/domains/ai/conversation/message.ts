@@ -29,6 +29,7 @@ import {
 import { classifyDecision, setPendingDecision } from "./pending-decision.js";
 import { listPersistedRevisionWorkItems } from "./revision-work-items.js";
 import { deriveNextActionOrchestrationMessageFromWorkItems } from "./action-orchestration.js";
+import { getAIPromptFragmentsByKey } from "../../system/index.js";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 2048;
@@ -373,7 +374,9 @@ export async function sendAIMessage(
       { role: "user", content: input.userMessage },
       { role: "assistant", content: assistantContent },
     ];
-    void generateConversationTitle(openaiClient, allMessages).then((title) => {
+    void getAIPromptFragmentsByKey(db, "backend.conversation-title")
+      .then((fragments) => generateConversationTitle(openaiClient, allMessages, fragments.system_template))
+      .then((title) => {
       if (title) {
         logger.debug("AI conversation title generated", {
           conversationId: input.conversationId,

@@ -7,6 +7,7 @@ import { getDb } from "../../../db/client.js";
 import { getOpenAIClient } from "../lib/openai-client.js";
 import { requireAuth, type AuthContext } from "../../../auth/require-auth.js";
 import { generateConversationTitle } from "../lib/generate-title.js";
+import { getAIPromptFragmentsByKey } from "../../system/index.js";
 
 export async function closeAIConversation(
   db: Kysely<Database>,
@@ -36,7 +37,8 @@ export async function closeAIConversation(
       .execute();
 
     if (messages.length > 0) {
-      title = await generateConversationTitle(openaiClient, messages);
+      const fragments = await getAIPromptFragmentsByKey(db, "backend.conversation-title");
+      title = await generateConversationTitle(openaiClient, messages, fragments.system_template);
     }
   }
 

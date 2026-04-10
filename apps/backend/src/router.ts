@@ -52,6 +52,10 @@ import {
   exportResumeMarkdownHandler,
 } from "./domains/export/index.js";
 import { getCurrentSessionHandler } from "./domains/auth/index.js";
+import {
+  listAIPromptConfigsHandler,
+  updateAIPromptFragmentHandler,
+} from "./domains/system/index.js";
 
 /**
  * The oRPC router — implements every procedure defined in the @cv-tool/contracts
@@ -64,6 +68,8 @@ import { getCurrentSessionHandler } from "./domains/auth/index.js";
  */
 export const router = implement(contract).router({
   health: healthHandler,
+  listAIPromptConfigs: listAIPromptConfigsHandler,
+  updateAIPromptFragment: updateAIPromptFragmentHandler,
   getCurrentSession: getCurrentSessionHandler,
   listEmployees: listEmployeesHandler,
   getEmployee: getEmployeeHandler,

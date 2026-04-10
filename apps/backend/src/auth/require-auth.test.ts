@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { requireAuth } from "./require-auth.js";
+import { requireAdmin, requireAuth } from "./require-auth.js";
 import type { User } from "../db/types.js";
 
 const MOCK_USER: User = {
@@ -34,6 +34,23 @@ describe("requireAuth", () => {
       requireAuth({ user: null });
     } catch (err: unknown) {
       expect((err as { status?: number }).status).toBe(401);
+    }
+  });
+});
+
+describe("requireAdmin", () => {
+  it("returns the user when context has an admin", () => {
+    const adminUser = { ...MOCK_USER, role: "admin" as const };
+    expect(requireAdmin({ user: adminUser })).toBe(adminUser);
+  });
+
+  it("throws FORBIDDEN for authenticated non-admin users", () => {
+    expect(() => requireAdmin({ user: MOCK_USER })).toThrow();
+    try {
+      requireAdmin({ user: MOCK_USER });
+    } catch (err: unknown) {
+      expect((err as { code?: string }).code).toBe("FORBIDDEN");
+      expect((err as { status?: number }).status).toBe(403);
     }
   });
 });

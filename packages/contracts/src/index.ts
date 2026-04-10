@@ -1,4 +1,10 @@
 import { oc } from "@orpc/contract";
+import {
+  listAIPromptConfigsInputSchema,
+  listAIPromptConfigsOutputSchema,
+  updateAIPromptFragmentInputSchema,
+  updateAIPromptFragmentOutputSchema,
+} from "./ai-prompt-configs.js";
 import { aiRoutes } from "./domains/ai/routes.js";
 import { assignmentRoutes } from "./domains/assignments/routes.js";
 import { authRoutes } from "./domains/auth/routes.js";
@@ -18,6 +24,26 @@ import { systemRoutes } from "./domains/system/routes.js";
 // Re-exports
 // ---------------------------------------------------------------------------
 
+export {
+  aiPromptCategorySchema,
+  aiPromptFragmentSchema,
+  aiPromptDefinitionSchema,
+  aiPromptCategoryWithPromptsSchema,
+  listAIPromptConfigsInputSchema,
+  listAIPromptConfigsOutputSchema,
+  updateAIPromptFragmentInputSchema,
+  updateAIPromptFragmentOutputSchema,
+} from "./ai-prompt-configs.js";
+export type {
+  AIPromptCategory,
+  AIPromptFragment,
+  AIPromptDefinition,
+  AIPromptCategoryWithPrompts,
+  ListAIPromptConfigsInput,
+  ListAIPromptConfigsOutput,
+  UpdateAIPromptFragmentInput,
+  UpdateAIPromptFragmentOutput,
+} from "./ai-prompt-configs.js";
 export {
   employeeSchema,
   listEmployeesOutputSchema,

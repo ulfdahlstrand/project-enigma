@@ -24,7 +24,8 @@ const IMPROVE_DESCRIPTION_SYSTEM =
  * User content is wrapped in XML-style delimiters to prevent prompt injection.
  */
 export function buildImproveDescriptionPrompt(
-  input: ImproveDescriptionPromptInput
+  input: ImproveDescriptionPromptInput,
+  templates?: { systemTemplate?: string; userTemplate?: string },
 ): BuiltPrompt {
   const contextLines: string[] = [];
 
@@ -40,7 +41,11 @@ export function buildImproveDescriptionPrompt(
       ? `\n\nContext:\n${contextLines.join("\n")}`
       : "";
 
-  const user = `Please improve the following assignment description.${contextSection}\n\n<description>\n${input.description}\n</description>`;
+  const system = templates?.systemTemplate ?? IMPROVE_DESCRIPTION_SYSTEM;
+  const user = (templates?.userTemplate
+    ?? "Please improve the following assignment description.{{context_section}}\n\n<description>\n{{description}}\n</description>")
+    .replace("{{context_section}}", contextSection)
+    .replace("{{description}}", input.description);
 
-  return { system: IMPROVE_DESCRIPTION_SYSTEM, user };
+  return { system, user };
 }
