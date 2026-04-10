@@ -29,6 +29,8 @@ describe("getExternalAIContext", () => {
     expect(result.scopes).toEqual(["ai:context:read"]);
     expect(result.sharedGuidance.map((entry) => entry.key)).toContain("same-language");
     expect(result.promptGuidance[0]?.key).toBe("shared-resume-guidance");
+    expect(result.promptModel.base.prompt).toBe("Shared prompt");
+    expect(result.promptModel.consultant.supported).toBe(false);
     expect(result.supportedResumeSections).toContain("assignments");
     expect(result.allowedRoutes).toHaveLength(1);
   });
@@ -51,6 +53,7 @@ describe("getExternalAIContext", () => {
     expect(result.scopes).toEqual(["ai:context:read", "resume:read", "resume-commit:read"]);
     expect(result.allowedRoutes.map((route) => route.path)).toContain("/resumes/{resumeId}");
     expect(result.allowedRoutes.map((route) => route.path)).toContain("/resume-commits/{commitId}");
+    expect(result.promptModel.agents).toEqual([]);
   });
 
   it("throws FORBIDDEN when an external token lacks context scope", () => {

@@ -111,6 +111,33 @@ export const externalAIPromptGuidanceSchema = z.object({
   fragments: z.array(externalAIPromptGuidanceFragmentSchema),
 });
 
+export const externalAIPromptLayerSchema = z.object({
+  prompt: z.string().nullable(),
+  rules: z.string().nullable(),
+  validators: z.string().nullable(),
+  workflow: z.string().nullable(),
+  contextRequirements: z.string().nullable(),
+  outputContract: z.string().nullable(),
+});
+
+export const externalAIAgentPromptModelSchema = z.object({
+  key: z.string().min(1),
+  title: z.string().min(1),
+  appliesToSections: z.array(z.string().min(1)),
+  layers: externalAIPromptLayerSchema,
+});
+
+export const externalAIConsultantPromptModelSchema = z.object({
+  supported: z.boolean(),
+  note: z.string().nullable(),
+});
+
+export const externalAIPromptModelSchema = z.object({
+  base: externalAIPromptLayerSchema,
+  agents: z.array(externalAIAgentPromptModelSchema),
+  consultant: externalAIConsultantPromptModelSchema,
+});
+
 export const getExternalAIContextInputSchema = z.object({});
 
 export const getExternalAIContextOutputSchema = z.object({
@@ -126,6 +153,7 @@ export const getExternalAIContextOutputSchema = z.object({
   sharedGuidance: z.array(externalAIContextEntrySchema),
   safetyGuidance: z.array(externalAIContextEntrySchema),
   promptGuidance: z.array(externalAIPromptGuidanceSchema),
+  promptModel: externalAIPromptModelSchema,
   supportedResumeSections: z.array(z.string().min(1)),
 });
 
@@ -146,5 +174,9 @@ export type ExternalAIContextEntry = z.infer<typeof externalAIContextEntrySchema
 export type ExternalAIAllowedRoute = z.infer<typeof externalAIAllowedRouteSchema>;
 export type ExternalAIPromptGuidanceFragment = z.infer<typeof externalAIPromptGuidanceFragmentSchema>;
 export type ExternalAIPromptGuidance = z.infer<typeof externalAIPromptGuidanceSchema>;
+export type ExternalAIPromptLayer = z.infer<typeof externalAIPromptLayerSchema>;
+export type ExternalAIAgentPromptModel = z.infer<typeof externalAIAgentPromptModelSchema>;
+export type ExternalAIConsultantPromptModel = z.infer<typeof externalAIConsultantPromptModelSchema>;
+export type ExternalAIPromptModel = z.infer<typeof externalAIPromptModelSchema>;
 export type GetExternalAIContextInput = z.infer<typeof getExternalAIContextInputSchema>;
 export type GetExternalAIContextOutput = z.infer<typeof getExternalAIContextOutputSchema>;

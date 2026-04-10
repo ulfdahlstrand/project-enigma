@@ -1,5 +1,12 @@
 import { implement } from "@orpc/server";
-import { contract, type ExternalAIPromptGuidance, type ExternalAIScope } from "@cv-tool/contracts";
+import {
+  contract,
+  type ExternalAIAgentPromptModel,
+  type ExternalAIPromptGuidance,
+  type ExternalAIPromptGuidanceFragment,
+  type ExternalAIPromptLayer,
+  type ExternalAIScope,
+} from "@cv-tool/contracts";
 import { requireScope, type AuthContext } from "../../auth/require-auth.js";
 import { getDb } from "../../db/client.js";
 import {
@@ -125,6 +132,42 @@ const EXTERNAL_PROMPT_GUIDANCE_CONFIGS = [
 
 export type ExternalAIContextLike = Pick<AuthContext, "user" | "externalAI">;
 
+function findFragmentContent(
+  fragments: ExternalAIPromptGuidanceFragment[],
+  key: string,
+): string | null {
+  return fragments.find((fragment) => fragment.key === key)?.content ?? null;
+}
+
+function buildPromptLayer(fragments: ExternalAIPromptGuidanceFragment[]): ExternalAIPromptLayer {
+  return {
+    prompt: findFragmentContent(fragments, "base_prompt"),
+    rules: findFragmentContent(fragments, "rules"),
+    validators: findFragmentContent(fragments, "validators"),
+    workflow: findFragmentContent(fragments, "workflow"),
+    contextRequirements: findFragmentContent(fragments, "context_requirements"),
+    outputContract: findFragmentContent(fragments, "output_contract"),
+  };
+}
+
+function buildPromptModel(promptGuidance: ExternalAIPromptGuidance[]) {
+  const [baseGuidance, ...agentGuidance] = promptGuidance;
+
+  return {
+    base: baseGuidance ? buildPromptLayer(baseGuidance.fragments) : buildPromptLayer([]),
+    agents: agentGuidance.map<ExternalAIAgentPromptModel>((guidance) => ({
+      key: guidance.key,
+      title: guidance.title,
+      appliesToSections: guidance.appliesToSections,
+      layers: buildPromptLayer(guidance.fragments),
+    })),
+    consultant: {
+      supported: false,
+      note: "Consultant-specific AI preferences are not exposed through the external context yet.",
+    },
+  };
+}
+
 export async function listExternalAIPromptGuidance(): Promise<ExternalAIPromptGuidance[]> {
   const fragmentsByPromptKey = await listAIPromptFragmentsByKeys(
     getDb(),
@@ -176,6 +219,7 @@ export function getExternalAIContext(
     sharedGuidance: [...SHARED_GUIDANCE],
     safetyGuidance: [...SAFETY_GUIDANCE],
     promptGuidance,
+    promptModel: buildPromptModel(promptGuidance),
     supportedResumeSections: [...SUPPORTED_RESUME_SECTIONS],
   };
 }
