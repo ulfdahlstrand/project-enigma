@@ -237,6 +237,7 @@ export async function buildCommitTree(
           role: assignment.role,
           description: assignment.description,
           technologies: assignment.technologies,
+          keywords: assignment.keywords,
           start_date: startDate,
           end_date: endDate,
           is_current: assignment.isCurrent,

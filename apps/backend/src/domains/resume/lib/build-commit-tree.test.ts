@@ -52,7 +52,7 @@ const CONTENT: ResumeCommitContent = {
       endDate: null,
       technologies: ["Node.js", "PostgreSQL"],
       isCurrent: true,
-      keywords: null,
+      keywords: "api integration, postgresql",
       type: null,
       highlight: false,
       sortOrder: 0,
@@ -255,6 +255,7 @@ describe("buildCommitTree", () => {
       assignment_id: CONTENT.assignments[0]!.assignmentId,
       client_name: CONTENT.assignments[0]!.clientName,
       role: CONTENT.assignments[0]!.role,
+      keywords: CONTENT.assignments[0]!.keywords,
     });
   });
 

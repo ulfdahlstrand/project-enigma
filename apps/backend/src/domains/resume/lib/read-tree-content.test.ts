@@ -68,6 +68,7 @@ const REVISION_DATA: Record<string, unknown> = {
     role: "Backend Engineer",
     description: "Built APIs",
     technologies: ["Node.js"],
+    keywords: "api integration, node.js",
     start_date: new Date("2023-01-01"),
     end_date: null,
     is_current: true,
@@ -228,6 +229,7 @@ describe("readTreeContent", () => {
       assignmentId: ASSIGNMENT_ID,
       clientName: "ACME Corp",
       role: "Backend Engineer",
+      keywords: "api integration, node.js",
     });
   });
 
