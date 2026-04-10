@@ -19,6 +19,7 @@ import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authentic
 import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authenticated/resumes/$id'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
 import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
+import { Route as AuthenticatedAssistantPreferencesRouteImport } from './routes/_authenticated/assistant/preferences'
 import { Route as AuthenticatedAssistantExternalAiRouteImport } from './routes/_authenticated/assistant/external-ai'
 import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
 import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
@@ -83,6 +84,12 @@ const AuthenticatedEmployeesIdRoute =
   AuthenticatedEmployeesIdRouteImport.update({
     id: '/employees/$id',
     path: '/employees/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAssistantPreferencesRoute =
+  AuthenticatedAssistantPreferencesRouteImport.update({
+    id: '/assistant/preferences',
+    path: '/assistant/preferences',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAssistantExternalAiRoute =
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login/': typeof LoginIndexRoute
   '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
+  '/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginIndexRoute
   '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
+  '/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login/': typeof LoginIndexRoute
   '/_authenticated/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
+  '/_authenticated/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/_authenticated/employees/new': typeof AuthenticatedEmployeesNewRoute
   '/_authenticated/resumes/$id': typeof AuthenticatedResumesIdRoute
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login/'
     | '/assistant/external-ai'
+    | '/assistant/preferences'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/assistant/external-ai'
+    | '/assistant/preferences'
     | '/employees/$id'
     | '/employees/new'
     | '/resumes/$id'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login/'
     | '/_authenticated/assistant/external-ai'
+    | '/_authenticated/assistant/preferences'
     | '/_authenticated/employees/$id'
     | '/_authenticated/employees/new'
     | '/_authenticated/resumes/$id'
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/employees/$id'
       fullPath: '/employees/$id'
       preLoaderRoute: typeof AuthenticatedEmployeesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/assistant/preferences': {
+      id: '/_authenticated/assistant/preferences'
+      path: '/assistant/preferences'
+      fullPath: '/assistant/preferences'
+      preLoaderRoute: typeof AuthenticatedAssistantPreferencesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/assistant/external-ai': {
@@ -498,6 +518,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAssistantExternalAiRoute: typeof AuthenticatedAssistantExternalAiRoute
+  AuthenticatedAssistantPreferencesRoute: typeof AuthenticatedAssistantPreferencesRoute
   AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
   AuthenticatedResumesIdRoute: typeof AuthenticatedResumesIdRoute
@@ -518,6 +539,8 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAssistantExternalAiRoute: AuthenticatedAssistantExternalAiRoute,
+  AuthenticatedAssistantPreferencesRoute:
+    AuthenticatedAssistantPreferencesRoute,
   AuthenticatedEmployeesIdRoute: AuthenticatedEmployeesIdRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
   AuthenticatedResumesIdRoute: AuthenticatedResumesIdRoute,

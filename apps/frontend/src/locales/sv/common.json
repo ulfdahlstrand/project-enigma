@@ -19,9 +19,28 @@
     "employees": "Anställda",
     "resumes": "Meritförteckningar",
     "assistantGroup": "Assistent",
+    "assistantPreferences": "Assistentpreferenser",
     "externalAIConnections": "Externa AI-kopplingar",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI-promptinventering"
+  },
+  "assistantPreferences": {
+    "pageTitle": "Assistentpreferenser",
+    "pageDescription": "Definiera dina personliga skrivpreferenser så att externa AI-klienter kan anpassa revisioner till din profil och ton.",
+    "loading": "Laddar assistentpreferenser…",
+    "loadError": "Det gick inte att ladda assistentpreferenserna.",
+    "formTitle": "Dina konsultspecifika AI-preferenser",
+    "formDescription": "Dessa preferenser injiceras som konsultspecifik vägledning i den externa AI-kontexten. Håll dem korta, konkreta och fokuserade på hur du vill att ditt CV ska uppfattas.",
+    "promptLabel": "Preferensprompt",
+    "promptPlaceholder": "Exempel: Föredra en senior och koncis ton som fortfarande känns praktisk och hands-on.",
+    "rulesLabel": "Personliga regler",
+    "rulesPlaceholder": "Exempel: Betona arkitektur, ledarskap och affärsnytta när CV:t faktiskt stödjer det.",
+    "validatorsLabel": "Personliga validatorer",
+    "validatorsPlaceholder": "Exempel: Undvik att låta generisk, undvik buzzwords utan bevis och överdriv inte min roll.",
+    "saveButton": "Spara preferenser",
+    "saving": "Sparar…",
+    "saveSuccess": "Preferenserna sparades.",
+    "saveError": "Det gick inte att spara preferenserna."
   },
   "externalAIConnections": {
     "pageTitle": "Externa AI-kopplingar",

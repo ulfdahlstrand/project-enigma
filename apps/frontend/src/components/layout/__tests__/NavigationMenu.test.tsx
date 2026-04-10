@@ -47,6 +47,7 @@ describe("NavigationMenu", () => {
     render(<NavigationMenu />);
 
     expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Assistant preferences")).toBeInTheDocument();
     expect(screen.getByText("External AI Connections")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
     expect(screen.getByText("AI Prompt Inventory")).toBeInTheDocument();
@@ -69,6 +70,7 @@ describe("NavigationMenu", () => {
     render(<NavigationMenu />);
 
     expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Assistant preferences")).toBeInTheDocument();
     expect(screen.getByText("External AI Connections")).toBeInTheDocument();
     expect(screen.queryByText("Admin")).not.toBeInTheDocument();
     expect(screen.queryByText("AI Prompt Inventory")).not.toBeInTheDocument();

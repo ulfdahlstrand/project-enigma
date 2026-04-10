@@ -19,9 +19,28 @@
     "employees": "Employees",
     "resumes": "Resumes",
     "assistantGroup": "Assistant",
+    "assistantPreferences": "Assistant preferences",
     "externalAIConnections": "External AI Connections",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI Prompt Inventory"
+  },
+  "assistantPreferences": {
+    "pageTitle": "Assistant preferences",
+    "pageDescription": "Define your personal writing preferences so external AI clients can adapt revisions to your profile and tone.",
+    "loading": "Loading assistant preferences…",
+    "loadError": "Failed to load assistant preferences.",
+    "formTitle": "Your consultant AI preferences",
+    "formDescription": "These preferences are injected as consultant-specific guidance in the external AI revision context. Keep them short, concrete, and focused on how you want your CV to read.",
+    "promptLabel": "Preference prompt",
+    "promptPlaceholder": "Example: Prefer a senior, concise tone that still feels practical and hands-on.",
+    "rulesLabel": "Personal rules",
+    "rulesPlaceholder": "Example: Emphasize architecture, leadership, and business impact when the CV supports it.",
+    "validatorsLabel": "Personal validators",
+    "validatorsPlaceholder": "Example: Avoid sounding generic, avoid buzzwords without evidence, and do not overstate my role.",
+    "saveButton": "Save preferences",
+    "saving": "Saving…",
+    "saveSuccess": "Preferences saved.",
+    "saveError": "Failed to save preferences."
   },
   "externalAIConnections": {
     "pageTitle": "External AI Connections",

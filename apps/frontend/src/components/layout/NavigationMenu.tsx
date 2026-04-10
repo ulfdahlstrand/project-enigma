@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ASSISTANT_NAV_ITEMS: NavItem[] = [
+  { labelKey: "nav.assistantPreferences", to: "/assistant/preferences" },
   { labelKey: "nav.externalAIConnections", to: "/assistant/external-ai" },
 ];
 
