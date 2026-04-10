@@ -341,6 +341,16 @@ export interface AIPromptFragmentTable {
   updated_at: Generated<Date>;
 }
 
+export interface ConsultantAIPreferencesTable {
+  id: Generated<string>;
+  employee_id: string;
+  prompt: string | null;
+  rules: string | null;
+  validators: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface ExternalAIClientTable {
   id: Generated<string>;
   key: string;
@@ -413,6 +423,9 @@ export type AIPromptDefinitionUpdate = Updateable<AIPromptDefinitionTable>;
 export type AIPromptFragment = Selectable<AIPromptFragmentTable>;
 export type NewAIPromptFragment = Insertable<AIPromptFragmentTable>;
 export type AIPromptFragmentUpdate = Updateable<AIPromptFragmentTable>;
+export type ConsultantAIPreferences = Selectable<ConsultantAIPreferencesTable>;
+export type NewConsultantAIPreferences = Insertable<ConsultantAIPreferencesTable>;
+export type ConsultantAIPreferencesUpdate = Updateable<ConsultantAIPreferencesTable>;
 export type ExternalAIClient = Selectable<ExternalAIClientTable>;
 export type NewExternalAIClient = Insertable<ExternalAIClientTable>;
 export type ExternalAIClientUpdate = Updateable<ExternalAIClientTable>;
@@ -572,6 +585,7 @@ export interface Database {
   ai_prompt_categories: AIPromptCategoryTable;
   ai_prompt_definitions: AIPromptDefinitionTable;
   ai_prompt_fragments: AIPromptFragmentTable;
+  consultant_ai_preferences: ConsultantAIPreferencesTable;
   external_ai_clients: ExternalAIClientTable;
   external_ai_authorizations: ExternalAIAuthorizationTable;
   external_ai_login_challenges: ExternalAILoginChallengeTable;

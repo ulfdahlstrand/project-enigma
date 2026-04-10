@@ -6,6 +6,13 @@ import {
   updateAIPromptFragmentOutputSchema,
 } from "./ai-prompt-configs.js";
 import {
+  consultantAIPreferencesSchema,
+  getConsultantAIPreferencesInputSchema,
+  getConsultantAIPreferencesOutputSchema,
+  updateConsultantAIPreferencesInputSchema,
+  updateConsultantAIPreferencesOutputSchema,
+} from "./consultant-ai-preferences.js";
+import {
   createExternalAIAuthorizationInputSchema,
   createExternalAIAuthorizationOutputSchema,
   exchangeExternalAILoginChallengeInputSchema,
@@ -70,6 +77,20 @@ export type {
   UpdateAIPromptFragmentInput,
   UpdateAIPromptFragmentOutput,
 } from "./ai-prompt-configs.js";
+export {
+  consultantAIPreferencesSchema,
+  getConsultantAIPreferencesInputSchema,
+  getConsultantAIPreferencesOutputSchema,
+  updateConsultantAIPreferencesInputSchema,
+  updateConsultantAIPreferencesOutputSchema,
+} from "./consultant-ai-preferences.js";
+export type {
+  ConsultantAIPreferences,
+  GetConsultantAIPreferencesInput,
+  GetConsultantAIPreferencesOutput,
+  UpdateConsultantAIPreferencesInput,
+  UpdateConsultantAIPreferencesOutput,
+} from "./consultant-ai-preferences.js";
 export {
   externalAIScopeSchema,
   externalAIClientSchema,

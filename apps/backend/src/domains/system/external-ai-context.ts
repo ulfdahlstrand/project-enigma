@@ -2,13 +2,15 @@ import { implement } from "@orpc/server";
 import {
   contract,
   type ExternalAIAgentPromptModel,
+  type ExternalAIConsultantPromptModel,
   type ExternalAIPromptGuidance,
   type ExternalAIPromptGuidanceFragment,
   type ExternalAIPromptLayer,
   type ExternalAIScope,
 } from "@cv-tool/contracts";
-import { requireScope, type AuthContext } from "../../auth/require-auth.js";
+import { requireAuth, requireScope, type AuthContext } from "../../auth/require-auth.js";
 import { getDb } from "../../db/client.js";
+import { resolveEmployeeId } from "../../auth/resolve-employee-id.js";
 import {
   EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE,
   EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE,
@@ -23,6 +25,7 @@ import {
   EXTERNAL_AI_RESUME_READ_SCOPE,
 } from "../../auth/external-ai-tokens.js";
 import { listAIPromptFragmentsByKeys } from "./ai-prompt-configs.js";
+import { getConsultantAIPreferencesForEmployee } from "./consultant-ai-preferences.js";
 
 const SHARED_GUIDANCE = [
   {
@@ -150,7 +153,52 @@ function buildPromptLayer(fragments: ExternalAIPromptGuidanceFragment[]): Extern
   };
 }
 
-function buildPromptModel(promptGuidance: ExternalAIPromptGuidance[]) {
+function buildConsultantPromptModel(preferences: {
+  prompt: string | null;
+  rules: string | null;
+  validators: string | null;
+  updatedAt: string;
+} | null): ExternalAIConsultantPromptModel {
+  if (!preferences) {
+    return {
+      supported: true,
+      note: "No consultant-specific preferences are configured yet.",
+      layers: {
+        prompt: null,
+        rules: null,
+        validators: null,
+        workflow: null,
+        contextRequirements: null,
+        outputContract: null,
+      },
+      updatedAt: null,
+    };
+  }
+
+  return {
+    supported: true,
+    note: null,
+    layers: {
+      prompt: preferences.prompt,
+      rules: preferences.rules,
+      validators: preferences.validators,
+      workflow: null,
+      contextRequirements: null,
+      outputContract: null,
+    },
+    updatedAt: preferences.updatedAt,
+  };
+}
+
+function buildPromptModel(
+  promptGuidance: ExternalAIPromptGuidance[],
+  consultantPreferences: {
+    prompt: string | null;
+    rules: string | null;
+    validators: string | null;
+    updatedAt: string;
+  } | null,
+) {
   const [baseGuidance, ...agentGuidance] = promptGuidance;
 
   return {
@@ -161,10 +209,7 @@ function buildPromptModel(promptGuidance: ExternalAIPromptGuidance[]) {
       appliesToSections: guidance.appliesToSections,
       layers: buildPromptLayer(guidance.fragments),
     })),
-    consultant: {
-      supported: false,
-      note: "Consultant-specific AI preferences are not exposed through the external context yet.",
-    },
+    consultant: buildConsultantPromptModel(consultantPreferences),
   };
 }
 
@@ -190,6 +235,12 @@ export async function listExternalAIPromptGuidance(): Promise<ExternalAIPromptGu
 export function getExternalAIContext(
   context: ExternalAIContextLike,
   promptGuidance: ExternalAIPromptGuidance[] = [],
+  consultantPreferences: {
+    prompt: string | null;
+    rules: string | null;
+    validators: string | null;
+    updatedAt: string;
+  } | null = null,
 ) {
   requireScope(context as AuthContext, EXTERNAL_AI_CONTEXT_SCOPE);
   const scopes: ExternalAIScope[] = context.externalAI?.scopes?.length
@@ -219,11 +270,20 @@ export function getExternalAIContext(
     sharedGuidance: [...SHARED_GUIDANCE],
     safetyGuidance: [...SAFETY_GUIDANCE],
     promptGuidance,
-    promptModel: buildPromptModel(promptGuidance),
+    promptModel: buildPromptModel(promptGuidance, consultantPreferences),
     supportedResumeSections: [...SUPPORTED_RESUME_SECTIONS],
   };
 }
 
 export const getExternalAIContextHandler = implement(contract.getExternalAIContext).handler(
-  async ({ context }) => getExternalAIContext(context as AuthContext, await listExternalAIPromptGuidance()),
+  async ({ context }) => {
+    const authContext = context as AuthContext;
+    const user = requireAuth(authContext);
+    const [promptGuidance, employeeId] = await Promise.all([
+      listExternalAIPromptGuidance(),
+      resolveEmployeeId(getDb(), user),
+    ]);
+    const consultantPreferences = await getConsultantAIPreferencesForEmployee(getDb(), employeeId);
+    return getExternalAIContext(authContext, promptGuidance, consultantPreferences);
+  },
 );

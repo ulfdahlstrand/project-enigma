@@ -130,6 +130,8 @@ export const externalAIAgentPromptModelSchema = z.object({
 export const externalAIConsultantPromptModelSchema = z.object({
   supported: z.boolean(),
   note: z.string().nullable(),
+  layers: externalAIPromptLayerSchema,
+  updatedAt: z.string().datetime().nullable(),
 });
 
 export const externalAIPromptModelSchema = z.object({

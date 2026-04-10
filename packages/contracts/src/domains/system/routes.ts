@@ -9,6 +9,12 @@ import {
   updateAIPromptFragmentInputSchema,
   updateAIPromptFragmentOutputSchema,
 } from "../../ai-prompt-configs.js";
+import {
+  getConsultantAIPreferencesInputSchema,
+  getConsultantAIPreferencesOutputSchema,
+  updateConsultantAIPreferencesInputSchema,
+  updateConsultantAIPreferencesOutputSchema,
+} from "../../consultant-ai-preferences.js";
 
 export const systemRoutes = {
   health: oc
@@ -23,4 +29,12 @@ export const systemRoutes = {
     .route({ method: "PATCH", path: "/system/ai-prompts/fragments/{fragmentId}" })
     .input(updateAIPromptFragmentInputSchema)
     .output(updateAIPromptFragmentOutputSchema),
+  getConsultantAIPreferences: oc
+    .route({ method: "GET", path: "/system/consultant-ai-preferences" })
+    .input(getConsultantAIPreferencesInputSchema)
+    .output(getConsultantAIPreferencesOutputSchema),
+  updateConsultantAIPreferences: oc
+    .route({ method: "PATCH", path: "/system/consultant-ai-preferences" })
+    .input(updateConsultantAIPreferencesInputSchema)
+    .output(updateConsultantAIPreferencesOutputSchema),
 };

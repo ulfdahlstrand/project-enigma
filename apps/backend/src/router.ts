@@ -64,7 +64,9 @@ import {
 } from "./domains/auth/index.js";
 import {
   getExternalAIContextHandler,
+  getConsultantAIPreferencesHandler,
   listAIPromptConfigsHandler,
+  updateConsultantAIPreferencesHandler,
   updateAIPromptFragmentHandler,
 } from "./domains/system/index.js";
 
@@ -87,6 +89,8 @@ export const router = implement(contract).router({
   getExternalAIContext: getExternalAIContextHandler,
   listAIPromptConfigs: listAIPromptConfigsHandler,
   updateAIPromptFragment: updateAIPromptFragmentHandler,
+  getConsultantAIPreferences: getConsultantAIPreferencesHandler,
+  updateConsultantAIPreferences: updateConsultantAIPreferencesHandler,
   getCurrentSession: getCurrentSessionHandler,
   listEmployees: listEmployeesHandler,
   getEmployee: getEmployeeHandler,

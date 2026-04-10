@@ -30,7 +30,8 @@ describe("getExternalAIContext", () => {
     expect(result.sharedGuidance.map((entry) => entry.key)).toContain("same-language");
     expect(result.promptGuidance[0]?.key).toBe("shared-resume-guidance");
     expect(result.promptModel.base.prompt).toBe("Shared prompt");
-    expect(result.promptModel.consultant.supported).toBe(false);
+    expect(result.promptModel.consultant.supported).toBe(true);
+    expect(result.promptModel.consultant.layers.prompt).toBeNull();
     expect(result.supportedResumeSections).toContain("assignments");
     expect(result.allowedRoutes).toHaveLength(1);
   });
@@ -47,13 +48,19 @@ describe("getExternalAIContext", () => {
         clientDescription: "Claude client",
         scopes: ["ai:context:read", "resume:read", "resume-commit:read"],
       },
-    }, []);
+    }, [], {
+      prompt: "Prefer concise senior tone",
+      rules: "Emphasize leadership when supported by the CV",
+      validators: "Do not overstate scope",
+      updatedAt: "2026-04-10T10:00:00.000Z",
+    });
 
     expect(result.client?.key).toBe("anthropic_claude");
     expect(result.scopes).toEqual(["ai:context:read", "resume:read", "resume-commit:read"]);
     expect(result.allowedRoutes.map((route) => route.path)).toContain("/resumes/{resumeId}");
     expect(result.allowedRoutes.map((route) => route.path)).toContain("/resume-commits/{commitId}");
     expect(result.promptModel.agents).toEqual([]);
+    expect(result.promptModel.consultant.layers.rules).toBe("Emphasize leadership when supported by the CV");
   });
 
   it("throws FORBIDDEN when an external token lacks context scope", () => {
