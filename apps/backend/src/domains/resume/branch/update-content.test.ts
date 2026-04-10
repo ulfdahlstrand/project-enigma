@@ -47,40 +47,48 @@ describe("updateResumeBranchContent", () => {
     vi.mocked(readBranchAssignmentContent).mockResolvedValue(BRANCH as never);
     vi.mocked(upsertBranchContentFromLive).mockResolvedValue({
       ...BRANCH.content,
+      title: "Updated resume title",
       consultantTitle: "Updated consultant title",
       presentation: ["Updated presentation"],
       summary: "Updated summary",
       highlightedItems: ["Principal Engineer", "Tech Lead"],
+      education: [{ type: "course", value: "Distributed Systems", sortOrder: 0 }],
     } as never);
     vi.mocked(resolveEmployeeId).mockResolvedValue(null);
   });
 
   it("updates branch-scoped scalar content", async () => {
     const result = await updateResumeBranchContent(buildDb(), MOCK_ADMIN, {
-      branchId: BRANCH_ID,
-      consultantTitle: "Updated consultant title",
-      presentation: ["Updated presentation"],
-      summary: "Updated summary",
-      highlightedItems: [" Principal Engineer ", "", "Tech Lead "],
-    });
+        branchId: BRANCH_ID,
+        title: "Updated resume title",
+        consultantTitle: "Updated consultant title",
+        presentation: ["Updated presentation"],
+        summary: "Updated summary",
+        highlightedItems: [" Principal Engineer ", "", "Tech Lead "],
+        education: [{ type: "course", value: " Distributed Systems ", sortOrder: 0 }],
+      });
 
     expect(upsertBranchContentFromLive).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         branchId: BRANCH_ID,
         resumeId: RESUME_ID,
+        title: "Updated resume title",
         consultantTitle: "Updated consultant title",
         presentation: ["Updated presentation"],
         summary: "Updated summary",
         highlightedItems: ["Principal Engineer", "Tech Lead"],
+        education: [{ type: "course", value: "Distributed Systems", sortOrder: 0 }],
       }),
     );
     expect(result).toEqual({
       branchId: BRANCH_ID,
+      title: "Updated resume title",
       consultantTitle: "Updated consultant title",
       presentation: ["Updated presentation"],
       summary: "Updated summary",
       highlightedItems: ["Principal Engineer", "Tech Lead"],
+      education: [{ type: "course", value: "Distributed Systems", sortOrder: 0 }],
     });
   });
 
@@ -116,10 +124,12 @@ describe("createUpdateResumeBranchContentHandler", () => {
     vi.mocked(readBranchAssignmentContent).mockResolvedValue(BRANCH as never);
     vi.mocked(upsertBranchContentFromLive).mockResolvedValue({
       ...BRANCH.content,
+      title: "My Resume",
       consultantTitle: "Updated consultant title",
       presentation: ["Updated presentation"],
       summary: "Updated summary",
       highlightedItems: ["Principal Engineer"],
+      education: [],
     } as never);
     vi.mocked(resolveEmployeeId).mockResolvedValue(EMPLOYEE_ID);
   });
@@ -134,6 +144,7 @@ describe("createUpdateResumeBranchContentHandler", () => {
     );
 
     expect(result.branchId).toBe(BRANCH_ID);
+    expect(result.title).toBe("My Resume");
     expect(result.summary).toBe("Updated summary");
   });
 

@@ -160,13 +160,17 @@ export type UpdateResumeBranchSkillsOutput = z.infer<typeof updateResumeBranchSk
 
 export const updateResumeBranchContentInputSchema = z.object({
   branchId: z.string().uuid(),
+  title: z.string().optional(),
   consultantTitle: z.string().nullable().optional(),
   presentation: z.array(z.string()).optional(),
   summary: z.string().nullable().optional(),
   highlightedItems: z.array(z.string()).optional(),
+  education: z.array(resumeCommitEducationSchema).optional(),
 }).refine(
   (input) =>
-    input.consultantTitle !== undefined
+    input.title !== undefined
+    || input.education !== undefined
+    || input.consultantTitle !== undefined
     || input.presentation !== undefined
     || input.summary !== undefined
     || input.highlightedItems !== undefined,
@@ -177,10 +181,12 @@ export const updateResumeBranchContentInputSchema = z.object({
 
 export const updateResumeBranchContentOutputSchema = z.object({
   branchId: z.string().uuid(),
+  title: z.string(),
   consultantTitle: z.string().nullable(),
   presentation: z.array(z.string()),
   summary: z.string().nullable(),
   highlightedItems: z.array(z.string()),
+  education: z.array(resumeCommitEducationSchema),
 });
 export type UpdateResumeBranchContentInput = z.infer<typeof updateResumeBranchContentInputSchema>;
 export type UpdateResumeBranchContentOutput = z.infer<typeof updateResumeBranchContentOutputSchema>;

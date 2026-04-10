@@ -8,10 +8,12 @@ interface UpsertBranchContentFromLiveParams {
   resumeId: string;
   branchId: string;
   userId: string | null;
+  title?: string;
   consultantTitle?: string | null;
   presentation?: string[];
   summary?: string | null;
   highlightedItems?: string[];
+  education?: ResumeCommitContent["education"];
   skillGroups?: Array<{ name: string; sortOrder: number }>;
   skills?: Array<{ name: string; category: string | null; sortOrder: number }>;
   assignments?: ResumeCommitContent["assignments"];
@@ -25,10 +27,12 @@ export async function upsertBranchContentFromLive(
     resumeId,
     branchId,
     userId,
+    title,
     consultantTitle,
     presentation,
     summary,
     highlightedItems,
+    education,
     skillGroups,
     skills,
     assignments,
@@ -61,7 +65,7 @@ export async function upsertBranchContentFromLive(
   const liveEducation = await listEducation(db, resumeRow.employee_id);
 
   const content: ResumeCommitContent = {
-    title: resumeRow.title,
+    title: title !== undefined ? title : previousContent?.title ?? resumeRow.title,
     consultantTitle: consultantTitle !== undefined
       ? consultantTitle
       : previousContent?.consultantTitle ?? null,
@@ -73,9 +77,11 @@ export async function upsertBranchContentFromLive(
       ? highlightedItems
       : previousContent?.highlightedItems ?? [],
     language: resumeRow.language,
-    education: previousContent?.education?.length
-      ? previousContent.education
-      : liveEducation.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
+    education: education !== undefined
+      ? education
+      : previousContent?.education?.length
+        ? previousContent.education
+        : liveEducation.map((row) => ({ type: row.type, value: row.value, sortOrder: row.sortOrder })),
     skillGroups: skillGroups !== undefined ? skillGroups : previousContent?.skillGroups ?? [],
     skills: skills !== undefined ? skills : previousContent?.skills ?? [],
     assignments: assignments !== undefined ? assignments : previousContent?.assignments ?? [],

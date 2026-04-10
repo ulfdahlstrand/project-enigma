@@ -22,6 +22,14 @@ function normalizeHighlightedItems(input: string[]) {
     .filter((item) => item.length > 0);
 }
 
+function normalizeEducation(input: UpdateResumeBranchContentInput["education"]) {
+  return (input ?? []).map((entry) => ({
+    type: entry.type,
+    value: entry.value.trim(),
+    sortOrder: entry.sortOrder,
+  }));
+}
+
 export async function updateResumeBranchContent(
   db: Kysely<Database>,
   user: AuthUser,
@@ -42,20 +50,24 @@ export async function updateResumeBranchContent(
     resumeId: branch.resumeId,
     branchId: branch.branchId,
     userId: user.id,
+    ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.consultantTitle !== undefined ? { consultantTitle: input.consultantTitle } : {}),
     ...(input.presentation !== undefined ? { presentation: input.presentation } : {}),
     ...(input.summary !== undefined ? { summary: input.summary } : {}),
     ...(input.highlightedItems !== undefined
       ? { highlightedItems: normalizeHighlightedItems(input.highlightedItems) }
       : {}),
+    ...(input.education !== undefined ? { education: normalizeEducation(input.education) } : {}),
   });
 
   return {
     branchId: branch.branchId,
+    title: content.title,
     consultantTitle: content.consultantTitle,
     presentation: content.presentation,
     summary: content.summary,
     highlightedItems: content.highlightedItems,
+    education: content.education,
   };
 }
 
