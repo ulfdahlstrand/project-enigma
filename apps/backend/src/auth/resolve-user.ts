@@ -3,17 +3,17 @@ import type { Database, User } from "../db/types.js";
 import { parseRefreshToken, hashRefreshToken } from "./refresh-token.js";
 import { createSessionRepository } from "./session-repository.js";
 import { verifyAccessToken } from "./jwt.js";
-import { verifyGoogleToken } from "./verify-google-token.js";
+import { verifyEntraToken } from "./verify-entra-token.js";
 import { upsertUser } from "./upsert-user.js";
 
 /**
  * Resolves the authenticated user from either:
  *   1. the backend-managed session cookie
  *   2. a self-issued bearer token
- *   3. a legacy Google bearer token
+ *   3. an Entra bearer token
  *
- * Cookie/session auth is preferred so the backend can transition away from
- * frontend-managed Authorization headers without breaking older clients.
+ * Cookie/session auth is preferred, but Entra bearer token verification remains
+ * available as a compatibility path for callers that still provide one.
  */
 export async function resolveUser(
   db: Kysely<Database>,
@@ -55,13 +55,13 @@ export async function resolveUser(
       .executeTakeFirst();
     return user ?? null;
   } catch {
-    // Fall through to legacy Google token verification
+    // Fall through to Entra token verification
   }
 
-  const googleUser = await verifyGoogleToken(token);
-  if (!googleUser) {
+  const entraUser = await verifyEntraToken(token);
+  if (!entraUser) {
     return null;
   }
 
-  return upsertUser(googleUser, db).catch(() => null);
+  return upsertUser(entraUser, db).catch(() => null);
 }

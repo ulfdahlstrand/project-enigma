@@ -14,7 +14,7 @@ const TEST_AUTH_ENABLED = process.env["ENABLE_TEST_AUTH"] === "true";
 
 type TestLoginBody = {
   userId?: string;
-  googleSub?: string;
+  azureOid?: string;
   email?: string;
   name?: string;
   role?: "admin" | "consultant";
@@ -22,7 +22,7 @@ type TestLoginBody = {
 
 const DEFAULT_TEST_USER = {
   id: "40000000-0000-4000-8000-000000000001",
-  googleSub: "playwright-admin-sub",
+  azureOid: "playwright-admin-oid",
   email: "playwright-admin@example.com",
   name: "Playwright Admin",
   role: "admin" as const,
@@ -52,7 +52,7 @@ export async function testLoginHandler(req: IncomingMessage, res: ServerResponse
   }
 
   const userId = body.userId ?? DEFAULT_TEST_USER.id;
-  const googleSub = body.googleSub ?? body.userId ?? DEFAULT_TEST_USER.googleSub;
+  const azureOid = body.azureOid ?? body.userId ?? DEFAULT_TEST_USER.azureOid;
   const email = body.email ?? DEFAULT_TEST_USER.email;
   const name = body.name ?? DEFAULT_TEST_USER.name;
   const role = body.role ?? DEFAULT_TEST_USER.role;
@@ -62,13 +62,15 @@ export async function testLoginHandler(req: IncomingMessage, res: ServerResponse
     .insertInto("users")
     .values({
       id: userId,
-      google_sub: googleSub,
+      google_sub: azureOid,
+      azure_oid: azureOid,
       email,
       name,
       role,
     })
     .onConflict((oc) =>
-      oc.column("google_sub").doUpdateSet({
+      oc.column("azure_oid").doUpdateSet({
+        google_sub: azureOid,
         email,
         name,
         role,

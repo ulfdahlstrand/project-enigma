@@ -7,6 +7,7 @@ import { createListEmployeesHandler } from "./list.js";
 const MOCK_USER: User = {
   id: "550e8400-e29b-41d4-a716-446655440099",
   google_sub: "google-sub-test",
+  azure_oid: "azure-oid-test",
   email: "test@example.com",
   name: "Test User",
   role: "consultant",

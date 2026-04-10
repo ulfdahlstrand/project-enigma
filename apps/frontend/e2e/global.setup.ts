@@ -15,7 +15,7 @@ export default async function globalSetup(config: FullConfig) {
   const response = await requestContext.post("/auth/test-login", {
     data: {
       userId: "40000000-0000-4000-8000-000000000001",
-      googleSub: "playwright-admin-sub",
+      azureOid: "playwright-admin-oid",
       email: "playwright-admin@example.com",
       name: "Playwright Admin",
       role: "admin",

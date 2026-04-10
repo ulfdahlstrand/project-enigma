@@ -7,8 +7,10 @@
 interface ImportMetaEnv {
   /** Base URL of the backend oRPC API. Read by orpc-client.ts. */
   readonly VITE_API_URL?: string;
-  /** Google OAuth client ID — obtain from Google Cloud Console. */
-  readonly VITE_GOOGLE_CLIENT_ID?: string;
+  /** Microsoft Entra application client ID. */
+  readonly VITE_ENTRA_CLIENT_ID?: string;
+  /** Microsoft Entra tenant ID. */
+  readonly VITE_ENTRA_TENANT_ID?: string;
   /** Port the Vite dev server listens on. Configured in vite.config.ts. */
   readonly VITE_PORT?: string;
 }

@@ -2,7 +2,7 @@
  * Root application component.
  *
  * Wires together all providers in the correct order:
- *   1. GoogleOAuthProvider -- Google OAuth; required by @react-oauth/google
+ *   1. MsalProvider        -- Microsoft Entra authentication
  *   2. AuthProvider        -- CV Tool auth context; cookie/session bootstrap
  *   3. ColorModeProvider   -- dark/light mode with system-preference fallback
  *   4. ThemeProvider       -- Material UI; supplies the MUI theme to all child components
@@ -13,7 +13,7 @@
  * i18n is initialised as a side-effect in `src/i18n/i18n.ts` (imported in main.tsx
  * before this component mounts), so no additional provider is needed here.
  */
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { MsalProvider } from "@azure/msal-react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -26,8 +26,7 @@ import { router } from "./router";
 import { AuthProvider } from "./auth/auth-context";
 import { AIAssistantProvider } from "./lib/ai-assistant-context";
 import { AIAssistantDrawer } from "./components/ai-assistant/AIAssistantDrawer";
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+import { msalInstance } from "./auth/msal-config";
 
 function ThemedApp() {
   const { mode } = useColorMode();
@@ -48,12 +47,12 @@ function ThemedApp() {
 
 export function App() {
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
+    <MsalProvider instance={msalInstance}>
       <AuthProvider>
         <ColorModeProvider>
           <ThemedApp />
         </ColorModeProvider>
       </AuthProvider>
-    </GoogleOAuthProvider>
+    </MsalProvider>
   );
 }

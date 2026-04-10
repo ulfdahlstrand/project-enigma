@@ -11,8 +11,8 @@ vi.mock("./jwt.js", () => ({
   verifyAccessToken: vi.fn(),
 }));
 
-vi.mock("./verify-google-token.js", () => ({
-  verifyGoogleToken: vi.fn(),
+vi.mock("./verify-entra-token.js", () => ({
+  verifyEntraToken: vi.fn(),
 }));
 
 vi.mock("./upsert-user.js", () => ({
@@ -21,15 +21,15 @@ vi.mock("./upsert-user.js", () => ({
 
 import { createSessionRepository } from "./session-repository.js";
 import { verifyAccessToken } from "./jwt.js";
-import { verifyGoogleToken } from "./verify-google-token.js";
+import { verifyEntraToken } from "./verify-entra-token.js";
 import { upsertUser } from "./upsert-user.js";
 
 const mockCreateSessionRepository = vi.mocked(createSessionRepository);
 const mockVerifyAccessToken = vi.mocked(verifyAccessToken);
-const mockVerifyGoogleToken = vi.mocked(verifyGoogleToken);
+const mockVerifyEntraToken = vi.mocked(verifyEntraToken);
 const mockUpsertUser = vi.mocked(upsertUser);
 
-function createDbMock(user: { id: string; email: string; name: string; role: "admin" | "consultant" } | null) {
+function createDbMock(user: { id: string; google_sub?: string; azure_oid?: string | null; email: string; name: string; role: "admin" | "consultant" } | null) {
   const executeTakeFirst = vi.fn().mockResolvedValue(user);
   const where = vi.fn().mockReturnValue({ executeTakeFirst });
   const selectAll = vi.fn().mockReturnValue({ where });
@@ -100,7 +100,7 @@ describe("resolveUser", () => {
       revokeAllUserSessions: vi.fn(),
     });
     mockVerifyAccessToken.mockRejectedValue(new Error("bad token"));
-    mockVerifyGoogleToken.mockResolvedValue(null);
+    mockVerifyEntraToken.mockResolvedValue(null);
 
     const result = await resolveUser(db, "Bearer invalid-token", undefined);
 

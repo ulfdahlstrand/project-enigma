@@ -8,26 +8,14 @@ import { AuthProvider } from "../../../auth/auth-context";
 import { resetAuthSession } from "../../../auth/session-store";
 import { Route } from "..";
 
-// ---------------------------------------------------------------------------
-// Mock @react-oauth/google — avoids needing a real client ID
-// ---------------------------------------------------------------------------
+const mockLoginPopup = vi.fn();
 
-const mockGoogleLogin = vi.fn();
-
-vi.mock("@react-oauth/google", () => ({
-  GoogleLogin: ({
-    onSuccess,
-  }: {
-    onSuccess: (resp: { credential?: string }) => void;
-    onError: () => void;
-  }) => (
-    <button
-      onClick={() => onSuccess({ credential: "mock.id.token" })}
-    >
-      Sign in with Google
-    </button>
-  ),
-  useGoogleLogin: () => mockGoogleLogin,
+vi.mock("@azure/msal-react", () => ({
+  useMsal: () => ({
+    instance: {
+      loginPopup: mockLoginPopup,
+    },
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -91,6 +79,7 @@ describe("LoginPage", () => {
   beforeEach(() => {
     resetAuthSession();
     vi.clearAllMocks();
+    mockLoginPopup.mockResolvedValue({ idToken: "mock.id.token" });
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = getRequestUrl(input);
 
@@ -120,17 +109,17 @@ describe("LoginPage", () => {
     expect(screen.getByRole("heading")).toBeInTheDocument();
   });
 
-  it("renders the Sign in with Google button", () => {
+  it("renders the Sign in with Microsoft button", () => {
     renderLogin();
     expect(
-      screen.getByRole("button", { name: /sign in with google/i })
+      screen.getByRole("button", { name: /sign in with microsoft/i })
     ).toBeInTheDocument();
   });
 
   it("navigates to /employees after successful login", async () => {
     renderLogin();
     await act(async () => {
-      screen.getByRole("button", { name: /sign in with google/i }).click();
+      screen.getByRole("button", { name: /sign in with microsoft/i }).click();
     });
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith({ to: "/employees" })
@@ -150,10 +139,9 @@ describe("LoginPage", () => {
   it("shows loading state after clicking sign in", async () => {
     renderLogin();
     await act(async () => {
-      screen.getByRole("button", { name: /sign in with google/i }).click();
+      screen.getByRole("button", { name: /sign in with microsoft/i }).click();
     });
-    // After click, the Google button should be replaced by progress indicator
-    expect(screen.queryByRole("button", { name: /sign in with google/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /sign in with microsoft/i })).toBeNull();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 });

@@ -102,7 +102,7 @@ describe("AuthProvider / useAuth", () => {
       const { login, user } = useAuth();
       return (
         <div>
-          <button onClick={() => void login("google-credential")}>login</button>
+          <button onClick={() => void login("entra-credential")}>login</button>
           <span data-testid="login-user">{user?.email ?? "null"}</span>
         </div>
       );
