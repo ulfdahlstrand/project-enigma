@@ -62,7 +62,6 @@ export async function testLoginHandler(req: IncomingMessage, res: ServerResponse
     .insertInto("users")
     .values({
       id: userId,
-      google_sub: azureOid,
       azure_oid: azureOid,
       email,
       name,
@@ -70,7 +69,6 @@ export async function testLoginHandler(req: IncomingMessage, res: ServerResponse
     })
     .onConflict((oc) =>
       oc.column("azure_oid").doUpdateSet({
-        google_sub: azureOid,
         email,
         name,
         role,

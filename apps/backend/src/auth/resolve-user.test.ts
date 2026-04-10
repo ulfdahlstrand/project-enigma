@@ -29,7 +29,7 @@ const mockVerifyAccessToken = vi.mocked(verifyAccessToken);
 const mockVerifyEntraToken = vi.mocked(verifyEntraToken);
 const mockUpsertUser = vi.mocked(upsertUser);
 
-function createDbMock(user: { id: string; google_sub?: string; azure_oid?: string | null; email: string; name: string; role: "admin" | "consultant" } | null) {
+function createDbMock(user: { id: string; azure_oid?: string | null; email: string; name: string; role: "admin" | "consultant" } | null) {
   const executeTakeFirst = vi.fn().mockResolvedValue(user);
   const where = vi.fn().mockReturnValue({ executeTakeFirst });
   const selectAll = vi.fn().mockReturnValue({ where });

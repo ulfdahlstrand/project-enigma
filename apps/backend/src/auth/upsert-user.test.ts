@@ -15,7 +15,6 @@ const ENTRA_USER = {
 
 const DB_USER: User = {
   id: "550e8400-e29b-41d4-a716-446655440000",
-  google_sub: ENTRA_USER.oid,
   azure_oid: ENTRA_USER.oid,
   email: ENTRA_USER.email,
   name: ENTRA_USER.name,
@@ -76,7 +75,6 @@ describe("upsertUser", () => {
     const valuesMock = insertIntoMock.mock.results[0]!.value.values as ReturnType<typeof vi.fn>;
     expect(valuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        google_sub: ENTRA_USER.oid,
         azure_oid: ENTRA_USER.oid,
         email: ENTRA_USER.email,
         name: ENTRA_USER.name,

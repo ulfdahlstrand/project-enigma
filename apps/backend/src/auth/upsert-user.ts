@@ -4,7 +4,7 @@ import type { AuthUser } from "./verify-entra-token.js";
 import type { Database, User } from "../db/types.js";
 
 /**
- * Upserts a user based on the Entra object id. Existing Google-era users are
+ * Upserts a user based on the Entra object id. Existing pre-Entra users are
  * linked on first Entra login by normalized email to avoid duplicate accounts.
  */
 export async function upsertUser(
@@ -54,7 +54,6 @@ export async function upsertUser(
   return db
     .insertInto("users")
     .values({
-      google_sub: entraUser.oid,
       azure_oid: entraUser.oid,
       email: entraUser.email,
       name: entraUser.name,
