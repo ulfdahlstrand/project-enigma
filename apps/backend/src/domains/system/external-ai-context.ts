@@ -2,7 +2,19 @@ import { implement } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { ExternalAIScope } from "@cv-tool/contracts";
 import { requireScope, type AuthContext } from "../../auth/require-auth.js";
-import { EXTERNAL_AI_CONTEXT_SCOPE } from "../../auth/external-ai-tokens.js";
+import {
+  EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE,
+  EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE,
+  EXTERNAL_AI_BRANCH_SKILL_WRITE_SCOPE,
+  EXTERNAL_AI_CONTEXT_SCOPE,
+  EXTERNAL_AI_EDUCATION_READ_SCOPE,
+  EXTERNAL_AI_EDUCATION_WRITE_SCOPE,
+  EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE,
+  EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE,
+  EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE,
+  EXTERNAL_AI_RESUME_COMMIT_WRITE_SCOPE,
+  EXTERNAL_AI_RESUME_READ_SCOPE,
+} from "../../auth/external-ai-tokens.js";
 
 const SHARED_GUIDANCE = [
   {
@@ -65,10 +77,30 @@ const SUPPORTED_RESUME_SECTIONS = [
   "education",
 ] as const;
 
+const ALLOWED_ROUTES = [
+  { method: "GET", path: "/external-ai/context", requiredScope: EXTERNAL_AI_CONTEXT_SCOPE, purpose: "Fetch the external AI workflow, scopes, and editing guidance." },
+  { method: "GET", path: "/resumes/{resumeId}", requiredScope: EXTERNAL_AI_RESUME_READ_SCOPE, purpose: "Read a resume with its current snapshot-backed content." },
+  { method: "GET", path: "/resumes/{resumeId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "List available branches for a resume." },
+  { method: "POST", path: "/resume-commits/{fromCommitId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE, purpose: "Create a new branch from an existing commit." },
+  { method: "GET", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "List commits on a branch." },
+  { method: "GET", path: "/resume-commits/{commitId}", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Read a specific commit snapshot." },
+  { method: "POST", path: "/resume-commits/compare", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Compare two commits." },
+  { method: "POST", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_WRITE_SCOPE, purpose: "Create a new commit on a branch." },
+  { method: "GET", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE, purpose: "List branch-scoped assignment content." },
+  { method: "POST", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE, purpose: "Add a branch-scoped assignment entry." },
+  { method: "PATCH", path: "/branch-assignments/{id}", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE, purpose: "Update an existing branch-scoped assignment." },
+  { method: "DELETE", path: "/branch-assignments/{id}", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE, purpose: "Remove a branch-scoped assignment." },
+  { method: "PATCH", path: "/resume-branches/{branchId}/skills", requiredScope: EXTERNAL_AI_BRANCH_SKILL_WRITE_SCOPE, purpose: "Replace the branch-scoped skills and skill groups snapshot." },
+  { method: "GET", path: "/employees/{employeeId}/education", requiredScope: EXTERNAL_AI_EDUCATION_READ_SCOPE, purpose: "List education entries for an employee." },
+  { method: "POST", path: "/employees/{employeeId}/education", requiredScope: EXTERNAL_AI_EDUCATION_WRITE_SCOPE, purpose: "Create an education entry." },
+  { method: "PATCH", path: "/employees/{employeeId}/education/{id}", requiredScope: EXTERNAL_AI_EDUCATION_WRITE_SCOPE, purpose: "Update an education entry." },
+  { method: "DELETE", path: "/employees/{employeeId}/education/{id}", requiredScope: EXTERNAL_AI_EDUCATION_WRITE_SCOPE, purpose: "Delete an education entry." },
+] as const;
+
 export function getExternalAIContext(context: AuthContext) {
   requireScope(context, EXTERNAL_AI_CONTEXT_SCOPE);
-  const scopes: ExternalAIScope[] = context.externalAI?.scopes.includes(EXTERNAL_AI_CONTEXT_SCOPE)
-    ? [EXTERNAL_AI_CONTEXT_SCOPE]
+  const scopes: ExternalAIScope[] = context.externalAI?.scopes?.length
+    ? context.externalAI.scopes.filter((scope): scope is ExternalAIScope => typeof scope === "string")
     : [EXTERNAL_AI_CONTEXT_SCOPE];
 
   return {
@@ -88,6 +120,9 @@ export function getExternalAIContext(context: AuthContext) {
       type: "external_api_revision" as const,
       steps: [...WORKFLOW_STEPS],
     },
+    allowedRoutes: ALLOWED_ROUTES
+      .filter((route) => scopes.includes(route.requiredScope))
+      .map((route) => ({ ...route })),
     sharedGuidance: [...SHARED_GUIDANCE],
     safetyGuidance: [...SAFETY_GUIDANCE],
     supportedResumeSections: [...SUPPORTED_RESUME_SECTIONS],

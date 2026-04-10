@@ -24,6 +24,7 @@ const mockCreateAuthorization = orpc.createExternalAIAuthorization as ReturnType
 const mockRevokeAuthorization = orpc.revokeExternalAIAuthorization as ReturnType<typeof vi.fn>;
 
 const ExternalAIPage = Route.options.component as React.ComponentType;
+const writeTextMock = vi.fn();
 
 function buildI18n() {
   const instance = i18n.createInstance();
@@ -57,6 +58,12 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("navigator", {
+    clipboard: {
+      writeText: writeTextMock,
+    },
+  });
+  writeTextMock.mockResolvedValue(undefined);
   mockListClients.mockResolvedValue({
     clients: [
       {
@@ -137,6 +144,26 @@ describe("External AI connections page", () => {
       clientKey: "anthropic_claude",
       title: "Claude desktop",
     });
+  });
+
+  it("copies Claude instructions including challenge details", async () => {
+    renderPage();
+    await screen.findByLabelText("External client");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create connection" }));
+    await screen.findByText(/One-time connection created for Anthropic Claude/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy Claude instructions" }));
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+    });
+
+    const copied = writeTextMock.mock.calls[0]?.[0] as string;
+    expect(copied).toContain("challengeId: challenge-1");
+    expect(copied).toContain("challengeCode: secret-code");
+    expect(copied).toContain("POST /auth/external-ai/token");
+    expect(await screen.findByText("Claude instructions copied.")).toBeInTheDocument();
   });
 
   it("revokes an authorization", async () => {

@@ -90,6 +90,13 @@ export const externalAIContextEntrySchema = z.object({
   content: z.string().min(1),
 });
 
+export const externalAIAllowedRouteSchema = z.object({
+  method: z.enum(["GET", "POST", "PATCH", "DELETE"]),
+  path: z.string().min(1),
+  requiredScope: externalAIScopeSchema,
+  purpose: z.string().min(1),
+});
+
 export const getExternalAIContextInputSchema = z.object({});
 
 export const getExternalAIContextOutputSchema = z.object({
@@ -101,6 +108,7 @@ export const getExternalAIContextOutputSchema = z.object({
     type: z.literal("external_api_revision"),
     steps: z.array(z.string().min(1)),
   }),
+  allowedRoutes: z.array(externalAIAllowedRouteSchema),
   sharedGuidance: z.array(externalAIContextEntrySchema),
   safetyGuidance: z.array(externalAIContextEntrySchema),
   supportedResumeSections: z.array(z.string().min(1)),
@@ -120,5 +128,6 @@ export type ExchangeExternalAILoginChallengeOutput = z.infer<typeof exchangeExte
 export type RevokeExternalAIAuthorizationInput = z.infer<typeof revokeExternalAIAuthorizationInputSchema>;
 export type RevokeExternalAIAuthorizationOutput = z.infer<typeof revokeExternalAIAuthorizationOutputSchema>;
 export type ExternalAIContextEntry = z.infer<typeof externalAIContextEntrySchema>;
+export type ExternalAIAllowedRoute = z.infer<typeof externalAIAllowedRouteSchema>;
 export type GetExternalAIContextInput = z.infer<typeof getExternalAIContextInputSchema>;
 export type GetExternalAIContextOutput = z.infer<typeof getExternalAIContextOutputSchema>;

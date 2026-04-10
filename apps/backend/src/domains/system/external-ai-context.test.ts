@@ -18,8 +18,10 @@ describe("getExternalAIContext", () => {
     const result = getExternalAIContext(CONTEXT);
     expect(result.guidanceVersion).toBe("external-ai-context-v1");
     expect(result.client).toBeNull();
+    expect(result.scopes).toEqual(["ai:context:read"]);
     expect(result.sharedGuidance.map((entry) => entry.key)).toContain("same-language");
     expect(result.supportedResumeSections).toContain("assignments");
+    expect(result.allowedRoutes).toHaveLength(1);
   });
 
   it("includes the connected client when called through an external ai token", () => {
@@ -32,12 +34,14 @@ describe("getExternalAIContext", () => {
         clientKey: "anthropic_claude",
         clientTitle: "Anthropic Claude",
         clientDescription: "Claude client",
-        scopes: ["ai:context:read"],
+        scopes: ["ai:context:read", "resume:read", "resume-commit:read"],
       },
     });
 
     expect(result.client?.key).toBe("anthropic_claude");
-    expect(result.scopes).toEqual(["ai:context:read"]);
+    expect(result.scopes).toEqual(["ai:context:read", "resume:read", "resume-commit:read"]);
+    expect(result.allowedRoutes.map((route) => route.path)).toContain("/resumes/{resumeId}");
+    expect(result.allowedRoutes.map((route) => route.path)).toContain("/resume-commits/{commitId}");
   });
 
   it("throws FORBIDDEN when an external token lacks context scope", () => {

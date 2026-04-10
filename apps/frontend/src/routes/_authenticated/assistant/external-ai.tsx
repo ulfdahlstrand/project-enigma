@@ -17,6 +17,12 @@ import { PageContent } from "../../../components/layout/PageContent";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { orpc } from "../../../orpc-client";
 
+const rawApiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
+const resolvedApiUrl =
+  typeof window !== "undefined" && rawApiUrl.startsWith("/")
+    ? new URL(rawApiUrl, window.location.origin).toString()
+    : rawApiUrl;
+
 export const Route = createFileRoute("/_authenticated/assistant/external-ai")({
   component: ExternalAIConnectionsPage,
 });
@@ -29,6 +35,7 @@ function ExternalAIConnectionsPage() {
   const queryClient = useQueryClient();
   const [selectedClientKey, setSelectedClientKey] = useState("");
   const [title, setTitle] = useState("");
+  const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
   const [latestChallenge, setLatestChallenge] = useState<null | {
     authorizationId: string;
     challengeId: string;
@@ -75,6 +82,7 @@ function ExternalAIConnectionsPage() {
         scopes: response.scopes,
         clientTitle: response.client.title,
       });
+      setCopyState("idle");
       setTitle("");
       await queryClient.invalidateQueries({ queryKey: AUTHORIZATIONS_QUERY_KEY });
     },
@@ -94,6 +102,54 @@ function ExternalAIConnectionsPage() {
     () => authorizationsQuery.data?.authorizations ?? [],
     [authorizationsQuery.data?.authorizations],
   );
+
+  const latestChallengeInstructions = useMemo(() => {
+    if (!latestChallenge) return "";
+
+    return [
+      "Connect to the external AI API for this project.",
+      "",
+      "Base URL:",
+      resolvedApiUrl,
+      "",
+      "Use this one-time login challenge:",
+      `challengeId: ${latestChallenge.challengeId}`,
+      `challengeCode: ${latestChallenge.challengeCode}`,
+      "",
+      "First exchange the challenge with:",
+      "POST /auth/external-ai/token",
+      "",
+      "Then use the returned bearer token to:",
+      "1. call GET /external-ai/context",
+      "2. inspect the returned scopes and allowedRoutes",
+      "3. use only the allowed resume revision routes exposed by that token",
+      "",
+      "Typical allowed route families include:",
+      "- GET /resumes/{resumeId}",
+      "- GET /resumes/{resumeId}/branches",
+      "- POST /resume-commits/{fromCommitId}/branches",
+      "- GET /resume-branches/{branchId}/commits",
+      "- GET /resume-commits/{commitId}",
+      "- POST /resume-commits/compare",
+      "- POST /resume-branches/{branchId}/commits",
+      "- GET/POST/PATCH/DELETE assignment routes when those scopes are present",
+      "- GET/POST/PATCH/DELETE education routes when those scopes are present",
+      "- PATCH /resume-branches/{branchId}/skills when that scope is present",
+      "",
+      "Do not use any internal-only routes. Start by fetching /external-ai/context and summarize the available workflow and scopes before making any edits.",
+    ].join("\n");
+  }, [latestChallenge]);
+
+  const handleCopyInstructions = async () => {
+    if (!latestChallengeInstructions) return;
+
+    try {
+      await navigator.clipboard.writeText(latestChallengeInstructions);
+      setCopyState("success");
+    } catch {
+      setCopyState("error");
+    }
+  };
 
   if (clientsQuery.isLoading || authorizationsQuery.isLoading) {
     return <LoadingState label={t("externalAIConnections.loading")} />;
@@ -176,6 +232,21 @@ function ExternalAIConnectionsPage() {
                     <Chip key={scope} label={scope} size="small" variant="outlined" />
                   ))}
                 </Stack>
+                <Box>
+                  <Button variant="outlined" onClick={() => void handleCopyInstructions()}>
+                    {t("externalAIConnections.copyInstructionsButton")}
+                  </Button>
+                </Box>
+                {copyState === "success" && (
+                  <Typography variant="body2" color="success.main">
+                    {t("externalAIConnections.copyInstructionsSuccess")}
+                  </Typography>
+                )}
+                {copyState === "error" && (
+                  <Typography variant="body2" color="error.main">
+                    {t("externalAIConnections.copyInstructionsError")}
+                  </Typography>
+                )}
               </Stack>
             </Alert>
           )}
