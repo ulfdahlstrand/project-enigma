@@ -29,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { labelKey: "nav.aiPromptInventory", to: "/admin" },
+  { labelKey: "nav.aiPromptInventory", to: "/admin/assistant/prompts" },
 ];
 
 export function NavigationMenu() {

@@ -2,8 +2,19 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Route } from "../index";
+import { Route } from "../assistant/prompts/index";
 import { renderWithProviders } from "../../../../test-utils/render";
+
+const mockNavigate = vi.fn();
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock("../../../../orpc-client", () => ({
   orpc: {
@@ -17,6 +28,7 @@ import { orpc } from "../../../../orpc-client";
 const mockListAIPromptConfigs = orpc.listAIPromptConfigs as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  mockNavigate.mockReset();
   mockListAIPromptConfigs.mockResolvedValue({
     categories: [
       {
@@ -31,7 +43,6 @@ beforeEach(() => {
             key: "frontend.assignment-assistant",
             title: "Assignment assistant",
             description: "Prompt for assignment improvements",
-            sourceFile: "apps/frontend/src/components/ai-assistant/lib/build-assignment-prompt.ts",
             isEditable: true,
             sortOrder: 0,
             fragments: [
@@ -49,7 +60,6 @@ beforeEach(() => {
             key: "backend.conversation-title",
             title: "Conversation title generator",
             description: "Prompt for short titles",
-            sourceFile: "apps/backend/src/domains/ai/lib/generate-title.ts",
             isEditable: true,
             sortOrder: 1,
             fragments: [
@@ -69,7 +79,7 @@ beforeEach(() => {
 });
 
 describe("admin prompt inventory page", () => {
-  it("renders the live prompt inventory overview", async () => {
+  it("renders the prompt overview as a list of categories and entries", async () => {
     const Component = Route.options.component as ComponentType;
 
     renderWithProviders(<Component />);
@@ -79,12 +89,13 @@ describe("admin prompt inventory page", () => {
     });
 
     expect(screen.getByRole("heading", { name: "AI Prompt Configuration" })).toBeInTheDocument();
-    expect(screen.getAllByText(/System function:/)).not.toHaveLength(0);
     expect(screen.getByText("Prompt for assignment improvements")).toBeInTheDocument();
-    expect(screen.getByText("Key cross-cutting rules")).toBeInTheDocument();
+    expect(screen.getByText("Assignment assistant")).toBeInTheDocument();
+    expect(screen.getByText("Conversation title generator")).toBeInTheDocument();
+    expect(screen.getAllByText("Editable")).toHaveLength(2);
   });
 
-  it("filters prompt locations by search text", async () => {
+  it("filters prompts by their system function", async () => {
     const user = userEvent.setup();
     const Component = Route.options.component as ComponentType;
 
@@ -96,10 +107,29 @@ describe("admin prompt inventory page", () => {
 
     await user.type(
       screen.getByRole("textbox", { name: "Search prompt functions" }),
-      "generate-title",
+      "short titles",
     );
 
-    expect(screen.getByText("Conversation title generator")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Conversation title generator")).toBeInTheDocument();
+    });
     expect(screen.queryByText("Assignment assistant")).not.toBeInTheDocument();
+  });
+
+  it("navigates to the prompt detail page when a row is clicked", async () => {
+    const user = userEvent.setup();
+    const Component = Route.options.component as ComponentType;
+
+    renderWithProviders(<Component />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Assignment assistant")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /Assignment assistant/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/admin/assistant/prompts/prompt-1",
+    });
   });
 });

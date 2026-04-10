@@ -6,8 +6,8 @@
  *   - Clicking it calls openAssistant with correct entity info, system prompt, and callbacks
  *   - Does NOT render inline preview states (those are handled inside the panel)
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi, afterEach } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import enCommon from "../../locales/en/common.json";
@@ -19,6 +19,7 @@ import { ImproveDescriptionButton } from "../ImproveDescriptionButton";
 // ---------------------------------------------------------------------------
 
 const mockOpenAssistant = vi.fn();
+const mockLoadPromptFragments = vi.fn();
 
 vi.mock("../../lib/ai-assistant-context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/ai-assistant-context")>();
@@ -32,8 +33,19 @@ vi.mock("../../lib/ai-assistant-context", async (importOriginal) => {
   };
 });
 
+vi.mock("../../features/admin/prompt-config-client", () => ({
+  loadPromptFragments: (...args: unknown[]) => mockLoadPromptFragments(...args),
+}));
+
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  mockLoadPromptFragments.mockResolvedValue({
+    system_template: "Current description: {{description}}",
+    kickoff_message: "Improve the assignment description.",
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -88,7 +100,9 @@ describe("ImproveDescriptionButton", () => {
       screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
-    expect(mockOpenAssistant).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(mockOpenAssistant).toHaveBeenCalledOnce();
+    });
     const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(args.entityType).toBe("assignment");
     expect(args.entityId).toBe(ASSIGNMENT_ID);
@@ -102,6 +116,9 @@ describe("ImproveDescriptionButton", () => {
       screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
+    await waitFor(() => {
+      expect(mockOpenAssistant).toHaveBeenCalledOnce();
+    });
     const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(args.originalContent).toBe("Some original text.");
   });
@@ -115,6 +132,9 @@ describe("ImproveDescriptionButton", () => {
       screen.getByRole("button", { name: new RegExp(enCommon.assignment.detail.ai.improveButton) })
     );
 
+    await waitFor(() => {
+      expect(mockOpenAssistant).toHaveBeenCalledOnce();
+    });
     const args = mockOpenAssistant.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(typeof args.onAccept).toBe("function");
     (args.onAccept as (text: string) => void)("improved text");
