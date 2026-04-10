@@ -407,6 +407,7 @@ export interface AssignmentRevisionTable {
   role: string;
   description: Generated<string>;
   technologies: ColumnType<string[], string[], string[]>;
+  keywords: string | null;
   start_date: Date;
   end_date: Date | null;
   is_current: Generated<boolean>;
