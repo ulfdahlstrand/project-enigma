@@ -10,4 +10,8 @@ export {
   exchangeExternalAILoginChallengeHandler,
   revokeExternalAIAuthorization,
   revokeExternalAIAuthorizationHandler,
+  refreshExternalAIAccessToken,
+  refreshExternalAIAccessTokenHandler,
+  deleteExternalAIAuthorization,
+  deleteExternalAIAuthorizationHandler,
 } from "./external-ai.js";

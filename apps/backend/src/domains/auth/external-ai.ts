@@ -7,12 +7,15 @@ import { getDb } from "../../db/client.js";
 import { requireAuth, type AuthContext } from "../../auth/require-auth.js";
 import {
   DEFAULT_EXTERNAL_AI_SCOPES,
+  EXTERNAL_AI_DEFAULT_DURATION,
   externalAIAccessTokenExpiresAt,
   externalAIAuthorizationExpiresAt,
   externalAIChallengeExpiresAt,
   generateExternalAIAccessToken,
   generateExternalAIChallengeCode,
+  generateExternalAIRefreshToken,
   hashExternalAISecret,
+  type ExternalAIDuration,
 } from "../../auth/external-ai-tokens.js";
 
 type ExternalAIClientRow = {
@@ -94,7 +97,7 @@ export async function listExternalAIAuthorizations(
 export async function createExternalAIAuthorization(
   db: Kysely<Database>,
   userId: string,
-  input: { clientKey: string; title?: string | null; scopes?: ExternalAIScope[] },
+  input: { clientKey: string; title?: string | null; scopes?: ExternalAIScope[]; duration?: ExternalAIDuration },
 ) {
   const client = await db
     .selectFrom("external_ai_clients")
@@ -115,10 +118,11 @@ export async function createExternalAIAuthorization(
   }
 
   const scopes: ExternalAIScope[] = [...new Set(requestedScopes)];
+  const duration = input.duration ?? EXTERNAL_AI_DEFAULT_DURATION;
   const challengeCode = generateExternalAIChallengeCode();
   const challengeExpiresAt = externalAIChallengeExpiresAt();
   const accessTokenExpiresAt = externalAIAccessTokenExpiresAt();
-  const authorizationExpiresAt = externalAIAuthorizationExpiresAt();
+  const authorizationExpiresAt = externalAIAuthorizationExpiresAt(duration);
 
   const authorization = await db
     .insertInto("external_ai_authorizations")
@@ -203,7 +207,10 @@ export async function exchangeExternalAILoginChallenge(
   )];
 
   const rawAccessToken = generateExternalAIAccessToken();
+  const rawRefreshToken = generateExternalAIRefreshToken();
   const accessTokenExpiresAt = externalAIAccessTokenExpiresAt();
+  // Refresh token is valid until the authorization itself expires
+  const refreshTokenExpiresAt = challenge.authorizationExpiresAt;
 
   await Promise.all([
     db
@@ -211,6 +218,7 @@ export async function exchangeExternalAILoginChallenge(
       .values({
         authorization_id: challenge.authorizationId,
         token_hash: hashExternalAISecret(rawAccessToken),
+        refresh_token_hash: hashExternalAISecret(rawRefreshToken),
         scopes,
         expires_at: accessTokenExpiresAt,
       })
@@ -230,6 +238,8 @@ export async function exchangeExternalAILoginChallenge(
   return {
     accessToken: rawAccessToken,
     expiresAt: accessTokenExpiresAt.toISOString(),
+    refreshToken: rawRefreshToken,
+    refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString(),
     scopes,
     authorizationId: challenge.authorizationId,
     client: {
@@ -283,6 +293,106 @@ export async function revokeExternalAIAuthorization(
   return { success: true as const };
 }
 
+export async function refreshExternalAIAccessToken(
+  db: Kysely<Database>,
+  input: { refreshToken: string },
+) {
+  const now = new Date();
+  const tokenHash = hashExternalAISecret(input.refreshToken);
+
+  const token = await db
+    .selectFrom("external_ai_access_tokens as t")
+    .innerJoin("external_ai_authorizations as a", "a.id", "t.authorization_id")
+    .select([
+      "t.id as tokenId",
+      "t.scopes as scopes",
+      "t.revoked_at as tokenRevokedAt",
+      "a.id as authorizationId",
+      "a.status as authorizationStatus",
+      "a.expires_at as authorizationExpiresAt",
+      "a.revoked_at as authorizationRevokedAt",
+    ])
+    .where("t.refresh_token_hash", "=", tokenHash)
+    .executeTakeFirst();
+
+  if (!token) {
+    throw new ORPCError("UNAUTHORIZED", { message: "Invalid refresh token" });
+  }
+
+  if (token.tokenRevokedAt || token.authorizationRevokedAt) {
+    throw new ORPCError("UNAUTHORIZED", { message: "Refresh token has been revoked" });
+  }
+
+  if (token.authorizationExpiresAt <= now || token.authorizationStatus === "expired") {
+    throw new ORPCError("UNAUTHORIZED", { message: "Authorization has expired" });
+  }
+
+  const scopes = token.scopes.filter((s): s is ExternalAIScope => typeof s === "string");
+  const rawAccessToken = generateExternalAIAccessToken();
+  const accessTokenExpiresAt = externalAIAccessTokenExpiresAt();
+
+  await Promise.all([
+    db
+      .insertInto("external_ai_access_tokens")
+      .values({
+        authorization_id: token.authorizationId,
+        token_hash: hashExternalAISecret(rawAccessToken),
+        refresh_token_hash: null,
+        scopes,
+        expires_at: accessTokenExpiresAt,
+      })
+      .execute(),
+    db
+      .updateTable("external_ai_authorizations")
+      .set({ last_used_at: now, updated_at: now })
+      .where("id", "=", token.authorizationId)
+      .execute(),
+  ]);
+
+  return {
+    accessToken: rawAccessToken,
+    expiresAt: accessTokenExpiresAt.toISOString(),
+    scopes,
+  };
+}
+
+export async function deleteExternalAIAuthorization(
+  db: Kysely<Database>,
+  userId: string,
+  authorizationId: string,
+) {
+  const authorization = await db
+    .selectFrom("external_ai_authorizations")
+    .select(["id", "user_id", "status", "revoked_at", "expires_at"])
+    .where("id", "=", authorizationId)
+    .executeTakeFirst();
+
+  if (!authorization) {
+    throw new ORPCError("NOT_FOUND", { message: "External AI authorization not found" });
+  }
+
+  if (authorization.user_id !== userId) {
+    throw new ORPCError("FORBIDDEN");
+  }
+
+  const now = new Date();
+  const isRevoked = authorization.status === "revoked" || authorization.revoked_at !== null;
+  const isExpired = authorization.expires_at <= now || authorization.status === "expired";
+
+  if (!isRevoked && !isExpired) {
+    throw new ORPCError("CONFLICT", {
+      message: "Active authorizations must be revoked before deletion",
+    });
+  }
+
+  await db
+    .deleteFrom("external_ai_authorizations")
+    .where("id", "=", authorizationId)
+    .execute();
+
+  return { success: true as const };
+}
+
 export const listExternalAIClientsHandler = implement(contract.listExternalAIClients).handler(
   async ({ context }) => {
     requireAuth(context as AuthContext);
@@ -304,6 +414,7 @@ export const createExternalAIAuthorizationHandler = implement(contract.createExt
       clientKey: input.clientKey,
       title: input.title ?? null,
       ...(input.scopes ? { scopes: input.scopes } : {}),
+      ...(input.duration ? { duration: input.duration } : {}),
     });
   },
 );
@@ -316,5 +427,16 @@ export const revokeExternalAIAuthorizationHandler = implement(contract.revokeExt
   async ({ input, context }) => {
     const user = requireAuth(context as AuthContext);
     return revokeExternalAIAuthorization(getDb(), user.id, input.authorizationId);
+  },
+);
+
+export const refreshExternalAIAccessTokenHandler = implement(contract.refreshExternalAIAccessToken).handler(
+  async ({ input }) => refreshExternalAIAccessToken(getDb(), input),
+);
+
+export const deleteExternalAIAuthorizationHandler = implement(contract.deleteExternalAIAuthorization).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return deleteExternalAIAuthorization(getDb(), user.id, input.authorizationId);
   },
 );

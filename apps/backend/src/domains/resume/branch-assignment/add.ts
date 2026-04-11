@@ -17,13 +17,18 @@ type AddBranchAssignmentOutput = z.infer<typeof addBranchAssignmentOutputSchema>
 export async function addBranchAssignment(
   db: Kysely<Database>,
   user: AuthUser,
-  input: AddBranchAssignmentInput
+  input: AddBranchAssignmentInput,
+  expectedResumeId?: string,
 ): Promise<AddBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   const branch = await readBranchAssignmentContent(db, input.branchId);
 
   if (branch === null) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  if (expectedResumeId && branch.resumeId !== expectedResumeId) {
     throw new ORPCError("NOT_FOUND");
   }
 
@@ -94,6 +99,13 @@ export const addBranchAssignmentHandler = implement(contract.addBranchAssignment
     const user = requireAuth(context as AuthContext);
     return addBranchAssignment(getDb(), user, input);
   }
+);
+
+export const addResumeBranchAssignmentHandler = implement(contract.addResumeBranchAssignment).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return addBranchAssignment(getDb(), user, input, input.resumeId);
+  },
 );
 
 export function createAddBranchAssignmentHandler(db: Kysely<Database>) {

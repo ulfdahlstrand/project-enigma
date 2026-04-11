@@ -1,5 +1,6 @@
 export { createResumeHandler } from "./resume/create.js";
 export { getResumeHandler } from "./resume/get.js";
+export { getResumeBranchHandler } from "./branch/get.js";
 export { listResumesHandler } from "./resume/list.js";
 export { updateResumeHandler } from "./resume/update.js";
 export { deleteResumeHandler } from "./resume/delete.js";
@@ -15,8 +16,11 @@ export { getResumeCommitHandler } from "./commit/get.js";
 export { listResumeCommitsHandler } from "./commit/list.js";
 export { compareResumeCommitsHandler } from "./commit/compare.js";
 export { addBranchAssignmentHandler } from "./branch-assignment/add.js";
+export { addResumeBranchAssignmentHandler } from "./branch-assignment/add.js";
 export { removeBranchAssignmentHandler } from "./branch-assignment/remove.js";
+export { removeResumeBranchAssignmentHandler } from "./branch-assignment/remove.js";
 export { updateBranchAssignmentHandler } from "./branch-assignment/update.js";
+export { updateResumeBranchAssignmentHandler } from "./branch-assignment/update.js";
 export { listBranchAssignmentsHandler } from "./branch-assignment/list.js";
 export { listBranchAssignmentsFullHandler } from "./branch-assignment/list-full.js";
 export { createAssignmentHandler } from "./branch-assignment/create.js";

@@ -17,13 +17,18 @@ type RemoveBranchAssignmentOutput = z.infer<typeof removeBranchAssignmentOutputS
 export async function removeBranchAssignment(
   db: Kysely<Database>,
   user: AuthUser,
-  input: RemoveBranchAssignmentInput
+  input: RemoveBranchAssignmentInput,
+  expectedResumeId?: string,
 ): Promise<RemoveBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   const branch = await readBranchAssignmentContent(db, input.branchId);
 
   if (branch === null) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  if (expectedResumeId && branch.resumeId !== expectedResumeId) {
     throw new ORPCError("NOT_FOUND");
   }
 
@@ -54,6 +59,13 @@ export const removeBranchAssignmentHandler = implement(contract.removeBranchAssi
     const user = requireAuth(context as AuthContext);
     return removeBranchAssignment(getDb(), user, input);
   }
+);
+
+export const removeResumeBranchAssignmentHandler = implement(contract.removeResumeBranchAssignment).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return removeBranchAssignment(getDb(), user, input, input.resumeId);
+  },
 );
 
 export function createRemoveBranchAssignmentHandler(db: Kysely<Database>) {

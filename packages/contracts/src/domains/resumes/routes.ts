@@ -4,6 +4,8 @@ import {
   listResumesOutputSchema,
   getResumeInputSchema,
   getResumeOutputSchema,
+  getResumeBranchInputSchema,
+  getResumeBranchOutputSchema,
   createResumeInputSchema,
   createResumeOutputSchema,
   updateResumeInputSchema,
@@ -21,6 +23,10 @@ export const resumeRoutes = {
     .route({ method: "GET", path: "/resumes/{id}" })
     .input(getResumeInputSchema)
     .output(getResumeOutputSchema),
+  getResumeBranch: oc
+    .route({ method: "GET", path: "/resumes/{resumeId}/branches/{branchId}" })
+    .input(getResumeBranchInputSchema)
+    .output(getResumeBranchOutputSchema),
   createResume: oc
     .route({ method: "POST", path: "/resumes" })
     .input(createResumeInputSchema)

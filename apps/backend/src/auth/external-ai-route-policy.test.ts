@@ -9,6 +9,7 @@ describe("getRequiredExternalAIScope", () => {
   it("maps read routes to read scopes", () => {
     expect(getRequiredExternalAIScope("GET", "/resumes/123")).toBe("resume:read");
     expect(getRequiredExternalAIScope("GET", "/resumes/123/branches")).toBe("resume-branch:read");
+    expect(getRequiredExternalAIScope("GET", "/resumes/123/branches/456")).toBe("resume-branch:read");
     expect(getRequiredExternalAIScope("GET", "/resume-branches/123/commits")).toBe("resume-commit:read");
     expect(getRequiredExternalAIScope("GET", "/resume-commits/123")).toBe("resume-commit:read");
     expect(getRequiredExternalAIScope("POST", "/resume-commits/compare")).toBe("resume-commit:read");
@@ -21,8 +22,11 @@ describe("getRequiredExternalAIScope", () => {
     expect(getRequiredExternalAIScope("PATCH", "/resume-branches/123/content")).toBe("resume-branch:write");
     expect(getRequiredExternalAIScope("POST", "/resume-branches/123/commits")).toBe("resume-commit:write");
     expect(getRequiredExternalAIScope("POST", "/resume-branches/123/assignments")).toBe("branch-assignment:write");
+    expect(getRequiredExternalAIScope("POST", "/resumes/123/branches/456/assignments")).toBe("branch-assignment:write");
     expect(getRequiredExternalAIScope("PATCH", "/branch-assignments/123")).toBe("branch-assignment:write");
     expect(getRequiredExternalAIScope("DELETE", "/branch-assignments/123")).toBe("branch-assignment:write");
+    expect(getRequiredExternalAIScope("PATCH", "/resumes/123/branches/456/assignments/789")).toBe("branch-assignment:write");
+    expect(getRequiredExternalAIScope("DELETE", "/resumes/123/branches/456/assignments/789")).toBe("branch-assignment:write");
     expect(getRequiredExternalAIScope("PATCH", "/resume-branches/123/skills")).toBe("branch-skill:write");
     expect(getRequiredExternalAIScope("POST", "/employees/123/education")).toBe("education:write");
     expect(getRequiredExternalAIScope("PATCH", "/employees/123/education/456")).toBe("education:write");

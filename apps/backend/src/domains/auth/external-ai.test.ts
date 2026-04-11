@@ -3,9 +3,11 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../db/types.js";
 import {
   createExternalAIAuthorization,
+  deleteExternalAIAuthorization,
   exchangeExternalAILoginChallenge,
   listExternalAIAuthorizations,
   listExternalAIClients,
+  refreshExternalAIAccessToken,
   revokeExternalAIAuthorization,
 } from "./external-ai.js";
 
@@ -24,11 +26,13 @@ vi.mock("../../auth/external-ai-tokens.js", () => ({
     "education:write",
   ],
   EXTERNAL_AI_CONTEXT_SCOPE: "ai:context:read",
-  externalAIAccessTokenExpiresAt: vi.fn(() => new Date("2026-04-10T12:00:00Z")),
-  externalAIAuthorizationExpiresAt: vi.fn(() => new Date("2026-05-10T12:00:00Z")),
-  externalAIChallengeExpiresAt: vi.fn(() => new Date("2026-04-10T10:10:00Z")),
+  EXTERNAL_AI_DEFAULT_DURATION: "8h",
+  externalAIAccessTokenExpiresAt: vi.fn(() => new Date("2026-04-11T12:00:00Z")),
+  externalAIAuthorizationExpiresAt: vi.fn(() => new Date("2026-04-11T20:00:00Z")),
+  externalAIChallengeExpiresAt: vi.fn(() => new Date("2026-04-11T10:10:00Z")),
   generateExternalAIAccessToken: vi.fn(() => "eai_token"),
   generateExternalAIChallengeCode: vi.fn(() => "challenge-code"),
+  generateExternalAIRefreshToken: vi.fn(() => "eair_refresh_token"),
   hashExternalAISecret: vi.fn((value: string) => `hash:${value}`),
 }));
 
@@ -110,6 +114,35 @@ function buildExchangeDb(existing: unknown) {
   const updateTable = vi.fn().mockReturnValue({ set });
 
   return { selectFrom, insertInto: vi.fn().mockReturnValue({ values: insertValues }), updateTable } as unknown as Kysely<Database>;
+}
+
+function buildRefreshDb(existing: unknown) {
+  const executeTakeFirst = vi.fn().mockResolvedValue(existing);
+  const where = vi.fn().mockReturnValue({ executeTakeFirst });
+  const select = vi.fn().mockReturnValue({ where });
+  const innerJoin = vi.fn().mockReturnValue({ select });
+  const selectFrom = vi.fn().mockReturnValue({ innerJoin });
+
+  const insertExecute = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn().mockReturnValue({ execute: insertExecute });
+
+  const executeUpdate = vi.fn().mockResolvedValue(undefined);
+  const whereUpdate = vi.fn().mockReturnValue({ execute: executeUpdate });
+  const set = vi.fn().mockReturnValue({ where: whereUpdate });
+  const updateTable = vi.fn().mockReturnValue({ set });
+
+  return { selectFrom, insertInto: vi.fn().mockReturnValue({ values: insertValues }), updateTable } as unknown as Kysely<Database>;
+}
+
+function buildDeleteDb(existing: unknown) {
+  const executeTakeFirst = vi.fn().mockResolvedValue(existing);
+  const where = vi.fn().mockReturnValue({ executeTakeFirst, execute: vi.fn().mockResolvedValue(undefined) });
+  const select = vi.fn().mockReturnValue({ where });
+  const selectFrom = vi.fn().mockReturnValue({ select });
+  const deleteWhere = vi.fn().mockReturnValue({ execute: vi.fn().mockResolvedValue(undefined) });
+  const deleteFrom = vi.fn().mockReturnValue({ where: deleteWhere });
+
+  return { selectFrom, deleteFrom } as unknown as Kysely<Database>;
 }
 
 function buildRevokeDb(existing: unknown) {
@@ -249,15 +282,16 @@ describe("listExternalAIAuthorizations", () => {
 });
 
 describe("exchangeExternalAILoginChallenge", () => {
-  it("exchanges a valid one-time challenge for an access token", async () => {
+  it("exchanges a valid one-time challenge for an access token and refresh token", async () => {
+    const authorizationExpiresAt = new Date("2099-04-11T20:00:00Z");
     const db = buildExchangeDb({
       challengeId: "challenge-1",
       challengeCodeHash: "hash:challenge-code",
-      challengeExpiresAt: new Date("2099-04-10T10:10:00Z"),
+      challengeExpiresAt: new Date("2099-04-11T10:10:00Z"),
       challengeUsedAt: null,
       authorizationId: "auth-1",
       scopes: ["ai:context:read", "resume:read"],
-      authorizationExpiresAt: new Date("2099-05-10T12:00:00Z"),
+      authorizationExpiresAt,
       authorizationRevokedAt: null,
       clientId: "client-1",
       clientKey: "anthropic_claude",
@@ -273,7 +307,9 @@ describe("exchangeExternalAILoginChallenge", () => {
       }),
     ).resolves.toEqual({
       accessToken: "eai_token",
-      expiresAt: "2026-04-10T12:00:00.000Z",
+      expiresAt: "2026-04-11T12:00:00.000Z",
+      refreshToken: "eair_refresh_token",
+      refreshTokenExpiresAt: authorizationExpiresAt.toISOString(),
       scopes: ["ai:context:read", "resume:read"],
       authorizationId: "auth-1",
       client: {
@@ -283,6 +319,118 @@ describe("exchangeExternalAILoginChallenge", () => {
         description: "Claude",
         isActive: true,
       },
+    });
+  });
+});
+
+describe("refreshExternalAIAccessToken", () => {
+  it("issues a new access token for a valid refresh token", async () => {
+    const db = buildRefreshDb({
+      tokenId: "token-1",
+      scopes: ["ai:context:read", "resume:read"],
+      tokenRevokedAt: null,
+      authorizationId: "auth-1",
+      authorizationStatus: "active",
+      authorizationExpiresAt: new Date("2099-04-11T20:00:00Z"),
+      authorizationRevokedAt: null,
+    });
+
+    await expect(
+      refreshExternalAIAccessToken(db, { refreshToken: "eair_refresh_token" }),
+    ).resolves.toEqual({
+      accessToken: "eai_token",
+      expiresAt: "2026-04-11T12:00:00.000Z",
+      scopes: ["ai:context:read", "resume:read"],
+    });
+  });
+
+  it("rejects a revoked refresh token", async () => {
+    const db = buildRefreshDb({
+      tokenId: "token-1",
+      scopes: ["ai:context:read"],
+      tokenRevokedAt: new Date("2026-04-11T08:00:00Z"),
+      authorizationId: "auth-1",
+      authorizationStatus: "active",
+      authorizationExpiresAt: new Date("2099-04-11T20:00:00Z"),
+      authorizationRevokedAt: null,
+    });
+
+    await expect(
+      refreshExternalAIAccessToken(db, { refreshToken: "eair_refresh_token" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("rejects a token whose authorization has expired", async () => {
+    const db = buildRefreshDb({
+      tokenId: "token-1",
+      scopes: ["ai:context:read"],
+      tokenRevokedAt: null,
+      authorizationId: "auth-1",
+      authorizationStatus: "expired",
+      authorizationExpiresAt: new Date("2020-01-01T00:00:00Z"),
+      authorizationRevokedAt: null,
+    });
+
+    await expect(
+      refreshExternalAIAccessToken(db, { refreshToken: "eair_refresh_token" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+describe("deleteExternalAIAuthorization", () => {
+  it("deletes a revoked authorization owned by the user", async () => {
+    const db = buildDeleteDb({
+      id: "auth-1",
+      user_id: "user-1",
+      status: "revoked",
+      revoked_at: new Date("2026-04-11T08:00:00Z"),
+      expires_at: new Date("2099-04-11T20:00:00Z"),
+    });
+
+    await expect(deleteExternalAIAuthorization(db, "user-1", "auth-1")).resolves.toEqual({
+      success: true,
+    });
+  });
+
+  it("deletes an expired authorization", async () => {
+    const db = buildDeleteDb({
+      id: "auth-1",
+      user_id: "user-1",
+      status: "expired",
+      revoked_at: null,
+      expires_at: new Date("2020-01-01T00:00:00Z"),
+    });
+
+    await expect(deleteExternalAIAuthorization(db, "user-1", "auth-1")).resolves.toEqual({
+      success: true,
+    });
+  });
+
+  it("rejects deletion of an active authorization", async () => {
+    const db = buildDeleteDb({
+      id: "auth-1",
+      user_id: "user-1",
+      status: "active",
+      revoked_at: null,
+      expires_at: new Date("2099-04-11T20:00:00Z"),
+    });
+
+    await expect(deleteExternalAIAuthorization(db, "user-1", "auth-1")).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+  });
+
+  it("rejects deletion of another user's authorization", async () => {
+    const db = buildDeleteDb({
+      id: "auth-1",
+      user_id: "user-2",
+      status: "revoked",
+      revoked_at: new Date("2026-04-11T08:00:00Z"),
+      expires_at: new Date("2099-04-11T20:00:00Z"),
+    });
+
+    await expect(deleteExternalAIAuthorization(db, "user-1", "auth-1")).rejects.toMatchObject({
+      code: "FORBIDDEN",
     });
   });
 });

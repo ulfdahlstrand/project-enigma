@@ -73,6 +73,21 @@ export const getResumeInputSchema = z.object({
 });
 export const getResumeOutputSchema = resumeWithSkillsSchema;
 
+export const getResumeBranchInputSchema = z.object({
+  resumeId: z.string().uuid(),
+  branchId: z.string().uuid(),
+});
+
+export const getResumeBranchOutputSchema = resumeWithSkillsSchema.extend({
+  mainBranchId: z.string().uuid().nullable().optional(),
+  branchId: z.string().uuid(),
+  branchName: z.string(),
+  branchLanguage: z.string(),
+  isMainBranch: z.boolean(),
+  headCommitId: z.string().uuid().nullable(),
+  forkedFromCommitId: z.string().uuid().nullable(),
+});
+
 // ---------------------------------------------------------------------------
 // createResume schemas
 // ---------------------------------------------------------------------------
@@ -130,3 +145,5 @@ export type ResumeSkill = z.infer<typeof resumeSkillSchema>;
 export type ResumeSkillGroup = z.infer<typeof resumeSkillGroupSchema>;
 export type Resume = z.infer<typeof resumeSchema>;
 export type ResumeWithSkills = z.infer<typeof resumeWithSkillsSchema>;
+export type GetResumeBranchInput = z.infer<typeof getResumeBranchInputSchema>;
+export type GetResumeBranchOutput = z.infer<typeof getResumeBranchOutputSchema>;

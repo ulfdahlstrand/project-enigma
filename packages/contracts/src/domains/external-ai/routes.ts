@@ -12,6 +12,10 @@ import {
   listExternalAIClientsOutputSchema,
   revokeExternalAIAuthorizationInputSchema,
   revokeExternalAIAuthorizationOutputSchema,
+  deleteExternalAIAuthorizationInputSchema,
+  deleteExternalAIAuthorizationOutputSchema,
+  refreshExternalAIAccessTokenInputSchema,
+  refreshExternalAIAccessTokenOutputSchema,
 } from "../../external-ai.js";
 
 export const externalAIRoutes = {
@@ -39,4 +43,12 @@ export const externalAIRoutes = {
     .route({ method: "GET", path: "/external-ai/context" })
     .input(getExternalAIContextInputSchema)
     .output(getExternalAIContextOutputSchema),
+  refreshExternalAIAccessToken: oc
+    .route({ method: "POST", path: "/auth/external-ai/token/refresh" })
+    .input(refreshExternalAIAccessTokenInputSchema)
+    .output(refreshExternalAIAccessTokenOutputSchema),
+  deleteExternalAIAuthorization: oc
+    .route({ method: "DELETE", path: "/auth/external-ai/authorizations/{authorizationId}" })
+    .input(deleteExternalAIAuthorizationInputSchema)
+    .output(deleteExternalAIAuthorizationOutputSchema),
 };

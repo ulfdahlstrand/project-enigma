@@ -46,10 +46,14 @@ export const listExternalAIAuthorizationsOutputSchema = z.object({
   authorizations: z.array(externalAIAuthorizationSchema),
 });
 
+export const externalAIDurationSchema = z.enum(["1h", "4h", "8h", "1d", "7d"]);
+export type ExternalAIDuration = z.infer<typeof externalAIDurationSchema>;
+
 export const createExternalAIAuthorizationInputSchema = z.object({
   clientKey: z.string().min(1),
   title: z.string().trim().min(1).max(255).nullable().optional(),
   scopes: z.array(externalAIScopeSchema).min(1).optional(),
+  duration: externalAIDurationSchema.optional(),
 });
 
 export const createExternalAIAuthorizationOutputSchema = z.object({
@@ -71,6 +75,8 @@ export const exchangeExternalAILoginChallengeInputSchema = z.object({
 export const exchangeExternalAILoginChallengeOutputSchema = z.object({
   accessToken: z.string().min(1),
   expiresAt: z.string().datetime(),
+  refreshToken: z.string().min(1),
+  refreshTokenExpiresAt: z.string().datetime(),
   scopes: z.array(externalAIScopeSchema),
   authorizationId: z.string().uuid(),
   client: externalAIClientSchema,
@@ -82,6 +88,24 @@ export const revokeExternalAIAuthorizationInputSchema = z.object({
 
 export const revokeExternalAIAuthorizationOutputSchema = z.object({
   success: z.literal(true),
+});
+
+export const deleteExternalAIAuthorizationInputSchema = z.object({
+  authorizationId: z.string().uuid(),
+});
+
+export const deleteExternalAIAuthorizationOutputSchema = z.object({
+  success: z.literal(true),
+});
+
+export const refreshExternalAIAccessTokenInputSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+export const refreshExternalAIAccessTokenOutputSchema = z.object({
+  accessToken: z.string().min(1),
+  expiresAt: z.string().datetime(),
+  scopes: z.array(externalAIScopeSchema),
 });
 
 export const externalAIContextEntrySchema = z.object({
@@ -182,3 +206,7 @@ export type ExternalAIConsultantPromptModel = z.infer<typeof externalAIConsultan
 export type ExternalAIPromptModel = z.infer<typeof externalAIPromptModelSchema>;
 export type GetExternalAIContextInput = z.infer<typeof getExternalAIContextInputSchema>;
 export type GetExternalAIContextOutput = z.infer<typeof getExternalAIContextOutputSchema>;
+export type DeleteExternalAIAuthorizationInput = z.infer<typeof deleteExternalAIAuthorizationInputSchema>;
+export type DeleteExternalAIAuthorizationOutput = z.infer<typeof deleteExternalAIAuthorizationOutputSchema>;
+export type RefreshExternalAIAccessTokenInput = z.infer<typeof refreshExternalAIAccessTokenInputSchema>;
+export type RefreshExternalAIAccessTokenOutput = z.infer<typeof refreshExternalAIAccessTokenOutputSchema>;

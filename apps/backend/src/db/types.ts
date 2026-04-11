@@ -388,6 +388,7 @@ export interface ExternalAIAccessTokenTable {
   id: Generated<string>;
   authorization_id: string;
   token_hash: string;
+  refresh_token_hash: string | null;
   scopes: ColumnType<string[], string[], string[]>;
   expires_at: Date;
   last_used_at: Date | null;

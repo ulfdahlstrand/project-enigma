@@ -164,6 +164,8 @@ export {
   listResumesOutputSchema,
   getResumeInputSchema,
   getResumeOutputSchema,
+  getResumeBranchInputSchema,
+  getResumeBranchOutputSchema,
   createResumeInputSchema,
   createResumeOutputSchema,
   updateResumeInputSchema,
@@ -171,7 +173,14 @@ export {
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
 } from "./resumes.js";
-export type { ResumeSkillGroup, ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
+export type {
+  ResumeSkillGroup,
+  ResumeSkill,
+  Resume,
+  ResumeWithSkills,
+  GetResumeBranchInput,
+  GetResumeBranchOutput,
+} from "./resumes.js";
 
 export {
   assignmentSchema,
@@ -281,14 +290,23 @@ export {
   listBranchAssignmentsOutputSchema,
   addBranchAssignmentInputSchema,
   addBranchAssignmentOutputSchema,
+  addResumeBranchAssignmentInputSchema,
   removeBranchAssignmentInputSchema,
   removeBranchAssignmentOutputSchema,
+  removeResumeBranchAssignmentInputSchema,
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
+  updateResumeBranchAssignmentInputSchema,
   listBranchAssignmentsFullInputSchema,
   listBranchAssignmentsFullOutputSchema,
 } from "./branch-assignments.js";
-export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
+export type {
+  BranchAssignmentItem,
+  FullBranchAssignment,
+  AddResumeBranchAssignmentInput,
+  RemoveResumeBranchAssignmentInput,
+  UpdateResumeBranchAssignmentInput,
+} from "./branch-assignments.js";
 
 export {
   authUserRoleSchema,

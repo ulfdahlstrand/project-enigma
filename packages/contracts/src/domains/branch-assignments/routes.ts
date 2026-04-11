@@ -4,10 +4,13 @@ import {
   listBranchAssignmentsOutputSchema,
   addBranchAssignmentInputSchema,
   addBranchAssignmentOutputSchema,
+  addResumeBranchAssignmentInputSchema,
   removeBranchAssignmentInputSchema,
   removeBranchAssignmentOutputSchema,
+  removeResumeBranchAssignmentInputSchema,
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
+  updateResumeBranchAssignmentInputSchema,
   listBranchAssignmentsFullInputSchema,
   listBranchAssignmentsFullOutputSchema,
 } from "../../branch-assignments.js";
@@ -21,13 +24,25 @@ export const branchAssignmentRoutes = {
     .route({ method: "POST", path: "/resume-branches/{branchId}/assignments" })
     .input(addBranchAssignmentInputSchema)
     .output(addBranchAssignmentOutputSchema),
+  addResumeBranchAssignment: oc
+    .route({ method: "POST", path: "/resumes/{resumeId}/branches/{branchId}/assignments" })
+    .input(addResumeBranchAssignmentInputSchema)
+    .output(addBranchAssignmentOutputSchema),
   removeBranchAssignment: oc
     .route({ method: "DELETE", path: "/branch-assignments/{id}" })
     .input(removeBranchAssignmentInputSchema)
     .output(removeBranchAssignmentOutputSchema),
+  removeResumeBranchAssignment: oc
+    .route({ method: "DELETE", path: "/resumes/{resumeId}/branches/{branchId}/assignments/{id}" })
+    .input(removeResumeBranchAssignmentInputSchema)
+    .output(removeBranchAssignmentOutputSchema),
   updateBranchAssignment: oc
     .route({ method: "PATCH", path: "/branch-assignments/{id}" })
     .input(updateBranchAssignmentInputSchema)
+    .output(updateBranchAssignmentOutputSchema),
+  updateResumeBranchAssignment: oc
+    .route({ method: "PATCH", path: "/resumes/{resumeId}/branches/{branchId}/assignments/{id}" })
+    .input(updateResumeBranchAssignmentInputSchema)
     .output(updateBranchAssignmentOutputSchema),
   listBranchAssignmentsFull: oc
     .route({ method: "GET", path: "/resume-branches/{branchId}/assignments" })

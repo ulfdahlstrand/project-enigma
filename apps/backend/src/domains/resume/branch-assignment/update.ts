@@ -17,13 +17,18 @@ type UpdateBranchAssignmentOutput = z.infer<typeof updateBranchAssignmentOutputS
 export async function updateBranchAssignment(
   db: Kysely<Database>,
   user: AuthUser,
-  input: UpdateBranchAssignmentInput
+  input: UpdateBranchAssignmentInput,
+  expectedResumeId?: string,
 ): Promise<UpdateBranchAssignmentOutput> {
   const ownerEmployeeId = await resolveEmployeeId(db, user);
 
   const branch = await readBranchAssignmentContent(db, input.branchId);
 
   if (branch === null) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  if (expectedResumeId && branch.resumeId !== expectedResumeId) {
     throw new ORPCError("NOT_FOUND");
   }
 
@@ -92,6 +97,13 @@ export const updateBranchAssignmentHandler = implement(contract.updateBranchAssi
     const user = requireAuth(context as AuthContext);
     return updateBranchAssignment(getDb(), user, input);
   }
+);
+
+export const updateResumeBranchAssignmentHandler = implement(contract.updateResumeBranchAssignment).handler(
+  async ({ input, context }) => {
+    const user = requireAuth(context as AuthContext);
+    return updateBranchAssignment(getDb(), user, input, input.resumeId);
+  },
 );
 
 export function createUpdateBranchAssignmentHandler(db: Kysely<Database>) {

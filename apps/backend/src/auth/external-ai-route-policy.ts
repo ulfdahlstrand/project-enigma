@@ -29,6 +29,9 @@ export function getRequiredExternalAIScope(
   if (method === "GET" && /^\/resumes\/[^/]+\/branches$/.test(pathname)) {
     return EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE;
   }
+  if (method === "GET" && /^\/resumes\/[^/]+\/branches\/[^/]+$/.test(pathname)) {
+    return EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE;
+  }
   if (method === "GET" && /^\/resume-branches\/[^/]+\/commits$/.test(pathname)) {
     return EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE;
   }
@@ -53,7 +56,13 @@ export function getRequiredExternalAIScope(
   if (method === "POST" && /^\/resume-branches\/[^/]+\/assignments$/.test(pathname)) {
     return EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE;
   }
+  if (method === "POST" && /^\/resumes\/[^/]+\/branches\/[^/]+\/assignments$/.test(pathname)) {
+    return EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE;
+  }
   if ((method === "PATCH" || method === "DELETE") && /^\/branch-assignments\/[^/]+$/.test(pathname)) {
+    return EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE;
+  }
+  if ((method === "PATCH" || method === "DELETE") && /^\/resumes\/[^/]+\/branches\/[^/]+\/assignments\/[^/]+$/.test(pathname)) {
     return EXTERNAL_AI_BRANCH_ASSIGNMENT_WRITE_SCOPE;
   }
   if (method === "PATCH" && /^\/resume-branches\/[^/]+\/skills$/.test(pathname)) {
