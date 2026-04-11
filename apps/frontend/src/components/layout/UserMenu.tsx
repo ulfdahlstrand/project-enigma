@@ -22,6 +22,7 @@ import Switch from "@mui/material/Switch";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import TranslateIcon from "@mui/icons-material/Translate";
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -52,6 +53,11 @@ export function UserMenu() {
   const handleSignOut = () => {
     handleClose();
     void logout().then(() => navigate({ to: "/login" }));
+  };
+
+  const handleOpenSettings = () => {
+    handleClose();
+    void navigate({ to: "/settings" });
   };
 
   const displayName = user?.name ?? "User";
@@ -174,7 +180,16 @@ export function UserMenu() {
           />
         </MenuItem>
 
-        {/* Placeholder: Help & feedback */}
+        <MenuItem onClick={handleOpenSettings} sx={{ gap: 1 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <SettingsOutlinedIcon fontSize="small" sx={{ color: "text.secondary" }} />
+          </ListItemIcon>
+          <ListItemText
+            primary={t("userMenu.settings")}
+            primaryTypographyProps={{ fontSize: "0.8125rem" }}
+          />
+        </MenuItem>
+
         <MenuItem onClick={handleClose} sx={{ gap: 1 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <HelpOutlineIcon fontSize="small" sx={{ color: "text.secondary" }} />

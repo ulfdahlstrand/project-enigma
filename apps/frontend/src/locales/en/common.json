@@ -18,11 +18,14 @@
     "home": "Home",
     "employees": "Employees",
     "resumes": "Resumes",
-    "assistantGroup": "Assistant",
     "assistantPreferences": "Assistant preferences",
     "externalAIConnections": "External AI Connections",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI Prompt Inventory"
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "sidebarLabel": "Workspace settings"
   },
   "assistantPreferences": {
     "pageTitle": "Assistant preferences",
@@ -51,6 +54,14 @@
     "clientLabel": "External client",
     "connectionTitleLabel": "Connection label",
     "connectionTitlePlaceholder": "Optional label to help you recognise this connection",
+    "durationLabel": "Session duration",
+    "durationOption": {
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "8h": "8 hours",
+      "1d": "1 day",
+      "7d": "7 days"
+    },
     "createButton": "Create connection",
     "creating": "Creating…",
     "createError": "Failed to create external AI connection.",
@@ -561,6 +572,7 @@
   "userMenu": {
     "language": "Language",
     "preferences": "Preferences",
+    "settings": "Settings",
     "helpAndFeedback": "Help & feedback",
     "signOut": "Sign out",
     "darkMode": "Dark mode"

@@ -10,7 +10,6 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
-import ListSubheader from "@mui/material/ListSubheader";
 import Typography from "@mui/material/Typography";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
@@ -26,11 +25,6 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: "nav.home", to: "/" },
   { labelKey: "nav.employees", to: "/employees" },
   { labelKey: "nav.resumes", to: "/resumes" },
-];
-
-const ASSISTANT_NAV_ITEMS: NavItem[] = [
-  { labelKey: "nav.assistantPreferences", to: "/assistant/preferences" },
-  { labelKey: "nav.externalAIConnections", to: "/assistant/external-ai" },
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
@@ -116,32 +110,11 @@ export function NavigationMenu() {
       <List component="nav" disablePadding sx={{ pt: 1 }}>
         {renderNavItems(NAV_ITEMS)}
 
-        <Divider sx={{ my: 1.5 }} />
-        <ListSubheader
-          disableSticky
-          sx={{
-            bgcolor: "transparent",
-            color: "text.secondary",
-            fontSize: "0.75rem",
-            fontWeight: 700,
-            lineHeight: 1.4,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            px: 2,
-            py: 0.5,
-          }}
-        >
-          {t("nav.assistantGroup")}
-        </ListSubheader>
-        {renderNavItems(ASSISTANT_NAV_ITEMS)}
-
         {user?.role === "admin" && (
           <>
             <Divider sx={{ my: 1.5 }} />
-            <ListSubheader
-              disableSticky
+            <Box
               sx={{
-                bgcolor: "transparent",
                 color: "text.secondary",
                 fontSize: "0.75rem",
                 fontWeight: 700,
@@ -153,7 +126,7 @@ export function NavigationMenu() {
               }}
             >
               {t("nav.adminGroup")}
-            </ListSubheader>
+            </Box>
             {renderNavItems(ADMIN_NAV_ITEMS)}
           </>
         )}

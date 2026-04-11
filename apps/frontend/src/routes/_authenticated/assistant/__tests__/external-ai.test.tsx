@@ -1,11 +1,10 @@
-import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 import enCommon from "../../../../locales/en/common.json";
-import { Route } from "../external-ai";
+import { ExternalAIConnectionsSection } from "../../../../features/settings/ExternalAIConnectionsSection";
 
 vi.mock("../../../../orpc-client", () => ({
   orpc: {
@@ -22,8 +21,6 @@ const mockListClients = orpc.listExternalAIClients as ReturnType<typeof vi.fn>;
 const mockListAuthorizations = orpc.listExternalAIAuthorizations as ReturnType<typeof vi.fn>;
 const mockCreateAuthorization = orpc.createExternalAIAuthorization as ReturnType<typeof vi.fn>;
 const mockRevokeAuthorization = orpc.revokeExternalAIAuthorization as ReturnType<typeof vi.fn>;
-
-const ExternalAIPage = Route.options.component as React.ComponentType;
 const writeTextMock = vi.fn();
 
 function buildI18n() {
@@ -51,7 +48,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={buildI18n()}>
-        <ExternalAIPage />
+        <ExternalAIConnectionsSection />
       </I18nextProvider>
     </QueryClientProvider>,
   );
@@ -143,6 +140,7 @@ describe("External AI connections page", () => {
     expect(mockCreateAuthorization).toHaveBeenCalledWith({
       clientKey: "anthropic_claude",
       title: "Claude desktop",
+      duration: "8h",
     });
   });
 

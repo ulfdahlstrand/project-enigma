@@ -18,11 +18,14 @@
     "home": "Hem",
     "employees": "Anställda",
     "resumes": "Meritförteckningar",
-    "assistantGroup": "Assistent",
     "assistantPreferences": "Assistentpreferenser",
     "externalAIConnections": "Externa AI-kopplingar",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI-promptinventering"
+  },
+  "settings": {
+    "pageTitle": "Inställningar",
+    "sidebarLabel": "Arbetsytans inställningar"
   },
   "assistantPreferences": {
     "pageTitle": "Assistentpreferenser",
@@ -51,6 +54,14 @@
     "clientLabel": "Extern klient",
     "connectionTitleLabel": "Kopplingsetikett",
     "connectionTitlePlaceholder": "Valfri etikett för att enklare känna igen kopplingen",
+    "durationLabel": "Sessionslängd",
+    "durationOption": {
+      "1h": "1 timme",
+      "4h": "4 timmar",
+      "8h": "8 timmar",
+      "1d": "1 dag",
+      "7d": "7 dagar"
+    },
     "createButton": "Skapa koppling",
     "creating": "Skapar…",
     "createError": "Det gick inte att skapa AI-kopplingen.",
@@ -561,6 +572,7 @@
   "userMenu": {
     "language": "Språk",
     "preferences": "Inställningar",
+    "settings": "Inställningar",
     "helpAndFeedback": "Hjälp & feedback",
     "signOut": "Logga ut",
     "darkMode": "Mörkt läge"
