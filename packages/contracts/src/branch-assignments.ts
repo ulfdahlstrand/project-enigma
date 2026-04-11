@@ -79,6 +79,11 @@ export const addBranchAssignmentInputSchema = z.object({
 
 export const addBranchAssignmentOutputSchema = fullBranchAssignmentSchema;
 
+export const addResumeBranchAssignmentInputSchema = addBranchAssignmentInputSchema.extend({
+  resumeId: z.string().uuid(),
+});
+export type AddResumeBranchAssignmentInput = z.infer<typeof addResumeBranchAssignmentInputSchema>;
+
 // ---------------------------------------------------------------------------
 // removeBranchAssignment
 // ---------------------------------------------------------------------------
@@ -91,6 +96,11 @@ export const removeBranchAssignmentInputSchema = z.object({
 export const removeBranchAssignmentOutputSchema = z.object({
   deleted: z.literal(true),
 });
+
+export const removeResumeBranchAssignmentInputSchema = removeBranchAssignmentInputSchema.extend({
+  resumeId: z.string().uuid(),
+});
+export type RemoveResumeBranchAssignmentInput = z.infer<typeof removeResumeBranchAssignmentInputSchema>;
 
 // ---------------------------------------------------------------------------
 // updateBranchAssignment — content + curation fields, all optional
@@ -131,3 +141,8 @@ export const updateBranchAssignmentInputSchema = z
   );
 
 export const updateBranchAssignmentOutputSchema = fullBranchAssignmentSchema;
+
+export const updateResumeBranchAssignmentInputSchema = updateBranchAssignmentInputSchema.extend({
+  resumeId: z.string().uuid(),
+});
+export type UpdateResumeBranchAssignmentInput = z.infer<typeof updateResumeBranchAssignmentInputSchema>;

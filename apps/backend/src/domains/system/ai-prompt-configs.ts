@@ -166,6 +166,42 @@ export async function getAIPromptFragmentsByKey(
   return Object.fromEntries(rows.map((row) => [row.key, row.content]));
 }
 
+export async function listAIPromptFragmentsByKeys(
+  db: Kysely<Database>,
+  promptKeys: string[],
+): Promise<Record<string, Array<{ key: string; label: string; content: string; sortOrder: number }>>> {
+  if (promptKeys.length === 0) return {};
+
+  const rows = await db
+    .selectFrom("ai_prompt_fragments as f")
+    .innerJoin("ai_prompt_definitions as d", "d.id", "f.prompt_definition_id")
+    .select([
+      "d.key as promptKey",
+      "f.key as key",
+      "f.label as label",
+      "f.content as content",
+      "f.sort_order as sortOrder",
+    ])
+    .where("d.key", "in", promptKeys)
+    .orderBy("d.sort_order")
+    .orderBy("f.sort_order")
+    .execute();
+
+  const grouped = new Map<string, Array<{ key: string; label: string; content: string; sortOrder: number }>>();
+  for (const row of rows) {
+    const fragments = grouped.get(row.promptKey) ?? [];
+    fragments.push({
+      key: row.key,
+      label: row.label,
+      content: row.content,
+      sortOrder: row.sortOrder,
+    });
+    grouped.set(row.promptKey, fragments);
+  }
+
+  return Object.fromEntries(Array.from(grouped.entries()));
+}
+
 export async function updateAIPromptFragment(
   db: Kysely<Database>,
   input: { fragmentId: string; content: string },

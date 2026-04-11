@@ -4,6 +4,7 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../db/types.js";
 import {
   getAIPromptFragmentsByKey,
+  listAIPromptFragmentsByKeys,
   listAIPromptConfigs,
   updateAIPromptFragment,
 } from "./ai-prompt-configs.js";
@@ -24,6 +25,17 @@ function buildFragmentLookupDb(rows: unknown[]) {
   const execute = vi.fn().mockResolvedValue(rows);
   const orderBy = vi.fn().mockReturnValue({ execute });
   const where = vi.fn().mockReturnValue({ orderBy });
+  const select = vi.fn().mockReturnValue({ where });
+  const innerJoin = vi.fn().mockReturnValue({ select });
+  const selectFrom = vi.fn().mockReturnValue({ innerJoin });
+  return { selectFrom } as unknown as Kysely<Database>;
+}
+
+function buildFragmentLookupByKeysDb(rows: unknown[]) {
+  const execute = vi.fn().mockResolvedValue(rows);
+  const orderBy2 = vi.fn().mockReturnValue({ execute });
+  const orderBy1 = vi.fn().mockReturnValue({ orderBy: orderBy2 });
+  const where = vi.fn().mockReturnValue({ orderBy: orderBy1 });
   const select = vi.fn().mockReturnValue({ where });
   const innerJoin = vi.fn().mockReturnValue({ select });
   const selectFrom = vi.fn().mockReturnValue({ innerJoin });
@@ -109,6 +121,41 @@ describe("getAIPromptFragmentsByKey", () => {
     await expect(getAIPromptFragmentsByKey(db, "frontend.assignment-assistant")).resolves.toEqual({
       system_template: "System",
       kickoff_message: "Kickoff",
+    });
+  });
+});
+
+describe("listAIPromptFragmentsByKeys", () => {
+  it("groups fragments by prompt key", async () => {
+    const db = buildFragmentLookupByKeysDb([
+      {
+        promptKey: "external-ai.shared-guidance",
+        key: "base_prompt",
+        label: "Base prompt",
+        content: "Shared prompt",
+        sortOrder: 0,
+      },
+      {
+        promptKey: "external-ai.assignment-guidance",
+        key: "rules",
+        label: "Rules",
+        content: "Assignment rules",
+        sortOrder: 1,
+      },
+    ]);
+
+    await expect(
+      listAIPromptFragmentsByKeys(db, [
+        "external-ai.shared-guidance",
+        "external-ai.assignment-guidance",
+      ]),
+    ).resolves.toEqual({
+      "external-ai.shared-guidance": [
+        { key: "base_prompt", label: "Base prompt", content: "Shared prompt", sortOrder: 0 },
+      ],
+      "external-ai.assignment-guidance": [
+        { key: "rules", label: "Rules", content: "Assignment rules", sortOrder: 1 },
+      ],
     });
   });
 });

@@ -5,12 +5,45 @@ import {
   updateAIPromptFragmentInputSchema,
   updateAIPromptFragmentOutputSchema,
 } from "./ai-prompt-configs.js";
+import {
+  consultantAIPreferencesSchema,
+  getConsultantAIPreferencesInputSchema,
+  getConsultantAIPreferencesOutputSchema,
+  updateConsultantAIPreferencesInputSchema,
+  updateConsultantAIPreferencesOutputSchema,
+} from "./consultant-ai-preferences.js";
+import {
+  createExternalAIAuthorizationInputSchema,
+  createExternalAIAuthorizationOutputSchema,
+  exchangeExternalAILoginChallengeInputSchema,
+  exchangeExternalAILoginChallengeOutputSchema,
+  externalAIAuthorizationSchema,
+  externalAIAllowedRouteSchema,
+  externalAIClientSchema,
+  externalAIContextEntrySchema,
+  externalAIAgentPromptModelSchema,
+  externalAIConsultantPromptModelSchema,
+  externalAIPromptGuidanceFragmentSchema,
+  externalAIPromptGuidanceSchema,
+  externalAIPromptLayerSchema,
+  externalAIPromptModelSchema,
+  externalAIScopeSchema,
+  getExternalAIContextInputSchema,
+  getExternalAIContextOutputSchema,
+  listExternalAIAuthorizationsInputSchema,
+  listExternalAIAuthorizationsOutputSchema,
+  listExternalAIClientsInputSchema,
+  listExternalAIClientsOutputSchema,
+  revokeExternalAIAuthorizationInputSchema,
+  revokeExternalAIAuthorizationOutputSchema,
+} from "./external-ai.js";
 import { aiRoutes } from "./domains/ai/routes.js";
 import { assignmentRoutes } from "./domains/assignments/routes.js";
 import { authRoutes } from "./domains/auth/routes.js";
 import { branchAssignmentRoutes } from "./domains/branch-assignments/routes.js";
 import { educationRoutes } from "./domains/education/routes.js";
 import { employeeRoutes } from "./domains/employees/routes.js";
+import { externalAIRoutes } from "./domains/external-ai/routes.js";
 import { importExportRoutes } from "./domains/import-export/routes.js";
 import { resumeRoutes } from "./domains/resumes/routes.js";
 import { resumeVersionRoutes } from "./domains/resume-versions/routes.js";
@@ -45,6 +78,70 @@ export type {
   UpdateAIPromptFragmentOutput,
 } from "./ai-prompt-configs.js";
 export {
+  consultantAIPreferencesSchema,
+  getConsultantAIPreferencesInputSchema,
+  getConsultantAIPreferencesOutputSchema,
+  updateConsultantAIPreferencesInputSchema,
+  updateConsultantAIPreferencesOutputSchema,
+} from "./consultant-ai-preferences.js";
+export type {
+  ConsultantAIPreferences,
+  GetConsultantAIPreferencesInput,
+  GetConsultantAIPreferencesOutput,
+  UpdateConsultantAIPreferencesInput,
+  UpdateConsultantAIPreferencesOutput,
+} from "./consultant-ai-preferences.js";
+export {
+  externalAIScopeSchema,
+  externalAIClientSchema,
+  externalAIAuthorizationSchema,
+  listExternalAIClientsInputSchema,
+  listExternalAIClientsOutputSchema,
+  listExternalAIAuthorizationsInputSchema,
+  listExternalAIAuthorizationsOutputSchema,
+  createExternalAIAuthorizationInputSchema,
+  createExternalAIAuthorizationOutputSchema,
+  exchangeExternalAILoginChallengeInputSchema,
+  exchangeExternalAILoginChallengeOutputSchema,
+  revokeExternalAIAuthorizationInputSchema,
+  revokeExternalAIAuthorizationOutputSchema,
+  externalAIAllowedRouteSchema,
+  externalAIContextEntrySchema,
+  externalAIAgentPromptModelSchema,
+  externalAIConsultantPromptModelSchema,
+  externalAIPromptGuidanceFragmentSchema,
+  externalAIPromptGuidanceSchema,
+  externalAIPromptLayerSchema,
+  externalAIPromptModelSchema,
+  getExternalAIContextInputSchema,
+  getExternalAIContextOutputSchema,
+} from "./external-ai.js";
+export type {
+  ExternalAIScope,
+  ExternalAIClient,
+  ExternalAIAuthorization,
+  ListExternalAIClientsInput,
+  ListExternalAIClientsOutput,
+  ListExternalAIAuthorizationsInput,
+  ListExternalAIAuthorizationsOutput,
+  CreateExternalAIAuthorizationInput,
+  CreateExternalAIAuthorizationOutput,
+  ExchangeExternalAILoginChallengeInput,
+  ExchangeExternalAILoginChallengeOutput,
+  RevokeExternalAIAuthorizationInput,
+  RevokeExternalAIAuthorizationOutput,
+  ExternalAIAllowedRoute,
+  ExternalAIContextEntry,
+  ExternalAIAgentPromptModel,
+  ExternalAIConsultantPromptModel,
+  ExternalAIPromptGuidance,
+  ExternalAIPromptGuidanceFragment,
+  ExternalAIPromptLayer,
+  ExternalAIPromptModel,
+  GetExternalAIContextInput,
+  GetExternalAIContextOutput,
+} from "./external-ai.js";
+export {
   employeeSchema,
   listEmployeesOutputSchema,
   getEmployeeInputSchema,
@@ -67,6 +164,8 @@ export {
   listResumesOutputSchema,
   getResumeInputSchema,
   getResumeOutputSchema,
+  getResumeBranchInputSchema,
+  getResumeBranchOutputSchema,
   createResumeInputSchema,
   createResumeOutputSchema,
   updateResumeInputSchema,
@@ -74,7 +173,14 @@ export {
   deleteResumeInputSchema,
   deleteResumeOutputSchema,
 } from "./resumes.js";
-export type { ResumeSkillGroup, ResumeSkill, Resume, ResumeWithSkills } from "./resumes.js";
+export type {
+  ResumeSkillGroup,
+  ResumeSkill,
+  Resume,
+  ResumeWithSkills,
+  GetResumeBranchInput,
+  GetResumeBranchOutput,
+} from "./resumes.js";
 
 export {
   assignmentSchema,
@@ -92,6 +198,8 @@ export {
   listEducationOutputSchema,
   createEducationInputSchema,
   createEducationOutputSchema,
+  updateEducationInputSchema,
+  updateEducationOutputSchema,
   deleteEducationInputSchema,
   deleteEducationOutputSchema,
 } from "./education.js";
@@ -127,6 +235,10 @@ export {
   branchAssignmentSchema,
   saveResumeVersionInputSchema,
   saveResumeVersionOutputSchema,
+  updateResumeBranchContentInputSchema,
+  updateResumeBranchContentOutputSchema,
+  updateResumeBranchSkillsInputSchema,
+  updateResumeBranchSkillsOutputSchema,
   getResumeCommitInputSchema,
   getResumeCommitOutputSchema,
   listResumeCommitsInputSchema,
@@ -159,6 +271,10 @@ export type {
   ResumeBranch,
   ResumeBranchHistoryGraph,
   BranchAssignment,
+  UpdateResumeBranchContentInput,
+  UpdateResumeBranchContentOutput,
+  UpdateResumeBranchSkillsInput,
+  UpdateResumeBranchSkillsOutput,
   DiffStatus,
   ResumeDiffScalars,
   SkillDiffEntry,
@@ -174,14 +290,23 @@ export {
   listBranchAssignmentsOutputSchema,
   addBranchAssignmentInputSchema,
   addBranchAssignmentOutputSchema,
+  addResumeBranchAssignmentInputSchema,
   removeBranchAssignmentInputSchema,
   removeBranchAssignmentOutputSchema,
+  removeResumeBranchAssignmentInputSchema,
   updateBranchAssignmentInputSchema,
   updateBranchAssignmentOutputSchema,
+  updateResumeBranchAssignmentInputSchema,
   listBranchAssignmentsFullInputSchema,
   listBranchAssignmentsFullOutputSchema,
 } from "./branch-assignments.js";
-export type { BranchAssignmentItem, FullBranchAssignment } from "./branch-assignments.js";
+export type {
+  BranchAssignmentItem,
+  FullBranchAssignment,
+  AddResumeBranchAssignmentInput,
+  RemoveResumeBranchAssignmentInput,
+  UpdateResumeBranchAssignmentInput,
+} from "./branch-assignments.js";
 
 export {
   authUserRoleSchema,
@@ -248,6 +373,7 @@ export {
 export const contract = oc.router({
   ...systemRoutes,
   ...authRoutes,
+  ...externalAIRoutes,
   ...employeeRoutes,
   ...resumeRoutes,
   ...assignmentRoutes,

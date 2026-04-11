@@ -41,6 +41,7 @@ vi.mock("../../../../orpc-client", () => ({
   orpc: {
     listResumes: vi.fn(),
     getResume: vi.fn(),
+    getResumeBranch: vi.fn(),
     deleteResume: vi.fn(),
     updateResume: vi.fn(),
     listBranchAssignmentsFull: vi.fn(),
@@ -54,6 +55,7 @@ vi.mock("../../../../orpc-client", () => ({
 import { orpc } from "../../../../orpc-client";
 
 const mockGetResume = orpc.getResume as ReturnType<typeof vi.fn>;
+const mockGetResumeBranch = orpc.getResumeBranch as ReturnType<typeof vi.fn>;
 const mockDeleteResume = orpc.deleteResume as ReturnType<typeof vi.fn>;
 const mockListBranchAssignmentsFull = orpc.listBranchAssignmentsFull as ReturnType<typeof vi.fn>;
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
@@ -181,6 +183,15 @@ beforeEach(() => {
   mockGetEmployee.mockResolvedValue(TEST_EMPLOYEE);
   mockListEducation.mockResolvedValue([]);
   mockGetResumeCommit.mockResolvedValue({ id: "commit-1", content: {} });
+  mockGetResumeBranch.mockResolvedValue({
+    ...TEST_RESUME,
+    branchId: SWEDISH_BRANCH.id,
+    branchName: SWEDISH_BRANCH.name,
+    branchLanguage: SWEDISH_BRANCH.language,
+    isMainBranch: false,
+    headCommitId: SWEDISH_BRANCH.headCommitId,
+    forkedFromCommitId: null,
+  });
   mockDeleteResume.mockResolvedValue({ deleted: true });
   mockNavigate.mockReset();
 });
@@ -232,11 +243,16 @@ describe("Resume detail rendering", () => {
 
   it("prefers the active branch language over the resume language", async () => {
     mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, SWEDISH_BRANCH]);
-    mockGetResume.mockResolvedValue({
+    mockGetResumeBranch.mockResolvedValue({
       ...TEST_RESUME,
-      language: "en",
+      language: "sv",
+      branchId: SWEDISH_BRANCH.id,
+      branchName: SWEDISH_BRANCH.name,
+      branchLanguage: "sv",
+      isMainBranch: false,
+      headCommitId: SWEDISH_BRANCH.headCommitId,
+      forkedFromCommitId: null,
     });
-    mockGetResumeCommit.mockResolvedValue({ id: "commit-2", content: {} });
 
     const queryClient = buildTestQueryClient();
     renderWithProviders(<ResumeDetailPage forcedBranchId={SWEDISH_BRANCH.id} />, { queryClient });
@@ -247,11 +263,17 @@ describe("Resume detail rendering", () => {
 
   it("renders document headings in the active branch language instead of the UI language", async () => {
     mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, SWEDISH_BRANCH]);
-    mockGetResume.mockResolvedValue({
+    mockGetResumeBranch.mockResolvedValue({
       ...TEST_RESUME,
-      language: "en",
+      language: "sv",
+      presentation: ["Kort svensk presentation."],
+      branchId: SWEDISH_BRANCH.id,
+      branchName: SWEDISH_BRANCH.name,
+      branchLanguage: "sv",
+      isMainBranch: false,
+      headCommitId: SWEDISH_BRANCH.headCommitId,
+      forkedFromCommitId: null,
     });
-    mockGetResumeCommit.mockResolvedValue({ id: "commit-2", content: {} });
 
     const queryClient = buildTestQueryClient();
     renderWithProviders(<ResumeDetailPage forcedBranchId={SWEDISH_BRANCH.id} />, { queryClient });

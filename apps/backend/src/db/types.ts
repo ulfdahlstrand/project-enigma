@@ -34,6 +34,8 @@ export interface UserTable {
 export type User = Selectable<UserTable>;
 export type NewUser = Insertable<UserTable>;
 
+export type ExternalAIAuthorizationStatus = "pending" | "active" | "revoked" | "expired";
+
 export interface ResumeTable {
   id: Generated<string>;
   employee_id: string;
@@ -339,6 +341,61 @@ export interface AIPromptFragmentTable {
   updated_at: Generated<Date>;
 }
 
+export interface ConsultantAIPreferencesTable {
+  id: Generated<string>;
+  employee_id: string;
+  prompt: string | null;
+  rules: string | null;
+  validators: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface ExternalAIClientTable {
+  id: Generated<string>;
+  key: string;
+  title: string;
+  description: string | null;
+  is_active: Generated<boolean>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface ExternalAIAuthorizationTable {
+  id: Generated<string>;
+  user_id: string;
+  client_id: string;
+  title: string | null;
+  scopes: ColumnType<string[], string[], string[]>;
+  status: ExternalAIAuthorizationStatus;
+  last_used_at: Date | null;
+  expires_at: Date;
+  revoked_at: Date | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface ExternalAILoginChallengeTable {
+  id: Generated<string>;
+  authorization_id: string;
+  challenge_code_hash: string;
+  expires_at: Date;
+  used_at: Date | null;
+  created_at: Generated<Date>;
+}
+
+export interface ExternalAIAccessTokenTable {
+  id: Generated<string>;
+  authorization_id: string;
+  token_hash: string;
+  refresh_token_hash: string | null;
+  scopes: ColumnType<string[], string[], string[]>;
+  expires_at: Date;
+  last_used_at: Date | null;
+  revoked_at: Date | null;
+  created_at: Generated<Date>;
+}
+
 // ---------------------------------------------------------------------------
 // user_sessions table
 // ---------------------------------------------------------------------------
@@ -367,6 +424,20 @@ export type AIPromptDefinitionUpdate = Updateable<AIPromptDefinitionTable>;
 export type AIPromptFragment = Selectable<AIPromptFragmentTable>;
 export type NewAIPromptFragment = Insertable<AIPromptFragmentTable>;
 export type AIPromptFragmentUpdate = Updateable<AIPromptFragmentTable>;
+export type ConsultantAIPreferences = Selectable<ConsultantAIPreferencesTable>;
+export type NewConsultantAIPreferences = Insertable<ConsultantAIPreferencesTable>;
+export type ConsultantAIPreferencesUpdate = Updateable<ConsultantAIPreferencesTable>;
+export type ExternalAIClient = Selectable<ExternalAIClientTable>;
+export type NewExternalAIClient = Insertable<ExternalAIClientTable>;
+export type ExternalAIClientUpdate = Updateable<ExternalAIClientTable>;
+export type ExternalAIAuthorization = Selectable<ExternalAIAuthorizationTable>;
+export type NewExternalAIAuthorization = Insertable<ExternalAIAuthorizationTable>;
+export type ExternalAIAuthorizationUpdate = Updateable<ExternalAIAuthorizationTable>;
+export type ExternalAILoginChallenge = Selectable<ExternalAILoginChallengeTable>;
+export type NewExternalAILoginChallenge = Insertable<ExternalAILoginChallengeTable>;
+export type ExternalAIAccessToken = Selectable<ExternalAIAccessTokenTable>;
+export type NewExternalAIAccessToken = Insertable<ExternalAIAccessTokenTable>;
+export type ExternalAIAccessTokenUpdate = Updateable<ExternalAIAccessTokenTable>;
 
 
 // ---------------------------------------------------------------------------
@@ -515,6 +586,11 @@ export interface Database {
   ai_prompt_categories: AIPromptCategoryTable;
   ai_prompt_definitions: AIPromptDefinitionTable;
   ai_prompt_fragments: AIPromptFragmentTable;
+  consultant_ai_preferences: ConsultantAIPreferencesTable;
+  external_ai_clients: ExternalAIClientTable;
+  external_ai_authorizations: ExternalAIAuthorizationTable;
+  external_ai_login_challenges: ExternalAILoginChallengeTable;
+  external_ai_access_tokens: ExternalAIAccessTokenTable;
   user_sessions: UserSessionTable;
   // Git-inspired content model
   resume_entry_types: ResumeEntryTypeTable;

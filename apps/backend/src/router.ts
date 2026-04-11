@@ -11,10 +11,13 @@ import {
 import {
   listResumesHandler,
   getResumeHandler,
+  getResumeBranchHandler,
   createResumeHandler,
   updateResumeHandler,
   deleteResumeHandler,
   forkResumeBranchHandler,
+  updateResumeBranchContentHandler,
+  updateResumeBranchSkillsHandler,
   finaliseResumeBranchHandler,
   deleteResumeBranchHandler,
   listResumeBranchesHandler,
@@ -24,8 +27,11 @@ import {
   listResumeCommitsHandler,
   compareResumeCommitsHandler,
   addBranchAssignmentHandler,
+  addResumeBranchAssignmentHandler,
   removeBranchAssignmentHandler,
+  removeResumeBranchAssignmentHandler,
   updateBranchAssignmentHandler,
+  updateResumeBranchAssignmentHandler,
   listBranchAssignmentsHandler,
   listBranchAssignmentsFullHandler,
   createAssignmentHandler,
@@ -34,6 +40,7 @@ import {
 import {
   listEducationHandler,
   createEducationHandler,
+  updateEducationHandler,
   deleteEducationHandler,
 } from "./domains/education/index.js";
 import { importCvHandler, parseCvDocxHandler } from "./domains/import/index.js";
@@ -51,9 +58,21 @@ import {
   exportResumeDocxHandler,
   exportResumeMarkdownHandler,
 } from "./domains/export/index.js";
-import { getCurrentSessionHandler } from "./domains/auth/index.js";
 import {
+  getCurrentSessionHandler,
+  listExternalAIClientsHandler,
+  listExternalAIAuthorizationsHandler,
+  createExternalAIAuthorizationHandler,
+  exchangeExternalAILoginChallengeHandler,
+  revokeExternalAIAuthorizationHandler,
+  refreshExternalAIAccessTokenHandler,
+  deleteExternalAIAuthorizationHandler,
+} from "./domains/auth/index.js";
+import {
+  getExternalAIContextHandler,
+  getConsultantAIPreferencesHandler,
   listAIPromptConfigsHandler,
+  updateConsultantAIPreferencesHandler,
   updateAIPromptFragmentHandler,
 } from "./domains/system/index.js";
 
@@ -68,8 +87,18 @@ import {
  */
 export const router = implement(contract).router({
   health: healthHandler,
+  listExternalAIClients: listExternalAIClientsHandler,
+  listExternalAIAuthorizations: listExternalAIAuthorizationsHandler,
+  createExternalAIAuthorization: createExternalAIAuthorizationHandler,
+  exchangeExternalAILoginChallenge: exchangeExternalAILoginChallengeHandler,
+  revokeExternalAIAuthorization: revokeExternalAIAuthorizationHandler,
+  refreshExternalAIAccessToken: refreshExternalAIAccessTokenHandler,
+  deleteExternalAIAuthorization: deleteExternalAIAuthorizationHandler,
+  getExternalAIContext: getExternalAIContextHandler,
   listAIPromptConfigs: listAIPromptConfigsHandler,
   updateAIPromptFragment: updateAIPromptFragmentHandler,
+  getConsultantAIPreferences: getConsultantAIPreferencesHandler,
+  updateConsultantAIPreferences: updateConsultantAIPreferencesHandler,
   getCurrentSession: getCurrentSessionHandler,
   listEmployees: listEmployeesHandler,
   getEmployee: getEmployeeHandler,
@@ -78,6 +107,7 @@ export const router = implement(contract).router({
   deleteEmployee: deleteEmployeeHandler,
   listResumes: listResumesHandler,
   getResume: getResumeHandler,
+  getResumeBranch: getResumeBranchHandler,
   createResume: createResumeHandler,
   updateResume: updateResumeHandler,
   deleteResume: deleteResumeHandler,
@@ -85,6 +115,7 @@ export const router = implement(contract).router({
   deleteAssignment: deleteAssignmentHandler,
   listEducation: listEducationHandler,
   createEducation: createEducationHandler,
+  updateEducation: updateEducationHandler,
   deleteEducation: deleteEducationHandler,
   importCv: importCvHandler,
   parseCvDocx: parseCvDocxHandler,
@@ -92,6 +123,8 @@ export const router = implement(contract).router({
   exportResumePdf: exportResumePdfHandler,
   exportResumeDocx: exportResumeDocxHandler,
   saveResumeVersion: saveResumeVersionHandler,
+  updateResumeBranchContent: updateResumeBranchContentHandler,
+  updateResumeBranchSkills: updateResumeBranchSkillsHandler,
   getResumeCommit: getResumeCommitHandler,
   listResumeCommits: listResumeCommitsHandler,
   forkResumeBranch: forkResumeBranchHandler,
@@ -102,8 +135,11 @@ export const router = implement(contract).router({
   listBranchAssignments: listBranchAssignmentsHandler,
   listBranchAssignmentsFull: listBranchAssignmentsFullHandler,
   addBranchAssignment: addBranchAssignmentHandler,
+  addResumeBranchAssignment: addResumeBranchAssignmentHandler,
   removeBranchAssignment: removeBranchAssignmentHandler,
+  removeResumeBranchAssignment: removeResumeBranchAssignmentHandler,
   updateBranchAssignment: updateBranchAssignmentHandler,
+  updateResumeBranchAssignment: updateResumeBranchAssignmentHandler,
   compareResumeCommits: compareResumeCommitsHandler,
   improveDescription: improveDescriptionHandler,
   createAIConversation: createAIConversationHandler,

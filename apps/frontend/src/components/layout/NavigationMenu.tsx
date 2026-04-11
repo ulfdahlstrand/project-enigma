@@ -10,7 +10,6 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
-import ListSubheader from "@mui/material/ListSubheader";
 import Typography from "@mui/material/Typography";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
@@ -114,10 +113,8 @@ export function NavigationMenu() {
         {user?.role === "admin" && (
           <>
             <Divider sx={{ my: 1.5 }} />
-            <ListSubheader
-              disableSticky
+            <Box
               sx={{
-                bgcolor: "transparent",
                 color: "text.secondary",
                 fontSize: "0.75rem",
                 fontWeight: 700,
@@ -129,7 +126,7 @@ export function NavigationMenu() {
               }}
             >
               {t("nav.adminGroup")}
-            </ListSubheader>
+            </Box>
             {renderNavItems(ADMIN_NAV_ITEMS)}
           </>
         )}

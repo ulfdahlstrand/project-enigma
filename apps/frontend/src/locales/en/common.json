@@ -18,8 +18,69 @@
     "home": "Home",
     "employees": "Employees",
     "resumes": "Resumes",
+    "assistantPreferences": "Assistant preferences",
+    "externalAIConnections": "External AI Connections",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI Prompt Inventory"
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "sidebarLabel": "Workspace settings"
+  },
+  "assistantPreferences": {
+    "pageTitle": "Assistant preferences",
+    "pageDescription": "Define your personal writing preferences so external AI clients can adapt revisions to your profile and tone.",
+    "loading": "Loading assistant preferences…",
+    "loadError": "Failed to load assistant preferences.",
+    "formTitle": "Your consultant AI preferences",
+    "formDescription": "These preferences are injected as consultant-specific guidance in the external AI revision context. Keep them short, concrete, and focused on how you want your CV to read.",
+    "promptLabel": "Preference prompt",
+    "promptPlaceholder": "Example: Prefer a senior, concise tone that still feels practical and hands-on.",
+    "rulesLabel": "Personal rules",
+    "rulesPlaceholder": "Example: Emphasize architecture, leadership, and business impact when the CV supports it.",
+    "validatorsLabel": "Personal validators",
+    "validatorsPlaceholder": "Example: Avoid sounding generic, avoid buzzwords without evidence, and do not overstate my role.",
+    "saveButton": "Save preferences",
+    "saving": "Saving…",
+    "saveSuccess": "Preferences saved.",
+    "saveError": "Failed to save preferences."
+  },
+  "externalAIConnections": {
+    "pageTitle": "External AI Connections",
+    "pageDescription": "Create and manage secure one-time connection flows for external AI clients that use the public resume revision API.",
+    "loading": "Loading external AI connections…",
+    "loadError": "Failed to load external AI connection data.",
+    "createTitle": "Create connection",
+    "clientLabel": "External client",
+    "connectionTitleLabel": "Connection label",
+    "connectionTitlePlaceholder": "Optional label to help you recognise this connection",
+    "durationLabel": "Session duration",
+    "durationOption": {
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "8h": "8 hours",
+      "1d": "1 day",
+      "7d": "7 days"
+    },
+    "createButton": "Create connection",
+    "creating": "Creating…",
+    "createError": "Failed to create external AI connection.",
+    "challengeTitle": "One-time connection created for {{client}}",
+    "challengeCodeLabel": "Challenge code",
+    "challengeIdLabel": "Challenge id",
+    "challengeExpiresLabel": "Challenge expires",
+    "authorizationExpiresLabel": "Authorization expires",
+    "tokenExpiresLabel": "Access token lifetime ends",
+    "copyInstructionsButton": "Copy Claude instructions",
+    "copyInstructionsSuccess": "Claude instructions copied.",
+    "copyInstructionsError": "Failed to copy the Claude instructions.",
+    "listTitle": "Existing connections",
+    "empty": "No external AI connections created yet.",
+    "createdAtLabel": "Created",
+    "lastUsedLabel": "Last used",
+    "neverUsed": "Never",
+    "expiresAtLabel": "Expires",
+    "revokeButton": "Revoke"
   },
   "admin": {
     "promptInventory": {
@@ -511,6 +572,7 @@
   "userMenu": {
     "language": "Language",
     "preferences": "Preferences",
+    "settings": "Settings",
     "helpAndFeedback": "Help & feedback",
     "signOut": "Sign out",
     "darkMode": "Dark mode"

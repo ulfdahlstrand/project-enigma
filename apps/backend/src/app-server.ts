@@ -11,7 +11,8 @@ import { loginHandler } from "./auth/login-handler.js";
 import { testLoginHandler } from "./auth/test-login-handler.js";
 import { refreshHandler } from "./auth/refresh-handler.js";
 import { logoutHandler } from "./auth/logout-handler.js";
-import { resolveUser } from "./auth/resolve-user.js";
+import { resolveAuthContext } from "./auth/resolve-auth-context.js";
+import { getRequiredExternalAIScope } from "./auth/external-ai-route-policy.js";
 import type { User } from "./db/types.js";
 import { getDb } from "./db/client.js";
 import { logger } from "./infra/logger.js";
@@ -23,7 +24,18 @@ import {
   e2eScriptedAIHandler,
 } from "./test-helpers/e2e-handlers.js";
 
-export type AppContext = { user: User | null };
+export type AppContext = {
+  user: User | null;
+  externalAI?: {
+    tokenId: string;
+    authorizationId: string;
+    clientId: string;
+    clientKey: string;
+    clientTitle: string;
+    clientDescription: string | null;
+    scopes: string[];
+  } | null;
+};
 
 function buildErrorMeta(error: unknown) {
   if (error instanceof Error) {
@@ -140,13 +152,31 @@ export async function createAppServer() {
       }
 
       requestLogging.setOperationName(requestLogging.path);
-      const user = await resolveUser(getDb(), req.headers["authorization"] ?? "", req.headers["cookie"]);
-      requestLogging.setUserId(user?.id ?? null);
+      const authContext = await resolveAuthContext(
+        getDb(),
+        req.headers["authorization"] ?? "",
+        req.headers["cookie"],
+      );
+      requestLogging.setUserId(authContext.user?.id ?? null);
+      if (authContext.externalAI) {
+        const requiredScope = getRequiredExternalAIScope(req.method, req.url);
+        if (!requiredScope) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "External AI token is not allowed for this route" }));
+          return;
+        }
+        if (!authContext.externalAI.scopes.includes(requiredScope)) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "External AI token does not have the required scope" }));
+          return;
+        }
+      }
       let result;
       try {
         result = await handler.handle(req, res, {
           context: {
-            user,
+            user: authContext.user,
+            externalAI: authContext.externalAI,
             requestId: requestLogging.requestId,
           },
         });

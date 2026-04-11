@@ -18,8 +18,69 @@
     "home": "Hem",
     "employees": "Anställda",
     "resumes": "Meritförteckningar",
+    "assistantPreferences": "Assistentpreferenser",
+    "externalAIConnections": "Externa AI-kopplingar",
     "adminGroup": "Admin",
     "aiPromptInventory": "AI-promptinventering"
+  },
+  "settings": {
+    "pageTitle": "Inställningar",
+    "sidebarLabel": "Arbetsytans inställningar"
+  },
+  "assistantPreferences": {
+    "pageTitle": "Assistentpreferenser",
+    "pageDescription": "Definiera dina personliga skrivpreferenser så att externa AI-klienter kan anpassa revisioner till din profil och ton.",
+    "loading": "Laddar assistentpreferenser…",
+    "loadError": "Det gick inte att ladda assistentpreferenserna.",
+    "formTitle": "Dina konsultspecifika AI-preferenser",
+    "formDescription": "Dessa preferenser injiceras som konsultspecifik vägledning i den externa AI-kontexten. Håll dem korta, konkreta och fokuserade på hur du vill att ditt CV ska uppfattas.",
+    "promptLabel": "Preferensprompt",
+    "promptPlaceholder": "Exempel: Föredra en senior och koncis ton som fortfarande känns praktisk och hands-on.",
+    "rulesLabel": "Personliga regler",
+    "rulesPlaceholder": "Exempel: Betona arkitektur, ledarskap och affärsnytta när CV:t faktiskt stödjer det.",
+    "validatorsLabel": "Personliga validatorer",
+    "validatorsPlaceholder": "Exempel: Undvik att låta generisk, undvik buzzwords utan bevis och överdriv inte min roll.",
+    "saveButton": "Spara preferenser",
+    "saving": "Sparar…",
+    "saveSuccess": "Preferenserna sparades.",
+    "saveError": "Det gick inte att spara preferenserna."
+  },
+  "externalAIConnections": {
+    "pageTitle": "Externa AI-kopplingar",
+    "pageDescription": "Skapa och hantera säkra engångsanslutningar för externa AI-klienter som använder det publika API:t för CV-revisioner.",
+    "loading": "Laddar externa AI-kopplingar…",
+    "loadError": "Det gick inte att ladda data för externa AI-kopplingar.",
+    "createTitle": "Skapa koppling",
+    "clientLabel": "Extern klient",
+    "connectionTitleLabel": "Kopplingsetikett",
+    "connectionTitlePlaceholder": "Valfri etikett för att enklare känna igen kopplingen",
+    "durationLabel": "Sessionslängd",
+    "durationOption": {
+      "1h": "1 timme",
+      "4h": "4 timmar",
+      "8h": "8 timmar",
+      "1d": "1 dag",
+      "7d": "7 dagar"
+    },
+    "createButton": "Skapa koppling",
+    "creating": "Skapar…",
+    "createError": "Det gick inte att skapa AI-kopplingen.",
+    "challengeTitle": "Engångsanslutning skapad för {{client}}",
+    "challengeCodeLabel": "Challenge-kod",
+    "challengeIdLabel": "Challenge-id",
+    "challengeExpiresLabel": "Challenge upphör",
+    "authorizationExpiresLabel": "Auktorisering upphör",
+    "tokenExpiresLabel": "Access token gäller till",
+    "copyInstructionsButton": "Kopiera Claude-instruktioner",
+    "copyInstructionsSuccess": "Claude-instruktionerna kopierades.",
+    "copyInstructionsError": "Det gick inte att kopiera Claude-instruktionerna.",
+    "listTitle": "Befintliga kopplingar",
+    "empty": "Inga externa AI-kopplingar har skapats ännu.",
+    "createdAtLabel": "Skapad",
+    "lastUsedLabel": "Senast använd",
+    "neverUsed": "Aldrig",
+    "expiresAtLabel": "Upphör",
+    "revokeButton": "Återkalla"
   },
   "admin": {
     "promptInventory": {
@@ -511,6 +572,7 @@
   "userMenu": {
     "language": "Språk",
     "preferences": "Inställningar",
+    "settings": "Inställningar",
     "helpAndFeedback": "Hjälp & feedback",
     "signOut": "Logga ut",
     "darkMode": "Mörkt läge"
