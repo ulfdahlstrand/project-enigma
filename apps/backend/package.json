@@ -10,12 +10,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "migrate": "node --env-file=.env --import tsx/esm src/db/migrate.ts",
+    "mcp:external-ai": "node --env-file=.env --import tsx/esm scripts/external-ai-mcp-server.ts",
     "report:branch-commits": "node --env-file=.env --import tsx/esm scripts/report-branch-commit-coverage.ts",
     "cleanup:detached-commits": "node --env-file=.env --import tsx/esm scripts/cleanup-detached-commits.ts"
   },
   "dependencies": {
     "@cv-tool/contracts": "*",
     "@cv-tool/utils": "*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.72.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
