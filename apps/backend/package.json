@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch --env-file=.env --import tsx/esm src/index.ts",
+    "dev": "node --env-file=.env --import tsx/esm scripts/dev.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "migrate": "node --env-file=.env --import tsx/esm src/db/migrate.ts",
     "mcp:external-ai": "node --env-file=.env --import tsx/esm scripts/external-ai-mcp-server.ts",
+    "mcp:external-ai:http": "node --env-file=.env --import tsx/esm scripts/external-ai-mcp-http-server.ts",
     "report:branch-commits": "node --env-file=.env --import tsx/esm scripts/report-branch-commit-coverage.ts",
     "cleanup:detached-commits": "node --env-file=.env --import tsx/esm scripts/cleanup-detached-commits.ts"
   },

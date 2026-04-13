@@ -13,7 +13,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import enCommon from "../../../../../locales/en/common.json";
 import { renderWithProviders, buildTestQueryClient } from "../../../../../test-utils/render";
@@ -259,12 +259,38 @@ describe("Diff with changes", () => {
     expect(heading).toBeInTheDocument();
   });
 
+  it("renders a changed groups summary", async () => {
+    renderPage();
+    expect(
+      await screen.findByText(enCommon.resume.compare.changedGroups_other.replace("{{count}}", "3"))
+    ).toBeInTheDocument();
+  });
+
+  it("shows diff content when a group is expanded", async () => {
+    renderPage();
+    expect(await screen.findByText("title")).toBeInTheDocument();
+    expect((await screen.findAllByText(enCommon.resume.compare.statusModified)).length).toBeGreaterThan(0);
+  });
+
+  it("uses the summary diff view by default and lets the user switch to split view", async () => {
+    renderPage();
+
+    const summaryToggle = await screen.findByRole("button", { name: enCommon.resume.compare.summaryView });
+    expect(summaryToggle).toHaveAttribute("aria-pressed", "true");
+
+    const splitToggle = screen.getByRole("button", { name: enCommon.resume.compare.splitView });
+    fireEvent.click(splitToggle);
+
+    expect(splitToggle).toHaveAttribute("aria-pressed", "true");
+    expect(summaryToggle).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("renders added skill chip with the skill name", async () => {
     renderPage();
     const addedChip = await screen.findByText(enCommon.resume.compare.statusAdded);
     expect(addedChip).toBeInTheDocument();
-    const skillName = await screen.findByText("TypeScript");
-    expect(skillName).toBeInTheDocument();
+    const skillNames = await screen.findAllByText("TypeScript");
+    expect(skillNames.length).toBeGreaterThan(0);
   });
 
   it("renders removed skill chip", async () => {
@@ -275,8 +301,8 @@ describe("Diff with changes", () => {
 
   it("renders modified assignment chip", async () => {
     renderPage();
-    const modifiedChip = await screen.findByText(enCommon.resume.compare.statusModified);
-    expect(modifiedChip).toBeInTheDocument();
+    const modifiedChips = await screen.findAllByText(enCommon.resume.compare.statusModified);
+    expect(modifiedChips.length).toBeGreaterThan(0);
   });
 });
 

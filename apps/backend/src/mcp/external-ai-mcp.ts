@@ -1,3 +1,4 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   exchangeExternalAILoginChallengeOutputSchema,
   getExternalAIContextOutputSchema,
@@ -13,6 +14,7 @@ const externalAIMcpToolNameSchema = z.enum([
   "get_resume",
   "list_resume_branches",
   "get_resume_branch",
+  "list_resume_branch_assignments",
   "fork_resume_branch",
   "list_resume_commits",
   "get_resume_commit",
@@ -64,6 +66,15 @@ export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
     route: { method: "GET", path: "/resumes/{resumeId}/branches/{branchId}" },
     inputSchema: {
       resumeId: z.string().uuid().describe("Resume ID"),
+      branchId: z.string().uuid().describe("Branch ID"),
+    },
+  },
+  {
+    name: "list_resume_branch_assignments",
+    title: "List Resume Branch Assignments",
+    description: "List the full assignment entries currently present on a branch.",
+    route: { method: "GET", path: "/resume-branches/{branchId}/assignments" },
+    inputSchema: {
       branchId: z.string().uuid().describe("Branch ID"),
     },
   },
@@ -526,4 +537,118 @@ function safeParseJson(value: string) {
   } catch {
     return value;
   }
+}
+
+export async function buildExternalAIMcpServer(client: ExternalAIMcpClient) {
+  let context = await client.initialize();
+
+  const server = new McpServer({
+    name: "project-enigma-external-ai",
+    version: "0.1.0",
+  });
+
+  server.registerResource(
+    "external-ai-context",
+    "external-ai://context",
+    {
+      title: "External AI Context",
+      description: "Current external AI context, workflow, and allowed route guidance.",
+      mimeType: "text/markdown",
+    },
+    async () => ({
+      contents: [
+        {
+          uri: "external-ai://context",
+          text: formatExternalAIContextMarkdown(context),
+          mimeType: "text/markdown",
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "external-ai-revision-context",
+    {
+      title: "External AI Revision Context",
+      description: "Load the current external AI revision context as a prompt message.",
+    },
+    async () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: formatExternalAIContextMarkdown(context),
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerTool(
+    "refresh_external_ai_context",
+    {
+      title: "Refresh External AI Context",
+      description: "Reload the external AI context from the API and return the latest guidance.",
+      inputSchema: {},
+    },
+    async () => {
+      context = await client.getContext();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: formatExternalAIContextMarkdown(context),
+          },
+        ],
+      };
+    },
+  );
+
+  for (const definition of selectAllowedToolDefinitions(context.allowedRoutes)) {
+    server.registerTool(
+      definition.name,
+      {
+        title: definition.title,
+        description: definition.description,
+        inputSchema: definition.inputSchema,
+      },
+      async (args) => {
+        const result = await client.callRoute(
+          definition.route.method,
+          definition.route.path,
+          args as Record<string, unknown>,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      },
+    );
+  }
+
+  server.registerTool(
+    "get_external_ai_allowed_routes",
+    {
+      title: "Get External AI Allowed Routes",
+      description: "Return the currently allowed external AI routes for the active token.",
+      inputSchema: {},
+    },
+    async () => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(context.allowedRoutes, null, 2),
+        },
+      ],
+    }),
+  );
+
+  return server;
 }

@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
     ?.split(",")
     .map((host) => host.trim())
     .filter(Boolean);
+  const apiProxyTarget = env["VITE_API_PROXY_TARGET"] || "http://localhost:3001";
+  const mcpProxyTarget = env["VITE_MCP_PROXY_TARGET"] || "http://localhost:8787";
 
   return {
     plugins: [
@@ -26,9 +28,13 @@ export default defineConfig(({ mode }) => {
       ...(allowedHosts && allowedHosts.length > 0 ? { allowedHosts } : {}),
       proxy: {
         "/api": {
-          target: "http://localhost:3001",
+          target: apiProxyTarget,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/u, ""),
+        },
+        "/mcp": {
+          target: mcpProxyTarget,
+          changeOrigin: true,
         },
       },
     },

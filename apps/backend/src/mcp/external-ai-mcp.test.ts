@@ -40,6 +40,12 @@ describe("external-ai-mcp helpers", () => {
         purpose: "Read branch",
       },
       {
+        method: "GET",
+        path: "/resume-branches/{branchId}/assignments",
+        requiredScope: "branch-assignment:read",
+        purpose: "List assignments",
+      },
+      {
         method: "POST",
         path: "/resume-branches/{branchId}/commits",
         requiredScope: "resume-commit:write",
@@ -49,6 +55,7 @@ describe("external-ai-mcp helpers", () => {
 
     expect(selected.map((tool) => tool.name)).toEqual([
       "get_resume_branch",
+      "list_resume_branch_assignments",
       "save_resume_version",
     ]);
   });
