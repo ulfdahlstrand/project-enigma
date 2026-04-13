@@ -33,13 +33,6 @@ async function main() {
     "tsx/esm",
     "src/index.ts",
   ]);
-  const mcp = spawnProcess([
-    "--watch",
-    "--env-file=.env",
-    "--import",
-    "tsx/esm",
-    "scripts/external-ai-mcp-http-server.ts",
-  ]);
 
   const handleSignal = (signal: NodeJS.Signals) => {
     terminateChildren(signal);
@@ -49,14 +42,9 @@ async function main() {
   process.on("SIGINT", handleSignal);
   process.on("SIGTERM", handleSignal);
 
-  const exitCode = await Promise.race([
-    new Promise<number>((resolve) => {
-      backend.on("exit", (code) => resolve(code ?? 0));
-    }),
-    new Promise<number>((resolve) => {
-      mcp.on("exit", (code) => resolve(code ?? 0));
-    }),
-  ]);
+  const exitCode = await new Promise<number>((resolve) => {
+    backend.on("exit", (code) => resolve(code ?? 0));
+  });
 
   terminateChildren("SIGTERM");
   process.exit(exitCode);

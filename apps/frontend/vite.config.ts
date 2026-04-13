@@ -36,6 +36,24 @@ export default defineConfig(({ mode }) => {
           target: mcpProxyTarget,
           changeOrigin: true,
         },
+        // OAuth2 discovery + token endpoints — forwarded to the MCP HTTP server so that
+        // Claude Code can complete the full OAuth2 flow when connecting via this Vite
+        // dev server URL (e.g. localhost:5173 or a single ngrok tunnel).
+        //
+        // NOTE: /oauth/authorize is intentionally NOT proxied — it is a frontend SPA
+        // route handled by TanStack Router (the user approval page).
+        "/.well-known": {
+          target: mcpProxyTarget,
+          changeOrigin: true,
+        },
+        "/register": {
+          target: mcpProxyTarget,
+          changeOrigin: true,
+        },
+        "/oauth/token": {
+          target: mcpProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
   };

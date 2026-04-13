@@ -780,5 +780,18 @@
       "title": "CV",
       "description": "Skapa, redigera och exportera konsult-CV."
     }
+  },
+  "oauthAuthorize": {
+    "title": "Auktorisera åtkomst",
+    "subtitle": "{{client}} begär behörighet att läsa och redigera dina CV-data.",
+    "scopesLabel": "Begärda behörigheter",
+    "durationLabel": "Sessionslängd",
+    "approveButton": "Auktorisera",
+    "approving": "Auktoriserar…",
+    "denyButton": "Neka",
+    "approveError": "Det gick inte att skapa auktoriseringen. Försök igen.",
+    "errorInvalidResponseType": "Ogiltig OAuth2-begäran: response_type stöds inte.",
+    "errorMissingPkce": "Ogiltig OAuth2-begäran: code_challenge (PKCE) krävs.",
+    "errorUnknownClient": "Okänd klient: {{clientId}}. Klienten kan vara inaktiv eller inte registrerad."
   }
 }

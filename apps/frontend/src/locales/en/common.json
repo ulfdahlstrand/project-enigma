@@ -780,5 +780,18 @@
       "title": "Resumes",
       "description": "Create, edit, and export consultant resumes."
     }
+  },
+  "oauthAuthorize": {
+    "title": "Authorize access",
+    "subtitle": "{{client}} is requesting permission to access your CV data.",
+    "scopesLabel": "Requested permissions",
+    "durationLabel": "Session duration",
+    "approveButton": "Authorize",
+    "approving": "Authorizing…",
+    "denyButton": "Deny",
+    "approveError": "Failed to create the authorization. Please try again.",
+    "errorInvalidResponseType": "Invalid OAuth2 request: unsupported response_type.",
+    "errorMissingPkce": "Invalid OAuth2 request: PKCE code_challenge is required.",
+    "errorUnknownClient": "Unknown client: {{clientId}}. The client may be inactive or not registered."
   }
 }

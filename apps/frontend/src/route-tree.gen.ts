@@ -19,6 +19,7 @@ import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees/index'
 import { Route as AuthenticatedResumesNewRouteImport } from './routes/_authenticated/resumes/new'
 import { Route as AuthenticatedResumesIdRouteImport } from './routes/_authenticated/resumes/$id'
+import { Route as AuthenticatedOauthAuthorizeRouteImport } from './routes/_authenticated/oauth/authorize'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees/new'
 import { Route as AuthenticatedEmployeesIdRouteImport } from './routes/_authenticated/employees/$id'
 import { Route as AuthenticatedAssistantPreferencesRouteImport } from './routes/_authenticated/assistant/preferences'
@@ -89,6 +90,12 @@ const AuthenticatedResumesIdRoute = AuthenticatedResumesIdRouteImport.update({
   path: '/resumes/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedOauthAuthorizeRoute =
+  AuthenticatedOauthAuthorizeRouteImport.update({
+    id: '/oauth/authorize',
+    path: '/oauth/authorize',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedEmployeesNewRoute =
   AuthenticatedEmployeesNewRouteImport.update({
     id: '/employees/new',
@@ -206,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/oauth/authorize': typeof AuthenticatedOauthAuthorizeRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/resumes/new': typeof AuthenticatedResumesNewRoute
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
@@ -233,6 +241,7 @@ export interface FileRoutesByTo {
   '/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/oauth/authorize': typeof AuthenticatedOauthAuthorizeRoute
   '/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/resumes/new': typeof AuthenticatedResumesNewRoute
   '/employees': typeof AuthenticatedEmployeesIndexRoute
@@ -264,6 +273,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
   '/_authenticated/employees/$id': typeof AuthenticatedEmployeesIdRoute
   '/_authenticated/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/_authenticated/oauth/authorize': typeof AuthenticatedOauthAuthorizeRoute
   '/_authenticated/resumes/$id': typeof AuthenticatedResumesIdRoute
   '/_authenticated/resumes/new': typeof AuthenticatedResumesNewRoute
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/assistant/preferences'
     | '/employees/$id'
     | '/employees/new'
+    | '/oauth/authorize'
     | '/resumes/$id'
     | '/resumes/new'
     | '/employees/'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/assistant/preferences'
     | '/employees/$id'
     | '/employees/new'
+    | '/oauth/authorize'
     | '/resumes/$id'
     | '/resumes/new'
     | '/employees'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant/preferences'
     | '/_authenticated/employees/$id'
     | '/_authenticated/employees/new'
+    | '/_authenticated/oauth/authorize'
     | '/_authenticated/resumes/$id'
     | '/_authenticated/resumes/new'
     | '/_authenticated/employees/'
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/resumes/$id'
       fullPath: '/resumes/$id'
       preLoaderRoute: typeof AuthenticatedResumesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/oauth/authorize': {
+      id: '/_authenticated/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof AuthenticatedOauthAuthorizeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/employees/new': {
@@ -618,6 +638,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAssistantPreferencesRoute: typeof AuthenticatedAssistantPreferencesRoute
   AuthenticatedEmployeesIdRoute: typeof AuthenticatedEmployeesIdRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
+  AuthenticatedOauthAuthorizeRoute: typeof AuthenticatedOauthAuthorizeRoute
   AuthenticatedResumesIdRoute: typeof AuthenticatedResumesIdRoute
   AuthenticatedResumesNewRoute: typeof AuthenticatedResumesNewRoute
   AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
@@ -641,6 +662,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedAssistantPreferencesRoute,
   AuthenticatedEmployeesIdRoute: AuthenticatedEmployeesIdRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
+  AuthenticatedOauthAuthorizeRoute: AuthenticatedOauthAuthorizeRoute,
   AuthenticatedResumesIdRoute: AuthenticatedResumesIdRoute,
   AuthenticatedResumesNewRoute: AuthenticatedResumesNewRoute,
   AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,

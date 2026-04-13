@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
-import { ExternalAIMcpClient, buildExternalAIMcpServer } from "../src/mcp/external-ai-mcp.js";
+import { ExternalAIMcpClient, buildExternalAIMcpServer } from "./adapter.js";
 import {
   buildOAuthMetadata,
   buildProtectedResourceMetadata,
@@ -9,7 +9,7 @@ import {
   resolveClientKeyFromRegistration,
   decodeAuthCode,
   verifyPkce,
-} from "../src/mcp/external-ai-mcp-oauth.js";
+} from "./oauth.js";
 
 // ---------------------------------------------------------------------------
 // Config helpers
@@ -124,7 +124,6 @@ async function main() {
 
   // -------------------------------------------------------------------------
   // OAuth 2.0 Protected Resource Metadata — RFC 9728
-  // Claude Code first fetches this to discover the authorization server.
   // -------------------------------------------------------------------------
   app.get("/.well-known/oauth-protected-resource", (_req, res) => {
     res.json(buildProtectedResourceMetadata(publicUrl));
@@ -138,8 +137,7 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
-  // OpenID Connect Discovery 1.0 — fallback for clients that try OIDC first.
-  // MCP spec requires code_challenge_methods_supported to be present here too.
+  // OpenID Connect Discovery 1.0 — fallback checked by some clients
   // -------------------------------------------------------------------------
   app.get("/.well-known/openid-configuration", (_req, res) => {
     res.json(buildOpenIdConfiguration(publicUrl, appUrl));
@@ -147,8 +145,6 @@ async function main() {
 
   // -------------------------------------------------------------------------
   // Dynamic Client Registration — RFC 7591
-  // Claude Code may attempt this before falling back to pre-registration.
-  // We accept any client and return a stable client_id mapped to a known key.
   // -------------------------------------------------------------------------
   app.post("/register", async (req, res) => {
     const body = await readJsonBody(req);
@@ -158,7 +154,6 @@ async function main() {
     res.status(201).json({
       client_id: clientId,
       client_id_issued_at: now,
-      // Propagate back the fields the client sent so it can verify them
       client_name: body["client_name"] ?? clientId,
       redirect_uris: body["redirect_uris"] ?? [],
       grant_types: body["grant_types"] ?? ["authorization_code"],
@@ -170,19 +165,17 @@ async function main() {
 
   // -------------------------------------------------------------------------
   // OAuth 2.0 Token Endpoint
-  // Handles authorization_code and refresh_token grants.
   // -------------------------------------------------------------------------
   app.post("/oauth/token", async (req, res) => {
     let params: URLSearchParams;
 
     try {
-      // Clients may send application/x-www-form-urlencoded or application/json.
       const raw = await readRawBody(req);
       const contentType = String(req.headers["content-type"] ?? "");
 
       if (contentType.includes("application/json")) {
         const parsed = JSON.parse(raw) as Record<string, string>;
-        params = new URLSearchParams(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+        params = new URLSearchParams(Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)])));
       } else {
         params = new URLSearchParams(raw);
       }
@@ -259,9 +252,7 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
-  // MCP endpoint — requires Bearer token obtained via OAuth2 flow above.
-  // The 401 response points to the protected resource metadata so clients
-  // can discover the authorization server automatically.
+  // MCP endpoint — requires Bearer token via OAuth2
   // -------------------------------------------------------------------------
   app.post("/mcp", async (req, res) => {
     const authHeader = (req.headers["authorization"] ?? "") as string;
@@ -324,7 +315,7 @@ async function main() {
 
   app.listen(port, host, () => {
     // eslint-disable-next-line no-console
-    console.log(`Project Enigma remote MCP server listening on http://${host}:${port}/mcp`);
+    console.log(`Project Enigma MCP server listening on http://${host}:${port}/mcp`);
     // eslint-disable-next-line no-console
     console.log(`OAuth2 protected resource: ${publicUrl}/.well-known/oauth-protected-resource`);
     // eslint-disable-next-line no-console
