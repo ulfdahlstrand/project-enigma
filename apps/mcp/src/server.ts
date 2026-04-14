@@ -12,7 +12,9 @@ import {
 } from "./oauth.js";
 
 // ---------------------------------------------------------------------------
-// Config helpers
+// Config helpers — public URL is read from env at startup, with per-request
+// override via X-Forwarded-Proto / X-Forwarded-Host headers for reverse-proxy
+// setups (ngrok, etc.).
 // ---------------------------------------------------------------------------
 
 function resolveBaseUrl() {
@@ -23,6 +25,28 @@ function resolvePublicUrl() {
   const port = process.env["EXTERNAL_AI_MCP_PORT"] ?? "8787";
   const host = process.env["EXTERNAL_AI_MCP_HOST"] ?? "127.0.0.1";
   return (process.env["EXTERNAL_AI_MCP_PUBLIC_URL"] ?? `http://${host}:${port}`).replace(/\/+$/, "");
+}
+
+/**
+ * Derive the public base URL from the incoming request headers.
+ * When the server is behind a reverse proxy (e.g. ngrok), the
+ * X-Forwarded-Proto and X-Forwarded-Host headers carry the real
+ * public origin. Falls back to the configured publicUrl.
+ */
+function resolvePublicUrlFromRequest(req: IncomingMessage, fallback: string): string {
+  const proto = Array.isArray(req.headers["x-forwarded-proto"])
+    ? req.headers["x-forwarded-proto"][0]
+    : req.headers["x-forwarded-proto"];
+  const forwardedHost = Array.isArray(req.headers["x-forwarded-host"])
+    ? req.headers["x-forwarded-host"][0]
+    : req.headers["x-forwarded-host"];
+  const host = forwardedHost ?? req.headers["host"];
+
+  if (proto && host) {
+    return `${proto}://${host}`;
+  }
+
+  return fallback;
 }
 
 function resolveAppUrl() {
@@ -125,22 +149,22 @@ async function main() {
   // -------------------------------------------------------------------------
   // OAuth 2.0 Protected Resource Metadata — RFC 9728
   // -------------------------------------------------------------------------
-  app.get("/.well-known/oauth-protected-resource", (_req, res) => {
-    res.json(buildProtectedResourceMetadata(publicUrl));
+  app.get("/.well-known/oauth-protected-resource", (req, res) => {
+    res.json(buildProtectedResourceMetadata(resolvePublicUrlFromRequest(req, publicUrl)));
   });
 
   // -------------------------------------------------------------------------
   // OAuth 2.0 Authorization Server Metadata — RFC 8414
   // -------------------------------------------------------------------------
-  app.get("/.well-known/oauth-authorization-server", (_req, res) => {
-    res.json(buildOAuthMetadata(publicUrl, appUrl));
+  app.get("/.well-known/oauth-authorization-server", (req, res) => {
+    res.json(buildOAuthMetadata(resolvePublicUrlFromRequest(req, publicUrl), appUrl));
   });
 
   // -------------------------------------------------------------------------
   // OpenID Connect Discovery 1.0 — fallback checked by some clients
   // -------------------------------------------------------------------------
-  app.get("/.well-known/openid-configuration", (_req, res) => {
-    res.json(buildOpenIdConfiguration(publicUrl, appUrl));
+  app.get("/.well-known/openid-configuration", (req, res) => {
+    res.json(buildOpenIdConfiguration(resolvePublicUrlFromRequest(req, publicUrl), appUrl));
   });
 
   // -------------------------------------------------------------------------
@@ -263,11 +287,12 @@ async function main() {
     }
 
     if (!accessToken) {
+      const reqPublicUrl = resolvePublicUrlFromRequest(req, publicUrl);
       res
         .status(401)
         .header(
           "WWW-Authenticate",
-          `Bearer realm="Project Enigma MCP", resource_metadata="${publicUrl}/.well-known/oauth-protected-resource"`,
+          `Bearer realm="Project Enigma MCP", resource_metadata="${reqPublicUrl}/.well-known/oauth-protected-resource"`,
         )
         .json({
           jsonrpc: "2.0",
