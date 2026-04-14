@@ -315,75 +315,116 @@ export function selectAllowedToolDefinitions(allowedRoutes: ExternalAIAllowedRou
 }
 
 export function formatExternalAIContextMarkdown(context: GetExternalAIContextOutput) {
-  const sections: string[] = [];
+  const lines: string[] = [];
 
-  sections.push(`# External AI Revision Context`);
-  sections.push(`Guidance version: ${context.guidanceVersion}`);
-  sections.push(`Generated at: ${context.generatedAt}`);
+  // ---------------------------------------------------------------------------
+  // Header
+  // ---------------------------------------------------------------------------
+  lines.push("# Project Enigma — Resume Editing Assistant");
+  lines.push("");
 
   if (context.client) {
-    sections.push(`Client: ${context.client.title}`);
+    lines.push(`Connected as: **${context.client.title}**`);
+    lines.push("");
   }
 
-  sections.push("");
-  sections.push("## Workflow");
+  // ---------------------------------------------------------------------------
+  // On connect — what to do first
+  // ---------------------------------------------------------------------------
+  lines.push("## On Connect");
+  lines.push(
+    "When the user asks you to work on a resume, follow these steps before editing anything:",
+  );
+  lines.push("");
   context.workflow.steps.forEach((step, index) => {
-    sections.push(`${index + 1}. ${step}`);
+    lines.push(`${index + 1}. ${step}`);
   });
+  lines.push("");
 
-  sections.push("");
-  sections.push("## Allowed Routes");
-  context.allowedRoutes.forEach((route) => {
-    sections.push(`- ${route.method} ${route.path} — ${route.purpose}`);
-  });
+  // ---------------------------------------------------------------------------
+  // Tool map — one section per editing area
+  // ---------------------------------------------------------------------------
+  lines.push("## Tool Map");
+  lines.push("Use the registered MCP tools below. Do not call routes directly.");
+  lines.push("");
 
-  sections.push("");
-  sections.push("## Shared Guidance");
+  lines.push("**Reading**");
+  lines.push("- `get_resume` — read a resume and its snapshot content");
+  lines.push("- `list_resume_branches` — list branches for a resume");
+  lines.push("- `get_resume_branch` — read the current state of a branch");
+  lines.push("- `list_resume_branch_assignments` — list all assignments on a branch");
+  lines.push("- `list_resume_commits` — list commits on a branch");
+  lines.push("- `get_resume_commit` — read a specific commit snapshot");
+  lines.push("- `compare_resume_commits` — diff two commits");
+  lines.push("");
+
+  lines.push("**Content editing** (title, consultant title, presentation, summary, highlighted items, education)");
+  lines.push("- `update_resume_branch_content` — update any of these fields on a branch");
+  lines.push("");
+
+  lines.push("**Assignments**");
+  lines.push("- `add_resume_branch_assignment` — add a new assignment");
+  lines.push("- `update_resume_branch_assignment` — edit an existing assignment");
+  lines.push("- `remove_resume_branch_assignment` — remove an assignment");
+  lines.push("");
+
+  lines.push("**Skills**");
+  lines.push("- `update_resume_branch_skills` — replace the full skills and skill-groups snapshot");
+  lines.push("");
+
+  lines.push("**Education**");
+  lines.push("- `list_education` — list education entries for an employee");
+  lines.push("- `create_education` — add an education entry");
+  lines.push("- `update_education` — edit an education entry");
+  lines.push("- `delete_education` — remove an education entry");
+  lines.push("");
+
+  lines.push("**Versioning**");
+  lines.push("- `save_resume_version` — create a commit on a branch (call after editing)");
+  lines.push("- `fork_resume_branch` — create a new branch from an existing commit");
+  lines.push("");
+
+  // ---------------------------------------------------------------------------
+  // Rules — concise, no duplication
+  // ---------------------------------------------------------------------------
+  lines.push("## Rules");
   context.sharedGuidance.forEach((entry) => {
-    sections.push(`### ${entry.title}`);
-    sections.push(entry.content);
+    lines.push(`- **${entry.title}:** ${entry.content}`);
   });
-
-  sections.push("");
-  sections.push("## Safety Guidance");
   context.safetyGuidance.forEach((entry) => {
-    sections.push(`### ${entry.title}`);
-    sections.push(entry.content);
+    lines.push(`- **${entry.title}:** ${entry.content}`);
   });
+  lines.push("");
 
+  // ---------------------------------------------------------------------------
+  // Prompt guidance — section-specific, only if configured
+  // ---------------------------------------------------------------------------
   if (context.promptGuidance.length > 0) {
-    sections.push("");
-    sections.push("## Prompt Guidance");
+    lines.push("## Section-Specific Guidance");
     context.promptGuidance.forEach((entry) => {
-      sections.push(`### ${entry.title}`);
-      sections.push(entry.purpose);
+      lines.push(`### ${entry.title}`);
+      lines.push(`_${entry.purpose}_`);
+      lines.push("");
       entry.fragments.forEach((fragment) => {
-        sections.push(`- ${fragment.label}: ${fragment.content}`);
+        lines.push(`- **${fragment.label}:** ${fragment.content}`);
       });
+      lines.push("");
     });
   }
 
-  sections.push("");
-  sections.push("## Prompt Model");
-  sections.push("### Base");
-  sections.push(JSON.stringify(context.promptModel.base, null, 2));
-  sections.push("### Agents");
-  sections.push(JSON.stringify(context.promptModel.agents, null, 2));
-  sections.push("### Consultant");
-  sections.push(JSON.stringify(context.promptModel.consultant, null, 2));
+  // ---------------------------------------------------------------------------
+  // Consultant overrides — only if configured
+  // ---------------------------------------------------------------------------
+  const c = context.promptModel.consultant;
+  if (c.layers.prompt || c.layers.rules || c.layers.validators) {
+    lines.push("## Consultant Preferences");
+    if (c.layers.prompt) lines.push(`- Prompt: ${c.layers.prompt}`);
+    if (c.layers.rules) lines.push(`- Rules: ${c.layers.rules}`);
+    if (c.layers.validators) lines.push(`- Validators: ${c.layers.validators}`);
+    lines.push("");
+  }
 
-  sections.push("");
-  sections.push("## Supported Resume Sections");
-  context.supportedResumeSections.forEach((section) => {
-    sections.push(`- ${section}`);
-  });
-
-  sections.push("");
-  sections.push("## Token Lifecycle");
-  sections.push("- The MCP adapter exchanges a one-time challenge or reuses configured tokens.");
-  sections.push("- Access token refresh is handled automatically via POST /auth/external-ai/token/refresh when a refresh token is available.");
-
-  return sections.join("\n");
+  return lines.join("\n");
 }
 
 export class ExternalAIMcpClient {

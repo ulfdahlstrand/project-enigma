@@ -69,11 +69,12 @@ const SAFETY_GUIDANCE = [
 ] as const;
 
 const WORKFLOW_STEPS = [
-  "Fetch this context before attempting resume revisions.",
-  "Read the target resume and branch state through the public API, preferring the direct branch endpoint when you are working on a specific branch.",
-  "Create or reuse a branch-scoped revision flow before making changes.",
-  "Apply narrow edits and create commits incrementally.",
-  "Leave merge or finalize actions for explicitly approved workflows.",
+  "Ask the user for the resume ID or URL if not already provided. The ID is the UUID in the resume URL.",
+  "Call get_resume with the resumeId to read the resume and its current snapshot content.",
+  "Call list_resume_branches to see available branches. Ask the user which branch to work on, or default to the branch whose name suggests it is the main or active one.",
+  "Call get_resume_branch to read the full current state of the chosen branch before making any edits.",
+  "Apply narrow edits using the appropriate tool for the section. After editing, call save_resume_version to create a commit.",
+  "Do not merge, publish, or finalize a branch unless the user explicitly asks for it.",
 ] as const;
 
 const SUPPORTED_RESUME_SECTIONS = [
