@@ -23,6 +23,9 @@ export function getRequiredExternalAIScope(
   if (method === "GET" && pathname === "/external-ai/context") {
     return EXTERNAL_AI_CONTEXT_SCOPE;
   }
+  if (method === "GET" && pathname === "/resumes") {
+    return EXTERNAL_AI_RESUME_READ_SCOPE;
+  }
   if (method === "GET" && /^\/resumes\/[^/]+$/.test(pathname)) {
     return EXTERNAL_AI_RESUME_READ_SCOPE;
   }
