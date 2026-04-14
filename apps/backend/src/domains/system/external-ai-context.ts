@@ -69,7 +69,7 @@ const SAFETY_GUIDANCE = [
 ] as const;
 
 const WORKFLOW_STEPS = [
-  "Ask the user for the resume ID or URL if not already provided. The ID is the UUID in the resume URL.",
+  "If the user has not provided a resume ID or URL, call list_resumes to show them all available resumes, then ask which one to work on.",
   "Call get_resume with the resumeId to read the resume and its current snapshot content.",
   "Call list_resume_branches to see available branches. Ask the user which branch to work on, or default to the branch whose name suggests it is the main or active one.",
   "Call get_resume_branch to read the full current state of the chosen branch before making any edits.",
@@ -91,6 +91,7 @@ const SUPPORTED_RESUME_SECTIONS = [
 
 const ALLOWED_ROUTES = [
   { method: "GET", path: "/external-ai/context", requiredScope: EXTERNAL_AI_CONTEXT_SCOPE, purpose: "Fetch the external AI workflow, scopes, and editing guidance." },
+  { method: "GET", path: "/resumes", requiredScope: EXTERNAL_AI_RESUME_READ_SCOPE, purpose: "List all resumes belonging to the authenticated consultant." },
   { method: "GET", path: "/resumes/{resumeId}", requiredScope: EXTERNAL_AI_RESUME_READ_SCOPE, purpose: "Read a resume with its current snapshot-backed content." },
   { method: "GET", path: "/resumes/{resumeId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "List available branches for a resume." },
   { method: "GET", path: "/resumes/{resumeId}/branches/{branchId}", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "Read the current state of a specific branch without resolving its head commit separately." },

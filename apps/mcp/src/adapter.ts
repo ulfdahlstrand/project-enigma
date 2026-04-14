@@ -11,6 +11,7 @@ import { z } from "zod";
 const educationTypeSchema = z.enum(["degree", "certification", "language"]);
 
 const externalAIMcpToolNameSchema = z.enum([
+  "list_resumes",
   "get_resume",
   "list_resume_branches",
   "get_resume_branch",
@@ -45,6 +46,13 @@ export interface ExternalAIMcpToolDefinition<TInput extends z.ZodRawShape = z.Zo
 }
 
 export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
+  {
+    name: "list_resumes",
+    title: "List Resumes",
+    description: "List all resumes belonging to the authenticated consultant. Call this when the user has not provided a resume ID.",
+    route: { method: "GET", path: "/resumes" },
+    inputSchema: {},
+  },
   {
     name: "get_resume",
     title: "Get Resume",
@@ -349,6 +357,7 @@ export function formatExternalAIContextMarkdown(context: GetExternalAIContextOut
   lines.push("");
 
   lines.push("**Reading**");
+  lines.push("- `list_resumes` — list all resumes for the consultant (use when no resume ID is known)");
   lines.push("- `get_resume` — read a resume and its snapshot content");
   lines.push("- `list_resume_branches` — list branches for a resume");
   lines.push("- `get_resume_branch` — read the current state of a branch");
