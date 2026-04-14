@@ -1,23 +1,34 @@
+import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import ListSubheader from "@mui/material/ListSubheader";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import Stack from "@mui/material/Stack";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { diffLines, diffWordsWithSpace } from "diff";
 import {
   useResumeBranchHistoryGraph,
   useResumeBranches,
   useResumeCommitDiff,
 } from "../../../../../hooks/versioning";
+import { UnifiedTextDiff } from "../../../../../components/ai-assistant/DiffReviewDialog";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 
@@ -35,6 +46,24 @@ type BranchRef = {
 type CommitRef = {
   id: string;
 };
+
+type DiffGroupItem = {
+  key: string;
+  title: string;
+  before: string;
+  after: string;
+  status: DiffStatus;
+};
+
+type DiffGroup = {
+  key: string;
+  label: string;
+  plusCount: number;
+  minusCount: number;
+  items: DiffGroupItem[];
+};
+
+type CompareViewMode = "summary" | "split";
 
 function statusColor(status: string): "success" | "error" | "warning" | "default" {
   if (status === "added") return "success";
@@ -91,6 +120,301 @@ function compareByCreatedAtDesc(a: { createdAt: string | Date | null }, b: { cre
   return bTime - aTime;
 }
 
+type SideBySideDiffRow = {
+  left: string | null;
+  right: string | null;
+  kind: "unchanged" | "removed" | "added" | "modified";
+};
+
+function splitLinesPreserveContent(value: string) {
+  const normalized = value.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+
+  if (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+
+  return lines;
+}
+
+function buildSideBySideDiffRows(original: string, suggested: string): SideBySideDiffRow[] {
+  const parts = diffLines(original, suggested);
+  const rows: SideBySideDiffRow[] = [];
+
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index]!;
+
+    if (!part.added && !part.removed) {
+      const lines = splitLinesPreserveContent(part.value);
+      rows.push(
+        ...lines.map((line) => ({
+          left: line,
+          right: line,
+          kind: "unchanged" as const,
+        })),
+      );
+      continue;
+    }
+
+    const nextPart = parts[index + 1];
+
+    if (part.removed && nextPart?.added) {
+      const leftLines = splitLinesPreserveContent(part.value);
+      const rightLines = splitLinesPreserveContent(nextPart.value);
+      const rowCount = Math.max(leftLines.length, rightLines.length);
+
+      for (let lineIndex = 0; lineIndex < rowCount; lineIndex += 1) {
+        rows.push({
+          left: leftLines[lineIndex] ?? null,
+          right: rightLines[lineIndex] ?? null,
+          kind: "modified",
+        });
+      }
+
+      index += 1;
+      continue;
+    }
+
+    if (part.removed) {
+      const lines = splitLinesPreserveContent(part.value);
+      rows.push(
+        ...lines.map((line) => ({
+          left: line,
+          right: null,
+          kind: "removed" as const,
+        })),
+      );
+      continue;
+    }
+
+    const lines = splitLinesPreserveContent(part.value);
+    rows.push(
+      ...lines.map((line) => ({
+        left: null,
+        right: line,
+        kind: "added" as const,
+      })),
+    );
+  }
+
+  return rows.length > 0 ? rows : [{ left: "", right: "", kind: "unchanged" }];
+}
+
+function SideBySideTextDiff({
+  original,
+  suggested,
+}: {
+  original: string;
+  suggested: string;
+}) {
+  const rows = buildSideBySideDiffRows(original, suggested);
+
+  function renderInlineLine(
+    side: "left" | "right",
+    left: string | null,
+    right: string | null,
+    kind: SideBySideDiffRow["kind"],
+  ) {
+    const value = side === "left" ? left : right;
+    if (value === null) {
+      return " ";
+    }
+
+    if (kind !== "modified" || left === null || right === null) {
+      return value;
+    }
+
+    const parts = diffWordsWithSpace(left, right);
+
+    return parts
+      .filter((part) => {
+        if (side === "left") return !part.added;
+        return !part.removed;
+      })
+      .map((part, index) => {
+        const isHighlighted = side === "left" ? part.removed : part.added;
+
+        if (!isHighlighted) {
+          return <span key={`${side}-${index}`}>{part.value}</span>;
+        }
+
+        return (
+          <Box
+            key={`${side}-${index}`}
+            component="span"
+            sx={{
+              bgcolor: side === "left" ? "rgba(248, 81, 73, 0.38)" : "rgba(46, 160, 67, 0.38)",
+              color: side === "left" ? "#ffdcd7" : "#aff5b4",
+              borderRadius: 0.5,
+              px: 0.25,
+            }}
+          >
+            {part.value}
+          </Box>
+        );
+      });
+  }
+
+  return (
+    <Box
+      sx={{
+        mt: 1,
+        borderRadius: 1,
+        overflow: "hidden",
+        border: "1px solid",
+        borderColor: "divider",
+        bgcolor: "#0d1117",
+      }}
+    >
+      {rows.map((row, index) => {
+        const leftSx =
+          row.kind === "removed" || row.kind === "modified"
+            ? {
+                bgcolor: "rgba(248, 81, 73, 0.16)",
+                color: "#ffdcd7",
+              }
+            : { color: "#c9d1d9" };
+        const rightSx =
+          row.kind === "added" || row.kind === "modified"
+            ? {
+                bgcolor: "rgba(46, 160, 67, 0.16)",
+                color: "#aff5b4",
+              }
+            : { color: "#c9d1d9" };
+
+        return (
+          <Box
+            key={`${row.kind}-${index}`}
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              borderTop: index === 0 ? "none" : "1px solid rgba(240, 246, 252, 0.08)",
+            }}
+          >
+            <Box
+              sx={{
+                minHeight: 28,
+                px: 1.5,
+                py: 0.75,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                borderRight: "1px solid rgba(240, 246, 252, 0.08)",
+                ...leftSx,
+              }}
+            >
+              {renderInlineLine("left", row.left, row.right, row.kind)}
+            </Box>
+            <Box
+              sx={{
+                minHeight: 28,
+                px: 1.5,
+                py: 0.75,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                ...rightSx,
+              }}
+            >
+              {renderInlineLine("right", row.left, row.right, row.kind)}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function toDisplayText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) {
+    return value.map((item) => toDisplayText(item)).join("\n");
+  }
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value, null, 2);
+}
+
+function countDiffContribution(status: DiffStatus) {
+  if (status === "added") return { plus: 1, minus: 0 };
+  if (status === "removed") return { plus: 0, minus: 1 };
+  if (status === "modified") return { plus: 1, minus: 1 };
+  return { plus: 0, minus: 0 };
+}
+
+function stringifySkillEntry(entry: { name: string; category?: string | null } | undefined) {
+  if (!entry) return "";
+  return entry.category ? `${entry.name}\n${entry.category}` : entry.name;
+}
+
+function stringifyAssignmentEntry(entry: Record<string, unknown> | undefined) {
+  if (!entry) return "";
+
+  const technologies = Array.isArray(entry["technologies"])
+    ? (entry["technologies"] as unknown[]).map((value) => String(value)).join(", ")
+    : "";
+
+  const lines = [
+    entry["clientName"] ? `Client: ${String(entry["clientName"])}` : "",
+    entry["role"] ? `Role: ${String(entry["role"])}` : "",
+    entry["description"] ? `Description:\n${toDisplayText(entry["description"])}` : "",
+    technologies ? `Technologies: ${technologies}` : "",
+    entry["keywords"] ? `Keywords: ${String(entry["keywords"])}` : "",
+  ].filter(Boolean);
+
+  return lines.join("\n\n");
+}
+
+function buildDiffGroups(
+  diff: NonNullable<ReturnType<typeof useResumeCommitDiff>["data"]>["diff"],
+  t: (key: string) => string,
+): DiffGroup[] {
+  const scalarItems: DiffGroupItem[] = Object.entries(diff.scalars).flatMap(([field, change]) => {
+    if (!change) return [];
+    return [{
+      key: field,
+      title: field,
+      before: toDisplayText(change.before),
+      after: toDisplayText(change.after),
+      status: "modified",
+    }];
+  });
+
+  const skillItems: DiffGroupItem[] = diff.skills
+    .filter((item) => item.status !== "unchanged")
+    .map((item) => ({
+      key: item.name,
+      title: item.name,
+      before: stringifySkillEntry(item.before),
+      after: stringifySkillEntry(item.after),
+      status: item.status as DiffStatus,
+    }));
+
+  const assignmentItems: DiffGroupItem[] = diff.assignments
+    .filter((item) => item.status !== "unchanged")
+    .map((item) => ({
+      key: item.assignmentId,
+      title: item.after?.clientName ?? item.before?.clientName ?? item.assignmentId,
+      before: stringifyAssignmentEntry(item.before as Record<string, unknown> | undefined),
+      after: stringifyAssignmentEntry(item.after as Record<string, unknown> | undefined),
+      status: item.status as DiffStatus,
+    }));
+
+  return [
+    { key: "scalars", label: t("resume.compare.scalarsHeading"), items: scalarItems, plusCount: 0, minusCount: 0 },
+    { key: "skills", label: t("resume.compare.skillsHeading"), items: skillItems, plusCount: 0, minusCount: 0 },
+    { key: "assignments", label: t("resume.compare.assignmentsHeading"), items: assignmentItems, plusCount: 0, minusCount: 0 },
+  ]
+    .map((group) => ({
+      ...group,
+      plusCount: group.items.reduce((sum, item) => sum + countDiffContribution(item.status).plus, 0),
+      minusCount: group.items.reduce((sum, item) => sum + countDiffContribution(item.status).minus, 0),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
@@ -99,6 +423,7 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
   const parsedRange = parseCompareRange(forcedRange);
   const [baseRef, setBaseRef] = useState(parsedRange.baseRef);
   const [compareRef, setCompareRef] = useState(parsedRange.compareRef);
+  const [viewMode, setViewMode] = useState<CompareViewMode>("summary");
 
   useEffect(() => {
     setBaseRef(parsedRange.baseRef);
@@ -181,8 +506,20 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
     void navigateToRange(baseRef, nextCompareRef);
   };
 
+  const handleViewModeChange = (_event: MouseEvent<HTMLElement>, nextValue: CompareViewMode | null) => {
+    if (nextValue) {
+      setViewMode(nextValue);
+    }
+  };
+
   const loading = branchesLoading || graphLoading;
   const bothSelected = Boolean(baseCommitId && headCommitId);
+  const diffGroups = useMemo(
+    () => (diffResult?.diff ? buildDiffGroups(diffResult.diff, t) : []),
+    [diffResult?.diff, t],
+  );
+  const totalPlusCount = diffGroups.reduce((sum, group) => sum + group.plusCount, 0);
+  const totalMinusCount = diffGroups.reduce((sum, group) => sum + group.minusCount, 0);
 
   return (
     <>
@@ -278,118 +615,100 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
 
         {diffResult?.diff.hasChanges && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {Object.keys(diffResult.diff.scalars).length > 0 && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
-                  {t("resume.compare.scalarsHeading")}
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {Object.entries(diffResult.diff.scalars).map(([field, change]) => {
-                    if (!change) return null;
-                    const before = Array.isArray(change.before)
-                      ? change.before.join("\n\n")
-                      : String(change.before ?? "");
-                    const after = Array.isArray(change.after)
-                      ? change.after.join("\n\n")
-                      : String(change.after ?? "");
-                    return (
-                      <Card
-                        key={field}
-                        variant="outlined"
-                        sx={{ borderLeftWidth: 3, borderLeftColor: "warning.main" }}
-                      >
-                        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                            {t("resume.compare.fieldLabel")}: <strong>{field}</strong>
-                          </Typography>
-                          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                            <Box sx={{ flex: 1, minWidth: 180 }}>
-                              <Typography variant="caption" color="error.main" fontWeight={600}>
-                                {t("resume.compare.before")}
-                              </Typography>
-                              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
-                                {before || "—"}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 180 }}>
-                              <Typography variant="caption" color="success.main" fontWeight={600}>
-                                {t("resume.compare.after")}
-                              </Typography>
-                              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
-                                {after || "—"}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+            <Card variant="outlined">
+              <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    display: "flex",
+                    alignItems: { xs: "flex-start", md: "center" },
+                    justifyContent: "space-between",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+                    <Typography variant="h6">
+                      {t("resume.compare.changedGroups", { count: diffGroups.length })}
+                    </Typography>
+                    <Typography variant="h6" color="success.main">
+                      +{totalPlusCount}
+                    </Typography>
+                    <Typography variant="h6" color="error.main">
+                      -{totalMinusCount}
+                    </Typography>
+                  </Box>
+                  <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    size="small"
+                    onChange={handleViewModeChange}
+                    aria-label={t("resume.compare.viewModeLabel")}
+                  >
+                    <ToggleButton value="summary" aria-label={t("resume.compare.summaryView")}>
+                      {t("resume.compare.summaryView")}
+                    </ToggleButton>
+                    <ToggleButton value="split" aria-label={t("resume.compare.splitView")}>
+                      {t("resume.compare.splitView")}
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
-              </Box>
-            )}
-
-            {diffResult.diff.skills.some((skill) => skill.status !== "unchanged") && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
-                  {t("resume.compare.skillsHeading")}
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {diffResult.diff.skills
-                    .filter((skill) => skill.status !== "unchanged")
-                    .map((skill) => (
-                      <Card
-                        key={skill.name}
-                        variant="outlined"
-                        sx={{ borderLeftWidth: 3, borderLeftColor: statusBorderColor(skill.status as DiffStatus) }}
-                      >
-                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 }, display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Chip
-                            label={t(`resume.compare.status${skill.status.charAt(0).toUpperCase()}${skill.status.slice(1)}`)}
-                            color={statusColor(skill.status)}
-                            size="small"
-                          />
-                          <Typography variant="body2">{skill.name}</Typography>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </Box>
-              </Box>
-            )}
-
-            {diffResult.diff.assignments.some((assignment) => assignment.status !== "unchanged") && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
-                  {t("resume.compare.assignmentsHeading")}
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {diffResult.diff.assignments
-                    .filter((assignment) => assignment.status !== "unchanged")
-                    .map((item) => {
-                      const label =
-                        item.after?.clientName ??
-                        item.before?.clientName ??
-                        item.assignmentId;
-
-                      return (
-                        <Card
-                          key={item.assignmentId}
-                          variant="outlined"
-                          sx={{ borderLeftWidth: 3, borderLeftColor: statusBorderColor(item.status as DiffStatus) }}
-                        >
-                          <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 }, display: "flex", alignItems: "center", gap: 1.5 }}>
-                            <Chip
-                              label={t(`resume.compare.status${item.status.charAt(0).toUpperCase()}${item.status.slice(1)}`)}
-                              color={statusColor(item.status)}
-                              size="small"
-                            />
-                            <Typography variant="body2">{label}</Typography>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                </Box>
-              </Box>
-            )}
+                <Divider />
+                {diffGroups.map((group, index) => (
+                  <Accordion
+                    key={group.key}
+                    disableGutters
+                    elevation={0}
+                    defaultExpanded={index === 0}
+                    sx={{
+                      "&:before": { display: "none" },
+                    }}
+                  >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%" }}>
+                        <Typography fontWeight={500}>{group.label}</Typography>
+                        <Typography color="success.main" fontWeight={600}>
+                          +{group.plusCount}
+                        </Typography>
+                        <Typography color="error.main" fontWeight={600}>
+                          -{group.minusCount}
+                        </Typography>
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                      <Stack spacing={1.5}>
+                        {group.items.map((item) => (
+                          <Card
+                            key={item.key}
+                            variant="outlined"
+                            sx={{ borderLeftWidth: 3, borderLeftColor: statusBorderColor(item.status) }}
+                          >
+                            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                                <Chip
+                                  label={t(`resume.compare.status${item.status.charAt(0).toUpperCase()}${item.status.slice(1)}`)}
+                                  color={statusColor(item.status)}
+                                  size="small"
+                                />
+                                <Typography variant="body2" fontWeight={600}>
+                                  {item.title}
+                                </Typography>
+                              </Box>
+                              {viewMode === "summary" ? (
+                                <UnifiedTextDiff original={item.before} suggested={item.after} />
+                              ) : (
+                                <SideBySideTextDiff original={item.before} suggested={item.after} />
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Stack>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </CardContent>
+            </Card>
           </Box>
         )}
       </PageContent>

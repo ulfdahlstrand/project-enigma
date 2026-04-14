@@ -38,55 +38,14 @@ export type TextDiffReviewValue = {
   suggested: string;
 };
 
-function SideBySideTextReview({ value }: { value: TextDiffReviewValue }) {
-  const { t } = useTranslation("common");
-  return (
-    <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-      <Box sx={{ flex: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
-          {t("aiAssistant.diff.original")}
-        </Typography>
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 1,
-            bgcolor: "error.light",
-            color: "error.contrastText",
-            fontSize: "0.875rem",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            minHeight: 100,
-            opacity: 0.85,
-          }}
-        >
-          {value.original}
-        </Box>
-      </Box>
-      <Box sx={{ flex: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
-          {t("aiAssistant.diff.suggested")}
-        </Typography>
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 1,
-            bgcolor: "success.light",
-            color: "success.contrastText",
-            fontSize: "0.875rem",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            minHeight: 100,
-          }}
-        >
-          {value.suggested}
-        </Box>
-      </Box>
-    </Box>
-  );
-}
-
-function UnifiedTextReview({ value }: { value: TextDiffReviewValue }) {
-  const parts = diffWords(value.original, value.suggested);
+export function UnifiedTextDiff({
+  original,
+  suggested,
+}: {
+  original: string;
+  suggested: string;
+}) {
+  const parts = diffWords(original, suggested);
 
   return (
     <Box
@@ -144,6 +103,57 @@ function UnifiedTextReview({ value }: { value: TextDiffReviewValue }) {
       })}
     </Box>
   );
+}
+
+function SideBySideTextReview({ value }: { value: TextDiffReviewValue }) {
+  const { t } = useTranslation("common");
+  return (
+    <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+      <Box sx={{ flex: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+          {t("aiAssistant.diff.original")}
+        </Typography>
+        <Box
+          sx={{
+            p: 2,
+            borderRadius: 1,
+            bgcolor: "error.light",
+            color: "error.contrastText",
+            fontSize: "0.875rem",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            minHeight: 100,
+            opacity: 0.85,
+          }}
+        >
+          {value.original}
+        </Box>
+      </Box>
+      <Box sx={{ flex: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+          {t("aiAssistant.diff.suggested")}
+        </Typography>
+        <Box
+          sx={{
+            p: 2,
+            borderRadius: 1,
+            bgcolor: "success.light",
+            color: "success.contrastText",
+            fontSize: "0.875rem",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            minHeight: 100,
+          }}
+        >
+          {value.suggested}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+function UnifiedTextReview({ value }: { value: TextDiffReviewValue }) {
+  return <UnifiedTextDiff original={value.original} suggested={value.suggested} />;
 }
 
 export function renderTextDiffReview({ mode, value }: ReviewRenderArgs<TextDiffReviewValue>) {

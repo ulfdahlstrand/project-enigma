@@ -19,6 +19,9 @@ const resolvedApiUrl =
   typeof window !== "undefined" && rawApiUrl.startsWith("/")
     ? new URL(rawApiUrl, window.location.origin).toString()
     : rawApiUrl;
+const resolvedMcpUrl = resolvedApiUrl
+  ? new URL("/mcp", resolvedApiUrl).toString()
+  : "";
 
 const CLIENTS_QUERY_KEY = ["external-ai", "clients"] as const;
 const AUTHORIZATIONS_QUERY_KEY = ["external-ai", "authorizations"] as const;
@@ -30,7 +33,7 @@ export function ExternalAIConnectionsSection() {
   const [selectedClientKey, setSelectedClientKey] = useState("");
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState<(typeof DURATION_OPTIONS)[number]>("8h");
-  const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
+  const [copyState, setCopyState] = useState<"idle" | "api-success" | "mcp-success" | "error">("idle");
   const [latestChallenge, setLatestChallenge] = useState<null | {
     authorizationId: string;
     challengeId: string;
@@ -92,6 +95,14 @@ export function ExternalAIConnectionsSection() {
     },
   });
 
+  const deleteAuthorizationMutation = useMutation({
+    mutationFn: (authorizationId: string) =>
+      orpc.deleteExternalAIAuthorization({ authorizationId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: AUTHORIZATIONS_QUERY_KEY });
+    },
+  });
+
   const canCreate = selectedClientKey.trim().length > 0 && !createAuthorizationMutation.isPending;
 
   const activeAuthorizations = useMemo(
@@ -136,12 +147,42 @@ export function ExternalAIConnectionsSection() {
     ].join("\n");
   }, [latestChallenge]);
 
-  const handleCopyInstructions = async () => {
-    if (!latestChallengeInstructions) return;
+  const latestChallengeMcpInstructions = useMemo(() => {
+    if (!latestChallenge) return "";
+
+    return [
+      "Connect this project as a remote MCP server.",
+      "",
+      "MCP URL:",
+      resolvedMcpUrl,
+      "",
+      "API Base URL:",
+      resolvedApiUrl,
+      "",
+      "Use this one-time login challenge:",
+      `challengeId: ${latestChallenge.challengeId}`,
+      `challengeCode: ${latestChallenge.challengeCode}`,
+      "",
+      "The MCP adapter should exchange the challenge with:",
+      "POST /auth/external-ai/token",
+      "",
+      "Then it should:",
+      "1. call GET /external-ai/context at session start",
+      "2. inspect the returned scopes and allowedRoutes",
+      "3. register only the routes exposed by allowedRoutes",
+      "4. refresh access with POST /auth/external-ai/token/refresh when needed",
+      "",
+      "Use the MCP URL above for the MCP client connection and the API Base URL for backend requests.",
+    ].join("\n");
+  }, [latestChallenge]);
+
+  const handleCopyInstructions = async (mode: "api" | "mcp") => {
+    const content = mode === "api" ? latestChallengeInstructions : latestChallengeMcpInstructions;
+    if (!content) return;
 
     try {
-      await navigator.clipboard.writeText(latestChallengeInstructions);
-      setCopyState("success");
+      await navigator.clipboard.writeText(content);
+      setCopyState(mode === "api" ? "api-success" : "mcp-success");
     } catch {
       setCopyState("error");
     }
@@ -244,14 +285,22 @@ export function ExternalAIConnectionsSection() {
                 <Chip key={scope} label={scope} size="small" variant="outlined" />
               ))}
             </Stack>
-            <Box>
-              <Button variant="outlined" onClick={() => void handleCopyInstructions()}>
-                {t("externalAIConnections.copyInstructionsButton")}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button variant="outlined" onClick={() => void handleCopyInstructions("api")}>
+                {t("externalAIConnections.copyApiInstructionsButton")}
               </Button>
-            </Box>
-            {copyState === "success" && (
+              <Button variant="outlined" onClick={() => void handleCopyInstructions("mcp")}>
+                {t("externalAIConnections.copyMcpInstructionsButton")}
+              </Button>
+            </Stack>
+            {copyState === "api-success" && (
               <Typography variant="body2" color="success.main">
-                {t("externalAIConnections.copyInstructionsSuccess")}
+                {t("externalAIConnections.copyApiInstructionsSuccess")}
+              </Typography>
+            )}
+            {copyState === "mcp-success" && (
+              <Typography variant="body2" color="success.main">
+                {t("externalAIConnections.copyMcpInstructionsSuccess")}
               </Typography>
             )}
             {copyState === "error" && (
@@ -306,16 +355,37 @@ export function ExternalAIConnectionsSection() {
                             <Chip key={scope} label={scope} size="small" variant="outlined" />
                           ))}
                         </Stack>
-                        <Box>
-                          <Button
-                            color="error"
-                            variant="outlined"
-                            onClick={() => revokeAuthorizationMutation.mutate(authorization.id)}
-                            disabled={revokeAuthorizationMutation.isPending}
-                          >
-                            {t("externalAIConnections.revokeButton")}
-                          </Button>
-                        </Box>
+                        {(() => {
+                          const expiresAt = new Date(authorization.expiresAt);
+                          const isExpired = authorization.status === "expired" || expiresAt <= new Date();
+                          const isRevoked = authorization.status === "revoked" || authorization.revokedAt !== null;
+                          const canDelete = isExpired || isRevoked;
+
+                          return (
+                            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                              {!canDelete && (
+                                <Button
+                                  color="error"
+                                  variant="outlined"
+                                  onClick={() => revokeAuthorizationMutation.mutate(authorization.id)}
+                                  disabled={revokeAuthorizationMutation.isPending}
+                                >
+                                  {t("externalAIConnections.revokeButton")}
+                                </Button>
+                              )}
+                              {canDelete && (
+                                <Button
+                                  color="error"
+                                  variant="outlined"
+                                  onClick={() => deleteAuthorizationMutation.mutate(authorization.id)}
+                                  disabled={deleteAuthorizationMutation.isPending}
+                                >
+                                  {t("externalAIConnections.deleteButton")}
+                                </Button>
+                              )}
+                            </Stack>
+                          );
+                        })()}
                       </Stack>
                     </CardContent>
                   </Card>

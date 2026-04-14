@@ -63,6 +63,23 @@ describe("getExternalAIContext", () => {
     expect(result.promptModel.consultant.layers.rules).toBe("Emphasize leadership when supported by the CV");
   });
 
+  it("includes the branch assignment listing route when the token has assignment read scope", () => {
+    const result = getExternalAIContext({
+      ...CONTEXT,
+      externalAI: {
+        tokenId: "token-2",
+        authorizationId: "auth-2",
+        clientId: "client-2",
+        clientKey: "openai_chatgpt",
+        clientTitle: "OpenAI ChatGPT",
+        clientDescription: "ChatGPT client",
+        scopes: ["ai:context:read", "branch-assignment:read"],
+      },
+    }, []);
+
+    expect(result.allowedRoutes.map((route) => route.path)).toContain("/resume-branches/{branchId}/assignments");
+  });
+
   it("throws FORBIDDEN when an external token lacks context scope", () => {
     expect(() =>
       getExternalAIContext({

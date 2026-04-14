@@ -7,6 +7,7 @@ describe("getRequiredExternalAIScope", () => {
   });
 
   it("maps read routes to read scopes", () => {
+    expect(getRequiredExternalAIScope("GET", "/resumes")).toBe("resume:read");
     expect(getRequiredExternalAIScope("GET", "/resumes/123")).toBe("resume:read");
     expect(getRequiredExternalAIScope("GET", "/resumes/123/branches")).toBe("resume-branch:read");
     expect(getRequiredExternalAIScope("GET", "/resumes/123/branches/456")).toBe("resume-branch:read");

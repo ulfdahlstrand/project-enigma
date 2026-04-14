@@ -12,6 +12,7 @@ vi.mock("../../../../orpc-client", () => ({
     listExternalAIAuthorizations: vi.fn(),
     createExternalAIAuthorization: vi.fn(),
     revokeExternalAIAuthorization: vi.fn(),
+    deleteExternalAIAuthorization: vi.fn(),
   },
 }));
 
@@ -21,6 +22,7 @@ const mockListClients = orpc.listExternalAIClients as ReturnType<typeof vi.fn>;
 const mockListAuthorizations = orpc.listExternalAIAuthorizations as ReturnType<typeof vi.fn>;
 const mockCreateAuthorization = orpc.createExternalAIAuthorization as ReturnType<typeof vi.fn>;
 const mockRevokeAuthorization = orpc.revokeExternalAIAuthorization as ReturnType<typeof vi.fn>;
+const mockDeleteAuthorization = orpc.deleteExternalAIAuthorization as ReturnType<typeof vi.fn>;
 const writeTextMock = vi.fn();
 
 function buildI18n() {
@@ -110,6 +112,7 @@ beforeEach(() => {
     },
   });
   mockRevokeAuthorization.mockResolvedValue({ success: true });
+  mockDeleteAuthorization.mockResolvedValue({ success: true });
 });
 
 afterEach(() => {
@@ -144,14 +147,14 @@ describe("External AI connections page", () => {
     });
   });
 
-  it("copies Claude instructions including challenge details", async () => {
+  it("copies API instructions including challenge details", async () => {
     renderPage();
     await screen.findByLabelText("External client");
 
     fireEvent.click(screen.getByRole("button", { name: "Create connection" }));
     await screen.findByText(/One-time connection created for Anthropic Claude/);
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy Claude instructions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy API instructions" }));
 
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledTimes(1);
@@ -161,7 +164,28 @@ describe("External AI connections page", () => {
     expect(copied).toContain("challengeId: challenge-1");
     expect(copied).toContain("challengeCode: secret-code");
     expect(copied).toContain("POST /auth/external-ai/token");
-    expect(await screen.findByText("Claude instructions copied.")).toBeInTheDocument();
+    expect(await screen.findByText("API instructions copied.")).toBeInTheDocument();
+  });
+
+  it("copies MCP instructions including challenge details", async () => {
+    renderPage();
+    await screen.findByLabelText("External client");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create connection" }));
+    await screen.findByText(/One-time connection created for Anthropic Claude/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy MCP instructions" }));
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+    });
+
+    const copied = writeTextMock.mock.calls[0]?.[0] as string;
+    expect(copied).toContain("MCP URL:");
+    expect(copied).toContain("challengeId: challenge-1");
+    expect(copied).toContain("challengeCode: secret-code");
+    expect(copied).toContain("POST /auth/external-ai/token/refresh");
+    expect(await screen.findByText("MCP instructions copied.")).toBeInTheDocument();
   });
 
   it("revokes an authorization", async () => {
@@ -171,6 +195,38 @@ describe("External AI connections page", () => {
 
     await waitFor(() => {
       expect(mockRevokeAuthorization).toHaveBeenCalledWith({ authorizationId: "auth-1" });
+    });
+  });
+
+  it("deletes a revoked authorization", async () => {
+    mockListAuthorizations.mockResolvedValueOnce({
+      authorizations: [
+        {
+          id: "auth-revoked",
+          title: "Old Claude",
+          scopes: ["ai:context:read"],
+          status: "revoked",
+          lastUsedAt: null,
+          expiresAt: "2026-04-20T10:00:00.000Z",
+          revokedAt: "2026-04-10T12:00:00.000Z",
+          createdAt: "2026-04-10T10:00:00.000Z",
+          client: {
+            id: "client-1",
+            key: "anthropic_claude",
+            title: "Anthropic Claude",
+            description: "Claude",
+            isActive: true,
+          },
+        },
+      ],
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(mockDeleteAuthorization).toHaveBeenCalledWith({ authorizationId: "auth-revoked" });
     });
   });
 });

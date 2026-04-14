@@ -69,11 +69,12 @@ const SAFETY_GUIDANCE = [
 ] as const;
 
 const WORKFLOW_STEPS = [
-  "Fetch this context before attempting resume revisions.",
-  "Read the target resume and branch state through the public API, preferring the direct branch endpoint when you are working on a specific branch.",
-  "Create or reuse a branch-scoped revision flow before making changes.",
-  "Apply narrow edits and create commits incrementally.",
-  "Leave merge or finalize actions for explicitly approved workflows.",
+  "If the user has not provided a resume ID or URL, call list_resumes to show them all available resumes, then ask which one to work on.",
+  "Call get_resume with the resumeId to read the resume and its current snapshot content.",
+  "Call list_resume_branches to see available branches. Ask the user which branch to work on, or default to the branch whose name suggests it is the main or active one.",
+  "Call get_resume_branch to read the full current state of the chosen branch before making any edits.",
+  "Apply narrow edits using the appropriate tool for the section. After editing, call save_resume_version to create a commit.",
+  "Do not merge, publish, or finalize a branch unless the user explicitly asks for it.",
 ] as const;
 
 const SUPPORTED_RESUME_SECTIONS = [
@@ -90,9 +91,11 @@ const SUPPORTED_RESUME_SECTIONS = [
 
 const ALLOWED_ROUTES = [
   { method: "GET", path: "/external-ai/context", requiredScope: EXTERNAL_AI_CONTEXT_SCOPE, purpose: "Fetch the external AI workflow, scopes, and editing guidance." },
+  { method: "GET", path: "/resumes", requiredScope: EXTERNAL_AI_RESUME_READ_SCOPE, purpose: "List all resumes belonging to the authenticated consultant." },
   { method: "GET", path: "/resumes/{resumeId}", requiredScope: EXTERNAL_AI_RESUME_READ_SCOPE, purpose: "Read a resume with its current snapshot-backed content." },
   { method: "GET", path: "/resumes/{resumeId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "List available branches for a resume." },
   { method: "GET", path: "/resumes/{resumeId}/branches/{branchId}", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "Read the current state of a specific branch without resolving its head commit separately." },
+  { method: "GET", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE, purpose: "List the full assignment entries currently present on a branch." },
   { method: "POST", path: "/resume-commits/{fromCommitId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE, purpose: "Create a new branch from an existing commit." },
   { method: "GET", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "List commits on a branch." },
   { method: "GET", path: "/resume-commits/{commitId}", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Read a specific commit snapshot." },

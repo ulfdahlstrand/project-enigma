@@ -71,16 +71,19 @@
     "challengeExpiresLabel": "Challenge upphör",
     "authorizationExpiresLabel": "Auktorisering upphör",
     "tokenExpiresLabel": "Access token gäller till",
-    "copyInstructionsButton": "Kopiera Claude-instruktioner",
-    "copyInstructionsSuccess": "Claude-instruktionerna kopierades.",
-    "copyInstructionsError": "Det gick inte att kopiera Claude-instruktionerna.",
+    "copyApiInstructionsButton": "Kopiera API-instruktioner",
+    "copyMcpInstructionsButton": "Kopiera MCP-instruktioner",
+    "copyApiInstructionsSuccess": "API-instruktionerna kopierades.",
+    "copyMcpInstructionsSuccess": "MCP-instruktionerna kopierades.",
+    "copyInstructionsError": "Det gick inte att kopiera instruktionerna.",
     "listTitle": "Befintliga kopplingar",
     "empty": "Inga externa AI-kopplingar har skapats ännu.",
     "createdAtLabel": "Skapad",
     "lastUsedLabel": "Senast använd",
     "neverUsed": "Aldrig",
     "expiresAtLabel": "Upphör",
-    "revokeButton": "Återkalla"
+    "revokeButton": "Återkalla",
+    "deleteButton": "Ta bort"
   },
   "admin": {
     "promptInventory": {
@@ -445,6 +448,11 @@
       "toLabel": "Till (nyare)",
       "compareButton": "Jämför",
       "fieldLabel": "Fält",
+      "changedGroups_one": "1 sektion ändrad",
+      "changedGroups_other": "{{count}} sektioner ändrade",
+      "viewModeLabel": "Diffvy",
+      "summaryView": "Översikt",
+      "splitView": "Detaljerad diff",
       "noSelectionHint": "Välj två versioner ovan för att se vad som ändrats mellan dem.",
       "branchGroupLabel": "Grenar",
       "commitGroupLabel": "Commits",
@@ -772,5 +780,18 @@
       "title": "CV",
       "description": "Skapa, redigera och exportera konsult-CV."
     }
+  },
+  "oauthAuthorize": {
+    "title": "Auktorisera åtkomst",
+    "subtitle": "{{client}} begär behörighet att läsa och redigera dina CV-data.",
+    "scopesLabel": "Begärda behörigheter",
+    "durationLabel": "Sessionslängd",
+    "approveButton": "Auktorisera",
+    "approving": "Auktoriserar…",
+    "denyButton": "Neka",
+    "approveError": "Det gick inte att skapa auktoriseringen. Försök igen.",
+    "errorInvalidResponseType": "Ogiltig OAuth2-begäran: response_type stöds inte.",
+    "errorMissingPkce": "Ogiltig OAuth2-begäran: code_challenge (PKCE) krävs.",
+    "errorUnknownClient": "Okänd klient: {{clientId}}. Klienten kan vara inaktiv eller inte registrerad."
   }
 }
