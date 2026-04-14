@@ -99,9 +99,11 @@ export interface AuthCodePayload {
   cm: string;
   /** redirect_uri (validated on token exchange) */
   ru: string;
+  /** expiry — Unix timestamp in seconds (code is valid for 60 s) */
+  exp: number;
 }
 
-export function encodeAuthCode(payload: AuthCodePayload): string {
+function encodeAuthCode(payload: AuthCodePayload): string {
   return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
 
@@ -110,14 +112,17 @@ export function decodeAuthCode(encoded: string): AuthCodePayload | null {
     const decoded = Buffer.from(encoded, "base64url").toString("utf-8");
     const parsed = JSON.parse(decoded) as unknown;
 
+    const p = parsed as Record<string, unknown>;
+
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      typeof (parsed as Record<string, unknown>)["id"] !== "string" ||
-      typeof (parsed as Record<string, unknown>)["code"] !== "string" ||
-      typeof (parsed as Record<string, unknown>)["cc"] !== "string" ||
-      typeof (parsed as Record<string, unknown>)["cm"] !== "string" ||
-      typeof (parsed as Record<string, unknown>)["ru"] !== "string"
+      typeof p["id"] !== "string" ||
+      typeof p["code"] !== "string" ||
+      typeof p["cc"] !== "string" ||
+      typeof p["cm"] !== "string" ||
+      typeof p["ru"] !== "string" ||
+      typeof p["exp"] !== "number"
     ) {
       return null;
     }

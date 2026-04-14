@@ -37,6 +37,7 @@ function encodeAuthCode(payload: {
   cc: string;
   cm: string;
   ru: string;
+  exp: number;
 }): string {
   // base64url encoding (compatible with the MCP server decoder)
   const json = JSON.stringify(payload);
@@ -83,6 +84,7 @@ export function OAuthAuthorizePage({ params }: OAuthAuthorizePageProps) {
         cc: params.codeChallenge,
         cm: params.codeChallengeMethod,
         ru: params.redirectUri,
+        exp: Math.floor(Date.now() / 1000) + 60,
       });
 
       window.location.href = buildRedirectUrl(params.redirectUri, {

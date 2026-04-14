@@ -290,7 +290,7 @@ export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
   },
 ];
 
-export function normalizeBaseUrl(baseUrl: string) {
+function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, "");
 }
 

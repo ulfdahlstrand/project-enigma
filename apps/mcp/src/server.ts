@@ -87,7 +87,15 @@ async function callApi<T>(method: string, url: string, body?: unknown): Promise<
   });
 
   const text = await res.text();
-  const payload = text.length > 0 ? (JSON.parse(text) as unknown) : null;
+  let payload: unknown = null;
+
+  if (text.length > 0) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      // Non-JSON response — surface raw text as error message downstream
+    }
+  }
 
   if (!res.ok) {
     const message =
@@ -228,6 +236,11 @@ async function main() {
 
         if (!payload) {
           res.status(400).json({ error: "invalid_grant", error_description: "Invalid authorization code" });
+          return;
+        }
+
+        if (Math.floor(Date.now() / 1000) > payload.exp) {
+          res.status(400).json({ error: "invalid_grant", error_description: "Authorization code expired" });
           return;
         }
 
