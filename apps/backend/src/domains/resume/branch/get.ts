@@ -60,6 +60,7 @@ export async function getResumeBranch(
     .leftJoin("resume_branches as main_rb", (join) =>
       join.onRef("main_rb.resume_id", "=", "r.id").on("main_rb.is_main", "=", true),
     )
+    .leftJoin("resume_branches as source_rb", "source_rb.id", "rb.source_branch_id")
     .select([
       "rb.id",
       "rb.resume_id",
@@ -68,10 +69,14 @@ export async function getResumeBranch(
       "rb.is_main",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
+      "rb.branch_type",
+      "rb.source_branch_id",
+      "rb.source_commit_id",
       "r.employee_id",
       "r.created_at",
       "r.updated_at",
       "main_rb.id as main_branch_id",
+      "source_rb.head_commit_id as source_head_commit_id",
     ])
     .where("rb.id", "=", input.branchId)
     .executeTakeFirst();
@@ -90,6 +95,11 @@ export async function getResumeBranch(
   }
 
   const snapshotSkills = buildSnapshotSkills(input.resumeId, branch.content);
+
+  const isStale =
+    branchRow.branch_type === "translation" &&
+    branchRow.source_commit_id !== null &&
+    branchRow.source_commit_id !== (branchRow.source_head_commit_id ?? null);
 
   return {
     id: input.resumeId,
@@ -114,6 +124,10 @@ export async function getResumeBranch(
     isMainBranch: branchRow.is_main,
     headCommitId: branchRow.head_commit_id,
     forkedFromCommitId: branchRow.forked_from_commit_id,
+    branchType: branchRow.branch_type,
+    sourceBranchId: branchRow.source_branch_id,
+    sourceCommitId: branchRow.source_commit_id,
+    isStale,
   };
 }
 

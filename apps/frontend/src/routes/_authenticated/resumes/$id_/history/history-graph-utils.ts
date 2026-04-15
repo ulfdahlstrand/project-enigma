@@ -234,6 +234,10 @@ function deriveBranchAssignments(
       forkedFromCommitId,
       createdBy: null,
       createdAt: headCommit.createdAt,
+      branchType: "variant",
+      sourceBranchId: null,
+      sourceCommitId: null,
+      isStale: false,
       isSynthetic: true,
     });
   });

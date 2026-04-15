@@ -80,8 +80,11 @@ export const resumeCommitSchema = z.object({
 export type ResumeCommit = z.infer<typeof resumeCommitSchema>;
 
 // ---------------------------------------------------------------------------
-// ResumeBranch — a variant
+// ResumeBranch — a variant, translation, or revision
 // ---------------------------------------------------------------------------
+
+export const branchTypeSchema = z.enum(["variant", "translation", "revision"]);
+export type BranchType = z.infer<typeof branchTypeSchema>;
 
 export const resumeBranchSchema = z.object({
   id: z.string().uuid(),
@@ -93,6 +96,24 @@ export const resumeBranchSchema = z.object({
   forkedFromCommitId: z.string().uuid().nullable(),
   createdBy: z.string().uuid().nullable(),
   createdAt: z.union([z.string(), z.date()]),
+  /** Classifies the branch as 'variant', 'translation', or 'revision'. */
+  branchType: branchTypeSchema,
+  /**
+   * For translation/revision branches: ID of the source variant.
+   * NULL for variants.
+   */
+  sourceBranchId: z.string().uuid().nullable(),
+  /**
+   * For translations: the source commit the translation is caught up to (mutable).
+   * For revisions: the commit the revision diverged from (immutable).
+   * NULL for variants.
+   */
+  sourceCommitId: z.string().uuid().nullable(),
+  /**
+   * True when this is a translation and source_commit_id differs from the
+   * source variant's head_commit_id. Always false for variants and revisions.
+   */
+  isStale: z.boolean(),
 });
 
 export type ResumeBranch = z.infer<typeof resumeBranchSchema>;
@@ -299,6 +320,91 @@ export const resumeBranchHistoryGraphSchema = z.object({
 export const getResumeBranchHistoryGraphOutputSchema = resumeBranchHistoryGraphSchema;
 
 export type ResumeBranchHistoryGraph = z.infer<typeof resumeBranchHistoryGraphSchema>;
+
+// ---------------------------------------------------------------------------
+// createTranslationBranch schemas
+//
+// Creates a translation branch (child of a variant) for a target language.
+// ---------------------------------------------------------------------------
+
+export const createTranslationBranchInputSchema = z.object({
+  sourceBranchId: z.string().uuid(),
+  language: z.string().min(2),
+  name: z.string().min(1).optional(),
+});
+
+export const createTranslationBranchOutputSchema = resumeBranchSchema;
+
+export type CreateTranslationBranchInput = z.infer<typeof createTranslationBranchInputSchema>;
+export type CreateTranslationBranchOutput = z.infer<typeof createTranslationBranchOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// createRevisionBranch schemas
+//
+// Creates a short-lived working branch off a variant.
+// ---------------------------------------------------------------------------
+
+export const createRevisionBranchInputSchema = z.object({
+  sourceBranchId: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export const createRevisionBranchOutputSchema = resumeBranchSchema;
+
+export type CreateRevisionBranchInput = z.infer<typeof createRevisionBranchInputSchema>;
+export type CreateRevisionBranchOutput = z.infer<typeof createRevisionBranchOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// mergeRevisionIntoSource schemas
+//
+// Fast-forwards the source variant's HEAD to the revision's HEAD, then
+// deletes the revision branch. Fails if source has advanced past the
+// revision's fork point (user must rebase first).
+// ---------------------------------------------------------------------------
+
+export const mergeRevisionIntoSourceInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const mergeRevisionIntoSourceOutputSchema = z.object({
+  mergedIntoBranchId: z.string().uuid(),
+});
+
+export type MergeRevisionIntoSourceInput = z.infer<typeof mergeRevisionIntoSourceInputSchema>;
+export type MergeRevisionIntoSourceOutput = z.infer<typeof mergeRevisionIntoSourceOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// promoteRevisionToVariant schemas
+//
+// Converts a revision branch into a standalone variant: clears
+// branch_type → 'variant', source_branch_id → NULL, source_commit_id → NULL.
+// ---------------------------------------------------------------------------
+
+export const promoteRevisionToVariantInputSchema = z.object({
+  branchId: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export const promoteRevisionToVariantOutputSchema = resumeBranchSchema;
+
+export type PromoteRevisionToVariantInput = z.infer<typeof promoteRevisionToVariantInputSchema>;
+export type PromoteRevisionToVariantOutput = z.infer<typeof promoteRevisionToVariantOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// markTranslationCaughtUp schemas
+//
+// Updates source_commit_id to the source variant's current HEAD, signalling
+// the translation is considered up-to-date with the source.
+// ---------------------------------------------------------------------------
+
+export const markTranslationCaughtUpInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const markTranslationCaughtUpOutputSchema = resumeBranchSchema;
+
+export type MarkTranslationCaughtUpInput = z.infer<typeof markTranslationCaughtUpInputSchema>;
+export type MarkTranslationCaughtUpOutput = z.infer<typeof markTranslationCaughtUpOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // Diff engine schemas

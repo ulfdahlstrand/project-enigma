@@ -59,12 +59,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // ---------------------------------------------------------------------------
 
 const ONE_BRANCH = [
-  { id: "branch-id-1", resumeId: "resume-id-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", createdAt: "2024-01-01T00:00:00Z" },
+  { id: "branch-id-1", resumeId: "resume-id-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", createdAt: "2024-01-01T00:00:00Z", branchType: "variant" as const, sourceBranchId: null, sourceCommitId: null, isStale: false },
 ];
 
 const TWO_BRANCHES = [
-  { id: "branch-id-1", resumeId: "resume-id-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", createdAt: "2024-01-01T00:00:00Z" },
-  { id: "branch-id-2", resumeId: "resume-id-1", name: "Swedish", isMain: false, language: "sv", headCommitId: "commit-2", createdAt: "2024-02-01T00:00:00Z" },
+  { id: "branch-id-1", resumeId: "resume-id-1", name: "main", isMain: true, language: "en", headCommitId: "commit-1", createdAt: "2024-01-01T00:00:00Z", branchType: "variant" as const, sourceBranchId: null, sourceCommitId: null, isStale: false },
+  { id: "branch-id-2", resumeId: "resume-id-1", name: "Swedish", isMain: false, language: "sv", headCommitId: "commit-2", createdAt: "2024-02-01T00:00:00Z", branchType: "variant" as const, sourceBranchId: null, sourceCommitId: null, isStale: false },
 ];
 
 // ---------------------------------------------------------------------------

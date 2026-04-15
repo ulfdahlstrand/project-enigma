@@ -11,11 +11,16 @@ import Slider from "@mui/material/Slider";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import { VariantSwitcher } from "../VariantSwitcher";
+import { LanguageSwitcher } from "../LanguageSwitcher";
+import { RevisionsMenu } from "../RevisionsMenu";
 
 interface ResumeStatusBarProps {
   isEditing: boolean;
   resumeId: string;
   activeBranchId: string | null;
+  activeBranchType: "variant" | "translation" | "revision" | null;
+  /** ID of the variant that is the parent of the current branch (or the branch itself if variant). */
+  variantBranchId: string | null;
   language: string | null;
   zoom: number;
   minZoom: number;
@@ -31,6 +36,8 @@ export function ResumeStatusBar({
   isEditing,
   resumeId,
   activeBranchId,
+  activeBranchType,
+  variantBranchId,
   language,
   zoom,
   minZoom,
@@ -71,9 +78,26 @@ export function ResumeStatusBar({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flexWrap: "wrap" }}>
-          <VariantSwitcher resumeId={resumeId} currentBranchId={activeBranchId} compact />
+          <VariantSwitcher
+            resumeId={resumeId}
+            currentBranchId={variantBranchId ?? activeBranchId}
+            compact
+          />
 
-          {language ? (
+          {variantBranchId !== null ? (
+            <LanguageSwitcher
+              resumeId={resumeId}
+              currentBranchId={activeBranchId}
+              variantBranchId={variantBranchId}
+              compact
+            />
+          ) : null}
+
+          {activeBranchType === "variant" && variantBranchId !== null ? (
+            <RevisionsMenu resumeId={resumeId} variantBranchId={variantBranchId} />
+          ) : null}
+
+          {language && variantBranchId === null ? (
             <Chip
               size="small"
               variant="filled"

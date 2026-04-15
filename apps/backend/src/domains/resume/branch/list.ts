@@ -90,6 +90,12 @@ export async function listResumeBranches(
       return true;
     }
 
+    // Translation and revision branches are never hidden by the main-reachability
+    // filter — they may intentionally share a HEAD commit with their source variant.
+    if (row.branch_type === "translation" || row.branch_type === "revision") {
+      return true;
+    }
+
     if (!row.head_commit_id) {
       return true;
     }
@@ -97,17 +103,32 @@ export async function listResumeBranches(
     return !mainReachableCommitIds.has(row.head_commit_id);
   });
 
-  return visibleRows.map((row) => ({
-    id: row.id,
-    resumeId: row.resume_id,
-    name: row.name,
-    language: row.language,
-    isMain: row.is_main,
-    headCommitId: row.head_commit_id,
-    forkedFromCommitId: row.forked_from_commit_id,
-    createdBy: row.created_by,
-    createdAt: row.created_at,
-  }));
+  // Build a map of branchId → headCommitId for staleness calculation.
+  const headCommitIdByBranchId = new Map(rows.map((row) => [row.id, row.head_commit_id]));
+
+  return visibleRows.map((row) => {
+    const isStale =
+      row.branch_type === "translation" &&
+      row.source_branch_id !== null &&
+      row.source_commit_id !== null &&
+      row.source_commit_id !== (headCommitIdByBranchId.get(row.source_branch_id) ?? null);
+
+    return {
+      id: row.id,
+      resumeId: row.resume_id,
+      name: row.name,
+      language: row.language,
+      isMain: row.is_main,
+      headCommitId: row.head_commit_id,
+      forkedFromCommitId: row.forked_from_commit_id,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      branchType: row.branch_type,
+      sourceBranchId: row.source_branch_id,
+      sourceCommitId: row.source_commit_id,
+      isStale,
+    };
+  });
 }
 
 export const listResumeBranchesHandler = implement(contract.listResumeBranches).handler(

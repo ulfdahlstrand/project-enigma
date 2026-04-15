@@ -1,5 +1,5 @@
 import { sortAssignments } from "@cv-tool/utils";
-import { createFileRoute, Outlet, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,8 @@ import {
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { LoadingState, ErrorState } from "../../../components/feedback";
 import { VariantSwitcher } from "../../../components/VariantSwitcher";
+import { TranslationStaleBanner } from "../../../components/TranslationStaleBanner";
+import { RevisionActionBanner } from "../../../components/RevisionActionBanner";
 import type { AssignmentRow as EditorAssignmentRow } from "../../../components/AssignmentEditor";
 import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDetailActions";
 import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
@@ -35,13 +37,6 @@ export const getResumeQueryKey = (
 ) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
-  beforeLoad: ({ params }) => {
-    throw redirect({
-      to: "/$locale/resumes/$id",
-      params: { locale: "sv", id: params.id },
-      replace: true,
-    });
-  },
   component: ResumeDetailLayout,
 });
 
@@ -145,6 +140,19 @@ export function ResumeDetailPage({
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
   const isBranchBackedMode = activeBranchId !== null && activeBranchId !== mainBranchId;
+
+  // Derived branch-type metadata for switchers and banners.
+  const activeBranchType = activeBranch?.branchType ?? null;
+  const variantBranchId =
+    activeBranchType === "variant"
+      ? activeBranchId
+      : activeBranchType === "translation"
+        ? (activeBranch?.sourceBranchId ?? null)
+        : null;
+  const sourceBranch =
+    activeBranchType === "revision" && activeBranch?.sourceBranchId
+      ? (branches?.find((b) => b.id === activeBranch.sourceBranchId) ?? null)
+      : null;
   const isSnapshotMode = forcedCommitId !== null;
 
   const { data: selectedCommit, isError: isSelectedCommitError } = useQuery({
@@ -805,6 +813,16 @@ export function ResumeDetailPage({
         )}
         actions={toolbarActions}
       />
+      {activeBranchType === "translation" && activeBranch?.isStale && activeBranchId ? (
+        <TranslationStaleBanner resumeId={id} branchId={activeBranchId} />
+      ) : null}
+      {activeBranchType === "revision" && activeBranchId ? (
+        <RevisionActionBanner
+          resumeId={id}
+          branchId={activeBranchId}
+          sourceName={sourceBranch?.name ?? ""}
+        />
+      ) : null}
       {isEditRoute ? (
         <ResumeEditWorkspace
           inlineRevision={inlineRevision}
@@ -897,6 +915,8 @@ export function ResumeDetailPage({
         isEditing={isEditRoute}
         resumeId={id}
         activeBranchId={activeBranchId}
+        activeBranchType={activeBranchType}
+        variantBranchId={variantBranchId}
         language={language ?? null}
         zoom={zoom}
         minZoom={minZoom}

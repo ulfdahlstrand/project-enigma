@@ -480,6 +480,56 @@
       "label": "Variant",
       "manageVariants": "Hantera varianter"
     },
+    "languageSwitcher": {
+      "label": "Språk",
+      "addTranslation": "Lägg till översättning",
+      "manageTranslations": "Hantera översättningar",
+      "createDialog": {
+        "title": "Skapa översättning",
+        "languageLabel": "Målspråk",
+        "cancel": "Avbryt",
+        "create": "Skapa",
+        "creating": "Skapar…",
+        "error": "Det gick inte att skapa översättningen. Försök igen."
+      }
+    },
+    "revisionsMenu": {
+      "label": "Revideringar",
+      "noRevisions": "Inga aktiva revideringar.",
+      "createRevision": "Skapa revidering",
+      "createDialog": {
+        "title": "Skapa revidering",
+        "nameLabel": "Revisionsnamn",
+        "cancel": "Avbryt",
+        "create": "Skapa",
+        "creating": "Skapar…",
+        "error": "Det gick inte att skapa revideringen. Försök igen."
+      }
+    },
+    "translationStaleBanner": {
+      "title": "Översättningen är inaktuell",
+      "description": "Källvarianten har nya ändringar. Uppdatera den här översättningen när du är redo.",
+      "markCaughtUpButton": "Markera som uppdaterad",
+      "markingCaughtUp": "Uppdaterar…",
+      "error": "Det gick inte att markera som uppdaterad. Försök igen."
+    },
+    "revisionBanner": {
+      "title": "Revisionsgren",
+      "description": "Det här är en kortlivad revisionsgren från \"{{sourceName}}\".",
+      "mergeButton": "Slå samman med {{sourceName}}",
+      "merging": "Slår samman…",
+      "mergeConflictError": "Kan inte slå samman — källan har nya ändringar. Starta en ny revidering från den uppdaterade källan.",
+      "mergeError": "Det gick inte att slå samman. Försök igen.",
+      "promoteButton": "Gör till variant",
+      "promoteDialog": {
+        "title": "Gör till variant",
+        "nameLabel": "Variantnamn",
+        "cancel": "Avbryt",
+        "promote": "Gör om",
+        "promoting": "Gör om…",
+        "error": "Det gick inte att göra om. Försök igen."
+      }
+    },
     "countLabel_one": "1 meritförteckning",
     "countLabel_other": "{{count}} meritförteckningar",
     "searchPlaceholder": "Sök meritförteckningar…"

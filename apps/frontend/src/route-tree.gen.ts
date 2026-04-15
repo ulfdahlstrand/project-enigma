@@ -14,7 +14,6 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedLocaleRouteImport } from './routes/_authenticated/$locale'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedResumesIndexRouteImport } from './routes/_authenticated/resumes/index'
 import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees/index'
@@ -29,28 +28,17 @@ import { Route as AuthenticatedResumesIdIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsAssistantPreferencesRouteImport } from './routes/_authenticated/settings/assistant/preferences'
 import { Route as AuthenticatedSettingsAssistantExternalAiRouteImport } from './routes/_authenticated/settings/assistant/external-ai'
 import { Route as AuthenticatedEmployeesIdImportRouteImport } from './routes/_authenticated/employees/$id_.import'
-import { Route as AuthenticatedLocaleResumesIdRouteImport } from './routes/_authenticated/$locale/resumes/$id'
 import { Route as AuthenticatedResumesIdVariantsIndexRouteImport } from './routes/_authenticated/resumes/$id_/variants/index'
 import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes/_authenticated/resumes/$id_/history/index'
 import { Route as AuthenticatedResumesIdCompareIndexRouteImport } from './routes/_authenticated/resumes/$id_/compare/index'
 import { Route as AuthenticatedResumesIdEditIndexRouteImport } from './routes/_authenticated/resumes/$id/edit/index'
-import { Route as AuthenticatedLocaleResumesIdIndexRouteImport } from './routes/_authenticated/$locale/resumes/$id/index'
 import { Route as AdminAdminAssistantPromptsIndexRouteImport } from './routes/_admin/admin/assistant/prompts/index'
 import { Route as AuthenticatedResumesIdCompareRangeRouteImport } from './routes/_authenticated/resumes/$id_/compare/$range'
 import { Route as AuthenticatedResumesIdCommitCommitIdRouteImport } from './routes/_authenticated/resumes/$id/commit/$commitId'
 import { Route as AuthenticatedResumesIdBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id/branch/$branchId'
 import { Route as AdminAdminAssistantPromptsPromptIdRouteImport } from './routes/_admin/admin/assistant/prompts/$promptId'
-import { Route as AuthenticatedLocaleResumesIdVariantsIndexRouteImport } from './routes/_authenticated/$locale/resumes/$id_/variants/index'
-import { Route as AuthenticatedLocaleResumesIdHistoryIndexRouteImport } from './routes/_authenticated/$locale/resumes/$id_/history/index'
-import { Route as AuthenticatedLocaleResumesIdCompareIndexRouteImport } from './routes/_authenticated/$locale/resumes/$id_/compare/index'
-import { Route as AuthenticatedLocaleResumesIdEditIndexRouteImport } from './routes/_authenticated/$locale/resumes/$id/edit/index'
 import { Route as AuthenticatedResumesIdHistoryBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id_/history/branch/$branchId'
 import { Route as AuthenticatedResumesIdEditBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id/edit/branch/$branchId'
-import { Route as AuthenticatedLocaleResumesIdCompareRangeRouteImport } from './routes/_authenticated/$locale/resumes/$id_/compare/$range'
-import { Route as AuthenticatedLocaleResumesIdCommitCommitIdRouteImport } from './routes/_authenticated/$locale/resumes/$id/commit/$commitId'
-import { Route as AuthenticatedLocaleResumesIdBranchBranchIdRouteImport } from './routes/_authenticated/$locale/resumes/$id/branch/$branchId'
-import { Route as AuthenticatedLocaleResumesIdHistoryBranchBranchIdRouteImport } from './routes/_authenticated/$locale/resumes/$id_/history/branch/$branchId'
-import { Route as AuthenticatedLocaleResumesIdEditBranchBranchIdRouteImport } from './routes/_authenticated/$locale/resumes/$id/edit/branch/$branchId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -73,11 +61,6 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedLocaleRoute = AuthenticatedLocaleRouteImport.update({
-  id: '/$locale',
-  path: '/$locale',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSettingsIndexRoute =
@@ -162,12 +145,6 @@ const AuthenticatedEmployeesIdImportRoute =
     path: '/employees/$id/import',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedLocaleResumesIdRoute =
-  AuthenticatedLocaleResumesIdRouteImport.update({
-    id: '/resumes/$id',
-    path: '/resumes/$id',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
 const AuthenticatedResumesIdVariantsIndexRoute =
   AuthenticatedResumesIdVariantsIndexRouteImport.update({
     id: '/resumes/$id_/variants/',
@@ -191,12 +168,6 @@ const AuthenticatedResumesIdEditIndexRoute =
     id: '/edit/',
     path: '/edit/',
     getParentRoute: () => AuthenticatedResumesIdRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdIndexRoute =
-  AuthenticatedLocaleResumesIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedLocaleResumesIdRoute,
   } as any)
 const AdminAdminAssistantPromptsIndexRoute =
   AdminAdminAssistantPromptsIndexRouteImport.update({
@@ -228,30 +199,6 @@ const AdminAdminAssistantPromptsPromptIdRoute =
     path: '/admin/assistant/prompts/$promptId',
     getParentRoute: () => AdminRoute,
   } as any)
-const AuthenticatedLocaleResumesIdVariantsIndexRoute =
-  AuthenticatedLocaleResumesIdVariantsIndexRouteImport.update({
-    id: '/resumes/$id_/variants/',
-    path: '/resumes/$id/variants/',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdHistoryIndexRoute =
-  AuthenticatedLocaleResumesIdHistoryIndexRouteImport.update({
-    id: '/resumes/$id_/history/',
-    path: '/resumes/$id/history/',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdCompareIndexRoute =
-  AuthenticatedLocaleResumesIdCompareIndexRouteImport.update({
-    id: '/resumes/$id_/compare/',
-    path: '/resumes/$id/compare/',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdEditIndexRoute =
-  AuthenticatedLocaleResumesIdEditIndexRouteImport.update({
-    id: '/edit/',
-    path: '/edit/',
-    getParentRoute: () => AuthenticatedLocaleResumesIdRoute,
-  } as any)
 const AuthenticatedResumesIdHistoryBranchBranchIdRoute =
   AuthenticatedResumesIdHistoryBranchBranchIdRouteImport.update({
     id: '/resumes/$id_/history/branch/$branchId',
@@ -264,40 +211,9 @@ const AuthenticatedResumesIdEditBranchBranchIdRoute =
     path: '/edit/branch/$branchId',
     getParentRoute: () => AuthenticatedResumesIdRoute,
   } as any)
-const AuthenticatedLocaleResumesIdCompareRangeRoute =
-  AuthenticatedLocaleResumesIdCompareRangeRouteImport.update({
-    id: '/resumes/$id_/compare/$range',
-    path: '/resumes/$id/compare/$range',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdCommitCommitIdRoute =
-  AuthenticatedLocaleResumesIdCommitCommitIdRouteImport.update({
-    id: '/commit/$commitId',
-    path: '/commit/$commitId',
-    getParentRoute: () => AuthenticatedLocaleResumesIdRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdBranchBranchIdRoute =
-  AuthenticatedLocaleResumesIdBranchBranchIdRouteImport.update({
-    id: '/branch/$branchId',
-    path: '/branch/$branchId',
-    getParentRoute: () => AuthenticatedLocaleResumesIdRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute =
-  AuthenticatedLocaleResumesIdHistoryBranchBranchIdRouteImport.update({
-    id: '/resumes/$id_/history/branch/$branchId',
-    path: '/resumes/$id/history/branch/$branchId',
-    getParentRoute: () => AuthenticatedLocaleRoute,
-  } as any)
-const AuthenticatedLocaleResumesIdEditBranchBranchIdRoute =
-  AuthenticatedLocaleResumesIdEditBranchBranchIdRouteImport.update({
-    id: '/edit/branch/$branchId',
-    path: '/edit/branch/$branchId',
-    getParentRoute: () => AuthenticatedLocaleResumesIdRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$locale': typeof AuthenticatedLocaleRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/login/': typeof LoginIndexRoute
   '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
@@ -310,7 +226,6 @@ export interface FileRoutesByFullPath {
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/resumes/': typeof AuthenticatedResumesIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/$locale/resumes/$id': typeof AuthenticatedLocaleResumesIdRouteWithChildren
   '/employees/$id/import': typeof AuthenticatedEmployeesIdImportRoute
   '/settings/assistant/external-ai': typeof AuthenticatedSettingsAssistantExternalAiRoute
   '/settings/assistant/preferences': typeof AuthenticatedSettingsAssistantPreferencesRoute
@@ -320,26 +235,15 @@ export interface FileRoutesByFullPath {
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
-  '/$locale/resumes/$id/': typeof AuthenticatedLocaleResumesIdIndexRoute
   '/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
-  '/$locale/resumes/$id/branch/$branchId': typeof AuthenticatedLocaleResumesIdBranchBranchIdRoute
-  '/$locale/resumes/$id/commit/$commitId': typeof AuthenticatedLocaleResumesIdCommitCommitIdRoute
-  '/$locale/resumes/$id/compare/$range': typeof AuthenticatedLocaleResumesIdCompareRangeRoute
   '/resumes/$id/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
   '/resumes/$id/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
-  '/$locale/resumes/$id/edit/': typeof AuthenticatedLocaleResumesIdEditIndexRoute
-  '/$locale/resumes/$id/compare/': typeof AuthenticatedLocaleResumesIdCompareIndexRoute
-  '/$locale/resumes/$id/history/': typeof AuthenticatedLocaleResumesIdHistoryIndexRoute
-  '/$locale/resumes/$id/variants/': typeof AuthenticatedLocaleResumesIdVariantsIndexRoute
-  '/$locale/resumes/$id/edit/branch/$branchId': typeof AuthenticatedLocaleResumesIdEditBranchBranchIdRoute
-  '/$locale/resumes/$id/history/branch/$branchId': typeof AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$locale': typeof AuthenticatedLocaleRouteWithChildren
   '/login': typeof LoginIndexRoute
   '/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
   '/assistant/preferences': typeof AuthenticatedAssistantPreferencesRoute
@@ -359,29 +263,18 @@ export interface FileRoutesByTo {
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/admin/assistant/prompts': typeof AdminAdminAssistantPromptsIndexRoute
-  '/$locale/resumes/$id': typeof AuthenticatedLocaleResumesIdIndexRoute
   '/resumes/$id/edit': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
   '/resumes/$id/history': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/resumes/$id/variants': typeof AuthenticatedResumesIdVariantsIndexRoute
-  '/$locale/resumes/$id/branch/$branchId': typeof AuthenticatedLocaleResumesIdBranchBranchIdRoute
-  '/$locale/resumes/$id/commit/$commitId': typeof AuthenticatedLocaleResumesIdCommitCommitIdRoute
-  '/$locale/resumes/$id/compare/$range': typeof AuthenticatedLocaleResumesIdCompareRangeRoute
   '/resumes/$id/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
   '/resumes/$id/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
-  '/$locale/resumes/$id/edit': typeof AuthenticatedLocaleResumesIdEditIndexRoute
-  '/$locale/resumes/$id/compare': typeof AuthenticatedLocaleResumesIdCompareIndexRoute
-  '/$locale/resumes/$id/history': typeof AuthenticatedLocaleResumesIdHistoryIndexRoute
-  '/$locale/resumes/$id/variants': typeof AuthenticatedLocaleResumesIdVariantsIndexRoute
-  '/$locale/resumes/$id/edit/branch/$branchId': typeof AuthenticatedLocaleResumesIdEditBranchBranchIdRoute
-  '/$locale/resumes/$id/history/branch/$branchId': typeof AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_admin': typeof AdminRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/_authenticated/$locale': typeof AuthenticatedLocaleRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/login/': typeof LoginIndexRoute
   '/_authenticated/assistant/external-ai': typeof AuthenticatedAssistantExternalAiRoute
@@ -394,7 +287,6 @@ export interface FileRoutesById {
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
   '/_authenticated/resumes/': typeof AuthenticatedResumesIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/_authenticated/$locale/resumes/$id': typeof AuthenticatedLocaleResumesIdRouteWithChildren
   '/_authenticated/employees/$id_/import': typeof AuthenticatedEmployeesIdImportRoute
   '/_authenticated/settings/assistant/external-ai': typeof AuthenticatedSettingsAssistantExternalAiRoute
   '/_authenticated/settings/assistant/preferences': typeof AuthenticatedSettingsAssistantPreferencesRoute
@@ -404,28 +296,17 @@ export interface FileRoutesById {
   '/_authenticated/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
   '/_authenticated/resumes/$id_/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/_admin/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
-  '/_authenticated/$locale/resumes/$id/': typeof AuthenticatedLocaleResumesIdIndexRoute
   '/_authenticated/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
   '/_authenticated/resumes/$id_/history/': typeof AuthenticatedResumesIdHistoryIndexRoute
   '/_authenticated/resumes/$id_/variants/': typeof AuthenticatedResumesIdVariantsIndexRoute
-  '/_authenticated/$locale/resumes/$id/branch/$branchId': typeof AuthenticatedLocaleResumesIdBranchBranchIdRoute
-  '/_authenticated/$locale/resumes/$id/commit/$commitId': typeof AuthenticatedLocaleResumesIdCommitCommitIdRoute
-  '/_authenticated/$locale/resumes/$id_/compare/$range': typeof AuthenticatedLocaleResumesIdCompareRangeRoute
   '/_authenticated/resumes/$id/edit/branch/$branchId': typeof AuthenticatedResumesIdEditBranchBranchIdRoute
   '/_authenticated/resumes/$id_/history/branch/$branchId': typeof AuthenticatedResumesIdHistoryBranchBranchIdRoute
-  '/_authenticated/$locale/resumes/$id/edit/': typeof AuthenticatedLocaleResumesIdEditIndexRoute
-  '/_authenticated/$locale/resumes/$id_/compare/': typeof AuthenticatedLocaleResumesIdCompareIndexRoute
-  '/_authenticated/$locale/resumes/$id_/history/': typeof AuthenticatedLocaleResumesIdHistoryIndexRoute
-  '/_authenticated/$locale/resumes/$id_/variants/': typeof AuthenticatedLocaleResumesIdVariantsIndexRoute
-  '/_authenticated/$locale/resumes/$id/edit/branch/$branchId': typeof AuthenticatedLocaleResumesIdEditBranchBranchIdRoute
-  '/_authenticated/$locale/resumes/$id_/history/branch/$branchId': typeof AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/$locale'
     | '/settings'
     | '/login/'
     | '/assistant/external-ai'
@@ -438,7 +319,6 @@ export interface FileRouteTypes {
     | '/employees/'
     | '/resumes/'
     | '/settings/'
-    | '/$locale/resumes/$id'
     | '/employees/$id/import'
     | '/settings/assistant/external-ai'
     | '/settings/assistant/preferences'
@@ -448,26 +328,15 @@ export interface FileRouteTypes {
     | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare/$range'
     | '/admin/assistant/prompts/'
-    | '/$locale/resumes/$id/'
     | '/resumes/$id/edit/'
     | '/resumes/$id/compare/'
     | '/resumes/$id/history/'
     | '/resumes/$id/variants/'
-    | '/$locale/resumes/$id/branch/$branchId'
-    | '/$locale/resumes/$id/commit/$commitId'
-    | '/$locale/resumes/$id/compare/$range'
     | '/resumes/$id/edit/branch/$branchId'
     | '/resumes/$id/history/branch/$branchId'
-    | '/$locale/resumes/$id/edit/'
-    | '/$locale/resumes/$id/compare/'
-    | '/$locale/resumes/$id/history/'
-    | '/$locale/resumes/$id/variants/'
-    | '/$locale/resumes/$id/edit/branch/$branchId'
-    | '/$locale/resumes/$id/history/branch/$branchId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$locale'
     | '/login'
     | '/assistant/external-ai'
     | '/assistant/preferences'
@@ -487,28 +356,17 @@ export interface FileRouteTypes {
     | '/resumes/$id/commit/$commitId'
     | '/resumes/$id/compare/$range'
     | '/admin/assistant/prompts'
-    | '/$locale/resumes/$id'
     | '/resumes/$id/edit'
     | '/resumes/$id/compare'
     | '/resumes/$id/history'
     | '/resumes/$id/variants'
-    | '/$locale/resumes/$id/branch/$branchId'
-    | '/$locale/resumes/$id/commit/$commitId'
-    | '/$locale/resumes/$id/compare/$range'
     | '/resumes/$id/edit/branch/$branchId'
     | '/resumes/$id/history/branch/$branchId'
-    | '/$locale/resumes/$id/edit'
-    | '/$locale/resumes/$id/compare'
-    | '/$locale/resumes/$id/history'
-    | '/$locale/resumes/$id/variants'
-    | '/$locale/resumes/$id/edit/branch/$branchId'
-    | '/$locale/resumes/$id/history/branch/$branchId'
   id:
     | '__root__'
     | '/'
     | '/_admin'
     | '/_authenticated'
-    | '/_authenticated/$locale'
     | '/_authenticated/settings'
     | '/login/'
     | '/_authenticated/assistant/external-ai'
@@ -521,7 +379,6 @@ export interface FileRouteTypes {
     | '/_authenticated/employees/'
     | '/_authenticated/resumes/'
     | '/_authenticated/settings/'
-    | '/_authenticated/$locale/resumes/$id'
     | '/_authenticated/employees/$id_/import'
     | '/_authenticated/settings/assistant/external-ai'
     | '/_authenticated/settings/assistant/preferences'
@@ -531,22 +388,12 @@ export interface FileRouteTypes {
     | '/_authenticated/resumes/$id/commit/$commitId'
     | '/_authenticated/resumes/$id_/compare/$range'
     | '/_admin/admin/assistant/prompts/'
-    | '/_authenticated/$locale/resumes/$id/'
     | '/_authenticated/resumes/$id/edit/'
     | '/_authenticated/resumes/$id_/compare/'
     | '/_authenticated/resumes/$id_/history/'
     | '/_authenticated/resumes/$id_/variants/'
-    | '/_authenticated/$locale/resumes/$id/branch/$branchId'
-    | '/_authenticated/$locale/resumes/$id/commit/$commitId'
-    | '/_authenticated/$locale/resumes/$id_/compare/$range'
     | '/_authenticated/resumes/$id/edit/branch/$branchId'
     | '/_authenticated/resumes/$id_/history/branch/$branchId'
-    | '/_authenticated/$locale/resumes/$id/edit/'
-    | '/_authenticated/$locale/resumes/$id_/compare/'
-    | '/_authenticated/$locale/resumes/$id_/history/'
-    | '/_authenticated/$locale/resumes/$id_/variants/'
-    | '/_authenticated/$locale/resumes/$id/edit/branch/$branchId'
-    | '/_authenticated/$locale/resumes/$id_/history/branch/$branchId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -591,13 +438,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/$locale': {
-      id: '/_authenticated/$locale'
-      path: '/$locale'
-      fullPath: '/$locale'
-      preLoaderRoute: typeof AuthenticatedLocaleRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings/': {
@@ -698,13 +538,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployeesIdImportRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/$locale/resumes/$id': {
-      id: '/_authenticated/$locale/resumes/$id'
-      path: '/resumes/$id'
-      fullPath: '/$locale/resumes/$id'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
     '/_authenticated/resumes/$id_/variants/': {
       id: '/_authenticated/resumes/$id_/variants/'
       path: '/resumes/$id/variants'
@@ -732,13 +565,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/resumes/$id/edit/'
       preLoaderRoute: typeof AuthenticatedResumesIdEditIndexRouteImport
       parentRoute: typeof AuthenticatedResumesIdRoute
-    }
-    '/_authenticated/$locale/resumes/$id/': {
-      id: '/_authenticated/$locale/resumes/$id/'
-      path: '/'
-      fullPath: '/$locale/resumes/$id/'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdIndexRouteImport
-      parentRoute: typeof AuthenticatedLocaleResumesIdRoute
     }
     '/_admin/admin/assistant/prompts/': {
       id: '/_admin/admin/assistant/prompts/'
@@ -775,34 +601,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminAssistantPromptsPromptIdRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/_authenticated/$locale/resumes/$id_/variants/': {
-      id: '/_authenticated/$locale/resumes/$id_/variants/'
-      path: '/resumes/$id/variants'
-      fullPath: '/$locale/resumes/$id/variants/'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdVariantsIndexRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
-    '/_authenticated/$locale/resumes/$id_/history/': {
-      id: '/_authenticated/$locale/resumes/$id_/history/'
-      path: '/resumes/$id/history'
-      fullPath: '/$locale/resumes/$id/history/'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdHistoryIndexRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
-    '/_authenticated/$locale/resumes/$id_/compare/': {
-      id: '/_authenticated/$locale/resumes/$id_/compare/'
-      path: '/resumes/$id/compare'
-      fullPath: '/$locale/resumes/$id/compare/'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdCompareIndexRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
-    '/_authenticated/$locale/resumes/$id/edit/': {
-      id: '/_authenticated/$locale/resumes/$id/edit/'
-      path: '/edit'
-      fullPath: '/$locale/resumes/$id/edit/'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdEditIndexRouteImport
-      parentRoute: typeof AuthenticatedLocaleResumesIdRoute
-    }
     '/_authenticated/resumes/$id_/history/branch/$branchId': {
       id: '/_authenticated/resumes/$id_/history/branch/$branchId'
       path: '/resumes/$id/history/branch/$branchId'
@@ -816,41 +614,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/resumes/$id/edit/branch/$branchId'
       preLoaderRoute: typeof AuthenticatedResumesIdEditBranchBranchIdRouteImport
       parentRoute: typeof AuthenticatedResumesIdRoute
-    }
-    '/_authenticated/$locale/resumes/$id_/compare/$range': {
-      id: '/_authenticated/$locale/resumes/$id_/compare/$range'
-      path: '/resumes/$id/compare/$range'
-      fullPath: '/$locale/resumes/$id/compare/$range'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdCompareRangeRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
-    '/_authenticated/$locale/resumes/$id/commit/$commitId': {
-      id: '/_authenticated/$locale/resumes/$id/commit/$commitId'
-      path: '/commit/$commitId'
-      fullPath: '/$locale/resumes/$id/commit/$commitId'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdCommitCommitIdRouteImport
-      parentRoute: typeof AuthenticatedLocaleResumesIdRoute
-    }
-    '/_authenticated/$locale/resumes/$id/branch/$branchId': {
-      id: '/_authenticated/$locale/resumes/$id/branch/$branchId'
-      path: '/branch/$branchId'
-      fullPath: '/$locale/resumes/$id/branch/$branchId'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdBranchBranchIdRouteImport
-      parentRoute: typeof AuthenticatedLocaleResumesIdRoute
-    }
-    '/_authenticated/$locale/resumes/$id_/history/branch/$branchId': {
-      id: '/_authenticated/$locale/resumes/$id_/history/branch/$branchId'
-      path: '/resumes/$id/history/branch/$branchId'
-      fullPath: '/$locale/resumes/$id/history/branch/$branchId'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdHistoryBranchBranchIdRouteImport
-      parentRoute: typeof AuthenticatedLocaleRoute
-    }
-    '/_authenticated/$locale/resumes/$id/edit/branch/$branchId': {
-      id: '/_authenticated/$locale/resumes/$id/edit/branch/$branchId'
-      path: '/edit/branch/$branchId'
-      fullPath: '/$locale/resumes/$id/edit/branch/$branchId'
-      preLoaderRoute: typeof AuthenticatedLocaleResumesIdEditBranchBranchIdRouteImport
-      parentRoute: typeof AuthenticatedLocaleResumesIdRoute
     }
   }
 }
@@ -867,60 +630,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
-interface AuthenticatedLocaleResumesIdRouteChildren {
-  AuthenticatedLocaleResumesIdIndexRoute: typeof AuthenticatedLocaleResumesIdIndexRoute
-  AuthenticatedLocaleResumesIdBranchBranchIdRoute: typeof AuthenticatedLocaleResumesIdBranchBranchIdRoute
-  AuthenticatedLocaleResumesIdCommitCommitIdRoute: typeof AuthenticatedLocaleResumesIdCommitCommitIdRoute
-  AuthenticatedLocaleResumesIdEditIndexRoute: typeof AuthenticatedLocaleResumesIdEditIndexRoute
-  AuthenticatedLocaleResumesIdEditBranchBranchIdRoute: typeof AuthenticatedLocaleResumesIdEditBranchBranchIdRoute
-}
-
-const AuthenticatedLocaleResumesIdRouteChildren: AuthenticatedLocaleResumesIdRouteChildren =
-  {
-    AuthenticatedLocaleResumesIdIndexRoute:
-      AuthenticatedLocaleResumesIdIndexRoute,
-    AuthenticatedLocaleResumesIdBranchBranchIdRoute:
-      AuthenticatedLocaleResumesIdBranchBranchIdRoute,
-    AuthenticatedLocaleResumesIdCommitCommitIdRoute:
-      AuthenticatedLocaleResumesIdCommitCommitIdRoute,
-    AuthenticatedLocaleResumesIdEditIndexRoute:
-      AuthenticatedLocaleResumesIdEditIndexRoute,
-    AuthenticatedLocaleResumesIdEditBranchBranchIdRoute:
-      AuthenticatedLocaleResumesIdEditBranchBranchIdRoute,
-  }
-
-const AuthenticatedLocaleResumesIdRouteWithChildren =
-  AuthenticatedLocaleResumesIdRoute._addFileChildren(
-    AuthenticatedLocaleResumesIdRouteChildren,
-  )
-
-interface AuthenticatedLocaleRouteChildren {
-  AuthenticatedLocaleResumesIdRoute: typeof AuthenticatedLocaleResumesIdRouteWithChildren
-  AuthenticatedLocaleResumesIdCompareRangeRoute: typeof AuthenticatedLocaleResumesIdCompareRangeRoute
-  AuthenticatedLocaleResumesIdCompareIndexRoute: typeof AuthenticatedLocaleResumesIdCompareIndexRoute
-  AuthenticatedLocaleResumesIdHistoryIndexRoute: typeof AuthenticatedLocaleResumesIdHistoryIndexRoute
-  AuthenticatedLocaleResumesIdVariantsIndexRoute: typeof AuthenticatedLocaleResumesIdVariantsIndexRoute
-  AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute: typeof AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute
-}
-
-const AuthenticatedLocaleRouteChildren: AuthenticatedLocaleRouteChildren = {
-  AuthenticatedLocaleResumesIdRoute:
-    AuthenticatedLocaleResumesIdRouteWithChildren,
-  AuthenticatedLocaleResumesIdCompareRangeRoute:
-    AuthenticatedLocaleResumesIdCompareRangeRoute,
-  AuthenticatedLocaleResumesIdCompareIndexRoute:
-    AuthenticatedLocaleResumesIdCompareIndexRoute,
-  AuthenticatedLocaleResumesIdHistoryIndexRoute:
-    AuthenticatedLocaleResumesIdHistoryIndexRoute,
-  AuthenticatedLocaleResumesIdVariantsIndexRoute:
-    AuthenticatedLocaleResumesIdVariantsIndexRoute,
-  AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute:
-    AuthenticatedLocaleResumesIdHistoryBranchBranchIdRoute,
-}
-
-const AuthenticatedLocaleRouteWithChildren =
-  AuthenticatedLocaleRoute._addFileChildren(AuthenticatedLocaleRouteChildren)
 
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -967,7 +676,6 @@ const AuthenticatedResumesIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedLocaleRoute: typeof AuthenticatedLocaleRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedAssistantExternalAiRoute: typeof AuthenticatedAssistantExternalAiRoute
   AuthenticatedAssistantPreferencesRoute: typeof AuthenticatedAssistantPreferencesRoute
@@ -987,7 +695,6 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedLocaleRoute: AuthenticatedLocaleRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedAssistantExternalAiRoute: AuthenticatedAssistantExternalAiRoute,
   AuthenticatedAssistantPreferencesRoute:

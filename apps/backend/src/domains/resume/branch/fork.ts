@@ -101,6 +101,9 @@ export async function forkResumeBranch(
       head_commit_id: null,
       forked_from_commit_id: input.fromCommitId,
       created_by: user.id,
+      branch_type: "variant",
+      source_branch_id: null,
+      source_commit_id: null,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -115,6 +118,10 @@ export async function forkResumeBranch(
     forkedFromCommitId: newBranch.forked_from_commit_id,
     createdBy: newBranch.created_by,
     createdAt: newBranch.created_at,
+    branchType: newBranch.branch_type,
+    sourceBranchId: newBranch.source_branch_id,
+    sourceCommitId: newBranch.source_commit_id,
+    isStale: false,
   };
 }
 

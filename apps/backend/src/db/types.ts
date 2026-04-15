@@ -166,9 +166,18 @@ export interface ResumeCommitParentTable {
 export type ResumeCommitParent = Selectable<ResumeCommitParentTable>;
 export type NewResumeCommitParent = Insertable<ResumeCommitParentTable>;
 
+export type BranchType = "variant" | "translation" | "revision";
+
 /**
  * Named variant of a resume — analogous to a git branch. Holds a pointer to
  * the HEAD commit and optionally the commit it was forked from.
+ *
+ * branch_type distinguishes three kinds of branches:
+ *   - variant: long-lived semantic version (e.g. "main", "Tech Lead").
+ *   - translation: language copy of a variant, pinned via source_branch_id.
+ *   - revision: short-lived working branch forked from a variant.
+ *
+ * See .claude/contexts/three-branch-type-model.md for the full design.
  */
 export interface ResumeBranchTable {
   id: Generated<string>;
@@ -182,6 +191,19 @@ export interface ResumeBranchTable {
   forked_from_commit_id: string | null;
   created_by: string | null;
   created_at: Generated<Date>;
+  /** Classifies the branch as 'variant', 'translation', or 'revision'. */
+  branch_type: Generated<BranchType>;
+  /**
+   * For translation/revision branches: the variant this branch is attached to.
+   * NULL for variants.
+   */
+  source_branch_id: string | null;
+  /**
+   * For translations: the source commit the translation is caught up to (mutable).
+   * For revisions: the commit the revision diverged from (immutable).
+   * NULL for variants.
+   */
+  source_commit_id: string | null;
 }
 
 export type ResumeBranch = Selectable<ResumeBranchTable>;

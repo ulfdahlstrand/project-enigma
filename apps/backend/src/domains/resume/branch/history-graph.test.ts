@@ -33,6 +33,9 @@ const BRANCH_ROWS = [
     forked_from_commit_id: null,
     created_by: CREATOR_ID,
     created_at: new Date("2026-01-01T00:00:00.000Z"),
+    branch_type: "variant" as const,
+    source_branch_id: null,
+    source_commit_id: null,
   },
   {
     id: SV_BRANCH_ID,
@@ -44,6 +47,9 @@ const BRANCH_ROWS = [
     forked_from_commit_id: MAIN_COMMIT_ID_1,
     created_by: CREATOR_ID,
     created_at: new Date("2026-01-02T00:00:00.000Z"),
+    branch_type: "variant" as const,
+    source_branch_id: null,
+    source_commit_id: null,
   },
 ];
 
