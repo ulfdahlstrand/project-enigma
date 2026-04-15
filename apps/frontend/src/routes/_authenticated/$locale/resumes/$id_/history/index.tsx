@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-export { VersionHistoryPage } from "../../../../resumes/$id_/history/index";
+import { VersionHistoryPage } from "../../../../resumes/$id_/history/index";
+export { VersionHistoryPage };
 
 export const Route = createFileRoute("/_authenticated/$locale/resumes/$id_/history/")({
   validateSearch: z.object({
