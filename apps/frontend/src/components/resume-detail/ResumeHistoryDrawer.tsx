@@ -6,6 +6,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
 import RouterButton from "../RouterButton";
 
 type ResumeCommitRow = {
@@ -34,6 +35,15 @@ export function ResumeHistoryDrawer({
   language,
 }: ResumeHistoryDrawerProps) {
   const { t } = useTranslation("common");
+  const navigate = useNavigate();
+
+  function handleCommitClick(commitId: string) {
+    onClose();
+    void navigate({
+      to: "/resumes/$id/commit/$commitId",
+      params: { id: resumeId, commitId },
+    });
+  }
 
   return (
     <Drawer
@@ -71,6 +81,7 @@ export function ResumeHistoryDrawer({
               <ListItemButton
                 selected={commit.id === currentCommitId}
                 aria-current={commit.id === currentCommitId ? "true" : undefined}
+                onClick={() => handleCommitClick(commit.id)}
                 sx={{
                   alignItems: "flex-start",
                   "&.Mui-selected": {
