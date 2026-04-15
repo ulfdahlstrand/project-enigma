@@ -1,17 +1,19 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../test-utils/render";
 import { ResumeHistoryDrawer } from "../ResumeHistoryDrawer";
 
-vi.mock("../../RouterButton", () => ({
-  default: React.forwardRef(function MockRouterButton(
-    { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; search?: unknown; params?: unknown },
-    ref: React.Ref<HTMLAnchorElement>,
-  ) {
-    return <a href={typeof to === "string" ? to : "#"} ref={ref} {...props}>{children}</a>;
-  }),
-}));
+const mockNavigate = vi.fn();
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 describe("ResumeHistoryDrawer", () => {
   const recentCommits = [
@@ -26,6 +28,7 @@ describe("ResumeHistoryDrawer", () => {
         onClose={() => undefined}
         resumeId="resume-id-1"
         activeBranchId="branch-id-1"
+        activeBranchName="main"
         currentCommitId="commit-3"
         recentCommits={recentCommits}
         language="en"
@@ -36,22 +39,32 @@ describe("ResumeHistoryDrawer", () => {
     expect(screen.getByRole("button", { name: /Previous commit/i })).not.toHaveAttribute("aria-current");
   });
 
-  it("links to the branch-specific history route when an active branch exists", async () => {
+  it("navigates to the branch-specific history route when 'View full history' is clicked", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
     renderWithProviders(
       <ResumeHistoryDrawer
         open
-        onClose={() => undefined}
+        onClose={onClose}
         resumeId="resume-id-1"
         activeBranchId="branch-id-1"
+        activeBranchName="main"
         currentCommitId="commit-3"
         recentCommits={recentCommits}
         language="en"
       />,
     );
 
-    expect(await screen.findByRole("link", { name: /View full history/i })).toHaveAttribute(
-      "href",
-      "/resumes/$id/history/branch/$branchId",
+    const viewAllBtn = await screen.findByRole("button", { name: /View full history/i });
+    await user.click(viewAllBtn);
+
+    expect(onClose).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/resumes/$id/history/branch/$branchId",
+        params: { id: "resume-id-1", branchId: "branch-id-1" },
+      }),
     );
   });
 });

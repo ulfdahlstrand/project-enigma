@@ -275,6 +275,7 @@
       "assignmentTechnologies": "Technologies",
       "editMenuLabel": "Open edit options",
       "moreActionsLabel": "More actions",
+      "historyButton": "Open history",
       "createBranchFromCommitMenuItem": "Create branch from this commit",
       "deleteButton": "Delete",
       "deleteDialog": {
@@ -289,7 +290,10 @@
         "title": "Recent changes",
         "viewAll": "View full history",
         "noCommits": "No saved versions yet.",
-        "defaultMessage": "(no message)"
+        "defaultMessage": "(no message)",
+        "commitActions": "Version actions",
+        "viewCommit": "View this version",
+        "compareWithCurrent": "Compare with current branch"
       }
     },
     "edit": {
@@ -373,7 +377,10 @@
       "description": "Each saved version is a snapshot of this resume at a point in time. Switch between branches to see their individual histories, or use the tree view for a full overview.",
       "viewInResumeButton": "View in resume",
       "viewCommitMenuItem": "View this commit",
+      "commitDetailMenuItem": "View details",
+      "compareWithCurrentMenuItem": "Compare with current branch",
       "commitActionsButton": "Commit actions",
+      "noDescription": "No description.",
       "headBadge": "Current",
       "compareButton": "Compare versions",
       "mergeButton": "Merge branch",
@@ -446,6 +453,7 @@
       "description": "Select two saved versions to compare them side by side. Changes are grouped by resume fields, skills, and assignments.",
       "fromLabel": "From (older)",
       "toLabel": "To (newer)",
+      "swapButton": "Swap from and to",
       "compareButton": "Compare",
       "fieldLabel": "Field",
       "changedGroups_one": "1 section changed",

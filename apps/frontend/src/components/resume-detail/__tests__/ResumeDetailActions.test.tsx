@@ -23,6 +23,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   };
 });
 
+vi.mock("../../../contexts/ResumeLayoutContext", () => ({
+  useResumeLayoutContext: () => ({ openHistory: vi.fn() }),
+}));
+
 describe("ResumeDetailActions", () => {
   const baseProps = {
     resumeId: "resume-id-1",
@@ -43,8 +47,6 @@ describe("ResumeDetailActions", () => {
     onDeleteResume: vi.fn(),
     isDeletePending: false,
     isDeleteError: false,
-    recentCommits: [],
-    language: "en" as string | null,
   };
 
   it("hides the edit button and offers create-branch action in snapshot mode", async () => {

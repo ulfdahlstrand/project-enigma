@@ -275,6 +275,7 @@
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
       "moreActionsLabel": "Fler åtgärder",
+      "historyButton": "Öppna historik",
       "createBranchFromCommitMenuItem": "Skapa branch från denna commit",
       "deleteButton": "Ta bort",
       "deleteDialog": {
@@ -289,7 +290,10 @@
         "title": "Senaste ändringar",
         "viewAll": "Visa fullständig historik",
         "noCommits": "Inga sparade versioner ännu.",
-        "defaultMessage": "(inget meddelande)"
+        "defaultMessage": "(inget meddelande)",
+        "commitActions": "Versionsåtgärder",
+        "viewCommit": "Visa denna version",
+        "compareWithCurrent": "Jämför med nuvarande branch"
       }
     },
     "edit": {
@@ -373,7 +377,10 @@
       "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
       "viewInResumeButton": "Visa i CV",
       "viewCommitMenuItem": "Visa denna commit",
+      "commitDetailMenuItem": "Visa detaljer",
+      "compareWithCurrentMenuItem": "Jämför med nuvarande branch",
       "commitActionsButton": "Commit-åtgärder",
+      "noDescription": "Ingen beskrivning.",
       "headBadge": "Aktuell",
       "compareButton": "Jämför versioner",
       "mergeButton": "Merga gren",
@@ -446,6 +453,7 @@
       "description": "Välj två sparade versioner för att jämföra dem sida vid sida. Ändringar grupperas efter CV-fält, färdigheter och uppdrag.",
       "fromLabel": "Från (äldre)",
       "toLabel": "Till (nyare)",
+      "swapButton": "Byt plats på från och till",
       "compareButton": "Jämför",
       "fieldLabel": "Fält",
       "changedGroups_one": "1 sektion ändrad",

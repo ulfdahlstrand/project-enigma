@@ -25,14 +25,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { ResumeSaveSplitButton } from "../ResumeSaveSplitButton";
-import { ResumeHistoryDrawer } from "./ResumeHistoryDrawer";
 import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
-
-type ResumeCommitRow = {
-  id: string;
-  title: string | null;
-  createdAt: string | Date | null;
-};
+import { useResumeLayoutContext } from "../../contexts/ResumeLayoutContext";
 
 interface ResumeDetailActionsProps {
   resumeId: string;
@@ -53,8 +47,6 @@ interface ResumeDetailActionsProps {
   onDeleteResume: () => void;
   isDeletePending: boolean;
   isDeleteError: boolean;
-  recentCommits: ResumeCommitRow[];
-  language: string | null;
 }
 
 type ExportFormat = "pdf" | "docx" | "markdown";
@@ -189,12 +181,10 @@ export function ResumeDetailActions({
   onDeleteResume,
   isDeletePending,
   isDeleteError,
-  recentCommits,
-  language,
 }: ResumeDetailActionsProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const { openHistory } = useResumeLayoutContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
@@ -214,15 +204,6 @@ export function ResumeDetailActions({
       open={Boolean(moreActionsAnchorEl)}
       onClose={() => setMoreActionsAnchorEl(null)}
     >
-      <MenuItem
-        onClick={() => {
-          setMoreActionsAnchorEl(null);
-          setHistoryOpen(true);
-        }}
-      >
-        <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
-        {t("resume.history.pageTitle")}
-      </MenuItem>
       <MenuItem
         onClick={() => {
           setMoreActionsAnchorEl(null);
@@ -284,6 +265,12 @@ export function ResumeDetailActions({
         </>
       )}
       <IconButton
+        aria-label={t("resume.detail.historyButton")}
+        onClick={openHistory}
+      >
+        <HistoryIcon />
+      </IconButton>
+      <IconButton
         aria-label={t("resume.detail.moreActionsLabel")}
         onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
       >
@@ -335,16 +322,6 @@ export function ResumeDetailActions({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ResumeHistoryDrawer
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        resumeId={resumeId}
-        activeBranchId={activeBranchId}
-        currentCommitId={currentCommitId}
-        recentCommits={recentCommits}
-        language={language ?? null}
-      />
 
       <ResumeDeleteDialog
         open={deleteDialogOpen}

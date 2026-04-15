@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { ResumeDetailPage } from "../../$id";
 
-export const Route = createFileRoute("/_authenticated/resumes/$id_/commit/$commitId")({
+export const Route = createFileRoute("/_authenticated/resumes/$id/commit/$commitId")({
   component: ResumeCommitPage,
 });
 

@@ -6,6 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 import type { GraphBranch, GraphCommit, GraphEdge } from "./history-graph-utils";
+import { CommitDiffBadge } from "../../../../../components/CommitDiffBadge";
 import {
   computeGraphLayout,
   formatCommitTimestamp,
@@ -243,8 +244,13 @@ export function HistoryBranchGraph({
               title={
                 <Box sx={{ py: 0.5 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{commitLabel}</Typography>
+                  {commit.description && (
+                    <Typography variant="caption" sx={{ display: "block", mt: 0.5, whiteSpace: "pre-wrap" }}>
+                      {commit.description}
+                    </Typography>
+                  )}
                   {branch && !branch.isSynthetic && (
-                    <Typography variant="caption" sx={{ display: "block" }}>{branch.name}</Typography>
+                    <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>{branch.name}</Typography>
                   )}
                   <Typography variant="caption" sx={{ display: "block" }}>
                     {isHead ? t("resume.history.treeHeadCommitTag") : t("resume.history.treeCommitTag")}
@@ -252,6 +258,7 @@ export function HistoryBranchGraph({
                   <Typography variant="caption" sx={{ display: "block" }}>
                     {t("resume.history.tableHeaderSavedAt")}: {formatCommitTimestamp(commit.createdAt)}
                   </Typography>
+                  <CommitDiffBadge commitId={commit.id} parentCommitId={commit.parentCommitId} />
                 </Box>
               }
             >

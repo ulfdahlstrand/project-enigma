@@ -157,6 +157,15 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
     });
   }
 
+  function handleCompareCommit(commitId: string) {
+    const branchName = selectedBranch?.name;
+    const range = branchName ? `${commitId}...${branchName}` : commitId;
+    void navigate({
+      to: "/resumes/$id/compare/$range",
+      params: { id: resumeId, range },
+    });
+  }
+
   function handleViewSelectedBranchInResume() {
     if (!selectedBranchId) {
       return;
@@ -272,6 +281,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
             commits={commits}
             selectedBranch={selectedBranch}
             onViewCommit={handleViewCommit}
+            onCompare={handleCompareCommit}
           />
         )}
 
