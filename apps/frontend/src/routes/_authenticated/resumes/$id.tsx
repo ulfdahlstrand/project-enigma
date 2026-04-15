@@ -21,8 +21,11 @@ import { LanguageSwitcher } from "../../../components/LanguageSwitcher";
 import { LoadingState, ErrorState } from "../../../components/feedback";
 import { TranslationStaleBanner } from "../../../components/TranslationStaleBanner";
 import { RevisionActionBanner } from "../../../components/RevisionActionBanner";
-import type { AssignmentRow as EditorAssignmentRow } from "../../../components/AssignmentEditor";
 import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDetailActions";
+import {
+  buildEditableAssignments,
+  resolveResumeContent,
+} from "../../../components/resume-detail/derive-snapshot-content";
 import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
 import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/ResumeRevisionReviewDialog";
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
@@ -37,7 +40,6 @@ export const getResumeQueryKey = (
   branchId?: string | null,
   commitId?: string | null,
 ) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
-const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
   component: ResumeDetailLayout,
 });
@@ -275,60 +277,37 @@ export function ResumeDetailPage({
   }, [draftHighlightedItems, draftPresentation, draftSummary, draftTitle]);
 
   const snapshotContent = isSnapshotMode ? selectedCommit?.content : null;
-  const branchEducation = !isSnapshotMode && shouldReadBranchState ? resume?.education ?? [] : [];
-  const effectiveEducation = snapshotContent?.education ?? branchEducation;
-  const resolvedEducation = effectiveEducation.length > 0
-    ? effectiveEducation.map((entry, index) => ({
-        id: `snapshot-education-${index}`,
-        employeeId: resume?.employeeId ?? "",
-        type: entry.type,
-        value: entry.value,
-        sortOrder: entry.sortOrder,
-        createdAt: "",
-        updatedAt: "",
-      }))
-    : education;
-  const assignments: Array<{
-    id: string;
-    assignmentId?: string;
-    isCurrent: boolean;
-    startDate: string | Date;
-    clientName: string;
-    role: string;
-    description: string;
-    endDate: string | Date | null;
-    technologies: string[];
-    keywords?: string | null;
-  }> = isSnapshotMode
-    ? (snapshotContent?.assignments ?? []).map((assignment) => ({
-        ...assignment,
-        id: assignment.assignmentId,
-      }))
-    : (shouldReadBranchState
-        ? (resume?.assignments ?? []).map((assignment) => ({
-            ...assignment,
-            id: assignment.assignmentId,
-          }))
-        : liveBranchAssignments);
-  const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
-  const language = snapshotContent?.language ?? activeBranch?.language ?? resume?.language;
-  const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
-  const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
-  const summary = snapshotContent?.summary ?? resume?.summary ?? null;
+  const sortedLiveAssignmentsForFallback = sortAssignments(
+    liveBranchAssignments,
+    (a) => a.isCurrent,
+    (a) => a.startDate,
+  );
+  const {
+    resolvedEducation,
+    assignments,
+    resumeTitle,
+    language,
+    consultantTitle,
+    presentation,
+    summary,
+    highlightedItems,
+    snapshotSkillGroups,
+    snapshotSkills,
+  } = resolveResumeContent({
+    resumeId: id,
+    employeeId: resume?.employeeId ?? "",
+    snapshotContent: snapshotContent ?? null,
+    isSnapshotMode,
+    shouldReadBranchState,
+    branchResume: resume ?? null,
+    liveBranchAssignments,
+    fullEducation: education,
+    activeBranchLanguage: activeBranch?.language ?? null,
+    sortedAssignmentsForFallback: sortedLiveAssignmentsForFallback,
+  });
   const presentationText = presentation.join("\n\n");
   const sortedAssignments = sortAssignments(assignments, (a) => a.isCurrent, (a) => a.startDate);
-  const editableAssignments = sortedAssignments.map((assignment) => ({
-    ...assignment,
-    assignmentId: assignment.assignmentId ?? assignment.id,
-  })) as EditorAssignmentRow[];
-  const fallbackHighlightedItems = sortedAssignments
-    .slice(0, COVER_HIGHLIGHT_COUNT)
-    .map((assignment) => `${assignment.role} hos ${assignment.clientName}`);
-  const highlightedItems =
-    snapshotContent?.highlightedItems ??
-    (resume?.highlightedItems && resume.highlightedItems.length > 0
-      ? resume.highlightedItems
-      : fallbackHighlightedItems);
+  const editableAssignments = buildEditableAssignments(sortedAssignments);
   const highlightedItemsText = highlightedItems.join("\n");
 
   useEffect(() => {
@@ -350,52 +329,6 @@ export function ResumeDetailPage({
     setDraftHighlightedItems(nextHighlightedItems);
   }, [activeBranchId, consultantTitle, highlightedItemsText, isEditing, presentationText, summary]);
 
-  const snapshotSkillGroupDefs = snapshotContent
-    ? (() => {
-        const explicitGroups = snapshotContent.skillGroups.map((group, index) => ({
-          key: group.name.trim() || `__other__${index}`,
-          name: group.name.trim(),
-          sortOrder: group.sortOrder,
-        }));
-        const seen = new Set(explicitGroups.map((group) => group.key));
-        const fallbackGroups = snapshotContent.skills.reduce<Array<{ key: string; name: string; sortOrder: number }>>((acc, skill, index) => {
-          const name = skill.category?.trim() || "";
-          const key = name || "__other__";
-          if (seen.has(key)) {
-            return acc;
-          }
-          seen.add(key);
-          return [...acc, {
-            key,
-            name,
-            sortOrder: explicitGroups.length + index,
-          }];
-        }, []);
-
-        return [...explicitGroups, ...fallbackGroups];
-      })()
-    : null;
-
-  const snapshotSkillGroups = snapshotSkillGroupDefs?.map((group) => ({
-    id: `snapshot-group-${group.key}`,
-    resumeId: id,
-    name: group.name,
-    sortOrder: group.sortOrder,
-  })) ?? null;
-
-  const snapshotGroupIdByName = new Map(
-    (snapshotSkillGroupDefs ?? []).map((group) => [group.name, `snapshot-group-${group.key}`]),
-  );
-
-  const snapshotSkills = snapshotContent?.skills
-    ? snapshotContent.skills.map((skill, index) => ({
-        id: `snapshot-skill-${index}-${skill.name}`,
-        groupId: snapshotGroupIdByName.get(skill.category?.trim() || "") ?? "snapshot-group-__other__",
-        name: skill.name,
-        category: skill.category ?? null,
-        sortOrder: skill.sortOrder ?? index,
-      }))
-    : null;
   const skills = isEditing ? (resume?.skills ?? []) : (snapshotSkills ?? (resume?.skills ?? []));
   const skillGroups = isEditing ? (resume?.skillGroups ?? []) : (snapshotSkillGroups ?? (resume?.skillGroups ?? []));
   const hasSkills = skills.length > 0;
