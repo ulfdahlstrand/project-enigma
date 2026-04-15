@@ -25,20 +25,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { ResumeSaveSplitButton } from "../ResumeSaveSplitButton";
-import { ResumeHistoryDrawer } from "./ResumeHistoryDrawer";
 import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
-
-type ResumeCommitRow = {
-  id: string;
-  title: string | null;
-  createdAt: string | Date | null;
-};
+import { useResumeLayoutContext } from "../../contexts/ResumeLayoutContext";
 
 interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
-  activeBranchName: string | null;
   currentCommitId: string | null;
   isEditRoute: boolean;
   isSnapshotMode: boolean;
@@ -54,8 +47,6 @@ interface ResumeDetailActionsProps {
   onDeleteResume: () => void;
   isDeletePending: boolean;
   isDeleteError: boolean;
-  recentCommits: ResumeCommitRow[];
-  language: string | null;
 }
 
 type ExportFormat = "pdf" | "docx" | "markdown";
@@ -175,7 +166,6 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
-  activeBranchName,
   currentCommitId,
   isEditRoute,
   isSnapshotMode,
@@ -191,12 +181,10 @@ export function ResumeDetailActions({
   onDeleteResume,
   isDeletePending,
   isDeleteError,
-  recentCommits,
-  language,
 }: ResumeDetailActionsProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const { openHistory } = useResumeLayoutContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
@@ -278,7 +266,7 @@ export function ResumeDetailActions({
       )}
       <IconButton
         aria-label={t("resume.detail.historyButton")}
-        onClick={() => setHistoryOpen(true)}
+        onClick={openHistory}
       >
         <HistoryIcon />
       </IconButton>
@@ -334,17 +322,6 @@ export function ResumeDetailActions({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ResumeHistoryDrawer
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        resumeId={resumeId}
-        activeBranchId={activeBranchId}
-        activeBranchName={activeBranchName}
-        currentCommitId={currentCommitId}
-        recentCommits={recentCommits}
-        language={language ?? null}
-      />
 
       <ResumeDeleteDialog
         open={deleteDialogOpen}

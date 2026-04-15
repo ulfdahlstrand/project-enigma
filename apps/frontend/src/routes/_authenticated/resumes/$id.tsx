@@ -1,5 +1,5 @@
 import { sortAssignments } from "@cv-tool/utils";
-import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,8 @@ import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/Re
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
 import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
+import { ResumeHistoryDrawer } from "../../../components/resume-detail/ResumeHistoryDrawer";
+import { ResumeLayoutContext } from "../../../contexts/ResumeLayoutContext";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
 
 export const getResumeQueryKey = (
@@ -33,8 +35,46 @@ export const getResumeQueryKey = (
 ) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
 export const Route = createFileRoute("/_authenticated/resumes/$id")({
-  component: () => <ResumeDetailPage routeMode="detail" />,
+  component: ResumeDetailLayout,
 });
+
+function ResumeDetailLayout() {
+  const { id, branchId: urlBranchId, commitId: urlCommitId } = useParams({ strict: false }) as {
+    id: string;
+    branchId?: string;
+    commitId?: string;
+  };
+
+  const { data: branches } = useQuery({
+    queryKey: resumeBranchesKey(id),
+    queryFn: () => orpc.listResumeBranches({ resumeId: id }),
+  });
+
+  const mainBranchId = branches?.find((b) => b.isMain)?.id ?? null;
+  const activeBranchId = urlBranchId ?? mainBranchId ?? null;
+  const activeBranch = branches?.find((b) => b.id === activeBranchId);
+
+  const { data: recentCommits = [] } = useResumeCommits(activeBranchId ?? mainBranchId ?? "");
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const currentCommitId = urlCommitId ?? activeBranch?.headCommitId ?? null;
+
+  return (
+    <ResumeLayoutContext.Provider value={{ openHistory: () => setHistoryOpen(true) }}>
+      <Outlet />
+      <ResumeHistoryDrawer
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        resumeId={id}
+        activeBranchId={activeBranchId}
+        activeBranchName={activeBranch?.name ?? null}
+        currentCommitId={currentCommitId}
+        recentCommits={recentCommits}
+        language={(activeBranch as { language?: string | null } | undefined)?.language ?? null}
+      />
+    </ResumeLayoutContext.Provider>
+  );
+}
 
 export function ResumeDetailPage({
   routeMode = "detail",
@@ -694,7 +734,6 @@ export function ResumeDetailPage({
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
-      activeBranchName={activeBranch?.name ?? null}
       currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
@@ -725,8 +764,6 @@ export function ResumeDetailPage({
       onDeleteResume={() => deleteResume.mutate()}
       isDeletePending={deleteResume.isPending}
       isDeleteError={deleteResume.isError}
-      recentCommits={recentCommits}
-      language={language ?? null}
     />
   );
 

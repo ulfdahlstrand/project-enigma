@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import { ResumeDetailPage } from "../../$id";
 
-export const Route = createFileRoute("/_authenticated/resumes/$id_/edit/")({
+export const Route = createFileRoute("/_authenticated/resumes/$id/edit/")({
   validateSearch: z.object({
     assistant: z.enum(["true"]).optional(),
     sourceBranchId: z.string().optional(),

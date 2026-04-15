@@ -37,6 +37,11 @@ vi.mock("../../../../components/RouterButton", () => ({
   }),
 }));
 
+const mockOpenHistory = vi.fn();
+vi.mock("../../../../contexts/ResumeLayoutContext", () => ({
+  useResumeLayoutContext: () => ({ openHistory: mockOpenHistory }),
+}));
+
 vi.mock("../../../../orpc-client", () => ({
   orpc: {
     listResumes: vi.fn(),
@@ -78,6 +83,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     useParams: () => ({ id: TEST_RESUME_ID }),
     useSearch: () => ({}),
     useNavigate: () => mockNavigate,
+    Outlet: () => null,
     Link: React.forwardRef(function MockLink(
       {
         children,
@@ -147,11 +153,9 @@ const TEST_RESUME_NO_SKILLS = {
 // Render helper
 // ---------------------------------------------------------------------------
 
-const ResumeDetailRouteComponent = Route.options.component as React.ComponentType;
-
 function renderPage() {
   const queryClient = buildTestQueryClient();
-  const result = renderWithProviders(<ResumeDetailRouteComponent />, { queryClient });
+  const result = renderWithProviders(<ResumeDetailPage routeMode="detail" />, { queryClient });
   return { ...result, queryClient };
 }
 
@@ -367,15 +371,15 @@ describe("Navigation", () => {
     expect(resumesLink).toBeInTheDocument();
   });
 
-  it("opens the history drawer from the more actions menu", async () => {
+  it("opens the history drawer when the history button is clicked", async () => {
     const user = userEvent.setup();
+    mockOpenHistory.mockReset();
     renderPage();
     await screen.findAllByText(TEST_RESUME.title);
 
-    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.moreActionsLabel }));
-    await user.click(screen.getByRole("menuitem", { name: enCommon.resume.history.pageTitle }));
+    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.historyButton }));
 
-    expect(screen.getByText(enCommon.resume.detail.historyDrawer.title)).toBeInTheDocument();
+    expect(mockOpenHistory).toHaveBeenCalled();
   });
 
   it("opens a delete dialog and deletes the resume", async () => {
