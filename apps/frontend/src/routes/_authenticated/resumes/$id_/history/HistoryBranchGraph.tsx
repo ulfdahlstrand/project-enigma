@@ -6,6 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 import type { GraphBranch, GraphCommit, GraphEdge } from "./history-graph-utils";
+import { CommitDiffBadge } from "../../../../../components/CommitDiffBadge";
 import {
   computeGraphLayout,
   formatCommitTimestamp,
@@ -257,6 +258,7 @@ export function HistoryBranchGraph({
                   <Typography variant="caption" sx={{ display: "block" }}>
                     {t("resume.history.tableHeaderSavedAt")}: {formatCommitTimestamp(commit.createdAt)}
                   </Typography>
+                  <CommitDiffBadge commitId={commit.id} parentCommitId={commit.parentCommitId} />
                 </Box>
               }
             >

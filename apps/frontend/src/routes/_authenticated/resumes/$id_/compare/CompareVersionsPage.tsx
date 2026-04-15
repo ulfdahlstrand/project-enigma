@@ -30,8 +30,8 @@ import {
   useResumeBranches,
 } from "../../../../../hooks/versioning";
 import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
-import type { DiffGroup, DiffGroupItem, DiffStatus } from "../../../../../utils/diff-utils";
-import { countDiffContribution } from "../../../../../utils/diff-utils";
+import { DiffStatsBadge } from "../../../../../components/DiffStatsBadge";
+import type { DiffStatus } from "../../../../../utils/diff-utils";
 import { UnifiedTextDiff } from "../../../../../components/ai-assistant/DiffReviewDialog";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
@@ -543,12 +543,11 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
                     <Typography variant="h6">
                       {t("resume.compare.changedGroups", { count: diffGroups.length })}
                     </Typography>
-                    <Typography variant="h6" color="success.main">
-                      +{totalPlusCount}
-                    </Typography>
-                    <Typography variant="h6" color="error.main">
-                      -{totalMinusCount}
-                    </Typography>
+                    <DiffStatsBadge
+                      plusCount={totalPlusCount}
+                      minusCount={totalMinusCount}
+                      size="medium"
+                    />
                   </Box>
                   <ToggleButtonGroup
                     value={viewMode}
