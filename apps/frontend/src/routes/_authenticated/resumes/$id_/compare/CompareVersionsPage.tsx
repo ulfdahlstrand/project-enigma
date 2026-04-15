@@ -30,6 +30,7 @@ import {
   useResumeBranches,
   useResumeCommitDiff,
 } from "../../../../../hooks/versioning";
+import { useCommitDiffStats } from "../../../../../hooks/useCommitDiffStats";
 import { UnifiedTextDiff } from "../../../../../components/ai-assistant/DiffReviewDialog";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
@@ -526,8 +527,7 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
     () => (diffResult?.diff ? buildDiffGroups(diffResult.diff, t) : []),
     [diffResult?.diff, t],
   );
-  const totalPlusCount = diffGroups.reduce((sum, group) => sum + group.plusCount, 0);
-  const totalMinusCount = diffGroups.reduce((sum, group) => sum + group.minusCount, 0);
+  const { plusCount: totalPlusCount, minusCount: totalMinusCount } = useCommitDiffStats(baseCommitId || null, headCommitId || null);
 
   return (
     <>

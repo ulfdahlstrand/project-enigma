@@ -18,6 +18,37 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import type { GraphBranch, GraphCommit } from "./history-graph-utils";
+import { useCommitDiffStats } from "../../../../../hooks/useCommitDiffStats";
+
+interface CommitDiffBadgeProps {
+  commitId: string;
+  parentCommitId?: string | null;
+}
+
+function CommitDiffBadge({ commitId, parentCommitId }: CommitDiffBadgeProps) {
+  const { plusCount, minusCount, isLoading } = useCommitDiffStats(parentCommitId, commitId);
+
+  if (!parentCommitId) return null;
+  if (isLoading) {
+    return (
+      <Typography variant="caption" color="text.disabled" sx={{ fontFamily: "monospace" }}>
+        …
+      </Typography>
+    );
+  }
+  if (plusCount === 0 && minusCount === 0) return null;
+
+  return (
+    <Box component="span" sx={{ display: "inline-flex", gap: 0.5, fontFamily: "monospace", fontSize: "0.7rem" }}>
+      {plusCount > 0 && (
+        <Box component="span" sx={{ color: "success.main" }}>+{plusCount}</Box>
+      )}
+      {minusCount > 0 && (
+        <Box component="span" sx={{ color: "error.main" }}>-{minusCount}</Box>
+      )}
+    </Box>
+  );
+}
 
 const DESCRIPTION_PREVIEW_LENGTH = 100;
 
@@ -73,6 +104,7 @@ export function HistoryCommitTable({ commits, selectedBranch, onViewCommit, onCo
                         {isHead && (
                           <Chip label={t("resume.history.headBadge")} color="primary" size="small" />
                         )}
+                        <CommitDiffBadge commitId={commit.id} parentCommitId={commit.parentCommitId} />
                       </Box>
                       {descriptionPreview && (
                         <Typography variant="caption" color="text.secondary">
