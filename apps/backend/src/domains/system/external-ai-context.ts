@@ -59,7 +59,7 @@ const SAFETY_GUIDANCE = [
   {
     key: "branch-first",
     title: "Work branch-first",
-    content: "Make changes on a branch or isolated revision flow before any merge or finalization step. Avoid direct destructive edits to the main line.",
+    content: "Make edits on the appropriate branch type. For exploratory or isolated work, fork a revision branch from the variant's latest commit and work there. For language-specific content, use the matching translation branch. Do not restructure or delete content on a variant branch without explicit user instruction.",
   },
   {
     key: "api-only",
@@ -71,7 +71,7 @@ const SAFETY_GUIDANCE = [
 const WORKFLOW_STEPS = [
   "If the user has not provided a resume ID or URL, call list_resumes to show them all available resumes, then ask which one to work on.",
   "Call get_resume with the resumeId to read the resume and its current snapshot content.",
-  "Call list_resume_branches to see available branches. Ask the user which branch to work on, or default to the branch whose name suggests it is the main or active one.",
+  "Call list_resume_branches to see available branches. Each branch has a branchType: 'variant' (the long-lived base branch for a version of the resume), 'translation' (a language copy of a variant — identified by its language field and sourceBranchId), or 'revision' (a short-lived working copy forked from a specific commit — identified by sourceBranchId and sourceCommitId). For general editing, prefer a variant branch or create a revision from it. For language-specific work, choose the matching translation branch. A translation with isStale: true means the source variant has changed since the translation was last updated.",
   "Call get_resume_branch to read the full current state of the chosen branch before making any edits.",
   "Apply narrow edits using the appropriate tool for the section. After editing, call save_resume_version to create a commit.",
   "Do not merge, publish, or finalize a branch unless the user explicitly asks for it.",
