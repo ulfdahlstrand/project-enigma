@@ -39,7 +39,7 @@ const CREATED_BRANCH_ROW = {
   name: "2026 rebrand",
   language: "sv",
   is_main: false,
-  head_commit_id: null,
+  head_commit_id: HEAD_COMMIT_ID,
   forked_from_commit_id: HEAD_COMMIT_ID,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-02T00:00:00.000Z"),
@@ -105,7 +105,8 @@ describe("createRevisionBranch", () => {
         branch_type: "revision",
         source_branch_id: SOURCE_BRANCH_ID,
         source_commit_id: HEAD_COMMIT_ID,
-        head_commit_id: null,
+        // Revision starts at source HEAD so the user sees a full CV immediately
+        head_commit_id: HEAD_COMMIT_ID,
         forked_from_commit_id: HEAD_COMMIT_ID,
         language: "sv",
         name: "2026 rebrand",
@@ -117,7 +118,7 @@ describe("createRevisionBranch", () => {
       branchType: "revision",
       sourceBranchId: SOURCE_BRANCH_ID,
       sourceCommitId: HEAD_COMMIT_ID,
-      headCommitId: null,
+      headCommitId: HEAD_COMMIT_ID,
       isStale: false,
     });
   });

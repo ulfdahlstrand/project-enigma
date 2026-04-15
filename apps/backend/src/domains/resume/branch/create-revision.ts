@@ -54,8 +54,8 @@ export async function createRevisionBranch(
       name: input.name,
       language: sourceBranch.language,
       is_main: false,
-      // Revision starts empty — content inherited via forked_from_commit_id
-      head_commit_id: null,
+      // Revision starts at the source's current HEAD — user sees the full CV and edits from there
+      head_commit_id: sourceBranch.head_commit_id,
       forked_from_commit_id: sourceBranch.head_commit_id,
       created_by: user.id,
       branch_type: "revision",
