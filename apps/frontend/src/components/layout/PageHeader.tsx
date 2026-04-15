@@ -22,12 +22,11 @@ import Breadcrumbs from "@mui/material/Breadcrumbs";
 import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 
-export interface BreadcrumbItem {
-  label: string;
-  to: string;
-}
+export type BreadcrumbItem =
+  | { label: string; to: string }
+  | { node: React.ReactNode; key: string };
 
 interface PageHeaderProps {
   title: string;
@@ -39,9 +38,15 @@ interface PageHeaderProps {
   centerContent?: ReactNode;
   /** Optional right-aligned action buttons. */
   actions?: ReactNode;
+  /**
+   * When true, the title is NOT auto-appended as the last breadcrumb item.
+   * Use this when you want to control the full breadcrumb path yourself
+   * (e.g. when the title appears as a link in the middle of the breadcrumbs).
+   */
+  hideTitleBreadcrumb?: boolean;
 }
 
-export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }: PageHeaderProps) {
+export function PageHeader({ title, breadcrumbs, chip, centerContent, actions, hideTitleBreadcrumb = false }: PageHeaderProps) {
   const hasBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
 
   return (
@@ -86,23 +91,29 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions }:
         {hasBreadcrumbs && (
           <Breadcrumbs
             aria-label="breadcrumb"
-            sx={{ mt: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
+            sx={{ mt: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap", alignItems: "center" } }}
           >
-            {breadcrumbs.map((item) => (
-              <MuiLink
-                key={item.to}
-                component={Link}
-                to={item.to}
-                underline="hover"
-                color="inherit"
-                variant="caption"
-              >
-                {item.label}
-              </MuiLink>
-            ))}
-            <Typography variant="caption" color="text.primary">
-              {title}
-            </Typography>
+            {breadcrumbs.map((item) =>
+              "node" in item ? (
+                <React.Fragment key={item.key}>{item.node}</React.Fragment>
+              ) : (
+                <MuiLink
+                  key={item.to}
+                  component={Link}
+                  to={item.to}
+                  underline="hover"
+                  color="inherit"
+                  variant="caption"
+                >
+                  {item.label}
+                </MuiLink>
+              )
+            )}
+            {!hideTitleBreadcrumb && (
+              <Typography variant="caption" color="text.primary">
+                {title}
+              </Typography>
+            )}
           </Breadcrumbs>
         )}
       </Box>
