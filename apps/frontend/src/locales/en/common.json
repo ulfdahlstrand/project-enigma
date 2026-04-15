@@ -450,6 +450,7 @@
       "description": "Select two saved versions to compare them side by side. Changes are grouped by resume fields, skills, and assignments.",
       "fromLabel": "From (older)",
       "toLabel": "To (newer)",
+      "swapButton": "Swap from and to",
       "compareButton": "Compare",
       "fieldLabel": "Field",
       "changedGroups_one": "1 section changed",

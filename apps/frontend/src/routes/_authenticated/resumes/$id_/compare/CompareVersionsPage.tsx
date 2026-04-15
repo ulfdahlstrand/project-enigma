@@ -13,6 +13,7 @@ import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
+import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
 import ListSubheader from "@mui/material/ListSubheader";
 import MenuItem from "@mui/material/MenuItem";
@@ -22,6 +23,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { diffLines, diffWordsWithSpace } from "diff";
 import {
   useResumeBranchHistoryGraph,
@@ -496,6 +498,12 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
     });
   }
 
+  const handleSwap = () => {
+    setBaseRef(compareRef);
+    setCompareRef(baseRef);
+    void navigateToRange(compareRef, baseRef);
+  };
+
   const handleBaseChange = (nextBaseRef: string) => {
     setBaseRef(nextBaseRef);
     void navigateToRange(nextBaseRef, compareRef);
@@ -567,6 +575,15 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
                 ))}
               </Select>
             </FormControl>
+
+            <IconButton
+              onClick={handleSwap}
+              aria-label={t("resume.compare.swapButton")}
+              size="small"
+              sx={{ alignSelf: "center", mb: 0.5 }}
+            >
+              <SwapHorizIcon />
+            </IconButton>
 
             <FormControl sx={{ minWidth: 320 }} size="small">
               <InputLabel>{t("resume.compare.toLabel")}</InputLabel>

@@ -450,6 +450,7 @@
       "description": "Välj två sparade versioner för att jämföra dem sida vid sida. Ändringar grupperas efter CV-fält, färdigheter och uppdrag.",
       "fromLabel": "Från (äldre)",
       "toLabel": "Till (nyare)",
+      "swapButton": "Byt plats på från och till",
       "compareButton": "Jämför",
       "fieldLabel": "Fält",
       "changedGroups_one": "1 sektion ändrad",
