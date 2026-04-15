@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
-import RouterButton from "../RouterButton";
+import Button from "@mui/material/Button";
 
 type ResumeCommitRow = {
   id: string;
@@ -45,6 +45,15 @@ export function ResumeHistoryDrawer({
   const navigate = useNavigate();
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
+
+  function handleViewAllHistory() {
+    onClose();
+    void navigate(
+      activeBranchId
+        ? { to: "/resumes/$id/history/branch/$branchId", params: { id: resumeId, branchId: activeBranchId } }
+        : { to: "/resumes/$id/history", params: { id: resumeId } },
+    );
+  }
 
   function handleCommitClick(commitId: string) {
     onClose();
@@ -89,16 +98,14 @@ export function ResumeHistoryDrawer({
         <Typography variant="subtitle1" fontWeight={600}>
           {t("resume.detail.historyDrawer.title")}
         </Typography>
-        <RouterButton
+        <Button
           variant="text"
           size="small"
-          to={activeBranchId ? "/resumes/$id/history/branch/$branchId" : "/resumes/$id/history"}
-          params={activeBranchId ? { id: resumeId, branchId: activeBranchId } : { id: resumeId }}
           sx={{ mt: 0.5, px: 0 }}
-          onClick={onClose}
+          onClick={handleViewAllHistory}
         >
           {t("resume.detail.historyDrawer.viewAll")}
-        </RouterButton>
+        </Button>
       </Box>
       <List dense disablePadding>
         {recentCommits.length === 0 ? (
