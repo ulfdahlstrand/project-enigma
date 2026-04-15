@@ -28,14 +28,13 @@ import { diffLines, diffWordsWithSpace } from "diff";
 import {
   useResumeBranchHistoryGraph,
   useResumeBranches,
-  useResumeCommitDiff,
 } from "../../../../../hooks/versioning";
-import { useCommitDiffStats } from "../../../../../hooks/useCommitDiffStats";
+import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
+import type { DiffGroup, DiffGroupItem, DiffStatus } from "../../../../../utils/diff-utils";
+import { countDiffContribution } from "../../../../../utils/diff-utils";
 import { UnifiedTextDiff } from "../../../../../components/ai-assistant/DiffReviewDialog";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
-
-type DiffStatus = "added" | "removed" | "modified" | "unchanged";
 
 type CompareVersionsPageProps = {
   forcedRange?: string | null;
@@ -48,22 +47,6 @@ type BranchRef = {
 
 type CommitRef = {
   id: string;
-};
-
-type DiffGroupItem = {
-  key: string;
-  title: string;
-  before: string;
-  after: string;
-  status: DiffStatus;
-};
-
-type DiffGroup = {
-  key: string;
-  label: string;
-  plusCount: number;
-  minusCount: number;
-  items: DiffGroupItem[];
 };
 
 type CompareViewMode = "summary" | "split";
@@ -330,93 +313,6 @@ function SideBySideTextDiff({
   );
 }
 
-function toDisplayText(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) {
-    return value.map((item) => toDisplayText(item)).join("\n");
-  }
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value, null, 2);
-}
-
-function countDiffContribution(status: DiffStatus) {
-  if (status === "added") return { plus: 1, minus: 0 };
-  if (status === "removed") return { plus: 0, minus: 1 };
-  if (status === "modified") return { plus: 1, minus: 1 };
-  return { plus: 0, minus: 0 };
-}
-
-function stringifySkillEntry(entry: { name: string; category?: string | null } | undefined) {
-  if (!entry) return "";
-  return entry.category ? `${entry.name}\n${entry.category}` : entry.name;
-}
-
-function stringifyAssignmentEntry(entry: Record<string, unknown> | undefined) {
-  if (!entry) return "";
-
-  const technologies = Array.isArray(entry["technologies"])
-    ? (entry["technologies"] as unknown[]).map((value) => String(value)).join(", ")
-    : "";
-
-  const lines = [
-    entry["clientName"] ? `Client: ${String(entry["clientName"])}` : "",
-    entry["role"] ? `Role: ${String(entry["role"])}` : "",
-    entry["description"] ? `Description:\n${toDisplayText(entry["description"])}` : "",
-    technologies ? `Technologies: ${technologies}` : "",
-    entry["keywords"] ? `Keywords: ${String(entry["keywords"])}` : "",
-  ].filter(Boolean);
-
-  return lines.join("\n\n");
-}
-
-function buildDiffGroups(
-  diff: NonNullable<ReturnType<typeof useResumeCommitDiff>["data"]>["diff"],
-  t: (key: string) => string,
-): DiffGroup[] {
-  const scalarItems: DiffGroupItem[] = Object.entries(diff.scalars).flatMap(([field, change]) => {
-    if (!change) return [];
-    return [{
-      key: field,
-      title: field,
-      before: toDisplayText(change.before),
-      after: toDisplayText(change.after),
-      status: "modified",
-    }];
-  });
-
-  const skillItems: DiffGroupItem[] = diff.skills
-    .filter((item) => item.status !== "unchanged")
-    .map((item) => ({
-      key: item.name,
-      title: item.name,
-      before: stringifySkillEntry(item.before),
-      after: stringifySkillEntry(item.after),
-      status: item.status as DiffStatus,
-    }));
-
-  const assignmentItems: DiffGroupItem[] = diff.assignments
-    .filter((item) => item.status !== "unchanged")
-    .map((item) => ({
-      key: item.assignmentId,
-      title: item.after?.clientName ?? item.before?.clientName ?? item.assignmentId,
-      before: stringifyAssignmentEntry(item.before as Record<string, unknown> | undefined),
-      after: stringifyAssignmentEntry(item.after as Record<string, unknown> | undefined),
-      status: item.status as DiffStatus,
-    }));
-
-  return [
-    { key: "scalars", label: t("resume.compare.scalarsHeading"), items: scalarItems, plusCount: 0, minusCount: 0 },
-    { key: "skills", label: t("resume.compare.skillsHeading"), items: skillItems, plusCount: 0, minusCount: 0 },
-    { key: "assignments", label: t("resume.compare.assignmentsHeading"), items: assignmentItems, plusCount: 0, minusCount: 0 },
-  ]
-    .map((group) => ({
-      ...group,
-      plusCount: group.items.reduce((sum, item) => sum + countDiffContribution(item.status).plus, 0),
-      minusCount: group.items.reduce((sum, item) => sum + countDiffContribution(item.status).minus, 0),
-    }))
-    .filter((group) => group.items.length > 0);
-}
 
 export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageProps) {
   const { t } = useTranslation("common");
@@ -457,10 +353,13 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
   const headCommitId = resolveCompareRefToCommitId(compareRef, branchOptions, commitOptions);
 
   const {
-    data: diffResult,
+    diffGroups,
+    plusCount: totalPlusCount,
+    minusCount: totalMinusCount,
+    hasChanges: diffHasChanges,
     isLoading: diffLoading,
     isError: diffError,
-  } = useResumeCommitDiff(baseCommitId || null, headCommitId || null);
+  } = useCommitDiff(baseCommitId || null, headCommitId || null);
 
   function commitLabel(id: string): string {
     const commit = commitOptions.find((entry) => entry.id === id);
@@ -523,11 +422,6 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
 
   const loading = branchesLoading || graphLoading;
   const bothSelected = Boolean(baseCommitId && headCommitId);
-  const diffGroups = useMemo(
-    () => (diffResult?.diff ? buildDiffGroups(diffResult.diff, t) : []),
-    [diffResult?.diff, t],
-  );
-  const { plusCount: totalPlusCount, minusCount: totalMinusCount } = useCommitDiffStats(baseCommitId || null, headCommitId || null);
 
   return (
     <>
@@ -626,11 +520,11 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
 
         {diffError && <Alert severity="error">{t("resume.compare.error")}</Alert>}
 
-        {diffResult && !diffResult.diff.hasChanges && (
+        {diffHasChanges === false && (
           <Alert severity="info">{t("resume.compare.noChanges")}</Alert>
         )}
 
-        {diffResult?.diff.hasChanges && (
+        {diffHasChanges === true && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <Card variant="outlined">
               <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
