@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { CompareVersionsPage } from "../../../../../resumes/$id_/compare/CompareVersionsPage";
+import { CompareVersionsPage } from "../../../../resumes/$id_/compare/CompareVersionsPage";
 
 export const Route = createFileRoute("/_authenticated/$locale/resumes/$id_/compare/$range")({
   component: CompareRangePage,

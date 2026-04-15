@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { VersionHistoryPage } from "../../../../../../resumes/$id_/history/index";
+import { VersionHistoryPage } from "../index";
 
 export const Route = createFileRoute("/_authenticated/$locale/resumes/$id_/history/branch/$branchId")({
   component: HistoryBranchRoute,
