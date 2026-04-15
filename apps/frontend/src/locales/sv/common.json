@@ -289,7 +289,10 @@
         "title": "Senaste ändringar",
         "viewAll": "Visa fullständig historik",
         "noCommits": "Inga sparade versioner ännu.",
-        "defaultMessage": "(inget meddelande)"
+        "defaultMessage": "(inget meddelande)",
+        "commitActions": "Versionsåtgärder",
+        "viewCommit": "Visa denna version",
+        "compareWithCurrent": "Jämför med nuvarande branch"
       }
     },
     "edit": {

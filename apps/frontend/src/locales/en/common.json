@@ -289,7 +289,10 @@
         "title": "Recent changes",
         "viewAll": "View full history",
         "noCommits": "No saved versions yet.",
-        "defaultMessage": "(no message)"
+        "defaultMessage": "(no message)",
+        "commitActions": "Version actions",
+        "viewCommit": "View this version",
+        "compareWithCurrent": "Compare with current branch"
       }
     },
     "edit": {

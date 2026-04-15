@@ -694,6 +694,7 @@ export function ResumeDetailPage({
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      activeBranchName={activeBranch?.name ?? null}
       currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}

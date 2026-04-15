@@ -1,10 +1,15 @@
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import RouterButton from "../RouterButton";
@@ -20,6 +25,7 @@ interface ResumeHistoryDrawerProps {
   onClose: () => void;
   resumeId: string;
   activeBranchId: string | null;
+  activeBranchName?: string | null;
   currentCommitId?: string | null;
   recentCommits: ResumeCommitRow[];
   language?: string | null;
@@ -30,18 +36,45 @@ export function ResumeHistoryDrawer({
   onClose,
   resumeId,
   activeBranchId,
+  activeBranchName,
   currentCommitId = null,
   recentCommits,
   language,
 }: ResumeHistoryDrawerProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
 
   function handleCommitClick(commitId: string) {
     onClose();
     void navigate({
       to: "/resumes/$id/commit/$commitId",
       params: { id: resumeId, commitId },
+    });
+  }
+
+  function handleMenuOpen(event: React.MouseEvent<HTMLButtonElement>, commitId: string) {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
+    setMenuCommitId(commitId);
+  }
+
+  function handleMenuClose() {
+    setMenuAnchorEl(null);
+    setMenuCommitId(null);
+  }
+
+  function handleCompare() {
+    if (!menuCommitId) return;
+    const range = activeBranchName
+      ? `${menuCommitId}...${activeBranchName}`
+      : menuCommitId;
+    handleMenuClose();
+    onClose();
+    void navigate({
+      to: "/resumes/$id/compare/$range",
+      params: { id: resumeId, range },
     });
   }
 
@@ -77,30 +110,40 @@ export function ResumeHistoryDrawer({
           </ListItem>
         ) : (
           recentCommits.slice(0, 20).map((commit) => (
-            <ListItem key={commit.id} divider disablePadding>
+            <ListItem
+              key={commit.id}
+              divider
+              disablePadding
+              secondaryAction={
+                <IconButton
+                  size="small"
+                  edge="end"
+                  aria-label={t("resume.detail.historyDrawer.commitActions")}
+                  onClick={(e) => handleMenuOpen(e, commit.id)}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              }
+            >
               <ListItemButton
                 selected={commit.id === currentCommitId}
                 aria-current={commit.id === currentCommitId ? "true" : undefined}
                 onClick={() => handleCommitClick(commit.id)}
                 sx={{
+                  pr: 6,
                   alignItems: "flex-start",
-                  "&.Mui-selected": {
-                    bgcolor: "action.selected",
-                  },
-                  "&.Mui-selected:hover": {
-                    bgcolor: "action.selected",
-                  },
+                  "&.Mui-selected": { bgcolor: "action.selected" },
+                  "&.Mui-selected:hover": { bgcolor: "action.selected" },
                 }}
               >
                 <ListItemText
                   primary={commit.title || t("resume.detail.historyDrawer.defaultMessage")}
                   secondary={
                     commit.createdAt
-                      ? new Date(commit.createdAt).toLocaleDateString(language === "sv" ? "sv-SE" : "en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
+                      ? new Date(commit.createdAt).toLocaleDateString(
+                          language === "sv" ? "sv-SE" : "en-GB",
+                          { day: "numeric", month: "short", year: "numeric" },
+                        )
                       : undefined
                   }
                   slotProps={{
@@ -116,6 +159,26 @@ export function ResumeHistoryDrawer({
           ))
         )}
       </List>
+
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem
+          onClick={() => {
+            if (menuCommitId) handleCommitClick(menuCommitId);
+            handleMenuClose();
+          }}
+        >
+          {t("resume.detail.historyDrawer.viewCommit")}
+        </MenuItem>
+        {activeBranchName && (
+          <MenuItem onClick={handleCompare}>
+            {t("resume.detail.historyDrawer.compareWithCurrent")}
+          </MenuItem>
+        )}
+      </Menu>
     </Drawer>
   );
 }

@@ -26,6 +26,7 @@ describe("ResumeHistoryDrawer", () => {
         onClose={() => undefined}
         resumeId="resume-id-1"
         activeBranchId="branch-id-1"
+        activeBranchName="main"
         currentCommitId="commit-3"
         recentCommits={recentCommits}
         language="en"
@@ -43,6 +44,7 @@ describe("ResumeHistoryDrawer", () => {
         onClose={() => undefined}
         resumeId="resume-id-1"
         activeBranchId="branch-id-1"
+        activeBranchName="main"
         currentCommitId="commit-3"
         recentCommits={recentCommits}
         language="en"

@@ -38,6 +38,7 @@ interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
+  activeBranchName: string | null;
   currentCommitId: string | null;
   isEditRoute: boolean;
   isSnapshotMode: boolean;
@@ -174,6 +175,7 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
+  activeBranchName,
   currentCommitId,
   isEditRoute,
   isSnapshotMode,
@@ -341,6 +343,7 @@ export function ResumeDetailActions({
         onClose={() => setHistoryOpen(false)}
         resumeId={resumeId}
         activeBranchId={activeBranchId}
+        activeBranchName={activeBranchName}
         currentCommitId={currentCommitId}
         recentCommits={recentCommits}
         language={language ?? null}
