@@ -311,7 +311,7 @@ export function ResumeDetailPage({
           }))
         : liveBranchAssignments);
   const resumeTitle = snapshotContent?.title ?? resume?.title ?? "";
-  const language = snapshotContent?.language ?? resume?.language ?? activeBranch?.language;
+  const language = snapshotContent?.language ?? activeBranch?.language ?? resume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? resume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? resume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? resume?.summary ?? null;

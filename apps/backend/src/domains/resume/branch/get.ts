@@ -109,7 +109,7 @@ export async function getResumeBranch(
     presentation: branch.content.presentation ?? [],
     summary: branch.content.summary ?? null,
     highlightedItems: branch.content.highlightedItems ?? [],
-    language: branch.content.language ?? branchRow.language,
+    language: branchRow.language,
     isMain: branchRow.is_main,
     createdAt: branchRow.created_at,
     updatedAt: branchRow.updated_at,
