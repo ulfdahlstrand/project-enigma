@@ -20,9 +20,10 @@ interface HistoryCommitTableProps {
   commits: GraphCommit[];
   selectedBranch: GraphBranch | undefined;
   onViewCommit: (commitId: string) => void;
+  onCompare?: (commitId: string) => void;
 }
 
-export function HistoryCommitTable({ commits, selectedBranch, onViewCommit }: HistoryCommitTableProps) {
+export function HistoryCommitTable({ commits, selectedBranch, onViewCommit, onCompare }: HistoryCommitTableProps) {
   const { t } = useTranslation("common");
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
@@ -95,6 +96,18 @@ export function HistoryCommitTable({ commits, selectedBranch, onViewCommit }: Hi
         >
           {t("resume.history.viewCommitMenuItem")}
         </MenuItem>
+        {onCompare && (
+          <MenuItem
+            onClick={() => {
+              if (menuCommitId) {
+                onCompare(menuCommitId);
+              }
+              closeMenu();
+            }}
+          >
+            {t("resume.history.compareWithCurrentMenuItem")}
+          </MenuItem>
+        )}
       </Menu>
     </TableContainer>
   );

@@ -373,6 +373,7 @@
       "description": "Each saved version is a snapshot of this resume at a point in time. Switch between branches to see their individual histories, or use the tree view for a full overview.",
       "viewInResumeButton": "View in resume",
       "viewCommitMenuItem": "View this commit",
+      "compareWithCurrentMenuItem": "Compare with current branch",
       "commitActionsButton": "Commit actions",
       "headBadge": "Current",
       "compareButton": "Compare versions",

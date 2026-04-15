@@ -373,6 +373,7 @@
       "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
       "viewInResumeButton": "Visa i CV",
       "viewCommitMenuItem": "Visa denna commit",
+      "compareWithCurrentMenuItem": "Jämför med nuvarande branch",
       "commitActionsButton": "Commit-åtgärder",
       "headBadge": "Aktuell",
       "compareButton": "Jämför versioner",
