@@ -275,6 +275,7 @@
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
       "moreActionsLabel": "Fler åtgärder",
+      "historyButton": "Öppna historik",
       "createBranchFromCommitMenuItem": "Skapa branch från denna commit",
       "deleteButton": "Ta bort",
       "deleteDialog": {
@@ -376,8 +377,10 @@
       "description": "Varje sparad version är en ögonblicksbild av detta CV vid ett visst tillfälle. Byt gren för att se deras individuella historik, eller använd trädvyn för en fullständig översikt.",
       "viewInResumeButton": "Visa i CV",
       "viewCommitMenuItem": "Visa denna commit",
+      "commitDetailMenuItem": "Visa detaljer",
       "compareWithCurrentMenuItem": "Jämför med nuvarande branch",
       "commitActionsButton": "Commit-åtgärder",
+      "noDescription": "Ingen beskrivning.",
       "headBadge": "Aktuell",
       "compareButton": "Jämför versioner",
       "mergeButton": "Merga gren",

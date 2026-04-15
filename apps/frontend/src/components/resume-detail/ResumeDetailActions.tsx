@@ -219,15 +219,6 @@ export function ResumeDetailActions({
       <MenuItem
         onClick={() => {
           setMoreActionsAnchorEl(null);
-          setHistoryOpen(true);
-        }}
-      >
-        <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
-        {t("resume.history.pageTitle")}
-      </MenuItem>
-      <MenuItem
-        onClick={() => {
-          setMoreActionsAnchorEl(null);
           openComparePage();
         }}
       >
@@ -285,6 +276,12 @@ export function ResumeDetailActions({
           {!isSnapshotMode ? <EditButton onEdit={onEdit} /> : null}
         </>
       )}
+      <IconButton
+        aria-label={t("resume.detail.historyButton")}
+        onClick={() => setHistoryOpen(true)}
+      >
+        <HistoryIcon />
+      </IconButton>
       <IconButton
         aria-label={t("resume.detail.moreActionsLabel")}
         onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
