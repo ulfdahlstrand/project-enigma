@@ -16,6 +16,7 @@ const externalAIMcpToolNameSchema = z.enum([
   "list_resume_branches",
   "get_resume_branch",
   "list_resume_branch_assignments",
+  "create_translation_branch",
   "fork_resume_branch",
   "list_resume_commits",
   "get_resume_commit",
@@ -84,6 +85,17 @@ export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
     route: { method: "GET", path: "/resume-branches/{branchId}/assignments" },
     inputSchema: {
       branchId: z.string().uuid().describe("Branch ID"),
+    },
+  },
+  {
+    name: "create_translation_branch",
+    title: "Create Translation Branch",
+    description: "Create a translation branch (language copy) of a variant branch. The new branch has branchType 'translation', with sourceBranchId pointing to the source variant. Use this when the user wants to translate a resume into another language.",
+    route: { method: "POST", path: "/resume-branches/{sourceBranchId}/translations" },
+    inputSchema: {
+      sourceBranchId: z.string().uuid().describe("ID of the source variant branch to translate"),
+      language: z.string().min(2).describe("Target language code, e.g. 'en', 'sv', 'de'"),
+      name: z.string().min(1).optional().describe("Optional branch name (defaults to source branch name + language)"),
     },
   },
   {
@@ -388,6 +400,11 @@ export function formatExternalAIContextMarkdown(context: GetExternalAIContextOut
   lines.push("- `delete_education` — remove an education entry");
   lines.push("");
 
+  lines.push("**Branches**");
+  lines.push("- `create_translation_branch` — create a language copy (translation) of a variant branch");
+  lines.push("- `fork_resume_branch` — create a new revision branch from an existing commit");
+  lines.push("");
+
   lines.push("**Versioning**");
   lines.push("- `save_resume_version` — create a commit on a branch (call after editing)");
   lines.push("- `fork_resume_branch` — create a new revision branch from an existing commit");
@@ -419,6 +436,17 @@ export function formatExternalAIContextMarkdown(context: GetExternalAIContextOut
     lines.push(`- **${entry.title}:** ${entry.content}`);
   });
   lines.push("");
+
+  // ---------------------------------------------------------------------------
+  // Authentication & token management
+  // ---------------------------------------------------------------------------
+  if (context.authGuidance.length > 0) {
+    lines.push("## Authentication");
+    context.authGuidance.forEach((entry) => {
+      lines.push(`- **${entry.title}:** ${entry.content}`);
+    });
+    lines.push("");
+  }
 
   // ---------------------------------------------------------------------------
   // Prompt guidance — section-specific, only if configured
