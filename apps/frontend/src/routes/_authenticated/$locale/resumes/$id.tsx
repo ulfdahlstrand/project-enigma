@@ -1,32 +1,32 @@
 import { sortAssignments } from "@cv-tool/utils";
-import { createFileRoute, Outlet, redirect, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
-import { orpc } from "../../../orpc-client";
-import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
-import { useResumeDocumentZoom } from "../../../hooks/useResumeDocumentZoom";
+import { orpc } from "../../../../orpc-client";
+import { useInlineResumeRevision } from "../../../../hooks/inline-resume-revision";
+import { useResumeDocumentZoom } from "../../../../hooks/useResumeDocumentZoom";
 import {
   resumeBranchHistoryGraphKey,
   resumeBranchesKey,
   resumeCommitsKey,
   useForkResumeBranch,
   useResumeCommits,
-} from "../../../hooks/versioning";
-import { PageHeader } from "../../../components/layout/PageHeader";
-import { LoadingState, ErrorState } from "../../../components/feedback";
-import { VariantSwitcher } from "../../../components/VariantSwitcher";
-import type { AssignmentRow as EditorAssignmentRow } from "../../../components/AssignmentEditor";
-import { ResumeDetailActions } from "../../../components/resume-detail/ResumeDetailActions";
-import { ResumeHeaderChip } from "../../../components/resume-detail/ResumeHeaderChip";
-import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/ResumeRevisionReviewDialog";
-import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
-import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
-import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
-import { ResumeHistoryDrawer } from "../../../components/resume-detail/ResumeHistoryDrawer";
-import { ResumeLayoutContext } from "../../../contexts/ResumeLayoutContext";
-import { LIST_RESUMES_QUERY_KEY } from "./index";
+} from "../../../../hooks/versioning";
+import { PageHeader } from "../../../../components/layout/PageHeader";
+import { LoadingState, ErrorState } from "../../../../components/feedback";
+import { VariantSwitcher } from "../../../../components/VariantSwitcher";
+import type { AssignmentRow as EditorAssignmentRow } from "../../../../components/AssignmentEditor";
+import { ResumeDetailActions } from "../../../../components/resume-detail/ResumeDetailActions";
+import { ResumeHeaderChip } from "../../../../components/resume-detail/ResumeHeaderChip";
+import { ResumeRevisionReviewDialog } from "../../../../components/resume-detail/ResumeRevisionReviewDialog";
+import { ResumeEditWorkspace } from "../../../../components/resume-detail/ResumeEditWorkspace";
+import { ResumeStatusBar } from "../../../../components/resume-detail/ResumeStatusBar";
+import { ResumeViewWorkspace } from "../../../../components/resume-detail/ResumeViewWorkspace";
+import { ResumeHistoryDrawer } from "../../../../components/resume-detail/ResumeHistoryDrawer";
+import { ResumeLayoutContext } from "../../../../contexts/ResumeLayoutContext";
+import { LIST_RESUMES_QUERY_KEY } from "../../resumes/index";
 
 export const getResumeQueryKey = (
   id: string,
@@ -34,14 +34,7 @@ export const getResumeQueryKey = (
   commitId?: string | null,
 ) => ["getResume", id, branchId ?? null, commitId ?? null] as const;
 const COVER_HIGHLIGHT_COUNT = 5;
-export const Route = createFileRoute("/_authenticated/resumes/$id")({
-  beforeLoad: ({ params }) => {
-    throw redirect({
-      to: "/$locale/resumes/$id",
-      params: { locale: "sv", id: params.id },
-      replace: true,
-    });
-  },
+export const Route = createFileRoute("/_authenticated/$locale/resumes/$id")({
   component: ResumeDetailLayout,
 });
 

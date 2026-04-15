@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/resumes/$id_/variants/")({
   component: VariantsPage,
 });
 
-function VariantsPage() {
+export function VariantsPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
