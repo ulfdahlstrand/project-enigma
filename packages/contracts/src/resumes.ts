@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resumeCommitAssignmentSchema, resumeCommitEducationSchema } from "./resume-versions.js";
+import { resumeCommitAssignmentSchema, resumeCommitEducationSchema, branchTypeSchema } from "./resume-versions.js";
 
 // ---------------------------------------------------------------------------
 // Resume schemas
@@ -86,6 +86,10 @@ export const getResumeBranchOutputSchema = resumeWithSkillsSchema.extend({
   isMainBranch: z.boolean(),
   headCommitId: z.string().uuid().nullable(),
   forkedFromCommitId: z.string().uuid().nullable(),
+  branchType: branchTypeSchema,
+  sourceBranchId: z.string().uuid().nullable(),
+  sourceCommitId: z.string().uuid().nullable(),
+  isStale: z.boolean(),
 });
 
 // ---------------------------------------------------------------------------

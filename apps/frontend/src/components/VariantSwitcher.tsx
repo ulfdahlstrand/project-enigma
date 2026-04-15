@@ -43,7 +43,7 @@ export function VariantSwitcher({ resumeId, currentBranchId, compact = false }: 
   const [forkError, setForkError] = useState<string | null>(null);
 
   if (!branches) return null;
-  const availableBranches = branches;
+  const availableBranches = branches.filter((b) => b.branchType === "variant");
 
   const activeBranch = availableBranches.find((branch) => branch.id === currentBranchId) ?? null;
   const MANAGE_VALUE = "__manage__";

@@ -10,6 +10,10 @@ export interface ResumeLanguageTranslations {
   degrees: string;
   certifications: string;
   languages: string;
+  tableHeaderClient: string;
+  tableHeaderRole: string;
+  tableHeaderStart: string;
+  tableHeaderCurrent: string;
 }
 
 const TRANSLATIONS: Record<string, ResumeLanguageTranslations> = {
@@ -25,6 +29,10 @@ const TRANSLATIONS: Record<string, ResumeLanguageTranslations> = {
     degrees: "DEGREES",
     certifications: "CERTIFICATIONS",
     languages: "LANGUAGES",
+    tableHeaderClient: "Client",
+    tableHeaderRole: "Role",
+    tableHeaderStart: "Start date",
+    tableHeaderCurrent: "Current",
   },
   sv: {
     experienceHeading: "Urval av kvalifikationer",
@@ -38,6 +46,10 @@ const TRANSLATIONS: Record<string, ResumeLanguageTranslations> = {
     degrees: "UTBILDNING",
     certifications: "CERTIFIERINGAR",
     languages: "SPRÅK",
+    tableHeaderClient: "Kund",
+    tableHeaderRole: "Roll",
+    tableHeaderStart: "Startdatum",
+    tableHeaderCurrent: "Pågående",
   },
 };
 

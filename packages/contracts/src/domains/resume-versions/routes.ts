@@ -22,6 +22,16 @@ import {
   getResumeBranchHistoryGraphOutputSchema,
   compareResumeCommitsInputSchema,
   compareResumeCommitsOutputSchema,
+  createTranslationBranchInputSchema,
+  createTranslationBranchOutputSchema,
+  createRevisionBranchInputSchema,
+  createRevisionBranchOutputSchema,
+  mergeRevisionIntoSourceInputSchema,
+  mergeRevisionIntoSourceOutputSchema,
+  promoteRevisionToVariantInputSchema,
+  promoteRevisionToVariantOutputSchema,
+  markTranslationCaughtUpInputSchema,
+  markTranslationCaughtUpOutputSchema,
 } from "../../resume-versions.js";
 
 export const resumeVersionRoutes = {
@@ -69,4 +79,24 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-commits/compare" })
     .input(compareResumeCommitsInputSchema)
     .output(compareResumeCommitsOutputSchema),
+  createTranslationBranch: oc
+    .route({ method: "POST", path: "/resume-branches/{sourceBranchId}/translations" })
+    .input(createTranslationBranchInputSchema)
+    .output(createTranslationBranchOutputSchema),
+  createRevisionBranch: oc
+    .route({ method: "POST", path: "/resume-branches/{sourceBranchId}/revisions" })
+    .input(createRevisionBranchInputSchema)
+    .output(createRevisionBranchOutputSchema),
+  mergeRevisionIntoSource: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/merge" })
+    .input(mergeRevisionIntoSourceInputSchema)
+    .output(mergeRevisionIntoSourceOutputSchema),
+  promoteRevisionToVariant: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/promote" })
+    .input(promoteRevisionToVariantInputSchema)
+    .output(promoteRevisionToVariantOutputSchema),
+  markTranslationCaughtUp: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/mark-caught-up" })
+    .input(markTranslationCaughtUpInputSchema)
+    .output(markTranslationCaughtUpOutputSchema),
 };

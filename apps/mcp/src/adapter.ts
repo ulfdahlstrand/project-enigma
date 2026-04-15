@@ -16,6 +16,7 @@ const externalAIMcpToolNameSchema = z.enum([
   "list_resume_branches",
   "get_resume_branch",
   "list_resume_branch_assignments",
+  "create_translation_branch",
   "fork_resume_branch",
   "list_resume_commits",
   "get_resume_commit",
@@ -63,14 +64,14 @@ export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
   {
     name: "list_resume_branches",
     title: "List Resume Branches",
-    description: "List available branches for a resume.",
+    description: "List available branches for a resume. Each branch includes branchType ('variant' = long-lived base, 'translation' = language copy of a variant with sourceBranchId and language fields, 'revision' = short-lived working copy with sourceBranchId and sourceCommitId). Translation branches also have an isStale flag that is true when the source variant has changed since the translation was last updated.",
     route: { method: "GET", path: "/resumes/{resumeId}/branches" },
     inputSchema: { resumeId: z.string().uuid().describe("Resume ID") },
   },
   {
     name: "get_resume_branch",
     title: "Get Resume Branch",
-    description: "Read the current state of a specific branch directly.",
+    description: "Read the current state of a specific branch. The response includes branchType, sourceBranchId (set for translation and revision branches), sourceCommitId (set for revision branches), language (set for translation branches), and isStale (true when the source variant has new commits the translation does not yet include).",
     route: { method: "GET", path: "/resumes/{resumeId}/branches/{branchId}" },
     inputSchema: {
       resumeId: z.string().uuid().describe("Resume ID"),
@@ -87,9 +88,20 @@ export const externalAIMcpToolDefinitions: ExternalAIMcpToolDefinition[] = [
     },
   },
   {
+    name: "create_translation_branch",
+    title: "Create Translation Branch",
+    description: "Create a translation branch (language copy) of a variant branch. The new branch has branchType 'translation', with sourceBranchId pointing to the source variant. Use this when the user wants to translate a resume into another language.",
+    route: { method: "POST", path: "/resume-branches/{sourceBranchId}/translations" },
+    inputSchema: {
+      sourceBranchId: z.string().uuid().describe("ID of the source variant branch to translate"),
+      language: z.string().min(2).describe("Target language code, e.g. 'en', 'sv', 'de'"),
+      name: z.string().min(1).optional().describe("Optional branch name (defaults to source branch name + language)"),
+    },
+  },
+  {
     name: "fork_resume_branch",
     title: "Fork Resume Branch",
-    description: "Create a new branch from an existing commit.",
+    description: "Create a new revision branch from an existing commit. Use this to create an isolated working copy before making exploratory edits. The resulting branch has branchType 'revision', with sourceBranchId pointing to the parent variant and sourceCommitId pointing to the forked commit.",
     route: { method: "POST", path: "/resume-commits/{fromCommitId}/branches" },
     inputSchema: {
       fromCommitId: z.string().uuid().describe("Source commit ID"),
@@ -388,9 +400,29 @@ export function formatExternalAIContextMarkdown(context: GetExternalAIContextOut
   lines.push("- `delete_education` — remove an education entry");
   lines.push("");
 
+  lines.push("**Branches**");
+  lines.push("- `create_translation_branch` — create a language copy (translation) of a variant branch");
+  lines.push("- `fork_resume_branch` — create a new revision branch from an existing commit");
+  lines.push("");
+
   lines.push("**Versioning**");
   lines.push("- `save_resume_version` — create a commit on a branch (call after editing)");
-  lines.push("- `fork_resume_branch` — create a new branch from an existing commit");
+  lines.push("- `fork_resume_branch` — create a new revision branch from an existing commit");
+  lines.push("");
+
+  // ---------------------------------------------------------------------------
+  // Branch types — always present so AI agents understand the model
+  // ---------------------------------------------------------------------------
+  lines.push("## Branch Types");
+  lines.push("Every branch returned by `list_resume_branches` or `get_resume_branch` has a `branchType` field:");
+  lines.push("");
+  lines.push("| branchType | Description | Key fields |");
+  lines.push("|---|---|---|");
+  lines.push("| `variant` | Long-lived base branch for a version of the resume (e.g. a role-specific variant) | — |");
+  lines.push("| `translation` | Language copy of a variant. Edits here represent the resume in a specific language. | `sourceBranchId` (parent variant), `language`, `isStale` |");
+  lines.push("| `revision` | Short-lived working copy forked from a single commit. Use for exploratory or isolated edits. | `sourceBranchId` (parent variant), `sourceCommitId` |");
+  lines.push("");
+  lines.push("**`isStale`** (translation branches only): `true` when the source variant has new commits that are not yet reflected in this translation. Alert the user before editing a stale translation.");
   lines.push("");
 
   // ---------------------------------------------------------------------------
@@ -404,6 +436,17 @@ export function formatExternalAIContextMarkdown(context: GetExternalAIContextOut
     lines.push(`- **${entry.title}:** ${entry.content}`);
   });
   lines.push("");
+
+  // ---------------------------------------------------------------------------
+  // Authentication & token management
+  // ---------------------------------------------------------------------------
+  if (context.authGuidance.length > 0) {
+    lines.push("## Authentication");
+    context.authGuidance.forEach((entry) => {
+      lines.push(`- **${entry.title}:** ${entry.content}`);
+    });
+    lines.push("");
+  }
 
   // ---------------------------------------------------------------------------
   // Prompt guidance — section-specific, only if configured

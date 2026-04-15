@@ -480,6 +480,56 @@
       "label": "Variant",
       "manageVariants": "Manage variants"
     },
+    "languageSwitcher": {
+      "label": "Language",
+      "addTranslation": "Add translation",
+      "manageTranslations": "Manage translations",
+      "createDialog": {
+        "title": "Create translation",
+        "languageLabel": "Target language",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating…",
+        "error": "Failed to create translation. Please try again."
+      }
+    },
+    "revisionsMenu": {
+      "label": "Revisions",
+      "noRevisions": "No active revisions.",
+      "createRevision": "Create revision",
+      "createDialog": {
+        "title": "Create revision",
+        "nameLabel": "Revision name",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating…",
+        "error": "Failed to create revision. Please try again."
+      }
+    },
+    "translationStaleBanner": {
+      "title": "Translation is out of date",
+      "description": "The source variant has new changes. Update this translation when you're ready.",
+      "markCaughtUpButton": "Mark as up to date",
+      "markingCaughtUp": "Updating…",
+      "error": "Failed to mark as up to date. Please try again."
+    },
+    "revisionBanner": {
+      "title": "Revision branch",
+      "description": "This is a short-lived revision branch off \"{{sourceName}}\".",
+      "mergeButton": "Merge into {{sourceName}}",
+      "merging": "Merging…",
+      "mergeConflictError": "Cannot merge — the source has new changes. Start a new revision from the updated source.",
+      "mergeError": "Failed to merge. Please try again.",
+      "promoteButton": "Promote to variant",
+      "promoteDialog": {
+        "title": "Promote to variant",
+        "nameLabel": "Variant name",
+        "cancel": "Cancel",
+        "promote": "Promote",
+        "promoting": "Promoting…",
+        "error": "Failed to promote. Please try again."
+      }
+    },
     "countLabel_one": "1 resume",
     "countLabel_other": "{{count}} resumes",
     "searchPlaceholder": "Search resumes…"

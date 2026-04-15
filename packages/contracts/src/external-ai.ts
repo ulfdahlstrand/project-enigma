@@ -178,6 +178,7 @@ export const getExternalAIContextOutputSchema = z.object({
   allowedRoutes: z.array(externalAIAllowedRouteSchema),
   sharedGuidance: z.array(externalAIContextEntrySchema),
   safetyGuidance: z.array(externalAIContextEntrySchema),
+  authGuidance: z.array(externalAIContextEntrySchema),
   promptGuidance: z.array(externalAIPromptGuidanceSchema),
   promptModel: externalAIPromptModelSchema,
   supportedResumeSections: z.array(z.string().min(1)),

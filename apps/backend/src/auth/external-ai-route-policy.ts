@@ -47,6 +47,9 @@ export function getRequiredExternalAIScope(
   if (method === "POST" && /^\/resume-commits\/[^/]+\/branches$/.test(pathname)) {
     return EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE;
   }
+  if (method === "POST" && /^\/resume-branches\/[^/]+\/translations$/.test(pathname)) {
+    return EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE;
+  }
   if (method === "POST" && /^\/resume-branches\/[^/]+\/commits$/.test(pathname)) {
     return EXTERNAL_AI_RESUME_COMMIT_WRITE_SCOPE;
   }

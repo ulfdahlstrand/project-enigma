@@ -153,3 +153,101 @@ export function useDeleteResumeBranch() {
     },
   });
 }
+
+/** Creates a translation branch (language copy) off a variant. */
+export function useCreateTranslationBranch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceBranchId,
+      language,
+      name,
+    }: {
+      sourceBranchId: string;
+      language: string;
+      name?: string;
+      resumeId: string;
+    }) => orpc.createTranslationBranch({ sourceBranchId, language, name }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+      ]);
+    },
+  });
+}
+
+/** Creates a short-lived revision branch off a variant. */
+export function useCreateRevisionBranch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceBranchId,
+      name,
+    }: {
+      sourceBranchId: string;
+      name: string;
+      resumeId: string;
+    }) => orpc.createRevisionBranch({ sourceBranchId, name }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+      ]);
+    },
+  });
+}
+
+/** Fast-forwards the source variant to the revision's HEAD, then deletes the revision. */
+export function useMergeRevisionIntoSource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
+      orpc.mergeRevisionIntoSource({ branchId }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: ["listResumeBranches"] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
+      ]);
+    },
+  });
+}
+
+/** Converts a revision branch into a standalone variant. */
+export function usePromoteRevisionToVariant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      branchId,
+      name,
+    }: {
+      branchId: string;
+      name: string;
+      resumeId: string;
+    }) => orpc.promoteRevisionToVariant({ branchId, name }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: ["listResumeBranches"] }),
+      ]);
+    },
+  });
+}
+
+/** Marks a translation as caught up to the source variant's current HEAD. */
+export function useMarkTranslationCaughtUp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
+      orpc.markTranslationCaughtUp({ branchId }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+      ]);
+    },
+  });
+}

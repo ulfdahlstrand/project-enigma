@@ -176,10 +176,10 @@ export function ResumeAssignmentsPage({
             <Table size="small" aria-label={t("resume.detail.assignmentsHeading")}>
               <TableHead>
                 <TableRow>
-                  <TableCell>{t("assignment.tableHeaderClient")}</TableCell>
-                  <TableCell>{t("assignment.tableHeaderRole")}</TableCell>
-                  <TableCell>{t("assignment.tableHeaderStart")}</TableCell>
-                  <TableCell>{t("assignment.tableHeaderCurrent")}</TableCell>
+                  <TableCell>{labels.tableHeaderClient}</TableCell>
+                  <TableCell>{labels.tableHeaderRole}</TableCell>
+                  <TableCell>{labels.tableHeaderStart}</TableCell>
+                  <TableCell>{labels.tableHeaderCurrent}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

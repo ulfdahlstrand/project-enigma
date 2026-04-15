@@ -17,6 +17,10 @@ function branch(
     headCommitId: null,
     forkedFromCommitId: null,
     createdBy: null,
+    branchType: "variant",
+    sourceBranchId: null,
+    sourceCommitId: null,
+    isStale: false,
     ...overrides,
   };
 }

@@ -44,3 +44,7 @@ test-results/
 # Flower orchestrator runtime data
 .flower/
 .claude/worktrees/
+
+# Local tooling artefacts
+mempalace.yaml
+entities.json

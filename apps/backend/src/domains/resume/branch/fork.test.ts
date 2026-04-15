@@ -66,6 +66,9 @@ const NEW_BRANCH_ROW = {
   forked_from_commit_id: COMMIT_ID,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
+  branch_type: "variant" as const,
+  source_branch_id: null,
+  source_commit_id: null,
 };
 
 // ---------------------------------------------------------------------------

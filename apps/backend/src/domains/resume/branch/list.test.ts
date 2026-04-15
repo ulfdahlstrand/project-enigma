@@ -34,6 +34,9 @@ const BRANCH_ROW_1 = {
   forked_from_commit_id: null,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-01T00:00:00.000Z"),
+  branch_type: "variant" as const,
+  source_branch_id: null,
+  source_commit_id: null,
 };
 
 const BRANCH_ROW_2 = {
@@ -46,6 +49,9 @@ const BRANCH_ROW_2 = {
   forked_from_commit_id: COMMIT_ID,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-02T00:00:00.000Z"),
+  branch_type: "variant" as const,
+  source_branch_id: null,
+  source_commit_id: null,
 };
 
 const BRANCH_ROW_3 = {
@@ -58,6 +64,9 @@ const BRANCH_ROW_3 = {
   forked_from_commit_id: COMMIT_ID,
   created_by: CREATOR_ID,
   created_at: new Date("2026-01-03T00:00:00.000Z"),
+  branch_type: "variant" as const,
+  source_branch_id: null,
+  source_commit_id: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -116,7 +125,7 @@ function buildDbMock(opts: {
 // ---------------------------------------------------------------------------
 
 describe("listResumeBranches", () => {
-  it("returns all branches for a resume", async () => {
+  it("returns all branches for a resume with branch type fields", async () => {
     const { db } = buildDbMock();
 
     const result = await listResumeBranches(db, MOCK_ADMIN, { resumeId: RESUME_ID });
@@ -130,12 +139,80 @@ describe("listResumeBranches", () => {
       isMain: true,
       headCommitId: COMMIT_ID,
       forkedFromCommitId: null,
+      branchType: "variant",
+      sourceBranchId: null,
+      sourceCommitId: null,
+      isStale: false,
     });
     expect(result[1]).toMatchObject({
       id: BRANCH_ID_2,
       name: "Swedish Variant",
       isMain: false,
+      branchType: "variant",
+      isStale: false,
     });
+  });
+
+  it("marks a translation branch as stale when source has advanced", async () => {
+    const SOURCE_COMMIT_ID = "550e8400-e29b-41d4-a716-446655440050";
+    const TRANSLATION_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440060";
+
+    const { db } = buildDbMock({
+      branchRows: [
+        BRANCH_ROW_1,
+        {
+          id: TRANSLATION_BRANCH_ID,
+          resume_id: RESUME_ID,
+          name: "main-en",
+          language: "en",
+          is_main: false,
+          head_commit_id: SOURCE_COMMIT_ID,
+          forked_from_commit_id: SOURCE_COMMIT_ID,
+          created_by: CREATOR_ID,
+          created_at: new Date("2026-01-04T00:00:00.000Z"),
+          branch_type: "translation" as const,
+          source_branch_id: BRANCH_ID_1,
+          // source_commit_id points to old commit, source variant has advanced to COMMIT_ID
+          source_commit_id: SOURCE_COMMIT_ID,
+        },
+      ],
+    });
+
+    const result = await listResumeBranches(db, MOCK_ADMIN, { resumeId: RESUME_ID });
+
+    const translation = result.find((b) => b.id === TRANSLATION_BRANCH_ID);
+    expect(translation).toBeDefined();
+    expect(translation?.isStale).toBe(true);
+  });
+
+  it("marks a translation branch as not stale when caught up to source HEAD", async () => {
+    const TRANSLATION_BRANCH_ID = "550e8400-e29b-41d4-a716-446655440060";
+
+    const { db } = buildDbMock({
+      branchRows: [
+        BRANCH_ROW_1,
+        {
+          id: TRANSLATION_BRANCH_ID,
+          resume_id: RESUME_ID,
+          name: "main-en",
+          language: "en",
+          is_main: false,
+          head_commit_id: COMMIT_ID,
+          forked_from_commit_id: COMMIT_ID,
+          created_by: CREATOR_ID,
+          created_at: new Date("2026-01-04T00:00:00.000Z"),
+          branch_type: "translation" as const,
+          source_branch_id: BRANCH_ID_1,
+          // source_commit_id matches source variant's head_commit_id (COMMIT_ID)
+          source_commit_id: COMMIT_ID,
+        },
+      ],
+    });
+
+    const result = await listResumeBranches(db, MOCK_ADMIN, { resumeId: RESUME_ID });
+
+    const translation = result.find((b) => b.id === TRANSLATION_BRANCH_ID);
+    expect(translation?.isStale).toBe(false);
   });
 
   it("filters out merged branches whose head commit is already reachable from main", async () => {
