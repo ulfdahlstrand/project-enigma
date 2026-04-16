@@ -27,6 +27,7 @@ vi.mock("../../../../../orpc-client", () => ({
     getResumeBranchHistoryGraph: vi.fn(),
     finaliseResumeBranch: vi.fn(),
     deleteResumeBranch: vi.fn(),
+    archiveResumeBranch: vi.fn(),
   },
 }));
 
@@ -63,9 +64,19 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
+const BRANCH_DEFAULTS = {
+  createdBy: null,
+  sourceBranchId: null,
+  sourceCommitId: null,
+  branchType: "variant" as const,
+  isStale: false,
+  isArchived: false,
+};
+
 const GRAPH = {
   branches: [
     {
+      ...BRANCH_DEFAULTS,
       id: "branch-id-1",
       resumeId: "resume-id-1",
       name: "main",
@@ -76,6 +87,7 @@ const GRAPH = {
       createdAt: "2024-06-01T09:00:00Z",
     },
     {
+      ...BRANCH_DEFAULTS,
       id: "branch-id-2",
       resumeId: "resume-id-1",
       name: "Swedish Variant",
@@ -86,6 +98,7 @@ const GRAPH = {
       createdAt: "2024-06-03T09:00:00Z",
     },
     {
+      ...BRANCH_DEFAULTS,
       id: "branch-id-3",
       resumeId: "resume-id-1",
       name: "German Variant",
@@ -96,6 +109,7 @@ const GRAPH = {
       createdAt: "2024-06-04T09:00:00Z",
     },
     {
+      ...BRANCH_DEFAULTS,
       id: "branch-id-4",
       resumeId: "resume-id-1",
       name: "Empty Variant",
@@ -313,11 +327,16 @@ describe("View controls", () => {
 
   it("navigates when a different branch is selected", async () => {
     const user = userEvent.setup();
+    mockSearch = { view: "list" };
     renderPage();
 
     await screen.findByText("Initial version");
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("Swedish Variant"));
+
+    // Open the BranchTreePicker popover — button shows current branch "main (EN)"
+    await user.click(screen.getByRole("button", { name: /main \(EN\)/i }));
+
+    // Swedish Variant appears as a ListItemButton in the tree
+    await user.click(await screen.findByRole("button", { name: /Swedish Variant/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/history/branch/$branchId",

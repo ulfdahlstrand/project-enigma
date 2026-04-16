@@ -26,14 +26,16 @@ import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import {
+  useArchiveResumeBranch,
   useDeleteResumeBranch,
   useFinaliseResumeBranch,
   useResumeBranchHistoryGraph,
 } from "../../../../../hooks/versioning";
+import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
-import { getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
+import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
 
@@ -56,6 +58,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
+  const { mutate: archiveBranch } = useArchiveResumeBranch();
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
@@ -68,6 +71,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
   const mainBranch = branches.find((branch) => branch.isMain);
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
   const selectedBranchId = selectedBranch?.id ?? mainBranchId;
+  const mergedCommitIds = getReachableCommitIds(mainBranch?.headCommitId ?? null, graphEdges);
   const selectedView = viewFromSearch ?? "list";
   const commits = sortByCreatedAt(
     getReachableCommits(selectedBranch?.headCommitId ?? null, graphCommits, graphEdges),
@@ -193,24 +197,20 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
           {t("resume.history.description")}
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-            <FormControl size="small" sx={{ minWidth: 220 }}>
-              <InputLabel>{t("resume.history.branchLabel")}</InputLabel>
-              <Select
-                value={selectedBranchId}
-                label={t("resume.history.branchLabel")}
-                onChange={(event) =>
-                  void navigateToHistory(event.target.value, selectedView)
-                }
-              >
-                {branches.map((branch) => (
-                  <MenuItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <BranchTreePicker
+              label={t("resume.history.branchLabel")}
+              value={selectedBranchId}
+              branches={branches}
+              onSelect={(branchId) => void navigateToHistory(branchId, selectedView)}
+              onArchive={(branchId, isArchived) =>
+                archiveBranch({ branchId, isArchived, resumeId })
+              }
+              showCommits={false}
+              valueField="id"
+              mergedCommitIds={mergedCommitIds}
+            />
 
             <ButtonGroup variant="outlined" size="small">
               <Button

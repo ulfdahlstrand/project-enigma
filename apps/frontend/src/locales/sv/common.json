@@ -481,6 +481,7 @@
         "filterTranslation": "Översättning",
         "filterRevision": "Revision",
         "filterArchived": "Visa arkiverade",
+        "merged": "Sammanfogad",
         "revisions": "Revisioner",
         "noBranches": "Inga grenar matchar aktuellt filter"
       }

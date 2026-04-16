@@ -481,6 +481,7 @@
         "filterTranslation": "Translation",
         "filterRevision": "Revision",
         "filterArchived": "Show archived",
+        "merged": "Merged",
         "revisions": "Revisions",
         "noBranches": "No branches match the current filter"
       }

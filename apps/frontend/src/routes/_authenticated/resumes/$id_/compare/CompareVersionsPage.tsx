@@ -29,7 +29,7 @@ import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { CompareDiffGroupsCard } from "./CompareDiffGroupsCard";
-import { BranchTreePicker } from "./BranchTreePicker";
+import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
 import {
   compareByCreatedAtDesc,
   parseCompareRange,
