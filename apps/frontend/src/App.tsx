@@ -8,7 +8,8 @@
  *   4. ThemeProvider       -- Material UI; supplies the MUI theme to all child components
  *   5. CssBaseline         -- Material UI; normalises browser default styles globally
  *   6. QueryClientProvider -- TanStack Query; makes useQuery/useMutation available everywhere
- *   7. RouterProvider      -- TanStack Router; renders the matched route
+ *   7. NuqsAdapter         -- nuqs; enables type-safe URL search-param hooks inside routes
+ *   8. RouterProvider      -- TanStack Router; renders the matched route
  *
  * i18n is initialised as a side-effect in `src/i18n/i18n.ts` (imported in main.tsx
  * before this component mounts), so no additional provider is needed here.
@@ -18,6 +19,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import { useMemo } from "react";
 import { createAppTheme } from "./lib/theme";
 import { ColorModeProvider, useColorMode } from "./lib/color-mode-context";
@@ -36,10 +38,12 @@ function ThemedApp() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
-        <AIAssistantProvider>
-          <RouterProvider router={router} />
-          <AIAssistantDrawer />
-        </AIAssistantProvider>
+        <NuqsAdapter>
+          <AIAssistantProvider>
+            <RouterProvider router={router} />
+            <AIAssistantDrawer />
+          </AIAssistantProvider>
+        </NuqsAdapter>
       </QueryClientProvider>
     </ThemeProvider>
   );
