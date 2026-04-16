@@ -13,6 +13,12 @@
     },
     "logAnalyticsRetentionInDays": {
       "value": 30
+    },
+    "keyVaultSkuName": {
+      "value": "standard"
+    },
+    "keyVaultSoftDeleteRetentionInDays": {
+      "value": 7
     }
   }
 }
