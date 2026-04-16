@@ -1,7 +1,7 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingState } from "../../components/feedback";
 import { orpc } from "../../orpc-client";
@@ -24,7 +24,7 @@ export function ExternalAIConnectionsSection() {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
 
-  const [selectedClientKey, setSelectedClientKey] = useState("");
+  const [explicitClientKey, setExplicitClientKey] = useState("");
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState<DurationOption>("8h");
   const [copyState, setCopyState] = useState<CopyState>("idle");
@@ -42,11 +42,9 @@ export function ExternalAIConnectionsSection() {
 
   const clientOptions = clientsQuery.data?.clients ?? [];
 
-  useEffect(() => {
-    if (!selectedClientKey && clientOptions.length === 1) {
-      setSelectedClientKey(clientOptions[0]!.key);
-    }
-  }, [clientOptions, selectedClientKey]);
+  // Auto-select the only client if the user hasn't picked one explicitly.
+  const selectedClientKey =
+    explicitClientKey || (clientOptions.length === 1 ? clientOptions[0]!.key : "");
 
   const createAuthorizationMutation = useMutation({
     mutationFn: () =>
@@ -145,7 +143,7 @@ export function ExternalAIConnectionsSection() {
         duration={duration}
         isCreating={createAuthorizationMutation.isPending}
         hasError={createAuthorizationMutation.isError}
-        onClientKeyChange={setSelectedClientKey}
+        onClientKeyChange={setExplicitClientKey}
         onTitleChange={setTitle}
         onDurationChange={setDuration}
         onSubmit={() => createAuthorizationMutation.mutate()}
