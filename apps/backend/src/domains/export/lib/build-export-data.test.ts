@@ -25,6 +25,7 @@ const RESUME_ROW = {
   employee_id: EMPLOYEE_ID,
   summary: null,
   language: "en",
+  branch_language: null,
   branch_name: "default",
   head_commit_id: COMMIT_ID,
   forked_from_commit_id: null,
@@ -75,6 +76,7 @@ const COMMIT_ROW = {
 const BRANCH_ROW = {
   id: "550e8400-e29b-41d4-a716-446655440061",
   name: "default",
+  language: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -129,6 +131,11 @@ function buildDbMock(opts: {
   const commitWhere = vi.fn().mockReturnValue({ executeTakeFirst: commitExec });
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
 
+  // Branch chain (used in snapshot path to look up branch name + language)
+  const branchExec = vi.fn().mockResolvedValue(branchRow === null ? undefined : branchRow);
+  const branchWhere = vi.fn().mockReturnValue({ executeTakeFirst: branchExec });
+  const branchSelect = vi.fn().mockReturnValue({ where: branchWhere });
+
   // Education chain
   const eduExec = vi.fn().mockResolvedValue(educationRows);
   const eduOrderBy = vi.fn().mockReturnValue({ execute: eduExec });
@@ -140,7 +147,7 @@ function buildDbMock(opts: {
     if (table === "resumes") return { select: resumeSelect };
     if (table === "resumes as r") return { leftJoin: resumeLeftJoin };
     if (table === "resume_commits") return { select: commitSelect };
-    if (table === "resume_branches") return { select: resumeSelect };
+    if (table === "resume_branches") return { select: branchSelect };
     if (table === "education") return { selectAll: eduSelectAll };
     throw new Error(`Unexpected table: ${table}`);
   });
@@ -223,6 +230,72 @@ describe("buildExportData — live path (no commitId)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Live-data path with branchId (translation branches)
+// ---------------------------------------------------------------------------
+
+describe("buildExportData — live path with branchId", () => {
+  const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440061";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
+  });
+
+  it("uses branch language when tree content has no language", async () => {
+    const CONTENT_NO_LANG = { ...TREE_CONTENT, language: null };
+    vi.mocked(readTreeContent).mockResolvedValue(CONTENT_NO_LANG as never);
+
+    const TRANSLATION_ROW = {
+      ...RESUME_ROW,
+      language: "sv",            // resume base language
+      branch_language: "en",     // translation branch language
+      branch_name: "main en",
+    };
+    const { db } = buildDbMock({ resumeRow: TRANSLATION_ROW });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    expect(result.language).toBe("en");
+    expect(result.branchName).toBe("main en");
+  });
+
+  it("falls back to resume language when branch row has no language", async () => {
+    const CONTENT_NO_LANG = { ...TREE_CONTENT, language: null };
+    vi.mocked(readTreeContent).mockResolvedValue(CONTENT_NO_LANG as never);
+
+    const ROW_NO_BRANCH = {
+      ...RESUME_ROW,
+      language: "sv",
+      branch_language: null,
+      branch_name: null,
+    };
+    const { db } = buildDbMock({ resumeRow: ROW_NO_BRANCH });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    expect(result.language).toBe("sv");
+    expect(result.branchName).toBe("default");
+  });
+
+  it("branch language overrides tree content language when both are present", async () => {
+    const TRANSLATION_ROW = {
+      ...RESUME_ROW,
+      language: "sv",
+      branch_language: "en",
+      branch_name: "main en",
+    };
+    const { db } = buildDbMock({ resumeRow: TRANSLATION_ROW });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    // branch_language ("en") wins over TREE_CONTENT.language ("sv") — the branch
+    // represents the translation target language and must take precedence
+    expect(result.language).toBe("en");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Snapshot path
 // ---------------------------------------------------------------------------
 
@@ -279,5 +352,28 @@ describe("buildExportData — snapshot path (commitId provided)", () => {
     ).rejects.toSatisfy(
       (err: unknown) => err instanceof ORPCError && err.code === "BAD_REQUEST"
     );
+  });
+
+  it("uses branch language over tree content language in snapshot path", async () => {
+    const { db } = buildDbMock({
+      branchRow: { ...BRANCH_ROW, language: "en", name: "main en" },
+    });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID, BRANCH_ROW.id);
+
+    // TREE_CONTENT has language: "sv" but branch.language is "en" — branch wins
+    expect(result.language).toBe("en");
+    expect(result.branchName).toBe("main en");
+  });
+
+  it("falls back to tree content language when branch has no language set", async () => {
+    const { db } = buildDbMock({
+      branchRow: { ...BRANCH_ROW, language: null },
+    });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, COMMIT_ID, BRANCH_ROW.id);
+
+    // branch.language is null → falls back to TREE_CONTENT.language ("sv")
+    expect(result.language).toBe("sv");
   });
 });

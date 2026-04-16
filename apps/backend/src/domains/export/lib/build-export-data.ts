@@ -79,21 +79,31 @@ function mapAssignments(
 }
 
 // ---------------------------------------------------------------------------
-// Live-data path (no commitId supplied — uses main branch HEAD commit tree)
+// Live-data path (no commitId supplied)
+//
+// Reads the HEAD commit tree of the supplied branch, falling back to the main
+// branch when no branchId is given. The branch's own `language` takes priority
+// over the resume's base language in the fallback chain so that translation
+// branches export in their own language even when the tree content lacks an
+// explicit language field.
 // ---------------------------------------------------------------------------
 
 async function buildFromLive(
   db: Kysely<Database>,
   resumeId: string,
-  employeeId: string
+  employeeId: string,
+  branchId?: string
 ): Promise<Omit<ExportData, "resumeId" | "employeeId" | "commitId">> {
   const resume = await db
     .selectFrom("resumes as r")
     .leftJoin("resume_branches as rb", (join) =>
-      join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
+      branchId
+        ? join.onRef("rb.resume_id", "=", "r.id").on("rb.id", "=", branchId)
+        : join.onRef("rb.resume_id", "=", "r.id").on("rb.is_main", "=", true)
     )
     .select([
       "r.language",
+      "rb.language as branch_language",
       "rb.name as branch_name",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
@@ -137,7 +147,7 @@ async function buildFromLive(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
-    language: content?.language ?? resume.language ?? "en",
+    language: resume.branch_language ?? content?.language ?? resume.language ?? "en",
     presentation: content?.presentation ?? [],
     summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],
@@ -190,7 +200,7 @@ async function buildFromSnapshot(
     branchId
       ? db
           .selectFrom("resume_branches")
-          .select(["id", "name"])
+          .select(["id", "name", "language"])
           .where("id", "=", branchId)
           .executeTakeFirst()
       : Promise.resolve(undefined),
@@ -217,7 +227,7 @@ async function buildFromSnapshot(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content.consultantTitle ?? "",
-    language: content.language,
+    language: branch?.language ?? content.language,
     presentation: content.presentation,
     summary: content.summary,
     highlightedItems: content.highlightedItems ?? [],
@@ -269,7 +279,7 @@ export async function buildExportData(
 
   const rest = commitId
     ? await buildFromSnapshot(db, resumeId, resume.employee_id, commitId, branchId)
-    : await buildFromLive(db, resumeId, resume.employee_id);
+    : await buildFromLive(db, resumeId, resume.employee_id, branchId);
 
   return {
     resumeId,
