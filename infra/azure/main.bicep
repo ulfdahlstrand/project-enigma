@@ -47,6 +47,11 @@ param tags object = {
   managedBy: 'bicep'
 }
 
+@description('Retention (days) for ingested Log Analytics data. Tune per environment.')
+@minValue(30)
+@maxValue(730)
+param logAnalyticsRetentionInDays int = 30
+
 // -----------------------------------------------------------------------------
 // Resource group (the one resource that lives above every module)
 // -----------------------------------------------------------------------------
@@ -60,11 +65,32 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 // -----------------------------------------------------------------------------
 // Modules
 // -----------------------------------------------------------------------------
-// Additional modules (Log Analytics, ACR, Container Apps env, PG, Key Vault,
-// SWA, OIDC, observability) are added in subsequent features of epic #560.
-// Each module receives `resourceGroupName`, `location`, `tags`, and any
-// outputs from earlier modules it depends on.
+// Additional modules (ACR, Container Apps env, PG, Key Vault, SWA, OIDC) are
+// added in subsequent features of epic #560. Each module receives `location`,
+// `tags`, and any outputs from earlier modules it depends on.
 // -----------------------------------------------------------------------------
+
+module logAnalytics 'modules/log-analytics.bicep' = {
+  name: 'log-analytics'
+  scope: rg
+  params: {
+    name: 'log-${projectCode}-${environmentName}'
+    location: location
+    tags: tags
+    retentionInDays: logAnalyticsRetentionInDays
+  }
+}
+
+module appInsights 'modules/app-insights.bicep' = {
+  name: 'app-insights'
+  scope: rg
+  params: {
+    name: 'appi-${projectCode}-${environmentName}'
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Outputs
@@ -74,3 +100,6 @@ output resourceGroupName string = rg.name
 output resourceGroupId string = rg.id
 output location string = location
 output environmentName string = environmentName
+output logAnalyticsWorkspaceId string = logAnalytics.outputs.workspaceId
+output logAnalyticsWorkspaceName string = logAnalytics.outputs.workspaceName
+output appInsightsConnectionString string = appInsights.outputs.connectionString
