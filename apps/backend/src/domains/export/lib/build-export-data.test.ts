@@ -25,6 +25,7 @@ const RESUME_ROW = {
   employee_id: EMPLOYEE_ID,
   summary: null,
   language: "en",
+  branch_language: "en",
   branch_name: "default",
   head_commit_id: COMMIT_ID,
   forked_from_commit_id: null,
@@ -219,6 +220,71 @@ describe("buildExportData — live path (no commitId)", () => {
     await expect(
       buildExportData(db, MOCK_CONSULTANT, RESUME_ID, undefined)
     ).resolves.toMatchObject({ resumeId: RESUME_ID });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Live-data path with branchId (translation branches)
+// ---------------------------------------------------------------------------
+
+describe("buildExportData — live path with branchId", () => {
+  const BRANCH_ID = "550e8400-e29b-41d4-a716-446655440061";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(readTreeContent).mockResolvedValue(TREE_CONTENT as never);
+    vi.mocked(filterDeletedAssignments).mockImplementation(async (_db, assignments) => assignments);
+  });
+
+  it("uses branch language when tree content has no language", async () => {
+    const CONTENT_NO_LANG = { ...TREE_CONTENT, language: null };
+    vi.mocked(readTreeContent).mockResolvedValue(CONTENT_NO_LANG as never);
+
+    const TRANSLATION_ROW = {
+      ...RESUME_ROW,
+      language: "sv",            // resume base language
+      branch_language: "en",     // translation branch language
+      branch_name: "main en",
+    };
+    const { db } = buildDbMock({ resumeRow: TRANSLATION_ROW });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    expect(result.language).toBe("en");
+    expect(result.branchName).toBe("main en");
+  });
+
+  it("falls back to resume language when branch row has no language", async () => {
+    const CONTENT_NO_LANG = { ...TREE_CONTENT, language: null };
+    vi.mocked(readTreeContent).mockResolvedValue(CONTENT_NO_LANG as never);
+
+    const ROW_NO_BRANCH = {
+      ...RESUME_ROW,
+      language: "sv",
+      branch_language: null,
+      branch_name: null,
+    };
+    const { db } = buildDbMock({ resumeRow: ROW_NO_BRANCH });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    expect(result.language).toBe("sv");
+    expect(result.branchName).toBe("default");
+  });
+
+  it("tree content language still overrides branch language when both are present", async () => {
+    const TRANSLATION_ROW = {
+      ...RESUME_ROW,
+      language: "sv",
+      branch_language: "en",
+      branch_name: "main en",
+    };
+    const { db } = buildDbMock({ resumeRow: TRANSLATION_ROW });
+
+    const result = await buildExportData(db, MOCK_ADMIN, RESUME_ID, undefined, BRANCH_ID);
+
+    // TREE_CONTENT has language: "sv" — tree wins because it's authoritative
+    expect(result.language).toBe("sv");
   });
 });
 
