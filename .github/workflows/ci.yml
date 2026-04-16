@@ -2,7 +2,11 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, dev]
+    # Run on every PR that eventually reaches dev/main, including PRs that
+    # target long-lived epic/** integration branches so feature branches get
+    # typecheck + test coverage before landing in the epic (not only when the
+    # epic finally opens a PR back to dev).
+    branches: [main, dev, 'epic/**']
 
 jobs:
   test:
