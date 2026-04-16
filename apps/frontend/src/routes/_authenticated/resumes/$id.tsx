@@ -15,6 +15,7 @@ import {
   resumeBranchesKey,
   resumeCommitsKey,
   useForkResumeBranch,
+  useResumeBranchHistoryGraph,
   useResumeCommits,
 } from "../../../hooks/versioning";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -33,6 +34,7 @@ import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/Re
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
 import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
+import { getReachableCommitIds } from "./$id_/history/history-graph-utils";
 import { ResumeHistoryDrawer } from "../../../components/resume-detail/ResumeHistoryDrawer";
 import { ResumeLayoutContext } from "../../../contexts/ResumeLayoutContext";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
@@ -112,6 +114,12 @@ export function ResumeDetailPage({
     queryKey: resumeBranchesKey(id),
     queryFn: () => orpc.listResumeBranches({ resumeId: id }),
   });
+
+  const { data: historyGraph } = useResumeBranchHistoryGraph(id);
+  const mergedCommitIds = getReachableCommitIds(
+    historyGraph?.branches.find((b) => b.isMain)?.headCommitId ?? null,
+    historyGraph?.edges ?? [],
+  );
 
   const requestedBranchId = forcedBranchId ?? null;
   const activeBranchId = requestedBranchId ?? branches?.find((b) => b.isMain)?.id ?? null;
@@ -580,7 +588,11 @@ export function ResumeDetailPage({
           ...(variantBranchId !== null && branches
             ? (() => {
                 const variantOptions = branches
-                  .filter((b) => b.branchType === "variant")
+                  .filter((b) =>
+                    b.branchType === "variant" &&
+                    !b.isArchived &&
+                    !(b.headCommitId !== null && !b.isMain && mergedCommitIds.has(b.headCommitId))
+                  )
                   .map((b) => ({ id: b.id, label: b.name }));
                 const variantBranch = branches.find((b) => b.id === variantBranchId);
                 return [
