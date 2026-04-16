@@ -526,7 +526,7 @@ describe("UX improvements", () => {
     expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
   });
 
-  it("navigates to a GitHub-like compare range for the selected branch", async () => {
+  it("navigates to compare with search params for the selected branch", async () => {
     const user = userEvent.setup();
     renderPage("branch-id-2");
 
@@ -534,8 +534,9 @@ describe("UX improvements", () => {
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.compareButton }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/compare/$range",
-      params: { id: "resume-id-1", range: "main...Swedish Variant" },
+      to: "/resumes/$id/compare",
+      params: { id: "resume-id-1" },
+      search: { baseRef: "main", compareRef: "Swedish Variant" },
     });
   });
 

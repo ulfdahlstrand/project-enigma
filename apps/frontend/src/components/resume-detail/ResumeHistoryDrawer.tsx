@@ -76,14 +76,14 @@ export function ResumeHistoryDrawer({
 
   function handleCompare() {
     if (!menuCommitId) return;
-    const range = activeBranchName
-      ? `${menuCommitId}...${activeBranchName}`
-      : menuCommitId;
     handleMenuClose();
     onClose();
     void navigate({
-      to: "/resumes/$id/compare/$range",
-      params: { id: resumeId, range },
+      to: "/resumes/$id/compare",
+      params: { id: resumeId },
+      search: activeBranchName
+        ? { baseRef: menuCommitId, compareRef: activeBranchName }
+        : { baseRef: menuCommitId },
     });
   }
 

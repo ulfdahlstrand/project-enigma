@@ -200,8 +200,9 @@ export function ResumeDetailActions({
   const openComparePage = () => {
     if (compareBaseRef && activeBranchName) {
       void navigate({
-        to: "/resumes/$id/compare/$range",
-        params: { id: resumeId, range: `${compareBaseRef}...${activeBranchName}` },
+        to: "/resumes/$id/compare",
+        params: { id: resumeId },
+        search: { baseRef: compareBaseRef, compareRef: activeBranchName },
       });
       return;
     }

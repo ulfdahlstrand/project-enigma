@@ -33,7 +33,6 @@ import { Route as AuthenticatedResumesIdHistoryIndexRouteImport } from './routes
 import { Route as AuthenticatedResumesIdCompareIndexRouteImport } from './routes/_authenticated/resumes/$id_/compare/index'
 import { Route as AuthenticatedResumesIdEditIndexRouteImport } from './routes/_authenticated/resumes/$id/edit/index'
 import { Route as AdminAdminAssistantPromptsIndexRouteImport } from './routes/_admin/admin/assistant/prompts/index'
-import { Route as AuthenticatedResumesIdCompareRangeRouteImport } from './routes/_authenticated/resumes/$id_/compare/$range'
 import { Route as AuthenticatedResumesIdCommitCommitIdRouteImport } from './routes/_authenticated/resumes/$id/commit/$commitId'
 import { Route as AuthenticatedResumesIdBranchBranchIdRouteImport } from './routes/_authenticated/resumes/$id/branch/$branchId'
 import { Route as AdminAdminAssistantPromptsPromptIdRouteImport } from './routes/_admin/admin/assistant/prompts/$promptId'
@@ -175,12 +174,6 @@ const AdminAdminAssistantPromptsIndexRoute =
     path: '/admin/assistant/prompts/',
     getParentRoute: () => AdminRoute,
   } as any)
-const AuthenticatedResumesIdCompareRangeRoute =
-  AuthenticatedResumesIdCompareRangeRouteImport.update({
-    id: '/resumes/$id_/compare/$range',
-    path: '/resumes/$id/compare/$range',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedResumesIdCommitCommitIdRoute =
   AuthenticatedResumesIdCommitCommitIdRouteImport.update({
     id: '/commit/$commitId',
@@ -233,7 +226,6 @@ export interface FileRoutesByFullPath {
   '/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
-  '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
   '/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
@@ -261,7 +253,6 @@ export interface FileRoutesByTo {
   '/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
-  '/resumes/$id/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/admin/assistant/prompts': typeof AdminAdminAssistantPromptsIndexRoute
   '/resumes/$id/edit': typeof AuthenticatedResumesIdEditIndexRoute
   '/resumes/$id/compare': typeof AuthenticatedResumesIdCompareIndexRoute
@@ -294,7 +285,6 @@ export interface FileRoutesById {
   '/_admin/admin/assistant/prompts/$promptId': typeof AdminAdminAssistantPromptsPromptIdRoute
   '/_authenticated/resumes/$id/branch/$branchId': typeof AuthenticatedResumesIdBranchBranchIdRoute
   '/_authenticated/resumes/$id/commit/$commitId': typeof AuthenticatedResumesIdCommitCommitIdRoute
-  '/_authenticated/resumes/$id_/compare/$range': typeof AuthenticatedResumesIdCompareRangeRoute
   '/_admin/admin/assistant/prompts/': typeof AdminAdminAssistantPromptsIndexRoute
   '/_authenticated/resumes/$id/edit/': typeof AuthenticatedResumesIdEditIndexRoute
   '/_authenticated/resumes/$id_/compare/': typeof AuthenticatedResumesIdCompareIndexRoute
@@ -326,7 +316,6 @@ export interface FileRouteTypes {
     | '/admin/assistant/prompts/$promptId'
     | '/resumes/$id/branch/$branchId'
     | '/resumes/$id/commit/$commitId'
-    | '/resumes/$id/compare/$range'
     | '/admin/assistant/prompts/'
     | '/resumes/$id/edit/'
     | '/resumes/$id/compare/'
@@ -354,7 +343,6 @@ export interface FileRouteTypes {
     | '/admin/assistant/prompts/$promptId'
     | '/resumes/$id/branch/$branchId'
     | '/resumes/$id/commit/$commitId'
-    | '/resumes/$id/compare/$range'
     | '/admin/assistant/prompts'
     | '/resumes/$id/edit'
     | '/resumes/$id/compare'
@@ -386,7 +374,6 @@ export interface FileRouteTypes {
     | '/_admin/admin/assistant/prompts/$promptId'
     | '/_authenticated/resumes/$id/branch/$branchId'
     | '/_authenticated/resumes/$id/commit/$commitId'
-    | '/_authenticated/resumes/$id_/compare/$range'
     | '/_admin/admin/assistant/prompts/'
     | '/_authenticated/resumes/$id/edit/'
     | '/_authenticated/resumes/$id_/compare/'
@@ -573,13 +560,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminAssistantPromptsIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/_authenticated/resumes/$id_/compare/$range': {
-      id: '/_authenticated/resumes/$id_/compare/$range'
-      path: '/resumes/$id/compare/$range'
-      fullPath: '/resumes/$id/compare/$range'
-      preLoaderRoute: typeof AuthenticatedResumesIdCompareRangeRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/resumes/$id/commit/$commitId': {
       id: '/_authenticated/resumes/$id/commit/$commitId'
       path: '/commit/$commitId'
@@ -687,7 +667,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEmployeesIndexRoute: typeof AuthenticatedEmployeesIndexRoute
   AuthenticatedResumesIndexRoute: typeof AuthenticatedResumesIndexRoute
   AuthenticatedEmployeesIdImportRoute: typeof AuthenticatedEmployeesIdImportRoute
-  AuthenticatedResumesIdCompareRangeRoute: typeof AuthenticatedResumesIdCompareRangeRoute
   AuthenticatedResumesIdCompareIndexRoute: typeof AuthenticatedResumesIdCompareIndexRoute
   AuthenticatedResumesIdHistoryIndexRoute: typeof AuthenticatedResumesIdHistoryIndexRoute
   AuthenticatedResumesIdVariantsIndexRoute: typeof AuthenticatedResumesIdVariantsIndexRoute
@@ -707,8 +686,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEmployeesIndexRoute: AuthenticatedEmployeesIndexRoute,
   AuthenticatedResumesIndexRoute: AuthenticatedResumesIndexRoute,
   AuthenticatedEmployeesIdImportRoute: AuthenticatedEmployeesIdImportRoute,
-  AuthenticatedResumesIdCompareRangeRoute:
-    AuthenticatedResumesIdCompareRangeRoute,
   AuthenticatedResumesIdCompareIndexRoute:
     AuthenticatedResumesIdCompareIndexRoute,
   AuthenticatedResumesIdHistoryIndexRoute:

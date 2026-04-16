@@ -138,11 +138,9 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
       mainBranch.headCommitId
     ) {
       await navigate({
-        to: "/resumes/$id/compare/$range",
-        params: {
-          id: resumeId,
-          range: `${mainBranch.name}...${selectedBranch.name}`,
-        },
+        to: "/resumes/$id/compare",
+        params: { id: resumeId },
+        search: { baseRef: mainBranch.name, compareRef: selectedBranch.name },
       });
       return;
     }
@@ -162,10 +160,12 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
 
   function handleCompareCommit(commitId: string) {
     const branchName = selectedBranch?.name;
-    const range = branchName ? `${commitId}...${branchName}` : commitId;
     void navigate({
-      to: "/resumes/$id/compare/$range",
-      params: { id: resumeId, range },
+      to: "/resumes/$id/compare",
+      params: { id: resumeId },
+      search: branchName
+        ? { baseRef: commitId, compareRef: branchName }
+        : { baseRef: commitId },
     });
   }
 

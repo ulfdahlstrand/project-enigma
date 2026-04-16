@@ -7,9 +7,9 @@
  * i18n: useTranslation("common")
  */
 import type { MouseEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useQueryState, parseAsStringEnum } from "nuqs";
+import { useQueryState, parseAsString, parseAsStringEnum } from "nuqs";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -33,34 +33,29 @@ import { CompareDiffGroupsCard } from "./CompareDiffGroupsCard";
 import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
 import {
   compareByCreatedAtDesc,
-  parseCompareRange,
   resolveCompareRefToCommitId,
   type CompareViewMode,
 } from "./compare-utils";
 
 export { parseCompareRange, resolveCompareRefToCommitId } from "./compare-utils";
 
-interface CompareVersionsPageProps {
-  forcedRange?: string | null;
-}
-
-export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageProps) {
+export function CompareVersionsPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
 
-  const parsedRange = parseCompareRange(forcedRange);
-  const [baseRef, setBaseRef] = useState(parsedRange.baseRef);
-  const [compareRef, setCompareRef] = useState(parsedRange.compareRef);
+  const [baseRef, setBaseRef] = useQueryState(
+    "baseRef",
+    parseAsString.withDefault(""),
+  );
+  const [compareRef, setCompareRef] = useQueryState(
+    "compareRef",
+    parseAsString.withDefault(""),
+  );
   const [viewMode, setViewMode] = useQueryState(
     "view",
     parseAsStringEnum<CompareViewMode>(["summary", "split"]).withDefault("summary"),
   );
-
-  useEffect(() => {
-    setBaseRef(parsedRange.baseRef);
-    setCompareRef(parsedRange.compareRef);
-  }, [parsedRange.baseRef, parsedRange.compareRef]);
 
   const { data: branches = [], isLoading: branchesLoading } = useResumeBranches(resumeId);
   const { data: graph, isLoading: graphLoading } = useResumeBranchHistoryGraph(resumeId);
@@ -95,35 +90,17 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
     isError: diffError,
   } = useCommitDiff(baseCommitId || null, headCommitId || null);
 
-  const navigateToRange = async (nextBaseRef: string, nextCompareRef: string) => {
-    if (nextBaseRef && nextCompareRef) {
-      await navigate({
-        to: "/resumes/$id/compare/$range",
-        params: { id: resumeId, range: `${nextBaseRef}...${nextCompareRef}` },
-      });
-      return;
-    }
-
-    await navigate({
-      to: "/resumes/$id/compare",
-      params: { id: resumeId },
-    });
-  };
-
   const handleSwap = () => {
-    setBaseRef(compareRef);
-    setCompareRef(baseRef);
-    void navigateToRange(compareRef, baseRef);
+    void setBaseRef(compareRef);
+    void setCompareRef(baseRef);
   };
 
   const handleBaseChange = (nextBaseRef: string) => {
-    setBaseRef(nextBaseRef);
-    void navigateToRange(nextBaseRef, compareRef);
+    void setBaseRef(nextBaseRef);
   };
 
   const handleCompareChange = (nextCompareRef: string) => {
-    setCompareRef(nextCompareRef);
-    void navigateToRange(baseRef, nextCompareRef);
+    void setCompareRef(nextCompareRef);
   };
 
   const handleArchiveBranch = (branchId: string, isArchived: boolean) => {
