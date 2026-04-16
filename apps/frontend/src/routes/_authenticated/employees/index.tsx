@@ -8,7 +8,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQueryState, parseAsString } from "nuqs";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -38,7 +39,10 @@ export const Route = createFileRoute("/_authenticated/employees/")({
 function EmployeePage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useQueryState(
+    "search",
+    parseAsString.withDefault("").withOptions({ throttleMs: 300, history: "replace" }),
+  );
 
   const { data: employees, isLoading, isError } = useQuery({
     queryKey: LIST_EMPLOYEES_QUERY_KEY,
@@ -87,7 +91,7 @@ function EmployeePage() {
               size="small"
               placeholder={t("employee.searchPlaceholder")}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => void setSearchQuery(e.target.value)}
               slotProps={{
                 input: {
                   startAdornment: (
