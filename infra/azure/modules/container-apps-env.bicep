@@ -7,8 +7,19 @@
 // dedicated /23 subnet (Microsoft.App/environments delegation).
 //
 // Zone redundancy is enabled only in prod to balance availability and cost.
+// NOTE: `zoneRedundant` is immutable on Microsoft.App/managedEnvironments —
+// flipping it requires deleting and recreating the environment (and every
+// container app inside it). Set it deliberately per environment and avoid
+// toggling in PRs expecting a hot change.
+//
 // Workload profile defaults to Consumption, which covers staging and prod
 // until a dedicated plan is required.
+//
+// TODO(#560 follow-up): switch log ingestion to identity-based auth once a
+// user-assigned identity is wired in. Today we pass the Log Analytics
+// primary shared key via `listKeys()` — functional, but the key lands in
+// deployment state. When we migrate, remove the `logAnalyticsWorkspace`
+// existing lookup and flip the workspace's `disableLocalAuth` to true.
 // =============================================================================
 
 @description('Resource name for the Container Apps environment.')

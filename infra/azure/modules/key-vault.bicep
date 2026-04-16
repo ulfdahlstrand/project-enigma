@@ -17,6 +17,13 @@
 // When `secretsUserPrincipalId` is supplied, the module grants that principal
 // the `Key Vault Secrets User` built-in role (read-only on secrets). Leave
 // it empty until the consuming managed identity exists.
+//
+// Network posture: `publicNetworkAccess` defaults to `Enabled` with an
+// `Allow` ACL so developer laptops and CI runners can reach the vault while
+// the infra stack is still being stood up. Prod should override to
+// `Disabled` + `Deny` once the private endpoint feature (tracked as
+// follow-up to #565) lands. Until then RBAC is the only gate — keep
+// principal assignments tight.
 // =============================================================================
 
 @description('Resource name for the Key Vault. Must be globally unique, 3–24 chars, alphanumeric with dashes.')
@@ -48,6 +55,20 @@ param enablePurgeProtection bool = false
 @description('Principal ID (object ID) of a managed identity to grant `Key Vault Secrets User` role. Leave empty to skip the role assignment.')
 param secretsUserPrincipalId string = ''
 
+@description('Whether the vault data plane is reachable from the public internet.')
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param publicNetworkAccess string = 'Enabled'
+
+@description('Default action for the vault firewall. Use `Deny` together with `virtualNetworkRules` once private endpoints/service endpoints land.')
+@allowed([
+  'Allow'
+  'Deny'
+])
+param networkAclsDefaultAction string = 'Allow'
+
 // Built-in role definition IDs are stable across tenants.
 // `Key Vault Secrets User` — read secret contents and metadata.
 var keyVaultSecretsUserRoleId = '4633458b-17de-41a5-8b4b-a57da4b7b2b5'
@@ -68,10 +89,10 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     // `null` in Bicep emits no property — required so staging vaults can be
     // recreated without waiting for the soft-delete window to expire.
     enablePurgeProtection: enablePurgeProtection ? true : null
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: publicNetworkAccess
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: 'Allow'
+      defaultAction: networkAclsDefaultAction
     }
   }
 }
