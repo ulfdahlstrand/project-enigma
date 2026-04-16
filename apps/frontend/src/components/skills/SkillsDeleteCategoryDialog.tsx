@@ -1,10 +1,5 @@
 import { useTranslation } from "react-i18next";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Typography from "@mui/material/Typography";
+import { ConfirmDeleteDialog } from "../dialogs/ConfirmDeleteDialog";
 
 interface SkillsDeleteCategoryDialogProps {
   open: boolean;
@@ -22,30 +17,16 @@ export function SkillsDeleteCategoryDialog({
   const { t } = useTranslation("common");
 
   return (
-    <Dialog
+    <ConfirmDeleteDialog
       open={open}
-      onClose={() => {
-        if (!isDeleting) {
-          onCancel();
-        }
-      }}
-    >
-      <DialogTitle>{t("resume.edit.skillDeleteCategoryDialog.title")}</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2">
-          {t("resume.edit.skillDeleteCategoryDialog.description")}
-        </Typography>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} disabled={isDeleting}>
-          {t("resume.edit.skillCancelButton")}
-        </Button>
-        <Button color="error" variant="contained" disabled={isDeleting} onClick={onConfirm}>
-          {isDeleting
-            ? t("resume.edit.skillDeleteCategoryDialog.deleting")
-            : t("resume.edit.skillDeleteCategoryDialog.confirm")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      title={t("resume.edit.skillDeleteCategoryDialog.title")}
+      message={t("resume.edit.skillDeleteCategoryDialog.description")}
+      confirmLabel={t("resume.edit.skillDeleteCategoryDialog.confirm")}
+      confirmingLabel={t("resume.edit.skillDeleteCategoryDialog.deleting")}
+      cancelLabel={t("resume.edit.skillCancelButton")}
+      isPending={isDeleting}
+      onClose={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }
