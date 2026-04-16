@@ -147,7 +147,7 @@ async function buildFromLive(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
-    language: content?.language ?? resume.branch_language ?? resume.language ?? "en",
+    language: resume.branch_language ?? content?.language ?? resume.language ?? "en",
     presentation: content?.presentation ?? [],
     summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],
@@ -200,7 +200,7 @@ async function buildFromSnapshot(
     branchId
       ? db
           .selectFrom("resume_branches")
-          .select(["id", "name"])
+          .select(["id", "name", "language"])
           .where("id", "=", branchId)
           .executeTakeFirst()
       : Promise.resolve(undefined),
@@ -227,7 +227,7 @@ async function buildFromSnapshot(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content.consultantTitle ?? "",
-    language: content.language,
+    language: branch?.language ?? content.language,
     presentation: content.presentation,
     summary: content.summary,
     highlightedItems: content.highlightedItems ?? [],
