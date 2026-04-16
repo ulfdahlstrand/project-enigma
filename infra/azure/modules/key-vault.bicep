@@ -84,10 +84,15 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       name: skuName
     }
     enableRbacAuthorization: true
-    enableSoftDelete: true
+    // `enableSoftDelete` is implicitly true on all new vaults since Feb 2025
+    // and the API rejects `false`, so we no longer set it explicitly.
     softDeleteRetentionInDays: softDeleteRetentionInDays
-    // `null` in Bicep emits no property — required so staging vaults can be
-    // recreated without waiting for the soft-delete window to expire.
+    // Footgun: simplifying to `enablePurgeProtection: enablePurgeProtection`
+    // would emit `enablePurgeProtection: false` on staging, which the API
+    // treats as a one-way-door enablement on some vault versions and bricks
+    // staging recreation for the full soft-delete window. Emitting `null`
+    // (= property omitted) is the only shape that lets staging be torn down
+    // and recreated freely during infra iteration. Keep this ternary.
     enablePurgeProtection: enablePurgeProtection ? true : null
     publicNetworkAccess: publicNetworkAccess
     networkAcls: {
