@@ -42,19 +42,20 @@ import { HistoryBranchGraph } from "./HistoryBranchGraph";
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   validateSearch: z.object({
     view: z.enum(["list", "tree"]).optional(),
+    branchId: z.string().optional(),
   }),
   component: HistoryIndexRoute,
 });
 
-export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string } = {}) {
+export function VersionHistoryPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mergeTargetBranchId, setMergeTargetBranchId] = useState("");
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
-  const { view: viewFromSearch } =
-    useSearch({ strict: false }) as { view?: "list" | "tree" };
+  const { view: viewFromSearch, branchId: branchIdFromSearch } =
+    useSearch({ strict: false }) as { view?: "list" | "tree"; branchId?: string };
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
@@ -65,7 +66,7 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
   const graphEdges = graph?.edges ?? [];
 
   const selectedBranch =
-    branches.find((branch) => branch.id === forcedBranchId) ??
+    branches.find((branch) => branch.id === branchIdFromSearch) ??
     branches.find((branch) => branch.isMain) ??
     branches[0];
   const mainBranch = branches.find((branch) => branch.isMain);
@@ -83,18 +84,10 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
   const canDeleteSelectedBranch = Boolean(selectedBranch && !selectedBranch.isMain);
 
   function navigateToHistory(branchId: string | undefined, view: "list" | "tree") {
-    if (branchId) {
-      return navigate({
-        to: "/resumes/$id/history/branch/$branchId",
-        params: { id: resumeId, branchId },
-        search: { view },
-      });
-    }
-
     return navigate({
       to: "/resumes/$id/history",
       params: { id: resumeId },
-      search: { view },
+      search: branchId ? { view, branchId } : { view },
     });
   }
 
@@ -376,3 +369,4 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
 function HistoryIndexRoute() {
   return <VersionHistoryPage />;
 }
+

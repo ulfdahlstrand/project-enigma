@@ -42,7 +42,7 @@ const mockDeleteResumeBranch = orpc.deleteResumeBranch as ReturnType<typeof vi.f
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
-let mockSearch: { view?: "list" | "tree" } = {};
+let mockSearch: { view?: "list" | "tree"; branchId?: string } = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
@@ -191,14 +191,12 @@ const GRAPH_WITH_MERGE = {
 // ---------------------------------------------------------------------------
 
 function renderPage(forcedBranchId?: string) {
+  if (forcedBranchId) {
+    mockSearch = { ...mockSearch, branchId: forcedBranchId };
+  }
   const queryClient = buildTestQueryClient();
   return {
-    ...renderWithProviders(
-      forcedBranchId
-        ? <VersionHistoryPage forcedBranchId={forcedBranchId} />
-        : <VersionHistoryPage />,
-      { queryClient },
-    ),
+    ...renderWithProviders(<VersionHistoryPage />, { queryClient }),
     queryClient,
   };
 }
@@ -339,9 +337,9 @@ describe("View controls", () => {
     await user.click(await screen.findByRole("button", { name: /Swedish Variant/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history/branch/$branchId",
-      params: { id: "resume-id-1", branchId: "branch-id-2" },
-      search: { view: "list" },
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { view: "list", branchId: "branch-id-2" },
     });
   });
 
@@ -436,9 +434,9 @@ describe("View controls", () => {
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.treeView }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history/branch/$branchId",
-      params: { id: "resume-id-1", branchId: "branch-id-1" },
-      search: { view: "tree" },
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { view: "tree", branchId: "branch-id-1" },
     });
   });
 });
@@ -568,9 +566,9 @@ describe("UX improvements", () => {
       action: "merge",
     });
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history/branch/$branchId",
-      params: { id: "resume-id-1", branchId: "branch-id-3" },
-      search: { view: "list" },
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { view: "list", branchId: "branch-id-3" },
     });
   });
 
@@ -587,9 +585,9 @@ describe("UX improvements", () => {
 
     expect(mockDeleteResumeBranch).toHaveBeenCalledWith({ branchId: "branch-id-2" });
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history/branch/$branchId",
-      params: { id: "resume-id-1", branchId: "branch-id-1" },
-      search: { view: "list" },
+      to: "/resumes/$id/history",
+      params: { id: "resume-id-1" },
+      search: { view: "list", branchId: "branch-id-1" },
     });
   });
 

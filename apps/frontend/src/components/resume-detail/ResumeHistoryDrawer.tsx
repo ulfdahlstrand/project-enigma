@@ -48,11 +48,11 @@ export function ResumeHistoryDrawer({
 
   function handleViewAllHistory() {
     onClose();
-    void navigate(
-      activeBranchId
-        ? { to: "/resumes/$id/history/branch/$branchId", params: { id: resumeId, branchId: activeBranchId } }
-        : { to: "/resumes/$id/history", params: { id: resumeId } },
-    );
+    void navigate({
+      to: "/resumes/$id/history",
+      params: { id: resumeId },
+      search: activeBranchId ? { branchId: activeBranchId } : {},
+    });
   }
 
   function handleCommitClick(commitId: string) {
