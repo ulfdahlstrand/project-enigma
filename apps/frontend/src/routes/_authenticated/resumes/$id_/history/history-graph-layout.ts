@@ -137,6 +137,7 @@ function deriveBranchAssignments(
       sourceBranchId: null,
       sourceCommitId: null,
       isStale: false,
+      isArchived: false,
       isSynthetic: true,
     });
   });

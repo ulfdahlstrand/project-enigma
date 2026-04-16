@@ -87,6 +87,7 @@ export async function createTranslationBranch(
     sourceBranchId: newBranch.source_branch_id,
     sourceCommitId: newBranch.source_commit_id,
     isStale: false,
+    isArchived: newBranch.is_archived,
   };
 }
 

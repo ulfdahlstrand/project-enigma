@@ -118,6 +118,7 @@ describe("createTranslationBranch", () => {
       sourceCommitId: HEAD_COMMIT_ID,
       language: "en",
       isStale: false,
+        isArchived: false,
     });
   });
 

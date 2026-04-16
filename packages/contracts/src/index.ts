@@ -278,6 +278,8 @@ export {
   promoteRevisionToVariantOutputSchema,
   markTranslationCaughtUpInputSchema,
   markTranslationCaughtUpOutputSchema,
+  archiveResumeBranchInputSchema,
+  archiveResumeBranchOutputSchema,
   diffStatusSchema,
   resumeBranchHistoryGraphSchema,
   resumeDiffScalarsSchema,
@@ -315,6 +317,8 @@ export type {
   PromoteRevisionToVariantOutput,
   MarkTranslationCaughtUpInput,
   MarkTranslationCaughtUpOutput,
+  ArchiveResumeBranchInput,
+  ArchiveResumeBranchOutput,
 } from "./resume-versions.js";
 
 export {

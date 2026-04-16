@@ -100,6 +100,7 @@ describe("markTranslationCaughtUp", () => {
       branchType: "translation",
       sourceCommitId: SOURCE_HEAD_COMMIT_ID,
       isStale: false,
+        isArchived: false,
     });
   });
 

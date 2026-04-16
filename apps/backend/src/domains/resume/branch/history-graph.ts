@@ -131,6 +131,7 @@ export async function getResumeBranchHistoryGraph(
         sourceBranchId: branch.source_branch_id,
         sourceCommitId: branch.source_commit_id,
         isStale,
+        isArchived: branch.is_archived,
       };
     }),
     commits: commits.map((commit) => ({

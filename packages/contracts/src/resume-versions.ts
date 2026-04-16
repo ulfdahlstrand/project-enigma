@@ -114,6 +114,8 @@ export const resumeBranchSchema = z.object({
    * source variant's head_commit_id. Always false for variants and revisions.
    */
   isStale: z.boolean(),
+  /** True when the branch has been soft-archived (hidden by default). */
+  isArchived: z.boolean(),
 });
 
 export type ResumeBranch = z.infer<typeof resumeBranchSchema>;
@@ -479,3 +481,20 @@ export const compareResumeCommitsOutputSchema = z.object({
 });
 
 export type CompareResumeCommitsOutput = z.infer<typeof compareResumeCommitsOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// archiveResumeBranch schemas
+//
+// Soft-archives (or unarchives) a branch. Archived branches are hidden by
+// default in the compare picker and branch list.
+// ---------------------------------------------------------------------------
+
+export const archiveResumeBranchInputSchema = z.object({
+  branchId: z.string().uuid(),
+  isArchived: z.boolean(),
+});
+
+export const archiveResumeBranchOutputSchema = resumeBranchSchema;
+
+export type ArchiveResumeBranchInput = z.infer<typeof archiveResumeBranchInputSchema>;
+export type ArchiveResumeBranchOutput = z.infer<typeof archiveResumeBranchOutputSchema>;

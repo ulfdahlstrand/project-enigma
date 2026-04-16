@@ -21,6 +21,7 @@ function branch(
     sourceBranchId: null,
     sourceCommitId: null,
     isStale: false,
+    isArchived: false,
     ...overrides,
   };
 }

@@ -120,6 +120,7 @@ describe("createRevisionBranch", () => {
       sourceCommitId: HEAD_COMMIT_ID,
       headCommitId: HEAD_COMMIT_ID,
       isStale: false,
+        isArchived: false,
     });
   });
 

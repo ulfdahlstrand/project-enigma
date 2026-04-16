@@ -237,6 +237,27 @@ export function usePromoteRevisionToVariant() {
   });
 }
 
+/** Soft-archives or unarchives a branch. */
+export function useArchiveResumeBranch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      branchId,
+      isArchived,
+    }: {
+      branchId: string;
+      isArchived: boolean;
+      resumeId: string;
+    }) => orpc.archiveResumeBranch({ branchId, isArchived }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+      ]);
+    },
+  });
+}
+
 /** Marks a translation as caught up to the source variant's current HEAD. */
 export function useMarkTranslationCaughtUp() {
   const queryClient = useQueryClient();

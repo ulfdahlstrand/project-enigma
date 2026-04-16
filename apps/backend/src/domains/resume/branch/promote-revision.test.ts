@@ -109,6 +109,7 @@ describe("promoteRevisionToVariant", () => {
       sourceCommitId: null,
       name: "Startup Focus",
       isStale: false,
+        isArchived: false,
     });
   });
 

@@ -127,6 +127,7 @@ export async function listResumeBranches(
       sourceBranchId: row.source_branch_id,
       sourceCommitId: row.source_commit_id,
       isStale,
+      isArchived: row.is_archived,
     };
   });
 }

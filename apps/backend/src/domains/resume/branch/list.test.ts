@@ -143,6 +143,7 @@ describe("listResumeBranches", () => {
       sourceBranchId: null,
       sourceCommitId: null,
       isStale: false,
+        isArchived: false,
     });
     expect(result[1]).toMatchObject({
       id: BRANCH_ID_2,
@@ -150,6 +151,7 @@ describe("listResumeBranches", () => {
       isMain: false,
       branchType: "variant",
       isStale: false,
+        isArchived: false,
     });
   });
 

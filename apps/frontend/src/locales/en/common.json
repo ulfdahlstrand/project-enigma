@@ -464,7 +464,24 @@
       "noSelectionHint": "Select two versions above to see what changed between them.",
       "branchGroupLabel": "Branches",
       "commitGroupLabel": "Commits",
-      "emptyBranch": "no head commit"
+      "emptyBranch": "no head commit",
+      "tree": {
+        "main": "main",
+        "archived": "archived",
+        "language": "lang",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "branchActions": "Branch actions",
+        "archive": "Archive branch",
+        "unarchive": "Unarchive branch",
+        "filterLabel": "Filter",
+        "filterVariant": "Variant",
+        "filterTranslation": "Translation",
+        "filterRevision": "Revision",
+        "filterArchived": "Show archived",
+        "revisions": "Revisions",
+        "noBranches": "No branches match the current filter"
+      }
     },
     "saveVersion": {
       "button": "Save version",
