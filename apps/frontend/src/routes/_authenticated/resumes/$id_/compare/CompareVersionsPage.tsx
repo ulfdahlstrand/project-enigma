@@ -9,6 +9,7 @@
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useQueryState, parseAsStringEnum } from "nuqs";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -51,7 +52,10 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
   const parsedRange = parseCompareRange(forcedRange);
   const [baseRef, setBaseRef] = useState(parsedRange.baseRef);
   const [compareRef, setCompareRef] = useState(parsedRange.compareRef);
-  const [viewMode, setViewMode] = useState<CompareViewMode>("summary");
+  const [viewMode, setViewMode] = useQueryState(
+    "view",
+    parseAsStringEnum<CompareViewMode>(["summary", "split"]).withDefault("summary"),
+  );
 
   useEffect(() => {
     setBaseRef(parsedRange.baseRef);
@@ -131,7 +135,7 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
     nextValue: CompareViewMode | null,
   ) => {
     if (nextValue) {
-      setViewMode(nextValue);
+      void setViewMode(nextValue);
     }
   };
 
