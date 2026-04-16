@@ -566,6 +566,26 @@
       "history": "History",
       "compare": "Compare",
       "variants": "Variants"
+    },
+    "commandBar": {
+      "openPalette": "Press ⌘K",
+      "unsaved": "Unsaved changes",
+      "synced": "Synced",
+      "action": {
+        "goEdit": "Go to Edit",
+        "goPreview": "Go to Preview",
+        "goHistory": "Go to History",
+        "goCompare": "Go to Compare",
+        "goVariants": "Go to Variants",
+        "save": "Save",
+        "toggleAi": "Toggle AI assistant",
+        "toggleSuggestions": "Toggle suggestions",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset zoom",
+        "createVariant": "Create variant",
+        "deleteResume": "Delete resume"
+      }
     }
   },
   "assignment": {

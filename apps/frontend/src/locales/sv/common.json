@@ -566,6 +566,26 @@
       "history": "Historik",
       "compare": "Jämför",
       "variants": "Varianter"
+    },
+    "commandBar": {
+      "openPalette": "Tryck ⌘K",
+      "unsaved": "Osparade ändringar",
+      "synced": "Synkroniserat",
+      "action": {
+        "goEdit": "Gå till Redigera",
+        "goPreview": "Gå till Förhandsgranska",
+        "goHistory": "Gå till Historik",
+        "goCompare": "Gå till Jämför",
+        "goVariants": "Gå till Varianter",
+        "save": "Spara",
+        "toggleAi": "Växla AI-assistent",
+        "toggleSuggestions": "Växla förslag",
+        "zoomIn": "Zooma in",
+        "zoomOut": "Zooma ut",
+        "zoomReset": "Återställ zoom",
+        "createVariant": "Skapa variant",
+        "deleteResume": "Ta bort meritförteckning"
+      }
     }
   },
   "assignment": {

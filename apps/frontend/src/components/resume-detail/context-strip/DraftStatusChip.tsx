@@ -7,6 +7,7 @@
  */
 import { useTranslation } from "react-i18next";
 import Typography from "@mui/material/Typography";
+import { isDraftSynced } from "../draft-status";
 
 interface DraftStatusChipProps {
   isEditRoute: boolean;
@@ -18,24 +19,6 @@ interface DraftStatusChipProps {
   summary: string | null;
   draftHighlightedItems: string;
   highlightedItemsText: string;
-}
-
-function hasUnsavedChanges({
-  draftTitle,
-  consultantTitle,
-  draftPresentation,
-  presentationText,
-  draftSummary,
-  summary,
-  draftHighlightedItems,
-  highlightedItemsText,
-}: Omit<DraftStatusChipProps, "isEditRoute">): boolean {
-  return (
-    draftTitle !== (consultantTitle ?? "") ||
-    draftPresentation !== presentationText ||
-    draftSummary !== (summary ?? "") ||
-    draftHighlightedItems !== highlightedItemsText
-  );
 }
 
 export function DraftStatusChip({
@@ -51,18 +34,17 @@ export function DraftStatusChip({
 }: DraftStatusChipProps) {
   const { t } = useTranslation("common");
 
-  const unsaved =
-    isEditRoute &&
-    hasUnsavedChanges({
-      draftTitle,
-      consultantTitle,
-      draftPresentation,
-      presentationText,
-      draftSummary,
-      summary,
-      draftHighlightedItems,
-      highlightedItemsText,
-    });
+  const unsaved = !isDraftSynced({
+    isEditRoute,
+    draftTitle,
+    consultantTitle,
+    draftPresentation,
+    presentationText,
+    draftSummary,
+    summary,
+    draftHighlightedItems,
+    highlightedItemsText,
+  });
 
   const label = unsaved
     ? t("resume.contextStrip.draftUnsaved")

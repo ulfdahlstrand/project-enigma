@@ -22,7 +22,7 @@ import { RevisionActionBanner } from "../../RevisionActionBanner";
 import { TranslationStaleBanner } from "../../TranslationStaleBanner";
 import { ResumeContextStrip } from "../context-strip/ResumeContextStrip";
 import { ResumeRevisionReviewDialog } from "../ResumeRevisionReviewDialog";
-import { ResumeStatusBar } from "../ResumeStatusBar";
+import { ResumeCommandBar } from "../command-bar/ResumeCommandBar";
 import type { ResumeDetailPageBundle } from "./useResumeDetailPage";
 
 interface ResumeDetailShellProps {
@@ -50,15 +50,7 @@ export function ResumeDetailShell({
     mergedCommitIds,
     resumeTitle,
     inlineRevision,
-    showSuggestionsPanel,
-    showChatPanel,
     isEditRoute,
-    zoom,
-    minZoom,
-    maxZoom,
-    setZoom,
-    handleToggleSuggestions,
-    handleToggleAssistant,
     createVariantDialogOpen,
     setCreateVariantDialogOpen,
     newVariantName,
@@ -161,20 +153,7 @@ export function ResumeDetailShell({
 
       {children}
 
-      <ResumeStatusBar
-        isEditing={isEditRoute}
-        resumeId={id}
-        activeBranchType={activeBranchType}
-        variantBranchId={variantBranchId}
-        zoom={zoom}
-        minZoom={minZoom}
-        maxZoom={maxZoom}
-        onZoomChange={setZoom}
-        isSuggestionsOpen={inlineRevision.isOpen && showSuggestionsPanel}
-        onToggleSuggestions={handleToggleSuggestions}
-        isAiOpen={inlineRevision.isOpen && showChatPanel && inlineRevision.stage !== "finalize"}
-        onToggleAi={handleToggleAssistant}
-      />
+      <ResumeCommandBar bundle={bundle} />
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
 
       <Dialog
