@@ -20,10 +20,10 @@
 //
 // Network posture: `publicNetworkAccess` defaults to `Enabled` with an
 // `Allow` ACL so developer laptops and CI runners can reach the vault while
-// the infra stack is still being stood up. Prod should override to
-// `Disabled` + `Deny` once the private endpoint feature (tracked as
-// follow-up to #565) lands. Until then RBAC is the only gate — keep
-// principal assignments tight.
+// the infra stack is still being stood up. `main.bicep` flips both to
+// `Disabled` + `Deny` for prod today; the fully-private posture via
+// private endpoints is tracked in #586. Until PE lands, RBAC is the only
+// identity gate — keep principal assignments tight.
 // =============================================================================
 
 @description('Resource name for the Key Vault. Must be globally unique, 3–24 chars, alphanumeric with dashes.')
@@ -84,10 +84,15 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       name: skuName
     }
     enableRbacAuthorization: true
-    enableSoftDelete: true
+    // `enableSoftDelete` is implicitly true on all new vaults since Feb 2025
+    // and the API rejects `false`, so we no longer set it explicitly.
     softDeleteRetentionInDays: softDeleteRetentionInDays
-    // `null` in Bicep emits no property — required so staging vaults can be
-    // recreated without waiting for the soft-delete window to expire.
+    // Footgun: simplifying to `enablePurgeProtection: enablePurgeProtection`
+    // would emit `enablePurgeProtection: false` on staging, which the API
+    // treats as a one-way-door enablement on some vault versions and bricks
+    // staging recreation for the full soft-delete window. Emitting `null`
+    // (= property omitted) is the only shape that lets staging be torn down
+    // and recreated freely during infra iteration. Keep this ternary.
     enablePurgeProtection: enablePurgeProtection ? true : null
     publicNetworkAccess: publicNetworkAccess
     networkAcls: {

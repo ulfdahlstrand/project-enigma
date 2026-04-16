@@ -10,6 +10,11 @@
 // for larger storage quota and retention-policy support. Retention policies
 // require Standard or Premium SKU, so the policy block is only emitted when
 // the SKU permits it.
+//
+// Network posture: `publicNetworkAccess` defaults to `Enabled` so CI and
+// developer laptops can push images. `main.bicep` flips it to `Disabled`
+// for prod; the private-endpoint wiring that makes pulls work over the
+// VNet lives in #586 (Premium SKU required).
 // =============================================================================
 
 @description('Resource name for the registry. ACR names are alphanumeric, 5–50 chars, globally unique.')
@@ -46,6 +51,11 @@ param publicNetworkAccess string = 'Enabled'
 @description('Enable soft-delete for tagged manifests. Only supported on Premium SKU — gives an undo window for accidental deletes.')
 param enableTaggedSoftDelete bool = false
 
+@description('Days a soft-deleted tagged manifest remains recoverable. Independent of untaggedRetentionDays — these policies have different risk profiles.')
+@minValue(1)
+@maxValue(90)
+param taggedSoftDeleteRetentionDays int = 30
+
 var retentionPolicySupported = sku != 'Basic'
 var taggedSoftDeleteSupported = sku == 'Premium' && enableTaggedSoftDelete
 
@@ -66,7 +76,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
       }
       softDeletePolicy: taggedSoftDeleteSupported ? {
         status: 'enabled'
-        retentionDays: untaggedRetentionDays
+        retentionDays: taggedSoftDeleteRetentionDays
       } : {
         status: 'disabled'
       }

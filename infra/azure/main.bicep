@@ -130,6 +130,11 @@ module acr 'modules/acr.bicep' = {
     tags: tags
     sku: acrSku
     untaggedRetentionDays: acrUntaggedRetentionDays
+    // Prod runs with the data plane closed to the internet — pulls happen
+    // over the Container Apps VNet via private endpoint (see #586). Staging
+    // stays Enabled so developer laptops and CI can push/pull directly
+    // until the PE wiring lands.
+    publicNetworkAccess: environmentName == 'prod' ? 'Disabled' : 'Enabled'
   }
 }
 
@@ -152,7 +157,7 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
     location: location
     tags: tags
     logAnalyticsWorkspaceName: logAnalytics.outputs.workspaceName
-    infrastructureSubnetId: vnet.outputs.subnetId
+    infrastructureSubnetId: vnet.outputs.containerAppsSubnetId
     zoneRedundant: environmentName == 'prod'
   }
 }
@@ -171,6 +176,13 @@ module keyVault 'modules/key-vault.bicep' = {
     enablePurgeProtection: environmentName == 'prod'
     // Populated in a later feature once the Container App managed identity exists.
     secretsUserPrincipalId: ''
+    // Prod closes the vault data plane to the internet and flips the firewall
+    // default to Deny — secrets are only reachable from the VNet-integrated
+    // Container App via private endpoint (tracked in #586). Staging stays
+    // open + Allow so developers and CI can seed placeholder secrets during
+    // infra iteration. RBAC remains the identity gate in both environments.
+    publicNetworkAccess: environmentName == 'prod' ? 'Disabled' : 'Enabled'
+    networkAclsDefaultAction: environmentName == 'prod' ? 'Deny' : 'Allow'
   }
 }
 

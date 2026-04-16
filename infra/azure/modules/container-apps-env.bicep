@@ -15,7 +15,7 @@
 // Workload profile defaults to Consumption, which covers staging and prod
 // until a dedicated plan is required.
 //
-// TODO(#560 follow-up): switch log ingestion to identity-based auth once a
+// TODO(#585): switch log ingestion to identity-based auth once a
 // user-assigned identity is wired in. Today we pass the Log Analytics
 // primary shared key via `listKeys()` — functional, but the key lands in
 // deployment state. When we migrate, remove the `logAnalyticsWorkspace`
