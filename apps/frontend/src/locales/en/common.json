@@ -275,7 +275,6 @@
       "assignmentTechnologies": "Technologies",
       "editMenuLabel": "Open edit options",
       "moreActionsLabel": "More actions",
-      "historyButton": "Open history",
       "createBranchFromCommitMenuItem": "Create branch from this commit",
       "deleteButton": "Delete",
       "deleteDialog": {

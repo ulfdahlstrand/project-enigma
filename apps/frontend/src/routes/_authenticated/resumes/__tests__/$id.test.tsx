@@ -37,11 +37,6 @@ vi.mock("../../../../components/RouterButton", () => ({
   }),
 }));
 
-const mockOpenHistory = vi.fn();
-vi.mock("../../../../contexts/ResumeLayoutContext", () => ({
-  useResumeLayoutContext: () => ({ openHistory: mockOpenHistory }),
-}));
-
 vi.mock("../../../../orpc-client", () => ({
   orpc: {
     listResumes: vi.fn(),
@@ -371,18 +366,7 @@ describe("Navigation", () => {
     expect(resumesLink).toBeInTheDocument();
   });
 
-  it("opens the history drawer when the history button is clicked", async () => {
-    const user = userEvent.setup();
-    mockOpenHistory.mockReset();
-    renderPage();
-    await screen.findAllByText(TEST_RESUME.title);
-
-    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.historyButton }));
-
-    expect(mockOpenHistory).toHaveBeenCalled();
-  });
-
-  it("opens a delete dialog and deletes the resume", async () => {
+it("opens a delete dialog and deletes the resume", async () => {
     const user = userEvent.setup();
     mockGetResume.mockResolvedValue(TEST_RESUME);
     renderPage();

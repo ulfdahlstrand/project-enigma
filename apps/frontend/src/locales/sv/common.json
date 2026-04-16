@@ -275,7 +275,6 @@
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
       "moreActionsLabel": "Fler åtgärder",
-      "historyButton": "Öppna historik",
       "createBranchFromCommitMenuItem": "Skapa branch från denna commit",
       "deleteButton": "Ta bort",
       "deleteDialog": {
