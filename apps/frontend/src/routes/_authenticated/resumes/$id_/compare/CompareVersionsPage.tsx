@@ -24,13 +24,12 @@ import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import {
   useResumeBranchHistoryGraph,
   useResumeBranches,
-  useArchiveResumeBranch,
 } from "../../../../../hooks/versioning";
 import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { CompareDiffGroupsCard } from "./CompareDiffGroupsCard";
-import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
+import { CompareRefChip } from "./CompareRefChip";
 import {
   compareByCreatedAtDesc,
   resolveCompareRefToCommitId,
@@ -59,7 +58,6 @@ export function CompareVersionsPage() {
 
   const { data: branches = [], isLoading: branchesLoading } = useResumeBranches(resumeId);
   const { data: graph, isLoading: graphLoading } = useResumeBranchHistoryGraph(resumeId);
-  const { mutate: archiveBranch } = useArchiveResumeBranch();
 
   const commitOptions = useMemo(
     () => [...(graph?.commits ?? [])].sort(compareByCreatedAtDesc),
@@ -101,10 +99,6 @@ export function CompareVersionsPage() {
 
   const handleCompareChange = (nextCompareRef: string) => {
     void setCompareRef(nextCompareRef);
-  };
-
-  const handleArchiveBranch = (branchId: string, isArchived: boolean) => {
-    archiveBranch({ branchId, isArchived, resumeId });
   };
 
   const handleViewModeChange = (
@@ -164,31 +158,35 @@ export function CompareVersionsPage() {
         {loading ? (
           <CircularProgress aria-label={t("resume.compare.loading")} />
         ) : (
-          <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <BranchTreePicker
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1.5,
+              mb: 3,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <CompareRefChip
               label={t("resume.compare.fromLabel")}
               value={baseRef}
-              branches={branches}
-              allCommits={commitOptions}
+              branches={branchOptions}
+              commits={commitOptions}
               onSelect={handleBaseChange}
-              onArchive={handleArchiveBranch}
             />
-            <Box sx={{ display: "flex", alignItems: "flex-end", pb: 0.5 }}>
-              <IconButton
-                onClick={handleSwap}
-                aria-label={t("resume.compare.swapButton")}
-                size="small"
-              >
-                <SwapHorizIcon />
-              </IconButton>
-            </Box>
-            <BranchTreePicker
+            <IconButton
+              onClick={handleSwap}
+              aria-label={t("resume.compare.swapButton")}
+              size="small"
+            >
+              <SwapHorizIcon fontSize="small" />
+            </IconButton>
+            <CompareRefChip
               label={t("resume.compare.toLabel")}
               value={compareRef}
-              branches={branches}
-              allCommits={commitOptions}
+              branches={branchOptions}
+              commits={commitOptions}
               onSelect={handleCompareChange}
-              onArchive={handleArchiveBranch}
             />
           </Box>
         )}

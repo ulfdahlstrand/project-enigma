@@ -275,7 +275,6 @@
       "assignmentTechnologies": "Teknologier",
       "editMenuLabel": "Öppna redigeringsalternativ",
       "moreActionsLabel": "Fler åtgärder",
-      "historyButton": "Öppna historik",
       "createBranchFromCommitMenuItem": "Skapa branch från denna commit",
       "deleteButton": "Ta bort",
       "deleteDialog": {
@@ -527,6 +526,12 @@
         "error": "Det gick inte att skapa revideringen. Försök igen."
       }
     },
+    "contextStrip": {
+      "draftSynced": "Synkroniserat",
+      "draftUnsaved": "Osparade ändringar",
+      "stale": "Inaktuell mot källan",
+      "revisionOf": "Revidering av {{source}}"
+    },
     "translationStaleBanner": {
       "title": "Översättningen är inaktuell",
       "description": "Källvarianten har nya ändringar. Uppdatera den här översättningen när du är redo.",
@@ -553,7 +558,34 @@
     },
     "countLabel_one": "1 meritförteckning",
     "countLabel_other": "{{count}} meritförteckningar",
-    "searchPlaceholder": "Sök meritförteckningar…"
+    "searchPlaceholder": "Sök meritförteckningar…",
+    "workbenchTabs": {
+      "edit": "Redigera",
+      "preview": "Förhandsgranska",
+      "history": "Historik",
+      "compare": "Jämför",
+      "variants": "Varianter"
+    },
+    "commandBar": {
+      "openPalette": "Tryck ⌘K",
+      "unsaved": "Osparade ändringar",
+      "synced": "Synkroniserat",
+      "action": {
+        "goEdit": "Gå till Redigera",
+        "goPreview": "Gå till Förhandsgranska",
+        "goHistory": "Gå till Historik",
+        "goCompare": "Gå till Jämför",
+        "goVariants": "Gå till Varianter",
+        "save": "Spara",
+        "toggleAi": "Växla AI-assistent",
+        "toggleSuggestions": "Växla förslag",
+        "zoomIn": "Zooma in",
+        "zoomOut": "Zooma ut",
+        "zoomReset": "Återställ zoom",
+        "createVariant": "Skapa variant",
+        "deleteResume": "Ta bort meritförteckning"
+      }
+    }
   },
   "assignment": {
     "pageTitle": "Uppdrag",

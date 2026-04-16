@@ -23,10 +23,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../contexts/ResumeLayoutContext", () => ({
-  useResumeLayoutContext: () => ({ openHistory: vi.fn() }),
-}));
-
 describe("ResumeDetailActions", () => {
   const baseProps = {
     resumeId: "resume-id-1",

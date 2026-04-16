@@ -275,7 +275,6 @@
       "assignmentTechnologies": "Technologies",
       "editMenuLabel": "Open edit options",
       "moreActionsLabel": "More actions",
-      "historyButton": "Open history",
       "createBranchFromCommitMenuItem": "Create branch from this commit",
       "deleteButton": "Delete",
       "deleteDialog": {
@@ -527,6 +526,12 @@
         "error": "Failed to create revision. Please try again."
       }
     },
+    "contextStrip": {
+      "draftSynced": "Synced",
+      "draftUnsaved": "Unsaved changes",
+      "stale": "Out of date with source",
+      "revisionOf": "Revision of {{source}}"
+    },
     "translationStaleBanner": {
       "title": "Translation is out of date",
       "description": "The source variant has new changes. Update this translation when you're ready.",
@@ -553,7 +558,34 @@
     },
     "countLabel_one": "1 resume",
     "countLabel_other": "{{count}} resumes",
-    "searchPlaceholder": "Search resumes…"
+    "searchPlaceholder": "Search resumes…",
+    "workbenchTabs": {
+      "edit": "Edit",
+      "preview": "Preview",
+      "history": "History",
+      "compare": "Compare",
+      "variants": "Variants"
+    },
+    "commandBar": {
+      "openPalette": "Press ⌘K",
+      "unsaved": "Unsaved changes",
+      "synced": "Synced",
+      "action": {
+        "goEdit": "Go to Edit",
+        "goPreview": "Go to Preview",
+        "goHistory": "Go to History",
+        "goCompare": "Go to Compare",
+        "goVariants": "Go to Variants",
+        "save": "Save",
+        "toggleAi": "Toggle AI assistant",
+        "toggleSuggestions": "Toggle suggestions",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset zoom",
+        "createVariant": "Create variant",
+        "deleteResume": "Delete resume"
+      }
+    }
   },
   "assignment": {
     "pageTitle": "Assignments",

@@ -2,7 +2,6 @@ import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
-import HistoryIcon from "@mui/icons-material/History";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import Alert from "@mui/material/Alert";
@@ -26,7 +25,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { ResumeSaveSplitButton } from "../ResumeSaveSplitButton";
 import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
-import { useResumeLayoutContext } from "../../contexts/ResumeLayoutContext";
 
 interface ResumeDetailActionsProps {
   resumeId: string;
@@ -190,7 +188,6 @@ export function ResumeDetailActions({
 }: ResumeDetailActionsProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const { openHistory } = useResumeLayoutContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moreActionsAnchorEl, setMoreActionsAnchorEl] = useState<HTMLElement | null>(null);
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
@@ -278,12 +275,6 @@ export function ResumeDetailActions({
           {!isSnapshotMode ? <EditButton onEdit={onEdit} /> : null}
         </>
       )}
-      <IconButton
-        aria-label={t("resume.detail.historyButton")}
-        onClick={openHistory}
-      >
-        <HistoryIcon />
-      </IconButton>
       <IconButton
         aria-label={t("resume.detail.moreActionsLabel")}
         onClick={(event) => setMoreActionsAnchorEl(event.currentTarget)}
