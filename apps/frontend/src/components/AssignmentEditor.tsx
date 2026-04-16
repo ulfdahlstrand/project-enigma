@@ -1,18 +1,15 @@
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
-import { toQuarter } from "@cv-tool/utils";
-import { createPortal } from "react-dom";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
-import Alert from "@mui/material/Alert";
 import EditIcon from "@mui/icons-material/Edit";
 import { orpc } from "../orpc-client";
+import {
+  AssignmentRowEditor,
+  type AssignmentDraftState,
+} from "./assignment-editor/AssignmentRowEditor";
+import { AssignmentRowView } from "./assignment-editor/AssignmentRowView";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,8 +34,6 @@ interface AssignmentEditorProps {
   assignments: AssignmentRow[];
   branchId: string;
   queryKey: readonly unknown[];
-  /** Canvas element (position:relative) used to portal AI FABs outside the paper. */
-  canvasEl?: HTMLElement | null;
   /** When set, immediately opens this assignment id in edit mode. */
   autoEditId?: string | null;
   /** Called after autoEditId has been consumed so the parent can clear it. */
@@ -55,23 +50,7 @@ function toDateInput(d: string | Date | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
-
-// ---------------------------------------------------------------------------
-// Draft state shape
-// ---------------------------------------------------------------------------
-
-interface DraftState {
-  role: string;
-  clientName: string;
-  startDate: string;
-  endDate: string;
-  isCurrent: boolean;
-  description: string;
-  technologies: string;
-  keywords: string;
-}
-
-function buildDraft(a: AssignmentRow): DraftState {
+function buildDraft(a: AssignmentRow): AssignmentDraftState {
   return {
     role: a.role,
     clientName: a.clientName,
@@ -88,17 +67,20 @@ function buildDraft(a: AssignmentRow): DraftState {
 // AssignmentEditor
 // ---------------------------------------------------------------------------
 
-export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, autoEditId, onAutoEditConsumed }: AssignmentEditorProps) {
+export function AssignmentEditor({
+  assignments,
+  branchId,
+  queryKey,
+  autoEditId,
+  onAutoEditConsumed,
+}: AssignmentEditorProps) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<DraftState | null>(null);
+  const [draft, setDraft] = useState<AssignmentDraftState | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
-  const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!autoEditId) return;
@@ -108,16 +90,6 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
     onAutoEditConsumed?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEditId, assignments]);
-
-  useLayoutEffect(() => {
-    if (!canvasEl) return;
-    const canvasTop = canvasEl.getBoundingClientRect().top;
-    const tops = new Map<string, number>();
-    cardRefs.current.forEach((el, id) => {
-      if (el) tops.set(id, el.getBoundingClientRect().top - canvasTop);
-    });
-    setCardTops(tops);
-  }, [canvasEl, assignments, editingId]);
 
   // Delete uses the assignment identity id (cascades across branches)
   const deleteMutation = useMutation({
@@ -193,241 +165,54 @@ export function AssignmentEditor({ assignments, branchId, queryKey, canvasEl, au
     updateMutation.mutate(patch);
   };
 
-  const setDraftField = <K extends keyof DraftState>(field: K, value: DraftState[K]) => {
+  const setDraftField = <K extends keyof AssignmentDraftState>(
+    field: K,
+    value: AssignmentDraftState[K],
+  ) => {
     setDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
   return (
-    <>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {assignments.map((a) => {
-          const isEditing = editingId === a.id;
-          const startQ = a.startDate ? toQuarter(a.startDate) : "";
-          const endQ = a.isCurrent
-            ? t("resume.detail.assignmentPresent")
-            : a.endDate
-            ? toQuarter(a.endDate)
-            : "—";
-          const paragraphs = a.description.split(/\n+/).filter(Boolean);
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      {assignments.map((a) => {
+        const isEditing = editingId === a.id;
 
-          return (
-            <Box
-              key={a.id}
-              ref={(el: HTMLDivElement | null) => { cardRefs.current.set(a.id, el); }}
-              sx={{ position: "relative" }}
-            >
-              {!isEditing && (
-                <IconButton
-                  size="small"
-                  onClick={() => startEdit(a)}
-                  aria-label={t("resume.edit.assignment.editButton")}
-                  sx={{ position: "absolute", top: 0, right: 0 }}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              )}
+        return (
+          <Box
+            key={a.id}
+            sx={{ position: "relative" }}
+          >
+            {!isEditing && (
+              <IconButton
+                size="small"
+                onClick={() => startEdit(a)}
+                aria-label={t("resume.edit.assignment.editButton")}
+                sx={{ position: "absolute", top: 0, right: 0 }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
 
-              {isEditing && draft ? (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                  <Box sx={{ display: "flex", gap: 1.5 }}>
-                    <TextField
-                      label={t("assignment.detail.roleLabel")}
-                      value={draft.role}
-                      onChange={(e) => setDraftField("role", e.target.value)}
-                      size="small"
-                      fullWidth
-                    />
-                    <TextField
-                      label={t("assignment.detail.clientNameLabel")}
-                      value={draft.clientName}
-                      onChange={(e) => setDraftField("clientName", e.target.value)}
-                      size="small"
-                      fullWidth
-                    />
-                  </Box>
-
-                  <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-                    <TextField
-                      label={t("assignment.detail.startDateLabel")}
-                      type="date"
-                      value={draft.startDate}
-                      onChange={(e) => setDraftField("startDate", e.target.value)}
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                      sx={{ flex: 1 }}
-                    />
-                    <TextField
-                      label={t("assignment.detail.endDateLabel")}
-                      type="date"
-                      value={draft.endDate}
-                      onChange={(e) => setDraftField("endDate", e.target.value)}
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                      disabled={draft.isCurrent}
-                      sx={{ flex: 1 }}
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={draft.isCurrent}
-                          onChange={(e) => {
-                            setDraftField("isCurrent", e.target.checked);
-                            if (e.target.checked) setDraftField("endDate", "");
-                          }}
-                          size="small"
-                        />
-                      }
-                      label={t("assignment.detail.isCurrentLabel")}
-                    />
-                  </Box>
-
-                  <TextField
-                    label={t("assignment.detail.descriptionLabel")}
-                    value={draft.description}
-                    onChange={(e) => setDraftField("description", e.target.value)}
-                    multiline
-                    minRows={4}
-                    size="small"
-                    fullWidth
-                  />
-
-                  <TextField
-                    label={t("assignment.detail.technologiesLabel")}
-                    value={draft.technologies}
-                    onChange={(e) => setDraftField("technologies", e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-
-                  <TextField
-                    label={t("assignment.new.keywordsLabel")}
-                    value={draft.keywords}
-                    onChange={(e) => setDraftField("keywords", e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-
-                  {saveError && (
-                    <Alert severity="error">{t("resume.edit.assignment.saveError")}</Alert>
-                  )}
-
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "space-between" }}>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        disabled={updateMutation.isPending || deleteMutation.isPending}
-                        onClick={() => handleSave(a)}
-                      >
-                        {updateMutation.isPending
-                          ? t("resume.edit.assignment.saving")
-                          : t("assignment.detail.saveButton")}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        disabled={updateMutation.isPending || deleteMutation.isPending}
-                        onClick={cancelEdit}
-                      >
-                        {t("resume.edit.assignment.cancelButton")}
-                      </Button>
-                    </Box>
-
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      {confirmDeleteId === a.assignmentId ? (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="error"
-                            size="small"
-                            disabled={deleteMutation.isPending}
-                            onClick={() => deleteMutation.mutate(a.assignmentId)}
-                          >
-                            {t("resume.edit.assignment.confirmDelete")}
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            disabled={deleteMutation.isPending}
-                            onClick={() => setConfirmDeleteId(null)}
-                          >
-                            {t("resume.edit.assignment.cancelButton")}
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          disabled={updateMutation.isPending || deleteMutation.isPending}
-                          onClick={() => setConfirmDeleteId(a.assignmentId)}
-                        >
-                          {t("resume.edit.assignment.deleteButton")}
-                        </Button>
-                      )}
-                    </Box>
-                  </Box>
-                </Box>
-              ) : (
-                <>
-                  <Typography
-                    variant="h6"
-                    component="h3"
-                    sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", mb: 0.5, pr: 5 }}
-                  >
-                    {a.role}
-                  </Typography>
-
-                  <Typography variant="subtitle1" sx={{ fontWeight: 400, mb: 1.5 }}>
-                    {a.clientName} {startQ} – {endQ}
-                  </Typography>
-
-                  {paragraphs.length > 0 && (
-                    <Box sx={{ mb: 2 }}>
-                      {paragraphs.map((para, i) => (
-                        <Typography
-                          key={i}
-                          variant="body2"
-                          sx={{ textAlign: "justify", mb: i < paragraphs.length - 1 ? 1.5 : 0 }}
-                        >
-                          {para}
-                        </Typography>
-                      ))}
-                    </Box>
-                  )}
-
-                  {(a.technologies.length > 0 || a.keywords) && (
-                    <Box sx={{ bgcolor: "action.hover", borderRadius: 0, px: 1.5, py: 1, mt: 2 }}>
-                      {a.technologies.length > 0 && (
-                        <Typography variant="body2" sx={{ mb: a.keywords ? 0.5 : 0 }}>
-                          <Box
-                            component="span"
-                            sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}
-                          >
-                            {t("resume.detail.assignmentTechnologies")}:{" "}
-                          </Box>
-                          {a.technologies.join(", ")}
-                        </Typography>
-                      )}
-                      {a.keywords && (
-                        <Typography variant="body2">
-                          <Box
-                            component="span"
-                            sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}
-                          >
-                            {t("assignment.new.keywordsLabel")}:{" "}
-                          </Box>
-                          {a.keywords}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
-          );
-        })}
-      </Box>
-    </>
+            {isEditing && draft ? (
+              <AssignmentRowEditor
+                draft={draft}
+                saveError={saveError}
+                confirmDelete={confirmDeleteId === a.assignmentId}
+                isSaving={updateMutation.isPending}
+                isDeleting={deleteMutation.isPending}
+                onDraftChange={setDraftField}
+                onSave={() => handleSave(a)}
+                onCancel={cancelEdit}
+                onStartConfirmDelete={() => setConfirmDeleteId(a.assignmentId)}
+                onCancelConfirmDelete={() => setConfirmDeleteId(null)}
+                onConfirmDelete={() => deleteMutation.mutate(a.assignmentId)}
+              />
+            ) : (
+              <AssignmentRowView assignment={a} />
+            )}
+          </Box>
+        );
+      })}
+    </Box>
   );
 }

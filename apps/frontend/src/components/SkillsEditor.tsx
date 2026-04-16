@@ -12,29 +12,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import IconButton from "@mui/material/IconButton";
-import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AddIcon from "@mui/icons-material/Add";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import EditIcon from "@mui/icons-material/Edit";
-import SortIcon from "@mui/icons-material/Sort";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
+import { SkillsCategoryBlock } from "./skills/SkillsCategoryBlock";
+import { SkillsDeleteCategoryDialog } from "./skills/SkillsDeleteCategoryDialog";
+import { SkillsListView } from "./skills/SkillsListView";
 
 export interface SkillRow {
   id: string;
@@ -93,405 +76,131 @@ export function SkillsEditor({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
 
-  // ---------------------------------------------------------------------------
-  // Render helpers
-  // ---------------------------------------------------------------------------
-
-  const renderSkill = (skill: SkillRow) => {
-    if (editor.editingSkillId === skill.id) {
-      return (
-        <Box key={skill.id} sx={{ display: "flex", gap: 0.5, alignItems: "center", width: "100%", mt: 0.5 }}>
-          <TextField
-            value={editor.editName}
-            onChange={(e) => editor.setEditName(e.target.value)}
-            size="small"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") editor.commitEdit(skill.id);
-              if (e.key === "Escape") editor.setEditingSkillId(null);
-            }}
-            sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5 } }}
-          />
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={() => editor.commitEdit(skill.id)}
-            disabled={!editor.editName.trim() || editor.updateMutation.isPending}
-          >
-            <CheckIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-          <IconButton size="small" onClick={() => editor.setEditingSkillId(null)}>
-            <CloseIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
-      );
-    }
-
-    return null;
+  const startEditingGroup = (groupId: string, currentName: string) => {
+    setEditingGroupId(groupId);
+    setEditGroupName(currentName);
   };
 
-  const renderAddSkillInput = (groupId: string) => (
-    <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", width: "100%", mt: 0.5 }}>
-      <TextField
-        value={editor.newSkillName}
-        onChange={(e) => editor.setNewSkillName(e.target.value)}
-        size="small"
-        autoFocus
-        placeholder={t("resume.edit.skillNameLabel")}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") editor.commitAddToCategory(groupId);
-          if (e.key === "Escape") editor.setAddingToCategory(null);
-        }}
-        sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5 } }}
-      />
-      <IconButton
-        size="small"
-        color="primary"
-        onClick={() => editor.commitAddToCategory(groupId)}
-        disabled={!editor.newSkillName.trim() || editor.addMutation.isPending}
-      >
-        <CheckIcon sx={{ fontSize: 16 }} />
-      </IconButton>
-      <IconButton size="small" onClick={() => editor.setAddingToCategory(null)}>
-        <CloseIcon sx={{ fontSize: 16 }} />
-      </IconButton>
-    </Box>
-  );
+  const stopEditingGroup = () => setEditingGroupId(null);
 
-  const renderCategoryBlock = (groupId: string, cat: string, catSkills: SkillRow[]) => {
-    const isSorting = sortingGroupId === groupId;
-    const isEditingGroup = editingGroupId === groupId;
+  const startSorting = (groupId: string, skillIds: string[]) => {
+    setSortingGroupId(groupId);
+    setDraftSkillOrder((current) => ({ ...current, [groupId]: skillIds }));
+  };
+
+  const stopSorting = (groupId: string) => {
+    setSortingGroupId(null);
+    setDraftSkillOrder((current) => {
+      const next = { ...current };
+      delete next[groupId];
+      return next;
+    });
+  };
+
+  const handleDrop = (groupId: string, targetSkillId: string, catSkills: SkillRow[]) => {
+    if (!draggingSkillId || draggingSkillId === targetSkillId) return;
+    const currentOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate) => candidate.id);
+    const nextOrder = currentOrder.filter((id) => id !== draggingSkillId);
+    const dropIndex = nextOrder.indexOf(targetSkillId);
+    nextOrder.splice(dropIndex, 0, draggingSkillId);
+    setDraftSkillOrder((current) => ({ ...current, [groupId]: nextOrder }));
+  };
+
+  const saveSkillOrder = (groupId: string, catSkills: SkillRow[]) => {
+    const nextOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate) => candidate.id);
+    void editor.reorderSkills(groupId, nextOrder).then(() => stopSorting(groupId));
+  };
+
+  const buildCategoryBlock = (groupId: string, categoryName: string, catSkills: SkillRow[]) => {
     const orderedSkillIds = draftSkillOrder[groupId] ?? catSkills.map((skill) => skill.id);
     const orderedSkills = orderedSkillIds
-      .map((skillId: string) => catSkills.find((skill: SkillRow) => skill.id === skillId))
+      .map((skillId) => catSkills.find((skill) => skill.id === skillId))
       .filter((skill): skill is SkillRow => Boolean(skill));
 
     return (
-    <Box key={groupId} sx={{ mb: 2.5, minWidth: 0 }}>
-      <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0, gap: 1 }}>
-        {isEditingGroup ? (
-          <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", flex: 1, minWidth: 0 }}>
-            <TextField
-              value={editGroupName}
-              onChange={(event) => setEditGroupName(event.target.value)}
-              size="small"
-              autoFocus
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && editGroupName.trim()) {
-                  editor.updateGroupMutation.mutate(
-                    { id: groupId, name: editGroupName.trim() },
-                    { onSuccess: () => setEditingGroupId(null) },
-                  );
-                }
-                if (event.key === "Escape") {
-                  setEditingGroupId(null);
-                }
-              }}
-              sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5, fontWeight: 700 } }}
-            />
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={() => {
-                if (!editGroupName.trim()) return;
-                editor.updateGroupMutation.mutate(
-                  { id: groupId, name: editGroupName.trim() },
-                  { onSuccess: () => setEditingGroupId(null) },
-                );
-              }}
-              disabled={!editGroupName.trim() || editor.updateGroupMutation.isPending}
-            >
-              <CheckIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-            <IconButton size="small" onClick={() => setEditingGroupId(null)}>
-              <CloseIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Box>
-        ) : (
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: 700, letterSpacing: "0.06em", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          >
-            {(cat || t("resume.detail.skillsHeading")).toUpperCase()}
-          </Typography>
-        )}
-        <Tooltip title={t("resume.edit.skillEditButton")}>
-          <IconButton
-            size="small"
-            onClick={() => {
-              setEditingGroupId(groupId);
-              setEditGroupName(cat);
-            }}
-            sx={{ p: 0.25 }}
-            disabled={isEditingGroup || isSorting}
-          >
-            <EditIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={t("resume.edit.skillAddButton")}>
-          <IconButton size="small" onClick={() => editor.startAddingToCategory(groupId)} sx={{ p: 0.25 }}>
-            <AddIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={t("resume.edit.skillDeleteCategoryButton")}>
-          <IconButton size="small" onClick={() => setConfirmDeleteGroupId(groupId)} sx={{ p: 0.25 }}>
-            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={t("resume.edit.skillsSortWithinGroupTooltip")}>
-          <IconButton
-            size="small"
-            onClick={() => {
-              if (isSorting) {
-                setSortingGroupId(null);
-                setDraftSkillOrder((current) => {
-                  const next = { ...current };
-                  delete next[groupId];
-                  return next;
-                });
-                return;
-              }
-
-              setSortingGroupId(groupId);
-              setDraftSkillOrder((current) => ({
-                ...current,
-                [groupId]: catSkills.map((skill) => skill.id),
-              }));
-            }}
-            sx={{ p: 0.25 }}
-          >
-            <SortIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      {isSorting ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          {orderedSkills.map((skill) => (
-            <Box
-              key={skill.id}
-              draggable
-              onDragStart={() => setDraggingSkillId(skill.id)}
-              onDragEnd={() => setDraggingSkillId(null)}
-              onDragOver={(event) => {
-                event.preventDefault();
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                if (!draggingSkillId || draggingSkillId === skill.id) return;
-
-                const currentOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate: SkillRow) => candidate.id);
-                const nextOrder = currentOrder.filter((id: string) => id !== draggingSkillId);
-                const dropIndex = nextOrder.indexOf(skill.id);
-                nextOrder.splice(dropIndex, 0, draggingSkillId);
-                setDraftSkillOrder((current: Record<string, string[]>) => ({ ...current, [groupId]: nextOrder }));
-              }}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1,
-                py: 0.75,
-                border: "1px solid",
-                borderColor: draggingSkillId === skill.id ? "primary.main" : "divider",
-                bgcolor: "background.paper",
-                cursor: "grab",
-              }}
-            >
-              <DragIndicatorIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {skill.name}
-              </Typography>
-            </Box>
-          ))}
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 0.5 }}>
-            <Button
-              size="small"
-              onClick={() => {
-                setSortingGroupId(null);
-                setDraftSkillOrder((current: Record<string, string[]>) => {
-                  const next = { ...current };
-                  delete next[groupId];
-                  return next;
-                });
-              }}
-            >
-              {t("resume.edit.skillCancelButton")}
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              disabled={editor.isReordering}
-              onClick={() => {
-                const nextOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate: SkillRow) => candidate.id);
-                void editor.reorderSkills(groupId, nextOrder).then(() => {
-                  setSortingGroupId(null);
-                  setDraftSkillOrder((current: Record<string, string[]>) => {
-                    const next = { ...current };
-                    delete next[groupId];
-                    return next;
-                  });
-                });
-              }}
-            >
-              {t("resume.edit.skillSaveButton")}
-            </Button>
-          </Box>
-        </Box>
-      ) : (
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-        {catSkills.map((skill) => {
-          if (editor.editingSkillId === skill.id) {
-            return renderSkill(skill);
-          }
-
-          return (
-            <Box key={skill.id} sx={{ display: "flex", alignItems: "center", maxWidth: "100%" }}>
-              <Chip
-                label={skill.name}
-                size="small"
-                variant="outlined"
-                onClick={() => editor.startEditing(skill)}
-                onDelete={() => editor.deleteMutation.mutate(skill.id)}
-                sx={{ fontSize: "0.75rem", cursor: "pointer", maxWidth: "100%" }}
-              />
-            </Box>
-          );
-        })}
-        {editor.addingToCategory === groupId && renderAddSkillInput(groupId)}
-      </Box>
-      )}
-    </Box>
-  );
+      <SkillsCategoryBlock
+        key={groupId}
+        groupId={groupId}
+        categoryName={categoryName}
+        catSkills={catSkills}
+        isSorting={sortingGroupId === groupId}
+        isEditingGroup={editingGroupId === groupId}
+        editingSkillId={editor.editingSkillId}
+        editName={editor.editName}
+        addingToCategory={editor.addingToCategory}
+        newSkillName={editor.newSkillName}
+        editGroupName={editGroupName}
+        draggingSkillId={draggingSkillId}
+        orderedSkills={orderedSkills}
+        isReordering={editor.isReordering}
+        updateMutation={editor.updateMutation}
+        addMutation={editor.addMutation}
+        deleteMutation={editor.deleteMutation}
+        updateGroupMutation={editor.updateGroupMutation}
+        onEditGroupNameChange={setEditGroupName}
+        onEditNameChange={editor.setEditName}
+        onNewSkillNameChange={editor.setNewSkillName}
+        onCommitEdit={editor.commitEdit}
+        onCancelEdit={() => editor.setEditingSkillId(null)}
+        onStartAddingToCategory={editor.startAddingToCategory}
+        onCancelAdding={() => editor.setAddingToCategory(null)}
+        onCommitAddToCategory={editor.commitAddToCategory}
+        onStartEditing={editor.startEditing}
+        onStartEditingGroup={startEditingGroup}
+        onStopEditingGroup={stopEditingGroup}
+        onStartConfirmDelete={setConfirmDeleteGroupId}
+        onStartSorting={startSorting}
+        onStopSorting={stopSorting}
+        onDragStart={setDraggingSkillId}
+        onDragEnd={() => setDraggingSkillId(null)}
+        onDrop={(targetSkillId) => handleDrop(groupId, targetSkillId, catSkills)}
+        onSaveSkillOrder={() => saveSkillOrder(groupId, catSkills)}
+      />
+    );
   };
-
-  // ---------------------------------------------------------------------------
-  // List view
-  // ---------------------------------------------------------------------------
 
   if (editor.view === "list") {
     return (
-      <Box sx={{ position: "relative" }}>
-        {editor.isReordering && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
-            <CircularProgress size={20} />
-          </Box>
-        )}
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {editor.sortedCategories.map((group, index) => (
-            <Box key={group.id}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1, opacity: editor.isReordering ? 0.5 : 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 24, color: "text.disabled" }}>
-                  {index + 1}
-                </Typography>
-                <Box sx={{ flex: 1, bgcolor: "action.hover", px: 1.5, py: 0.75, minWidth: 0 }}>
-                  {editingGroupId === group.id ? (
-                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-                      <TextField
-                        value={editGroupName}
-                        onChange={(event) => setEditGroupName(event.target.value)}
-                        size="small"
-                        autoFocus
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && editGroupName.trim()) {
-                            editor.updateGroupMutation.mutate(
-                              { id: group.id, name: editGroupName.trim() },
-                              { onSuccess: () => setEditingGroupId(null) },
-                            );
-                          }
-                          if (event.key === "Escape") {
-                            setEditingGroupId(null);
-                          }
-                        }}
-                        sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5, fontWeight: 700 } }}
-                      />
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        disabled={!editGroupName.trim() || editor.updateGroupMutation.isPending}
-                        onClick={() => {
-                          if (!editGroupName.trim()) return;
-                          editor.updateGroupMutation.mutate(
-                            { id: group.id, name: editGroupName.trim() },
-                            { onSuccess: () => setEditingGroupId(null) },
-                          );
-                        }}
-                      >
-                        <CheckIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setEditingGroupId(null)}>
-                        <CloseIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Box>
-                  ) : (
-                    <Typography
-                      variant="caption"
-                      sx={{ fontWeight: 700, letterSpacing: "0.06em", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {(group.category || t("resume.detail.skillsHeading")).toUpperCase()}
-                    </Typography>
-                  )}
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                  {t("resume.edit.skillsCount", { count: group.skills.length })}
-                </Typography>
-                <Box sx={{ display: "flex" }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setEditingGroupId(group.id);
-                      setEditGroupName(group.category);
-                    }}
-                    disabled={editor.isReordering || editingGroupId === group.id}
-                  >
-                    <EditIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => setConfirmDeleteGroupId(group.id)}
-                    disabled={editor.isReordering}
-                  >
-                    <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => void editor.handleMoveCategory(index, "up")}
-                    disabled={index === 0 || editor.isReordering}
-                  >
-                    <ArrowUpwardIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => void editor.handleMoveCategory(index, "down")}
-                    disabled={index === editor.sortedCategories.length - 1 || editor.isReordering}
-                  >
-                    <ArrowDownwardIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Box>
-              </Box>
-              {index < editor.sortedCategories.length - 1 && <Divider />}
-            </Box>
-          ))}
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <SkillsAddCategoryForm
-            adding={editor.addingCategory}
-            categoryName={editor.newCategoryName}
-            skillName={editor.newCategorySkillName}
-            isPending={editor.addMutation.isPending}
-            onCategoryNameChange={editor.setNewCategoryName}
-            onSkillNameChange={editor.setNewCategorySkillName}
-            onCommit={editor.commitAddCategory}
-            onCancel={() => editor.setAddingCategory(false)}
-            onStartAdding={() => { editor.setAddingCategory(true); editor.setNewCategoryName(""); editor.setNewCategorySkillName(""); }}
-          />
-        </Box>
-      </Box>
+      <>
+        <SkillsListView
+          sortedCategories={editor.sortedCategories}
+          isReordering={editor.isReordering}
+          editingGroupId={editingGroupId}
+          editGroupName={editGroupName}
+          updateGroupMutation={editor.updateGroupMutation}
+          addingCategory={editor.addingCategory}
+          newCategoryName={editor.newCategoryName}
+          newCategorySkillName={editor.newCategorySkillName}
+          addMutationPending={editor.addMutation.isPending}
+          onEditGroupNameChange={setEditGroupName}
+          onStartEditingGroup={startEditingGroup}
+          onStopEditingGroup={stopEditingGroup}
+          onStartConfirmDelete={setConfirmDeleteGroupId}
+          onMoveCategory={(index, direction) => void editor.handleMoveCategory(index, direction)}
+          onCategoryNameChange={editor.setNewCategoryName}
+          onSkillNameChange={editor.setNewCategorySkillName}
+          onCommitAddCategory={editor.commitAddCategory}
+          onCancelAddCategory={() => editor.setAddingCategory(false)}
+          onStartAddingCategory={() => {
+            editor.setAddingCategory(true);
+            editor.setNewCategoryName("");
+            editor.setNewCategorySkillName("");
+          }}
+        />
+        <SkillsDeleteCategoryDialog
+          open={confirmDeleteGroupId !== null}
+          isDeleting={editor.deleteGroupMutation.isPending}
+          onCancel={() => setConfirmDeleteGroupId(null)}
+          onConfirm={() => {
+            if (!confirmDeleteGroupId) return;
+            editor.deleteGroupMutation.mutate(confirmDeleteGroupId, {
+              onSuccess: () => setConfirmDeleteGroupId(null),
+            });
+          }}
+        />
+      </>
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Detail view
-  // ---------------------------------------------------------------------------
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -502,10 +211,14 @@ export function SkillsEditor({
       ) : (
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start", mb: 2 }}>
           <Box sx={{ minWidth: 0 }}>
-            {editor.leftCategories.map((group) => renderCategoryBlock(group.id, group.category, group.skills))}
+            {editor.leftCategories.map((group) =>
+              buildCategoryBlock(group.id, group.category, group.skills),
+            )}
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            {editor.rightCategories.map((group) => renderCategoryBlock(group.id, group.category, group.skills))}
+            {editor.rightCategories.map((group) =>
+              buildCategoryBlock(group.id, group.category, group.skills),
+            )}
           </Box>
         </Box>
       )}
@@ -518,46 +231,23 @@ export function SkillsEditor({
         onSkillNameChange={editor.setNewCategorySkillName}
         onCommit={editor.commitAddCategory}
         onCancel={() => editor.setAddingCategory(false)}
-        onStartAdding={() => { editor.setAddingCategory(true); editor.setNewCategoryName(""); editor.setNewCategorySkillName(""); }}
-      />
-      <Dialog
-        open={confirmDeleteGroupId !== null}
-        onClose={() => {
-          if (!editor.deleteGroupMutation.isPending) {
-            setConfirmDeleteGroupId(null);
-          }
+        onStartAdding={() => {
+          editor.setAddingCategory(true);
+          editor.setNewCategoryName("");
+          editor.setNewCategorySkillName("");
         }}
-      >
-        <DialogTitle>{t("resume.edit.skillDeleteCategoryDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            {t("resume.edit.skillDeleteCategoryDialog.description")}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setConfirmDeleteGroupId(null)}
-            disabled={editor.deleteGroupMutation.isPending}
-          >
-            {t("resume.edit.skillCancelButton")}
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            disabled={confirmDeleteGroupId === null || editor.deleteGroupMutation.isPending}
-            onClick={() => {
-              if (!confirmDeleteGroupId) return;
-              editor.deleteGroupMutation.mutate(confirmDeleteGroupId, {
-                onSuccess: () => setConfirmDeleteGroupId(null),
-              });
-            }}
-          >
-            {editor.deleteGroupMutation.isPending
-              ? t("resume.edit.skillDeleteCategoryDialog.deleting")
-              : t("resume.edit.skillDeleteCategoryDialog.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
+      <SkillsDeleteCategoryDialog
+        open={confirmDeleteGroupId !== null}
+        isDeleting={editor.deleteGroupMutation.isPending}
+        onCancel={() => setConfirmDeleteGroupId(null)}
+        onConfirm={() => {
+          if (!confirmDeleteGroupId) return;
+          editor.deleteGroupMutation.mutate(confirmDeleteGroupId, {
+            onSuccess: () => setConfirmDeleteGroupId(null),
+          });
+        }}
+      />
     </Box>
   );
 }

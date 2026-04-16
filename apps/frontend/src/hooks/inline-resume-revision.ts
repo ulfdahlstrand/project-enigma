@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,23 +8,29 @@ import {
   useCloseAIConversation,
 } from "./ai-assistant";
 import {
-  resumeCommitsKey,
   resumeBranchesKey,
   resumeBranchHistoryGraphKey,
   useFinaliseResumeBranch,
 } from "./versioning";
-import { orpc } from "../orpc-client";
 import {
   INLINE_REVISION_CHAT_WIDTH,
   INLINE_REVISION_CHECKLIST_WIDTH,
-  appendUniqueRevisionSuggestions,
-  reconcileRevisionSuggestionsWithCurrentContent,
 } from "../components/revision/inline-revision";
 import { type RevisionSuggestions, type RevisionWorkItems } from "../lib/ai-tools/registries/resume-tool-schemas";
 import { useAIAssistantContext } from "../lib/ai-assistant-context";
 import {
-  deriveWorkItemsFromConversation,
-} from "./inline-revision/conversation";
+  useInlineRevisionSaveVersion,
+  useInlineRevisionUpdateAssignment,
+} from "./inline-revision/mutations";
+import {
+  clearAssistantSessionParams,
+  writeAssistantSessionParams,
+} from "./inline-revision/url-session";
+import {
+  useReconcileSuggestionsAgainstContent,
+  useRestoreSuggestionsFromActionConversation,
+  useSyncSuggestionsFromAssistant,
+} from "./inline-revision/suggestion-sync";
 import type { UseInlineResumeRevisionParams } from "./inline-revision/types";
 import { useInlineRevisionAssistant } from "./inline-revision/use-inline-revision-assistant";
 import { useInlineRevisionReview } from "./inline-revision/review";
@@ -34,9 +40,7 @@ export function useInlineResumeRevision({
   isEditRoute,
   activeBranchId,
   activeBranchName,
-  activeBranchHeadCommitId,
   mainBranchId,
-  baseCommitId,
   resumeTitle,
   consultantTitle,
   presentation,
@@ -82,26 +86,8 @@ export function useInlineResumeRevision({
   const restoredBranchIdRef = useRef<string | null>(null);
   const openingRevisionBranchIdRef = useRef<string | null>(null);
 
-  const saveVersion = useMutation({
-    mutationFn: (input: Parameters<typeof orpc.saveResumeVersion>[0]) => orpc.saveResumeVersion(input),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
-        queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(resumeId) }),
-        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
-      ]);
-    },
-  });
-
-  const updateBranchAssignment = useMutation({
-    mutationFn: (input: Parameters<typeof orpc.updateBranchAssignment>[0]) => orpc.updateBranchAssignment(input),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(resumeId) }),
-        queryClient.invalidateQueries({ queryKey: ["getResume", resumeId] }),
-      ]);
-    },
-  });
+  const saveVersion = useInlineRevisionSaveVersion(resumeId);
+  const updateBranchAssignment = useInlineRevisionUpdateAssignment(resumeId);
 
   const finaliseInlineRevision = useFinaliseResumeBranch();
   const closeActionConversation = useCloseAIConversation(
@@ -235,15 +221,9 @@ export function useInlineResumeRevision({
     setSuggestions(null);
 
     // Persist session state in URL so page reloads restore the session
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void (navigate as any)({
-      search: (prev: Record<string, unknown>) => ({
-        ...prev,
-        assistant: "true",
-        sourceBranchId: activeBranchId,
-        sourceBranchName: activeBranchName,
-      }),
-      replace: true,
+    writeAssistantSessionParams(navigate, {
+      assistantBranchId: activeBranchId,
+      assistantBranchName: activeBranchName,
     });
 
     try {
@@ -258,22 +238,6 @@ export function useInlineResumeRevision({
     }
   };
 
-  const clearUrlSessionParams = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void (navigate as any)({
-      search: (prev: Record<string, unknown>) => {
-        const { assistant: _a, sourceBranchId: _s, sourceBranchName: _n, ...rest } = prev as {
-          assistant?: string;
-          sourceBranchId?: string;
-          sourceBranchName?: string;
-          [key: string]: unknown;
-        };
-        return rest;
-      },
-      replace: true,
-    });
-  };
-
   const reset = () => {
     setIsOpen(false);
     setIsFinalized(false);
@@ -283,13 +247,13 @@ export function useInlineResumeRevision({
     setSourceBranchId(null);
     setIsPreparingFinalize(false);
     closeAssistant();
-    clearUrlSessionParams();
+    clearAssistantSessionParams(navigate);
   };
 
   const close = () => {
     setIsOpen(false);
     hideDrawer();
-    clearUrlSessionParams();
+    clearAssistantSessionParams(navigate);
   };
 
   // Restore session from URL params when page loads with ?assistant=true
@@ -348,78 +312,33 @@ export function useInlineResumeRevision({
     activeBranchName,
   ]);
 
-  useEffect(() => {
-    if (!isOpen || suggestions || !existingActionConversation) {
-      return;
-    }
-
-    const restoredSuggestions = existingActionConversation.revisionSuggestions;
-    if (restoredSuggestions) {
-      setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, restoredSuggestions));
-    }
-  }, [existingActionConversation, isOpen, suggestions]);
-
-  useEffect(() => {
-    const currentConversation = activeAssistantConversation;
-    if (!isOpen || !currentConversation) {
-      return;
-    }
-
-    if (
-      activeBranchId &&
-      assistantEntityType === "resume-revision-actions" &&
-      assistantEntityId === activeBranchId
-    ) {
-      const derivedWorkItems = deriveWorkItemsFromConversation(currentConversation.messages);
-      if (derivedWorkItems) {
-        setWorkItems(derivedWorkItems);
-      }
-
-      const derivedSuggestions = currentConversation.revisionSuggestions;
-      if (derivedSuggestions) {
-        setSuggestions((prev) => appendUniqueRevisionSuggestions(prev, derivedSuggestions));
-      }
-    }
-  }, [
-    activeAssistantConversation,
-    activeBranchId,
-    assistantEntityId,
-    assistantEntityType,
+  useRestoreSuggestionsFromActionConversation({
     isOpen,
-  ]);
+    suggestions,
+    existingActionConversation,
+    setSuggestions,
+  });
 
-  useEffect(() => {
-    if (!suggestions) {
-      return;
-    }
+  useSyncSuggestionsFromAssistant({
+    isOpen,
+    activeBranchId,
+    assistantEntityType,
+    assistantEntityId,
+    activeAssistantConversation,
+    setWorkItems,
+    setSuggestions,
+  });
 
-    const reconciled = reconcileRevisionSuggestionsWithCurrentContent(suggestions, {
-      title: resumeTitle,
-      consultantTitle,
-      presentation,
-      summary,
-      skills,
-      assignments: sortedAssignments.map((assignment) => ({
-        id: assignment.assignmentId ?? assignment.id,
-        ...(assignment.description !== undefined ? { description: assignment.description } : {}),
-      })),
-    });
-
-    const didChange = JSON.stringify(reconciled) !== JSON.stringify(suggestions);
-    if (!didChange) {
-      return;
-    }
-
-    setSuggestions(reconciled);
-  }, [
+  useReconcileSuggestionsAgainstContent({
+    suggestions,
+    resumeTitle,
     consultantTitle,
     presentation,
-    resumeTitle,
+    summary,
     skills,
     sortedAssignments,
-    suggestions,
-    summary,
-  ]);
+    setSuggestions,
+  });
 
   useEffect(() => {
     const branchHandoff = activeAssistantConversation?.latestBranchHandoff;

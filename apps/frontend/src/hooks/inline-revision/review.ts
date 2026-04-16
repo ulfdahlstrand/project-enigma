@@ -32,7 +32,6 @@ import type {
 } from "./types";
 
 type Suggestion = RevisionSuggestions["suggestions"][number];
-type SuggestionsState = RevisionSuggestions | null;
 type ReviewDialog =
   | {
       kind: "skills";

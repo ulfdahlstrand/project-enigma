@@ -192,7 +192,6 @@ export function ResumeDocumentCanvas({
           isEditing={isEditing}
           isSnapshotMode={isSnapshotMode}
           canCreateAssignment={canCreateAssignment}
-          canvasEl={canvasRef.current}
           newAssignmentId={newAssignmentId}
           onAutoEditConsumed={onAutoEditConsumed}
           onCreateAssignment={onCreateAssignment}

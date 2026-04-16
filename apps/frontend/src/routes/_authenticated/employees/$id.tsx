@@ -18,28 +18,26 @@ import { z } from "zod";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import AddIcon from "@mui/icons-material/Add";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { orpc } from "../../../orpc-client";
-import { ConsultantAvatar } from "../../../components/ConsultantAvatar";
 import RouterButton from "../../../components/RouterButton";
 import { LIST_EMPLOYEES_QUERY_KEY } from "./new";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../components/feedback";
 import { prepareProfileImages } from "../../../lib/profile-image";
+import { EmployeeDeleteDialog } from "./detail/EmployeeDeleteDialog";
+import {
+  EmployeeEducationSection,
+  type EducationType,
+} from "./detail/EmployeeEducationSection";
+import {
+  EmployeeIdentityForm,
+  type EmployeeIdentityFormValues,
+} from "./detail/EmployeeIdentityForm";
 
 export const getEmployeeQueryKey = (id: string) =>
   ["getEmployee", id] as const;
@@ -55,9 +53,6 @@ const editEmployeeFormSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
 });
-
-type EditEmployeeFormValues = z.infer<typeof editEmployeeFormSchema>;
-type EducationType = "degree" | "certification" | "language";
 
 function EmployeeDetailPage() {
   const { t } = useTranslation("common");
@@ -93,7 +88,7 @@ function EmployeeDetailPage() {
     enabled: !!employee,
   });
 
-  const { register, handleSubmit, reset } = useForm<EditEmployeeFormValues>({
+  const { register, handleSubmit, reset } = useForm<EmployeeIdentityFormValues>({
     resolver: zodResolver(editEmployeeFormSchema),
     defaultValues: { name: "", email: "" },
   });
@@ -107,7 +102,7 @@ function EmployeeDetailPage() {
   }, [employee, reset]);
 
   const mutation = useMutation({
-    mutationFn: (input: EditEmployeeFormValues) =>
+    mutationFn: (input: EmployeeIdentityFormValues) =>
       orpc.updateEmployee({
         id,
         name: input.name.trim(),
@@ -159,6 +154,11 @@ function EmployeeDetailPage() {
     setProfileImageOriginalDataUrl(nextImages.originalDataUrl);
   };
 
+  const handleProfileImageRemoved = () => {
+    setProfileImageDataUrl(null);
+    setProfileImageOriginalDataUrl(null);
+  };
+
   if (isLoading) return <LoadingState label={t("employee.detail.loading")} />;
 
   if (isError) {
@@ -171,14 +171,22 @@ function EmployeeDetailPage() {
     return <ErrorState message={isNotFound ? t("employee.detail.notFound") : t("employee.detail.saveError")} />;
   }
 
-  const degrees = educationList.filter((e) => e.type === "degree");
-  const certifications = educationList.filter((e) => e.type === "certification");
-  const languages = educationList.filter((e) => e.type === "language");
-
-  const educationSections: { type: EducationType; label: string; entries: typeof educationList }[] = [
-    { type: "degree", label: t("employee.detail.educationDegrees"), entries: degrees },
-    { type: "certification", label: t("employee.detail.educationCertifications"), entries: certifications },
-    { type: "language", label: t("employee.detail.educationLanguages"), entries: languages },
+  const educationSections = [
+    {
+      type: "degree" as const,
+      label: t("employee.detail.educationDegrees"),
+      entries: educationList.filter((entry) => entry.type === "degree"),
+    },
+    {
+      type: "certification" as const,
+      label: t("employee.detail.educationCertifications"),
+      entries: educationList.filter((entry) => entry.type === "certification"),
+    },
+    {
+      type: "language" as const,
+      label: t("employee.detail.educationLanguages"),
+      entries: educationList.filter((entry) => entry.type === "language"),
+    },
   ];
 
   return (
@@ -221,177 +229,34 @@ function EmployeeDetailPage() {
           </Alert>
         )}
 
-        {/* Two-column body */}
         <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-        {/* Left — identity form */}
-        <Box sx={{ width: 560, flexShrink: 0 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, mb: 3 }}>
-            <ConsultantAvatar
-              name={employee?.name ?? ""}
-              profileImageDataUrl={profileImageDataUrl}
-              size={120}
-              fontSize={36}
-            />
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Button variant="outlined" component="label">
-                {t("employee.detail.uploadProfileImageButton")}
-                <input
-                  hidden
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    void handleProfileImageSelected(event.target.files?.[0] ?? null);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </Button>
-              <Button
-                variant="text"
-                color="inherit"
-                disabled={!profileImageDataUrl}
-                onClick={() => {
-                  setProfileImageDataUrl(null);
-                  setProfileImageOriginalDataUrl(null);
-                }}
-              >
-                {t("employee.detail.removeProfileImageButton")}
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            id="employee-identity-form"
-            component="form"
-            onSubmit={handleSubmit((data) => mutation.mutate(data))}
-            noValidate
-            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-          >
-            <TextField
-              label={t("employee.detail.nameLabel")}
-              {...register("name")}
-              required
-              fullWidth
-            />
-            <TextField
-              label={t("employee.detail.emailLabel")}
-              type="email"
-              {...register("email")}
-              required
-              fullWidth
-            />
-          </Box>
-        </Box>
+          <EmployeeIdentityForm
+            employeeName={employee?.name ?? ""}
+            profileImageDataUrl={profileImageDataUrl}
+            register={register}
+            handleSubmit={handleSubmit}
+            onSubmit={(values) => mutation.mutate(values)}
+            onProfileImageSelected={(file) => void handleProfileImageSelected(file)}
+            onProfileImageRemoved={handleProfileImageRemoved}
+          />
 
-        {/* Right — education */}
-        <Box sx={{ flex: 1, minWidth: 320 }}>
-          <Typography variant="h5" gutterBottom>
-            {t("employee.detail.educationHeading")}
-          </Typography>
-
-          {createEducationMutation.isError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {t("employee.detail.educationAddError")}
-            </Alert>
-          )}
-          {deleteEducationMutation.isError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {t("employee.detail.educationDeleteError")}
-            </Alert>
-          )}
-
-          {educationSections.map(({ type, label, entries }) => (
-            <Box key={type} sx={{ mb: 2.5 }}>
-              {/* Section header */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  bgcolor: "action.hover",
-                  px: 1.5,
-                  py: 0.75,
-                  mb: 1,
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{ fontWeight: 700, letterSpacing: "0.06em", flex: 1 }}
-                >
-                  {label.toUpperCase()}
-                </Typography>
-                <Tooltip title={t("employee.detail.educationAddButton")}>
-                  <IconButton
-                    size="small"
-                    sx={{ p: 0.25 }}
-                    onClick={() => {
-                      setAddingToSection(type);
-                      setNewEntryValue("");
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              {/* Entries */}
-              {entries.length === 0 && addingToSection !== type && (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 0.5 }}>
-                  {t("employee.detail.educationEmpty")}
-                </Typography>
-              )}
-              {entries.map((entry) => (
-                <Box
-                  key={entry.id}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    mb: 0.5,
-                    px: 0.5,
-                  }}
-                >
-                  <Typography variant="body2">{entry.value}</Typography>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    disabled={deleteEducationMutation.isPending}
-                    onClick={() => deleteEducationMutation.mutate(entry.id)}
-                    aria-label={t("employee.detail.educationDeleteButton")}
-                  >
-                    <CloseIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Box>
-              ))}
-
-              {/* Inline add input */}
-              {addingToSection === type && (
-                <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", mt: 0.5, px: 0.5 }}>
-                  <TextField
-                    value={newEntryValue}
-                    onChange={(e) => setNewEntryValue(e.target.value)}
-                    size="small"
-                    autoFocus
-                    fullWidth
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitAdd(type);
-                      if (e.key === "Escape") setAddingToSection(null);
-                    }}
-                    sx={{ "& .MuiInputBase-input": { fontSize: "0.875rem", py: 0.75 } }}
-                  />
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => commitAdd(type)}
-                    disabled={!newEntryValue.trim() || createEducationMutation.isPending}
-                  >
-                    <CheckIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setAddingToSection(null)}>
-                    <CloseIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Box>
-              )}
-            </Box>
-          ))}
-        </Box>
+          <EmployeeEducationSection
+            sections={educationSections}
+            addingToSection={addingToSection}
+            newEntryValue={newEntryValue}
+            createError={createEducationMutation.isError}
+            deleteError={deleteEducationMutation.isError}
+            isDeleting={deleteEducationMutation.isPending}
+            isCreating={createEducationMutation.isPending}
+            onStartAdd={(type) => {
+              setAddingToSection(type);
+              setNewEntryValue("");
+            }}
+            onCancelAdd={() => setAddingToSection(null)}
+            onCommitAdd={commitAdd}
+            onEntryValueChange={setNewEntryValue}
+            onDeleteEntry={(entryId) => deleteEducationMutation.mutate(entryId)}
+          />
         </Box>
       </PageContent>
       <Menu
@@ -408,32 +273,14 @@ function EmployeeDetailPage() {
           {t("employee.detail.deleteButton")}
         </MenuItem>
       </Menu>
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t("employee.detail.deleteDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mb: deleteEmployeeMutation.isError ? 2 : 0 }}>
-            {t("employee.detail.deleteDialog.message", { name: employee?.name ?? "" })}
-          </Typography>
-          {deleteEmployeeMutation.isError && (
-            <Alert severity="error">{t("employee.detail.deleteDialog.error")}</Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteEmployeeMutation.isPending}>
-            {t("employee.detail.deleteDialog.cancel")}
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => deleteEmployeeMutation.mutate()}
-            disabled={deleteEmployeeMutation.isPending}
-          >
-            {deleteEmployeeMutation.isPending
-              ? t("employee.detail.deleteDialog.deleting")
-              : t("employee.detail.deleteDialog.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <EmployeeDeleteDialog
+        open={deleteDialogOpen}
+        employeeName={employee?.name ?? ""}
+        isDeleting={deleteEmployeeMutation.isPending}
+        hasError={deleteEmployeeMutation.isError}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={() => deleteEmployeeMutation.mutate()}
+      />
     </>
   );
 }

@@ -69,7 +69,6 @@ export function VersionHistoryPage({ forcedBranchId }: { forcedBranchId?: string
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
   const selectedBranchId = selectedBranch?.id ?? mainBranchId;
   const selectedView = viewFromSearch ?? "list";
-  const selectedResumeCommitId = selectedBranch?.headCommitId ?? selectedBranch?.forkedFromCommitId ?? null;
   const commits = sortByCreatedAt(
     getReachableCommits(selectedBranch?.headCommitId ?? null, graphCommits, graphEdges),
   ).reverse();
