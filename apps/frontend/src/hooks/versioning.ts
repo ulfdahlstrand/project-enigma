@@ -258,16 +258,55 @@ export function useArchiveResumeBranch() {
   });
 }
 
-/** Marks a translation as caught up to the source variant's current HEAD. */
-export function useMarkTranslationCaughtUp() {
+/** Rebases a revision branch onto its source's current HEAD. */
+export function useRebaseRevisionOntoSource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
-      orpc.markTranslationCaughtUp({ branchId }),
+      orpc.rebaseRevisionOntoSource({ branchId }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
         queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+      ]);
+    },
+  });
+}
+
+/** Rebases a translation branch onto its source's current HEAD (destructive). */
+export function useRebaseTranslationOntoSource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
+      orpc.rebaseTranslationOntoSource({ branchId }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+      ]);
+    },
+  });
+}
+
+/** Reverts to a prior snapshot by creating a new commit with that content. */
+export function useRevertResumeCommit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      branchId,
+      targetCommitId,
+    }: {
+      branchId: string;
+      targetCommitId: string;
+      resumeId: string;
+    }) => orpc.revertCommit({ branchId, targetCommitId }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
+        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
       ]);
     },
   });

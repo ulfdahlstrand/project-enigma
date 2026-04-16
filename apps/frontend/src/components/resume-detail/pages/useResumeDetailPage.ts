@@ -168,7 +168,6 @@ export interface ResumeDetailPageBundle {
 
   // Handlers
   handleSave: () => Promise<void>;
-  handleSaveAsNewVersion: (name: string) => Promise<void>;
   handleCreateBranchFromCommit: (name: string) => Promise<void>;
   handleExitEditing: () => void;
   handleToggleAssistant: () => void;
@@ -550,7 +549,6 @@ export function useResumeDetailPage({
 
   const {
     handleSave,
-    handleSaveAsNewVersion,
     handleCreateBranchFromCommit,
     handleExitEditing,
     handleToggleAssistant,
@@ -560,7 +558,6 @@ export function useResumeDetailPage({
     isEditRoute,
     activeBranchId,
     mainBranchId,
-    baseCommitId,
     currentViewedCommitId,
     navigate,
     inlineRevision,
@@ -716,7 +713,6 @@ export function useResumeDetailPage({
     setDraftSummary,
     setDraftHighlightedItems,
     handleSave,
-    handleSaveAsNewVersion,
     handleCreateBranchFromCommit,
     handleExitEditing,
     handleToggleAssistant,

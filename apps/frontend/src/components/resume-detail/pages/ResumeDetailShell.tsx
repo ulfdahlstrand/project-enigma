@@ -141,13 +141,18 @@ export function ResumeDetailShell({
       />
 
       {activeBranchType === "translation" && activeBranch?.isStale && activeBranchId ? (
-        <TranslationStaleBanner resumeId={id} branchId={activeBranchId} />
+        <TranslationStaleBanner
+          resumeId={id}
+          branchId={activeBranchId}
+          sourceName={sourceBranch?.name ?? ""}
+        />
       ) : null}
       {activeBranchType === "revision" && activeBranchId ? (
         <RevisionActionBanner
           resumeId={id}
           branchId={activeBranchId}
           sourceName={sourceBranch?.name ?? ""}
+          sourceBranchId={sourceBranch?.id ?? null}
         />
       ) : null}
 

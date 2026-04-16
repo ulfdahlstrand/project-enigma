@@ -42,12 +42,10 @@ export function ResumePreviewPage({
     currentViewedCommitId,
     isEditRoute,
     isEditing,
-    baseCommitId,
     updateResumeIsPending,
     saveVersionIsPending,
     forkBranchIsPending,
     handleSave,
-    handleSaveAsNewVersion,
     handleCreateBranchFromCommit,
     handleExitEditing,
     onEdit,
@@ -111,11 +109,8 @@ export function ResumePreviewPage({
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
-      baseCommitId={baseCommitId}
       isSaving={updateResumeIsPending || saveVersionIsPending || forkBranchIsPending}
-      canSaveAsNewVersion={baseCommitId !== null}
       onSaveCurrent={() => void handleSave()}
-      onSaveAsNewVersion={handleSaveAsNewVersion}
       onCreateBranchFromCommit={handleCreateBranchFromCommit}
       onEdit={onEdit}
       onExitEdit={handleExitEditing}

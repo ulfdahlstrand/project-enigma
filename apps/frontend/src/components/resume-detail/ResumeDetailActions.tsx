@@ -23,7 +23,6 @@ import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
-import { ResumeSaveSplitButton } from "../ResumeSaveSplitButton";
 import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
 
 interface ResumeDetailActionsProps {
@@ -38,11 +37,8 @@ interface ResumeDetailActionsProps {
   isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
-  baseCommitId: string | null;
   isSaving: boolean;
-  canSaveAsNewVersion: boolean;
   onSaveCurrent: () => void;
-  onSaveAsNewVersion: (name: string) => Promise<void>;
   onCreateBranchFromCommit: (name: string) => Promise<void>;
   onEdit: () => void;
   onExitEdit: () => void;
@@ -174,11 +170,8 @@ export function ResumeDetailActions({
   isEditRoute,
   isSnapshotMode,
   isEditing,
-  baseCommitId,
   isSaving,
-  canSaveAsNewVersion,
   onSaveCurrent,
-  onSaveAsNewVersion,
   onCreateBranchFromCommit,
   onEdit,
   onExitEdit,
@@ -255,12 +248,13 @@ export function ResumeDetailActions({
     <>
       {isEditing ? (
         <>
-          <ResumeSaveSplitButton
-            onSaveCurrent={onSaveCurrent}
-            onSaveAsNewVersion={onSaveAsNewVersion}
-            canSaveAsNewVersion={canSaveAsNewVersion && baseCommitId !== null}
-            isPending={isSaving}
-          />
+          <Button
+            variant="contained"
+            onClick={onSaveCurrent}
+            disabled={isSaving}
+          >
+            {isSaving ? t("resume.edit.saving") : t("resume.edit.saveButton")}
+          </Button>
           <Button variant="outlined" onClick={onExitEdit}>
             {t("resume.edit.backButton")}
           </Button>
