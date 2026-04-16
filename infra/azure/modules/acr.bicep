@@ -10,6 +10,11 @@
 // for larger storage quota and retention-policy support. Retention policies
 // require Standard or Premium SKU, so the policy block is only emitted when
 // the SKU permits it.
+//
+// Network posture: `publicNetworkAccess` defaults to `Enabled` so CI and
+// developer laptops can push images. `main.bicep` flips it to `Disabled`
+// for prod; the private-endpoint wiring that makes pulls work over the
+// VNet lives in #586 (Premium SKU required).
 // =============================================================================
 
 @description('Resource name for the registry. ACR names are alphanumeric, 5–50 chars, globally unique.')

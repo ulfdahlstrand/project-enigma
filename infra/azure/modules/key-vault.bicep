@@ -20,10 +20,10 @@
 //
 // Network posture: `publicNetworkAccess` defaults to `Enabled` with an
 // `Allow` ACL so developer laptops and CI runners can reach the vault while
-// the infra stack is still being stood up. Prod should override to
-// `Disabled` + `Deny` once the private endpoint feature (tracked as
-// follow-up to #565) lands. Until then RBAC is the only gate — keep
-// principal assignments tight.
+// the infra stack is still being stood up. `main.bicep` flips both to
+// `Disabled` + `Deny` for prod today; the fully-private posture via
+// private endpoints is tracked in #586. Until PE lands, RBAC is the only
+// identity gate — keep principal assignments tight.
 // =============================================================================
 
 @description('Resource name for the Key Vault. Must be globally unique, 3–24 chars, alphanumeric with dashes.')
