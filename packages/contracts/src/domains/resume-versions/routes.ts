@@ -34,6 +34,12 @@ import {
   markTranslationCaughtUpOutputSchema,
   archiveResumeBranchInputSchema,
   archiveResumeBranchOutputSchema,
+  revertCommitInputSchema,
+  revertCommitOutputSchema,
+  rebaseTranslationOntoSourceInputSchema,
+  rebaseTranslationOntoSourceOutputSchema,
+  rebaseRevisionOntoSourceInputSchema,
+  rebaseRevisionOntoSourceOutputSchema,
 } from "../../resume-versions.js";
 
 export const resumeVersionRoutes = {
@@ -105,4 +111,16 @@ export const resumeVersionRoutes = {
     .route({ method: "PATCH", path: "/resume-branches/{branchId}/archive" })
     .input(archiveResumeBranchInputSchema)
     .output(archiveResumeBranchOutputSchema),
+  revertCommit: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/revert" })
+    .input(revertCommitInputSchema)
+    .output(revertCommitOutputSchema),
+  rebaseTranslationOntoSource: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/rebase-translation" })
+    .input(rebaseTranslationOntoSourceInputSchema)
+    .output(rebaseTranslationOntoSourceOutputSchema),
+  rebaseRevisionOntoSource: oc
+    .route({ method: "POST", path: "/resume-branches/{branchId}/rebase" })
+    .input(rebaseRevisionOntoSourceInputSchema)
+    .output(rebaseRevisionOntoSourceOutputSchema),
 };

@@ -498,3 +498,60 @@ export const archiveResumeBranchOutputSchema = resumeBranchSchema;
 
 export type ArchiveResumeBranchInput = z.infer<typeof archiveResumeBranchInputSchema>;
 export type ArchiveResumeBranchOutput = z.infer<typeof archiveResumeBranchOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// revertCommit schemas
+//
+// Creates a new commit on the branch with the content of an older commit,
+// effectively restoring the CV to that earlier snapshot without destroying
+// history. The target commit must be reachable from the branch's HEAD.
+// ---------------------------------------------------------------------------
+
+export const revertCommitInputSchema = z.object({
+  branchId: z.string().uuid(),
+  targetCommitId: z.string().uuid(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const revertCommitOutputSchema = resumeCommitSchema;
+
+export type RevertCommitInput = z.infer<typeof revertCommitInputSchema>;
+export type RevertCommitOutput = z.infer<typeof revertCommitOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// rebaseTranslationOntoSource schemas
+//
+// "Ful rebase" for translation branches: takes the source variant's current
+// HEAD content, creates a new commit on the translation branch with that
+// content, and advances source_commit_id. The translator must then re-translate
+// the changed sections. Destructive — overwrites translation content with
+// untranslated source content.
+// ---------------------------------------------------------------------------
+
+export const rebaseTranslationOntoSourceInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const rebaseTranslationOntoSourceOutputSchema = resumeBranchSchema;
+
+export type RebaseTranslationOntoSourceInput = z.infer<typeof rebaseTranslationOntoSourceInputSchema>;
+export type RebaseTranslationOntoSourceOutput = z.infer<typeof rebaseTranslationOntoSourceOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// rebaseRevisionOntoSource schemas
+//
+// When a source variant has advanced past a revision's fork point (blocking
+// merge), this operation creates a new commit on the revision that carries
+// the revision's changes forward — with the new source HEAD as its parent.
+// Updates source_commit_id so merge is unblocked.
+// ---------------------------------------------------------------------------
+
+export const rebaseRevisionOntoSourceInputSchema = z.object({
+  branchId: z.string().uuid(),
+});
+
+export const rebaseRevisionOntoSourceOutputSchema = resumeBranchSchema;
+
+export type RebaseRevisionOntoSourceInput = z.infer<typeof rebaseRevisionOntoSourceInputSchema>;
+export type RebaseRevisionOntoSourceOutput = z.infer<typeof rebaseRevisionOntoSourceOutputSchema>;

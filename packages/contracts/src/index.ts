@@ -280,6 +280,12 @@ export {
   markTranslationCaughtUpOutputSchema,
   archiveResumeBranchInputSchema,
   archiveResumeBranchOutputSchema,
+  revertCommitInputSchema,
+  revertCommitOutputSchema,
+  rebaseTranslationOntoSourceInputSchema,
+  rebaseTranslationOntoSourceOutputSchema,
+  rebaseRevisionOntoSourceInputSchema,
+  rebaseRevisionOntoSourceOutputSchema,
   diffStatusSchema,
   resumeBranchHistoryGraphSchema,
   resumeDiffScalarsSchema,
@@ -319,6 +325,12 @@ export type {
   MarkTranslationCaughtUpOutput,
   ArchiveResumeBranchInput,
   ArchiveResumeBranchOutput,
+  RevertCommitInput,
+  RevertCommitOutput,
+  RebaseTranslationOntoSourceInput,
+  RebaseTranslationOntoSourceOutput,
+  RebaseRevisionOntoSourceInput,
+  RebaseRevisionOntoSourceOutput,
 } from "./resume-versions.js";
 
 export {
