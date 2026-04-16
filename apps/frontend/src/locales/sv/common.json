@@ -527,6 +527,12 @@
         "error": "Det gick inte att skapa revideringen. Försök igen."
       }
     },
+    "contextStrip": {
+      "draftSynced": "Synkroniserat",
+      "draftUnsaved": "Osparade ändringar",
+      "stale": "Inaktuell mot källan",
+      "revisionOf": "Revidering av {{source}}"
+    },
     "translationStaleBanner": {
       "title": "Översättningen är inaktuell",
       "description": "Källvarianten har nya ändringar. Uppdatera den här översättningen när du är redo.",

@@ -527,6 +527,12 @@
         "error": "Failed to create revision. Please try again."
       }
     },
+    "contextStrip": {
+      "draftSynced": "Synced",
+      "draftUnsaved": "Unsaved changes",
+      "stale": "Out of date with source",
+      "revisionOf": "Revision of {{source}}"
+    },
     "translationStaleBanner": {
       "title": "Translation is out of date",
       "description": "The source variant has new changes. Update this translation when you're ready.",

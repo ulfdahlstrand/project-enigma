@@ -152,6 +152,10 @@ export interface ResumeDetailPageBundle {
   // Inline revision
   inlineRevision: ReturnType<typeof useInlineResumeRevision>;
 
+  // Derived text used for draft comparison
+  presentationText: string;
+  highlightedItemsText: string;
+
   // Draft state (raw + setters)
   draftTitle: string;
   draftPresentation: string;
@@ -701,6 +705,8 @@ export function useResumeDetailPage({
     newAssignmentId,
     onAutoEditConsumed: () => setNewAssignmentId(null),
     inlineRevision,
+    presentationText,
+    highlightedItemsText,
     draftTitle,
     draftPresentation,
     draftSummary,

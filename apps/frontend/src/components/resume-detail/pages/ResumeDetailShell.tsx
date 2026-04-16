@@ -1,13 +1,12 @@
 /**
  * ResumeDetailShell — outer chrome for the resume detail/edit pages.
  *
- * Renders the page header (with breadcrumbs + variant/language dropdowns),
- * stale/revision banners, the workspace slot, the status bar, the revision
- * review dialog, and the "create variant" dialog.
+ * Renders the page header (with breadcrumbs), the ResumeContextStrip (variant,
+ * language, draft-status, stale/revision pills), stale/revision action banners,
+ * the workspace slot, the status bar, the revision review dialog, and the
+ * "create variant" dialog.
  */
 import type { ReactNode } from "react";
-import type { useNavigate } from "@tanstack/react-router";
-import type { TFunction } from "i18next";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -18,12 +17,10 @@ import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-import { BreadcrumbDropdown } from "../../layout/BreadcrumbDropdown";
 import { PageHeader } from "../../layout/PageHeader";
-import { LanguageSwitcher } from "../../LanguageSwitcher";
 import { RevisionActionBanner } from "../../RevisionActionBanner";
 import { TranslationStaleBanner } from "../../TranslationStaleBanner";
-import { ResumeHeaderChip } from "../ResumeHeaderChip";
+import { ResumeContextStrip } from "../context-strip/ResumeContextStrip";
 import { ResumeRevisionReviewDialog } from "../ResumeRevisionReviewDialog";
 import { ResumeStatusBar } from "../ResumeStatusBar";
 import type { ResumeDetailPageBundle } from "./useResumeDetailPage";
@@ -43,12 +40,10 @@ export function ResumeDetailShell({
     id,
     t,
     navigate,
-    branches,
     resume,
     employee,
     activeBranchId,
     activeBranch,
-    activeBranchName,
     activeBranchType,
     variantBranchId,
     sourceBranch,
@@ -72,7 +67,24 @@ export function ResumeDetailShell({
     setCreateVariantError,
     handleCreateVariant,
     forkBranchIsPending,
+    language,
+    activeBranchName,
+    branches,
+    draftTitle,
+    consultantTitle,
+    draftPresentation,
+    presentationText,
+    draftSummary,
+    summary,
+    draftHighlightedItems,
+    highlightedItemsText,
   } = bundle;
+
+  function handleAddVariant() {
+    setNewVariantName("");
+    setCreateVariantError(null);
+    setCreateVariantDialogOpen(true);
+  }
 
   return (
     <Box
@@ -105,28 +117,37 @@ export function ResumeDetailShell({
             ),
             key: "resume-title",
           },
-          ...(variantBranchId !== null && branches
-            ? buildVariantBreadcrumbs({
-                t,
-                navigate,
-                branches,
-                variantBranchId,
-                activeBranchName,
-                activeBranchId,
-                mergedCommitIds,
-                resumeId: id,
-                onAddVariant: () => {
-                  setNewVariantName("");
-                  setCreateVariantError(null);
-                  setCreateVariantDialogOpen(true);
-                },
-              })
-            : []),
         ]}
         hideTitleBreadcrumb
-        chip={<ResumeHeaderChip revisionModeLabel={t("revision.inline.modeChip")} />}
         actions={toolbarActions}
       />
+
+      <ResumeContextStrip
+        bundle={{
+          id,
+          isEditRoute,
+          branches,
+          activeBranchId,
+          activeBranch,
+          activeBranchType,
+          activeBranchName,
+          variantBranchId,
+          sourceBranch,
+          mergedCommitIds,
+          language,
+          draftTitle,
+          consultantTitle,
+          draftPresentation,
+          presentationText,
+          draftSummary,
+          summary,
+          draftHighlightedItems,
+          highlightedItemsText,
+          navigate,
+        }}
+        onAddVariant={handleAddVariant}
+      />
+
       {activeBranchType === "translation" && activeBranch?.isStale && activeBranchId ? (
         <TranslationStaleBanner resumeId={id} branchId={activeBranchId} />
       ) : null}
@@ -137,7 +158,9 @@ export function ResumeDetailShell({
           sourceName={sourceBranch?.name ?? ""}
         />
       ) : null}
+
       {children}
+
       <ResumeStatusBar
         isEditing={isEditRoute}
         resumeId={id}
@@ -197,68 +220,4 @@ export function ResumeDetailShell({
       </Dialog>
     </Box>
   );
-}
-
-interface VariantBreadcrumbInput {
-  t: TFunction;
-  navigate: ReturnType<typeof useNavigate>;
-  branches: NonNullable<ResumeDetailPageBundle["branches"]>;
-  variantBranchId: string;
-  activeBranchName: string;
-  activeBranchId: string | null;
-  mergedCommitIds: Set<string>;
-  resumeId: string;
-  onAddVariant: () => void;
-}
-
-function buildVariantBreadcrumbs({
-  t,
-  navigate,
-  branches,
-  variantBranchId,
-  activeBranchName,
-  activeBranchId,
-  mergedCommitIds,
-  resumeId,
-  onAddVariant,
-}: VariantBreadcrumbInput) {
-  const variantOptions = branches
-    .filter((b) =>
-      b.branchType === "variant" &&
-      !b.isArchived &&
-      !(b.headCommitId !== null && !b.isMain && mergedCommitIds.has(b.headCommitId))
-    )
-    .map((b) => ({ id: b.id, label: b.name }));
-  const variantBranch = branches.find((b) => b.id === variantBranchId);
-  return [
-    {
-      key: "branch",
-      node: (
-        <BreadcrumbDropdown
-          label={variantBranch?.name ?? activeBranchName}
-          options={variantOptions}
-          onSelect={(branchId) =>
-            void navigate({
-              to: "/resumes/$id/branch/$branchId",
-              params: { id: resumeId, branchId },
-            })
-          }
-          isCurrentPage
-          addLabel={t("resume.variants.addVariant")}
-          onAdd={onAddVariant}
-        />
-      ),
-    },
-    {
-      key: "language",
-      node: (
-        <LanguageSwitcher
-          resumeId={resumeId}
-          currentBranchId={activeBranchId}
-          variantBranchId={variantBranchId}
-          ghost
-        />
-      ),
-    },
-  ];
 }
