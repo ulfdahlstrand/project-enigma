@@ -22,6 +22,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 
@@ -120,9 +121,11 @@ function renderEmployeePage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18nInstance}>
-        <EmployeePage />
-      </I18nextProvider>
+      <NuqsTestingAdapter>
+        <I18nextProvider i18n={i18nInstance}>
+          <EmployeePage />
+        </I18nextProvider>
+      </NuqsTestingAdapter>
     </QueryClientProvider>
   );
 }

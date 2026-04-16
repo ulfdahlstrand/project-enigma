@@ -62,8 +62,9 @@ describe("ResumeHistoryDrawer", () => {
     expect(onClose).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: "/resumes/$id/history/branch/$branchId",
-        params: { id: "resume-id-1", branchId: "branch-id-1" },
+        to: "/resumes/$id/history",
+        params: { id: "resume-id-1" },
+        search: { branchId: "branch-id-1" },
       }),
     );
   });

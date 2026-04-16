@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useRef, type ReactNode } from "react";
+import { createStore, useStore } from "zustand";
 import type { AIToolContext, AIToolRegistry } from "./ai-tools/types";
 
 // ---------------------------------------------------------------------------
@@ -51,7 +52,7 @@ interface AIAssistantState {
   onAccept: ((suggested: string) => void) | null;
 }
 
-interface AIAssistantContextValue extends AIAssistantState {
+interface AIAssistantActions {
   openAssistant: (options: OpenAssistantOptions) => void;
   /** Full reset — clears entity, conversation, and suggestions. */
   closeAssistant: () => void;
@@ -65,11 +66,14 @@ interface AIAssistantContextValue extends AIAssistantState {
   applyAndClose: (suggested: string) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
+export type AIAssistantStoreState = AIAssistantState & AIAssistantActions;
 
-const AIAssistantContext = createContext<AIAssistantContextValue | null>(null);
+// Back-compat: existing consumers import `AIAssistantContextValue` shape implicitly
+// via the return type of `useAIAssistantContext()`. The store state is the same shape.
+
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
 
 const INITIAL_STATE: AIAssistantState = {
   isOpen: false,
@@ -87,84 +91,102 @@ const INITIAL_STATE: AIAssistantState = {
   onAccept: null,
 };
 
+function createAIAssistantStore() {
+  return createStore<AIAssistantStoreState>((set, get) => ({
+    ...INITIAL_STATE,
+
+    openAssistant: (options) => {
+      set({
+        isOpen: true,
+        entityType: options.entityType,
+        entityId: options.entityId,
+        systemPrompt: options.systemPrompt,
+        conversationTitle: options.title ?? null,
+        kickoffMessage: options.kickoffMessage ?? null,
+        autoStartMessage: options.autoStartMessage ?? null,
+        originalContent: options.originalContent ?? null,
+        toolRegistry: options.toolRegistry ?? null,
+        toolContext: options.toolContext ?? null,
+        activeConversationId: options.initialConversationId ?? null,
+        pendingSuggestion: null,
+        onAccept: options.onAccept ?? null,
+      });
+    },
+
+    closeAssistant: () => {
+      set({ ...INITIAL_STATE });
+    },
+
+    hideDrawer: () => {
+      set({ isOpen: false });
+    },
+
+    setActiveConversationId: (id) => {
+      set({ activeConversationId: id });
+    },
+
+    selectHistoryConversation: (id) => {
+      set({ activeConversationId: id, conversationTitle: null });
+    },
+
+    setPendingSuggestion: (suggestion) => {
+      set({ pendingSuggestion: suggestion });
+    },
+
+    applyAndClose: (suggested) => {
+      const { onAccept } = get();
+      onAccept?.(suggested);
+      set({ ...INITIAL_STATE });
+    },
+  }));
+}
+
+type AIAssistantStore = ReturnType<typeof createAIAssistantStore>;
+
 // ---------------------------------------------------------------------------
-// Provider
+// Provider (store-in-context pattern preserves per-tree isolation for tests)
 // ---------------------------------------------------------------------------
+
+const AIAssistantStoreContext = createContext<AIAssistantStore | null>(null);
 
 export function AIAssistantProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AIAssistantState>(INITIAL_STATE);
-
-  const openAssistant = useCallback((options: OpenAssistantOptions) => {
-    setState({
-      isOpen: true,
-      entityType: options.entityType,
-      entityId: options.entityId,
-      systemPrompt: options.systemPrompt,
-      conversationTitle: options.title ?? null,
-      kickoffMessage: options.kickoffMessage ?? null,
-      autoStartMessage: options.autoStartMessage ?? null,
-      originalContent: options.originalContent ?? null,
-      toolRegistry: options.toolRegistry ?? null,
-      toolContext: options.toolContext ?? null,
-      activeConversationId: options.initialConversationId ?? null,
-      pendingSuggestion: null,
-      onAccept: options.onAccept ?? null,
-    });
-  }, []);
-
-  const closeAssistant = useCallback(() => {
-    setState(INITIAL_STATE);
-  }, []);
-
-  const hideDrawer = useCallback(() => {
-    setState((prev) => ({ ...prev, isOpen: false }));
-  }, []);
-
-  const setActiveConversationId = useCallback((id: string | null) => {
-    setState((prev) => ({ ...prev, activeConversationId: id }));
-  }, []);
-
-  const selectHistoryConversation = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, activeConversationId: id, conversationTitle: null }));
-  }, []);
-
-  const setPendingSuggestion = useCallback((suggestion: PendingSuggestion | null) => {
-    setState((prev) => ({ ...prev, pendingSuggestion: suggestion }));
-  }, []);
-
-  const applyAndClose = useCallback((suggested: string) => {
-    setState((prev) => {
-      prev.onAccept?.(suggested);
-      return INITIAL_STATE;
-    });
-  }, []);
-
+  const storeRef = useRef<AIAssistantStore | null>(null);
+  if (!storeRef.current) {
+    storeRef.current = createAIAssistantStore();
+  }
   return (
-    <AIAssistantContext.Provider
-      value={{
-        ...state,
-        openAssistant,
-        closeAssistant,
-        hideDrawer,
-        setActiveConversationId,
-        selectHistoryConversation,
-        setPendingSuggestion,
-        applyAndClose,
-      }}
-    >
+    <AIAssistantStoreContext.Provider value={storeRef.current}>
       {children}
-    </AIAssistantContext.Provider>
+    </AIAssistantStoreContext.Provider>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Hook
+// Hooks
 // ---------------------------------------------------------------------------
 
-export function useAIAssistantContext(): AIAssistantContextValue {
-  const ctx = useContext(AIAssistantContext);
-  if (!ctx) {
+function useAIAssistantStoreInstance(): AIAssistantStore {
+  const store = useContext(AIAssistantStoreContext);
+  if (!store) {
     throw new Error("useAIAssistantContext must be used within AIAssistantProvider");
   }
-  return ctx;
+  return store;
+}
+
+/**
+ * Subscribe to the entire AI assistant state + actions. Re-renders on any
+ * change. For finer-grained subscriptions, use `useAIAssistantStore(selector)`.
+ */
+export function useAIAssistantContext(): AIAssistantStoreState {
+  const store = useAIAssistantStoreInstance();
+  return useStore(store);
+}
+
+/**
+ * Subscribe to a specific slice of AI assistant state. Re-renders only when
+ * the selected value changes (referentially).
+ */
+export function useAIAssistantStore<T>(selector: (state: AIAssistantStoreState) => T): T {
+  const store = useAIAssistantStoreInstance();
+  return useStore(store, selector);
 }

@@ -9,7 +9,8 @@
  */
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQueryState, parseAsString } from "nuqs";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
@@ -47,7 +48,10 @@ function ResumeListPage() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { employeeId } = useSearch({ strict: false }) as { employeeId?: string };
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useQueryState(
+    "search",
+    parseAsString.withDefault("").withOptions({ throttleMs: 300, history: "replace" }),
+  );
 
   const {
     data: resumes,
@@ -113,7 +117,7 @@ function ResumeListPage() {
             size="small"
             placeholder={t("resume.searchPlaceholder")}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => void setSearchQuery(e.target.value)}
             slotProps={{
               input: {
                 startAdornment: (

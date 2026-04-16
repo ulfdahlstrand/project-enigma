@@ -48,11 +48,11 @@ export function ResumeHistoryDrawer({
 
   function handleViewAllHistory() {
     onClose();
-    void navigate(
-      activeBranchId
-        ? { to: "/resumes/$id/history/branch/$branchId", params: { id: resumeId, branchId: activeBranchId } }
-        : { to: "/resumes/$id/history", params: { id: resumeId } },
-    );
+    void navigate({
+      to: "/resumes/$id/history",
+      params: { id: resumeId },
+      search: activeBranchId ? { branchId: activeBranchId } : {},
+    });
   }
 
   function handleCommitClick(commitId: string) {
@@ -76,14 +76,14 @@ export function ResumeHistoryDrawer({
 
   function handleCompare() {
     if (!menuCommitId) return;
-    const range = activeBranchName
-      ? `${menuCommitId}...${activeBranchName}`
-      : menuCommitId;
     handleMenuClose();
     onClose();
     void navigate({
-      to: "/resumes/$id/compare/$range",
-      params: { id: resumeId, range },
+      to: "/resumes/$id/compare",
+      params: { id: resumeId },
+      search: activeBranchName
+        ? { baseRef: menuCommitId, compareRef: activeBranchName }
+        : { baseRef: menuCommitId },
     });
   }
 

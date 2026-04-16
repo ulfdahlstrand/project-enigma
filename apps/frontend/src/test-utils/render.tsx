@@ -26,6 +26,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { theme } from "../lib/theme";
 import enCommon from "../locales/en/common.json";
 import { AIAssistantProvider } from "../lib/ai-assistant-context";
@@ -91,9 +92,11 @@ export function renderWithProviders(
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <QueryClientProvider client={queryClient}>
-          <AIAssistantProvider>
-            <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
-          </AIAssistantProvider>
+          <NuqsTestingAdapter>
+            <AIAssistantProvider>
+              <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
+            </AIAssistantProvider>
+          </NuqsTestingAdapter>
         </QueryClientProvider>
       </ThemeProvider>
     );
