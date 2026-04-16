@@ -157,7 +157,7 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
     location: location
     tags: tags
     logAnalyticsWorkspaceName: logAnalytics.outputs.workspaceName
-    infrastructureSubnetId: vnet.outputs.subnetId
+    infrastructureSubnetId: vnet.outputs.containerAppsSubnetId
     zoneRedundant: environmentName == 'prod'
   }
 }

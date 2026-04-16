@@ -97,10 +97,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
 
 output vnetId string = vnet.id
 output vnetName string = vnet.name
-// Preserve the Container Apps subnet as the default-named output so existing
-// consumers keep working; name-addressed outputs expose the other subnets.
-output subnetId string = vnet.properties.subnets[0].id
-output subnetName string = vnet.properties.subnets[0].name
 output containerAppsSubnetId string = vnet.properties.subnets[0].id
+output containerAppsSubnetName string = vnet.properties.subnets[0].name
 output postgresSubnetId string = vnet.properties.subnets[1].id
 output privateEndpointSubnetId string = vnet.properties.subnets[2].id
