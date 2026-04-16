@@ -30,7 +30,10 @@ import {
   useDeleteResumeBranch,
   useFinaliseResumeBranch,
   useResumeBranchHistoryGraph,
+  useRevertResumeCommit,
 } from "../../../../../hooks/versioning";
+import { RevertDialog } from "../../../../../components/RevertDialog";
+import type { GraphCommit } from "./history-graph-utils";
 import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
@@ -59,7 +62,10 @@ export function VersionHistoryPage() {
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
+  const revertCommit = useRevertResumeCommit();
   const { mutate: archiveBranch } = useArchiveResumeBranch();
+  const [revertTarget, setRevertTarget] = useState<GraphCommit | null>(null);
+  const [revertError, setRevertError] = useState<string | null>(null);
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
@@ -149,6 +155,26 @@ export function VersionHistoryPage() {
       to: "/resumes/$id/commit/$commitId",
       params: { id: resumeId, commitId },
     });
+  }
+
+  function handleRequestRevert(commit: GraphCommit) {
+    setRevertError(null);
+    setRevertTarget(commit);
+  }
+
+  async function handleConfirmRevert() {
+    if (!revertTarget || !selectedBranchId) return;
+    setRevertError(null);
+    try {
+      await revertCommit.mutateAsync({
+        branchId: selectedBranchId,
+        targetCommitId: revertTarget.id,
+        resumeId,
+      });
+      setRevertTarget(null);
+    } catch {
+      setRevertError(t("resume.revertDialog.error"));
+    }
   }
 
   function handleCompareCommit(commitId: string) {
@@ -274,6 +300,7 @@ export function VersionHistoryPage() {
             selectedBranch={selectedBranch}
             onViewCommit={handleViewCommit}
             onCompare={handleCompareCommit}
+            onRevert={handleRequestRevert}
           />
         )}
 
@@ -361,6 +388,21 @@ export function VersionHistoryPage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <RevertDialog
+          open={revertTarget !== null}
+          targetLabel={
+            revertTarget
+              ? revertTarget.title || t("resume.history.defaultMessage")
+              : ""
+          }
+          isPending={revertCommit.isPending}
+          error={revertError}
+          onClose={() => {
+            if (!revertCommit.isPending) setRevertTarget(null);
+          }}
+          onConfirm={handleConfirmRevert}
+        />
       </PageContent>
     </>
   );

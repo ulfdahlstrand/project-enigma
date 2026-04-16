@@ -27,9 +27,16 @@ interface HistoryCommitTableProps {
   selectedBranch: GraphBranch | undefined;
   onViewCommit: (commitId: string) => void;
   onCompare?: (commitId: string) => void;
+  onRevert?: (commit: GraphCommit) => void;
 }
 
-export function HistoryCommitTable({ commits, selectedBranch, onViewCommit, onCompare }: HistoryCommitTableProps) {
+export function HistoryCommitTable({
+  commits,
+  selectedBranch,
+  onViewCommit,
+  onCompare,
+  onRevert,
+}: HistoryCommitTableProps) {
   const { t } = useTranslation("common");
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
@@ -131,6 +138,17 @@ export function HistoryCommitTable({ commits, selectedBranch, onViewCommit, onCo
               }}
             >
               {t("resume.history.compareWithCurrentMenuItem")}
+            </MenuItem>
+          )}
+          {onRevert && (
+            <MenuItem
+              onClick={() => {
+                const commit = commits.find((c) => c.id === menuCommitId);
+                if (commit) onRevert(commit);
+                closeMenu();
+              }}
+            >
+              {t("resume.history.restoreSnapshotMenuItem")}
             </MenuItem>
           )}
         </Menu>

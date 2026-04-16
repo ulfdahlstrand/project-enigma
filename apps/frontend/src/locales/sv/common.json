@@ -375,6 +375,7 @@
       "viewCommitMenuItem": "Visa denna ögonblicksbild",
       "commitDetailMenuItem": "Visa detaljer",
       "compareWithCurrentMenuItem": "Jämför med aktuell version",
+      "restoreSnapshotMenuItem": "Återställ till denna snapshot",
       "commitActionsButton": "Ögonblicksbildsåtgärder",
       "noDescription": "Ingen beskrivning.",
       "headBadge": "Aktuell",
@@ -535,6 +536,38 @@
       "markCaughtUpButton": "Markera som uppdaterad",
       "markingCaughtUp": "Uppdaterar…",
       "error": "Det gick inte att markera som uppdaterad. Försök igen."
+    },
+    "syncDialog": {
+      "revision": {
+        "title": "Synka utkast mot källan",
+        "step1Heading": "Granska inkommande ändringar",
+        "step1Description": "Hämta in senaste ändringar från \"{{sourceName}}\" så att du kan acceptera utkastet.",
+        "step2Heading": "Bekräfta & snapshot",
+        "step2Description": "En ny snapshot skapas på utkastet som för dina ändringar vidare.",
+        "confirmButton": "Synka nu"
+      },
+      "translation": {
+        "title": "Synka översättning mot källan",
+        "step1Heading": "Granska inkommande ändringar",
+        "step1Description": "Källan har ändrats. Synk kopierar in senaste källinnehållet i översättningen — du behöver översätta de ändrade avsnitten igen.",
+        "step2Heading": "Bekräfta & snapshot",
+        "step2Description": "En ny snapshot skapas med källans innehåll. Översatta fält kan behöva granskas.",
+        "confirmButton": "Synka nu"
+      },
+      "back": "Tillbaka",
+      "next": "Nästa",
+      "cancel": "Avbryt",
+      "syncing": "Synkar…",
+      "error": "Synkning misslyckades. Försök igen."
+    },
+    "revertDialog": {
+      "title": "Återställ till tidigare snapshot?",
+      "description": "En ny snapshot skapas med innehållet från den valda snapshoten. Historik bevaras.",
+      "targetLabel": "Återställer från:",
+      "cancel": "Avbryt",
+      "confirm": "Återställ",
+      "reverting": "Återställer…",
+      "error": "Det gick inte att återställa. Försök igen."
     },
     "revisionBanner": {
       "title": "Utkast",

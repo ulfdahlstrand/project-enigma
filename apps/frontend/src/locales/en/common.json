@@ -375,6 +375,7 @@
       "viewCommitMenuItem": "View this snapshot",
       "commitDetailMenuItem": "View details",
       "compareWithCurrentMenuItem": "Compare with current version",
+      "restoreSnapshotMenuItem": "Restore to this snapshot",
       "commitActionsButton": "Snapshot actions",
       "noDescription": "No description.",
       "headBadge": "Current",
@@ -535,6 +536,38 @@
       "markCaughtUpButton": "Mark as up to date",
       "markingCaughtUp": "Updating…",
       "error": "Failed to mark as up to date. Please try again."
+    },
+    "syncDialog": {
+      "revision": {
+        "title": "Sync draft with source",
+        "step1Heading": "Review incoming changes",
+        "step1Description": "Bring in the latest changes from \"{{sourceName}}\" so you can accept this draft.",
+        "step2Heading": "Confirm & snapshot",
+        "step2Description": "This creates a new snapshot on the draft carrying your changes forward.",
+        "confirmButton": "Sync now"
+      },
+      "translation": {
+        "title": "Sync translation with source",
+        "step1Heading": "Review incoming changes",
+        "step1Description": "The source has changed. Syncing copies the latest source content into this translation — you'll need to re-translate the changed sections.",
+        "step2Heading": "Confirm & snapshot",
+        "step2Description": "A new snapshot will be created with source content. Translated fields may need review.",
+        "confirmButton": "Sync now"
+      },
+      "back": "Back",
+      "next": "Next",
+      "cancel": "Cancel",
+      "syncing": "Syncing…",
+      "error": "Sync failed. Please try again."
+    },
+    "revertDialog": {
+      "title": "Restore to earlier snapshot?",
+      "description": "This creates a new snapshot with the content from the selected snapshot. History is preserved.",
+      "targetLabel": "Restoring from:",
+      "cancel": "Cancel",
+      "confirm": "Restore",
+      "reverting": "Restoring…",
+      "error": "Failed to restore. Please try again."
     },
     "revisionBanner": {
       "title": "Draft",
