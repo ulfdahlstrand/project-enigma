@@ -24,11 +24,12 @@ targetScope = 'subscription'
 // Parameters
 // -----------------------------------------------------------------------------
 
-@description('Environment identifier (e.g. staging, prod). Used in resource names and tags.')
-@allowed([
-  'staging'
-  'prod'
-])
+// Only parameters that require per-environment overrides are exposed here;
+// everything else is configured via module defaults so main.bicep stays a
+// thin composition layer. See #588.
+
+@description('Environment identifier. Drives resource naming and per-env ternaries below.')
+@allowed(['staging', 'prod'])
 param environmentName string
 
 @description('Primary Azure region for all resources.')
@@ -41,38 +42,18 @@ param projectCode string = 'cvtool'
 param resourceGroupName string = 'rg-${projectCode}-${environmentName}'
 
 @description('Common tags applied to every resource.')
-param tags object = {
-  environment: environmentName
-  project: projectCode
-  managedBy: 'bicep'
-}
+param tags object = { environment: environmentName, project: projectCode, managedBy: 'bicep' }
 
-@description('Retention (days) for ingested Log Analytics data. Tune per environment.')
+@description('Retention (days) for ingested Log Analytics data. Staging = 30, prod = 90.')
 @minValue(30)
 @maxValue(730)
 param logAnalyticsRetentionInDays int = 30
 
-@description('SKU for Azure Container Registry. Basic is the cheapest; Standard/Premium enable retention policies.')
-@allowed([
-  'Basic'
-  'Standard'
-  'Premium'
-])
-param acrSku string = environmentName == 'prod' ? 'Standard' : 'Basic'
-
-@description('Days before untagged ACR manifests are eligible for cleanup. Only enforced on Standard/Premium SKUs.')
-@minValue(0)
-@maxValue(365)
-param acrUntaggedRetentionDays int = 7
-
-@description('SKU for Key Vault. Standard is typical; Premium adds HSM-backed keys.')
-@allowed([
-  'standard'
-  'premium'
-])
+@description('SKU for Key Vault. Staging = standard, prod = premium (HSM-backed).')
+@allowed(['standard', 'premium'])
 param keyVaultSkuName string = 'standard'
 
-@description('Days a soft-deleted Key Vault remains recoverable. Longer in prod for audit/recovery windows.')
+@description('Days a soft-deleted Key Vault remains recoverable. Staging = 7, prod = 90.')
 @minValue(7)
 @maxValue(90)
 param keyVaultSoftDeleteRetentionInDays int = 7
@@ -128,8 +109,10 @@ module acr 'modules/acr.bicep' = {
     name: 'acr${projectCode}${environmentName}${substring(uniqueString(subscription().id, resourceGroupName), 0, 6)}'
     location: location
     tags: tags
-    sku: acrSku
-    untaggedRetentionDays: acrUntaggedRetentionDays
+    // Prod gets Standard for the larger storage quota and retention-policy
+    // support; staging stays on Basic to keep cost down. acrUntaggedRetention
+    // follows the module default (7 days) — no per-env override needed yet.
+    sku: environmentName == 'prod' ? 'Standard' : 'Basic'
     // Prod runs with the data plane closed to the internet — pulls happen
     // over the Container Apps VNet via private endpoint (see #586). Staging
     // stays Enabled so developer laptops and CI can push/pull directly
