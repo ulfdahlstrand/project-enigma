@@ -171,6 +171,25 @@ export async function saveResumeVersion(
       : baseContent.assignments ?? [],
   };
 
+  // If nothing changed and there is an existing commit, return it without creating a new one.
+  if (baseCommitId && equalsByJson(baseContent, content)) {
+    const existingCommit = await db
+      .selectFrom("resume_commits")
+      .selectAll()
+      .where("id", "=", baseCommitId)
+      .executeTakeFirstOrThrow();
+    return {
+      id: existingCommit.id,
+      resumeId: existingCommit.resume_id,
+      parentCommitId: null,
+      content,
+      title: existingCommit.title,
+      description: existingCommit.description,
+      createdBy: existingCommit.created_by,
+      createdAt: existingCommit.created_at,
+    };
+  }
+
   const generatedMetadata = summarizeCommitChanges(baseContent, content);
   const title = input.title?.trim() || generatedMetadata.title;
   const description = input.description?.trim() || generatedMetadata.description;

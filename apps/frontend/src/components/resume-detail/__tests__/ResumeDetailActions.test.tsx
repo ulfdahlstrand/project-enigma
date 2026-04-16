@@ -32,6 +32,8 @@ describe("ResumeDetailActions", () => {
     resumeId: "resume-id-1",
     resumeTitle: "Test Resume",
     activeBranchId: "branch-id-1",
+    activeBranchName: "main",
+    compareBaseRef: null,
     currentCommitId: "commit-id-1",
     isEditRoute: false,
     isSnapshotMode: false,

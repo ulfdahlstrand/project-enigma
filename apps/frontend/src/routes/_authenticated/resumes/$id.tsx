@@ -3,7 +3,14 @@ import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tan
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
@@ -15,6 +22,7 @@ import {
   resumeBranchesKey,
   resumeCommitsKey,
   useForkResumeBranch,
+  useResumeBranchHistoryGraph,
   useResumeCommits,
 } from "../../../hooks/versioning";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -33,6 +41,7 @@ import { ResumeRevisionReviewDialog } from "../../../components/resume-detail/Re
 import { ResumeEditWorkspace } from "../../../components/resume-detail/ResumeEditWorkspace";
 import { ResumeStatusBar } from "../../../components/resume-detail/ResumeStatusBar";
 import { ResumeViewWorkspace } from "../../../components/resume-detail/ResumeViewWorkspace";
+import { getReachableCommitIds } from "./$id_/history/history-graph-utils";
 import { ResumeHistoryDrawer } from "../../../components/resume-detail/ResumeHistoryDrawer";
 import { ResumeLayoutContext } from "../../../contexts/ResumeLayoutContext";
 import { LIST_RESUMES_QUERY_KEY } from "./index";
@@ -113,6 +122,12 @@ export function ResumeDetailPage({
     queryFn: () => orpc.listResumeBranches({ resumeId: id }),
   });
 
+  const { data: historyGraph } = useResumeBranchHistoryGraph(id);
+  const mergedCommitIds = getReachableCommitIds(
+    historyGraph?.branches.find((b) => b.isMain)?.headCommitId ?? null,
+    historyGraph?.edges ?? [],
+  );
+
   const requestedBranchId = forcedBranchId ?? null;
   const activeBranchId = requestedBranchId ?? branches?.find((b) => b.isMain)?.id ?? null;
   const activeBranch = branches?.find((b) => b.id === activeBranchId);
@@ -141,6 +156,22 @@ export function ResumeDetailPage({
 
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
+
+  // Compute the "from" ref for the quick compare shortcut.
+  // Goal: diff the current branch against the main CV in the same language.
+  //   1. If on main branch itself → no meaningful base, fall back to empty compare page.
+  //   2. If main branch language matches → use main branch name as base.
+  //   3. Otherwise → find the translation of main that shares the current language.
+  //   4. Fallback → main branch name (cross-language diff).
+  const compareBaseRef = (() => {
+    const mainBranch = branches?.find((b) => b.isMain);
+    if (!mainBranch || !activeBranch || activeBranch.id === mainBranch.id) return null;
+    if (activeBranch.language === mainBranch.language) return mainBranch.name;
+    const sameLanguageTranslation = branches?.find(
+      (b) => b.sourceBranchId === mainBranch.id && b.language === activeBranch.language,
+    );
+    return sameLanguageTranslation?.name ?? mainBranch.name;
+  })();
 
   const activeBranchType = activeBranch?.branchType ?? null;
   const variantBranchId =
@@ -237,6 +268,7 @@ export function ResumeDetailPage({
         queryClient.invalidateQueries({ queryKey: resumeBranchesKey(id) }),
         queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+        queryClient.invalidateQueries({ queryKey: ["getResume", id] }),
       ]);
     },
   });
@@ -245,6 +277,9 @@ export function ResumeDetailPage({
   const [showFullAssignments, setShowFullAssignments] = useState(true);
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [createVariantDialogOpen, setCreateVariantDialogOpen] = useState(false);
+  const [newVariantName, setNewVariantName] = useState("");
+  const [createVariantError, setCreateVariantError] = useState<string | null>(null);
   const wasInlineRevisionOpenRef = useRef(false);
   const previousSuggestionCountRef = useRef(0);
 
@@ -442,6 +477,24 @@ export function ResumeDetailPage({
     buildDraftPatch,
   });
 
+  async function handleCreateVariant() {
+    const name = newVariantName.trim();
+    const fromCommitId = branches?.find((b) => b.isMain)?.headCommitId ?? null;
+    if (!name || !fromCommitId || forkResumeBranch.isPending) return;
+    setCreateVariantError(null);
+    try {
+      const newBranch = await forkResumeBranch.mutateAsync({ fromCommitId, name, resumeId: id });
+      setCreateVariantDialogOpen(false);
+      setNewVariantName("");
+      await navigate({
+        to: "/resumes/$id/branch/$branchId",
+        params: { id, branchId: newBranch.id },
+      });
+    } catch {
+      setCreateVariantError(t("resume.variants.createDialog.error"));
+    }
+  }
+
   useEffect(() => {
     if (!isEditRoute || assistantMode !== "true" || inlineRevision.isOpen) return;
     if (urlSourceBranchId) return;
@@ -500,6 +553,8 @@ export function ResumeDetailPage({
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      activeBranchName={activeBranch?.name ?? null}
+      compareBaseRef={compareBaseRef}
       currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
@@ -561,7 +616,11 @@ export function ResumeDetailPage({
           ...(variantBranchId !== null && branches
             ? (() => {
                 const variantOptions = branches
-                  .filter((b) => b.branchType === "variant")
+                  .filter((b) =>
+                    b.branchType === "variant" &&
+                    !b.isArchived &&
+                    !(b.headCommitId !== null && !b.isMain && mergedCommitIds.has(b.headCommitId))
+                  )
                   .map((b) => ({ id: b.id, label: b.name }));
                 const variantBranch = branches.find((b) => b.id === variantBranchId);
                 return [
@@ -578,6 +637,12 @@ export function ResumeDetailPage({
                           })
                         }
                         isCurrentPage
+                        addLabel={t("resume.variants.addVariant")}
+                        onAdd={() => {
+                          setNewVariantName("");
+                          setCreateVariantError(null);
+                          setCreateVariantDialogOpen(true);
+                        }}
                       />
                     ),
                   },
@@ -717,6 +782,48 @@ export function ResumeDetailPage({
         onToggleAi={handleToggleAssistant}
       />
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
+
+      <Dialog
+        open={createVariantDialogOpen}
+        onClose={() => !forkResumeBranch.isPending && setCreateVariantDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
+        <DialogContent>
+          {createVariantError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {createVariantError}
+            </Alert>
+          )}
+          <TextField
+            autoFocus
+            fullWidth
+            label={t("resume.variants.createDialog.nameLabel")}
+            value={newVariantName}
+            onChange={(e) => setNewVariantName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleCreateVariant(); }}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCreateVariantDialogOpen(false)}
+            disabled={forkResumeBranch.isPending}
+          >
+            {t("resume.variants.createDialog.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!newVariantName.trim() || forkResumeBranch.isPending}
+            onClick={() => void handleCreateVariant()}
+          >
+            {forkResumeBranch.isPending
+              ? t("resume.variants.createDialog.creating")
+              : t("resume.variants.createDialog.create")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

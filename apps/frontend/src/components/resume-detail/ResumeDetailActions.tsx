@@ -32,6 +32,10 @@ interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
   activeBranchId: string | null;
+  /** Name of the currently active branch (used to build the compare range URL). */
+  activeBranchName: string | null;
+  /** "From" ref for the quick compare shortcut — main branch or its same-language translation. */
+  compareBaseRef: string | null;
   currentCommitId: string | null;
   isEditRoute: boolean;
   isSnapshotMode: boolean;
@@ -166,6 +170,8 @@ export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   activeBranchId,
+  activeBranchName,
+  compareBaseRef,
   currentCommitId,
   isEditRoute,
   isSnapshotMode,
@@ -192,6 +198,13 @@ export function ResumeDetailActions({
   const [createBranchError, setCreateBranchError] = useState<string | null>(null);
 
   const openComparePage = () => {
+    if (compareBaseRef && activeBranchName) {
+      void navigate({
+        to: "/resumes/$id/compare/$range",
+        params: { id: resumeId, range: `${compareBaseRef}...${activeBranchName}` },
+      });
+      return;
+    }
     void navigate({
       to: "/resumes/$id/compare",
       params: { id: resumeId },

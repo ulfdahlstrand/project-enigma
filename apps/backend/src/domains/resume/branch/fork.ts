@@ -86,7 +86,17 @@ export async function forkResumeBranch(
     throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
   }
 
-  const commitContent = await readTreeContent(db, commit.tree_id);
+  // Determine language from the branch that owns this commit (head_commit_id match),
+  // falling back to reading it from the commit tree content.
+  const owningBranch = await db
+    .selectFrom("resume_branches")
+    .select(["language"])
+    .where("head_commit_id", "=", input.fromCommitId)
+    .executeTakeFirst();
+
+  const language = owningBranch?.language
+    ?? (await readTreeContent(db, commit.tree_id)).language
+    ?? "en";
 
   // Create the new branch atomically.
   // No initial commit is created — the branch starts empty (headCommitId = null)
@@ -96,7 +106,7 @@ export async function forkResumeBranch(
     .values({
       resume_id: commit.resume_id,
       name: normaliseRevisionBranchName(input.name),
-      language: commitContent.language ?? "en",
+      language,
       is_main: false,
       head_commit_id: null,
       forked_from_commit_id: input.fromCommitId,
@@ -122,6 +132,7 @@ export async function forkResumeBranch(
     sourceBranchId: newBranch.source_branch_id,
     sourceCommitId: newBranch.source_commit_id,
     isStale: false,
+    isArchived: newBranch.is_archived,
   };
 }
 

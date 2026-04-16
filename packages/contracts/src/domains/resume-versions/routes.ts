@@ -32,6 +32,8 @@ import {
   promoteRevisionToVariantOutputSchema,
   markTranslationCaughtUpInputSchema,
   markTranslationCaughtUpOutputSchema,
+  archiveResumeBranchInputSchema,
+  archiveResumeBranchOutputSchema,
 } from "../../resume-versions.js";
 
 export const resumeVersionRoutes = {
@@ -99,4 +101,8 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-branches/{branchId}/mark-caught-up" })
     .input(markTranslationCaughtUpInputSchema)
     .output(markTranslationCaughtUpOutputSchema),
+  archiveResumeBranch: oc
+    .route({ method: "PATCH", path: "/resume-branches/{branchId}/archive" })
+    .input(archiveResumeBranchInputSchema)
+    .output(archiveResumeBranchOutputSchema),
 };

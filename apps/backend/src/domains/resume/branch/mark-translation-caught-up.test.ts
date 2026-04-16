@@ -32,6 +32,7 @@ const TRANSLATION_BRANCH_ROW = {
   source_branch_id: SOURCE_BRANCH_ID,
   source_commit_id: OLD_SOURCE_COMMIT_ID,
   employee_id: EMPLOYEE_ID,
+  is_archived: false,
   // joined field: source variant's current HEAD
   source_head_commit_id: SOURCE_HEAD_COMMIT_ID,
 };
@@ -100,6 +101,7 @@ describe("markTranslationCaughtUp", () => {
       branchType: "translation",
       sourceCommitId: SOURCE_HEAD_COMMIT_ID,
       isStale: false,
+        isArchived: false,
     });
   });
 

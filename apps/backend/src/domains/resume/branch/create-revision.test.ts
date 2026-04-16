@@ -46,6 +46,7 @@ const CREATED_BRANCH_ROW = {
   branch_type: "revision" as const,
   source_branch_id: SOURCE_BRANCH_ID,
   source_commit_id: HEAD_COMMIT_ID,
+  is_archived: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -120,6 +121,7 @@ describe("createRevisionBranch", () => {
       sourceCommitId: HEAD_COMMIT_ID,
       headCommitId: HEAD_COMMIT_ID,
       isStale: false,
+        isArchived: false,
     });
   });
 

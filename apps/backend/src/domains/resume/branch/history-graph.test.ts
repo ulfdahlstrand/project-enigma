@@ -36,6 +36,7 @@ const BRANCH_ROWS = [
     branch_type: "variant" as const,
     source_branch_id: null,
     source_commit_id: null,
+    is_archived: false,
   },
   {
     id: SV_BRANCH_ID,
@@ -50,6 +51,7 @@ const BRANCH_ROWS = [
     branch_type: "variant" as const,
     source_branch_id: null,
     source_commit_id: null,
+    is_archived: false,
   },
 ];
 

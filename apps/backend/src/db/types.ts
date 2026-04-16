@@ -204,6 +204,8 @@ export interface ResumeBranchTable {
    * NULL for variants.
    */
   source_commit_id: string | null;
+  /** Soft-archived flag — archived branches are hidden from the UI by default. */
+  is_archived: Generated<boolean>;
 }
 
 export type ResumeBranch = Selectable<ResumeBranchTable>;

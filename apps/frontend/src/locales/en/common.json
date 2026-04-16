@@ -413,6 +413,7 @@
       "tableHeaderLastSaved": "Last saved",
       "mainBadge": "Main",
       "createButton": "Create variant",
+      "addVariant": "New variant…",
       "createButtonDisabledTooltip": "Save a version on the resume page first",
       "noVersionsWarning": "No saved versions yet. Go back to the resume and click \"Save version\" before creating a variant.",
       "createDialog": {
@@ -464,7 +465,27 @@
       "noSelectionHint": "Select two versions above to see what changed between them.",
       "branchGroupLabel": "Branches",
       "commitGroupLabel": "Commits",
-      "emptyBranch": "no head commit"
+      "emptyBranch": "no head commit",
+      "moreActions": "More actions",
+      "goToHistory": "Go to history",
+      "tree": {
+        "main": "main",
+        "archived": "archived",
+        "language": "lang",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "branchActions": "Branch actions",
+        "archive": "Archive branch",
+        "unarchive": "Unarchive branch",
+        "filterLabel": "Filter",
+        "filterVariant": "Variant",
+        "filterTranslation": "Translation",
+        "filterRevision": "Revision",
+        "filterArchived": "Show archived",
+        "merged": "Merged",
+        "revisions": "Revisions",
+        "noBranches": "No branches match the current filter"
+      }
     },
     "saveVersion": {
       "button": "Save version",

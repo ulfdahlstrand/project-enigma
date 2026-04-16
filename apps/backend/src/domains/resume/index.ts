@@ -16,6 +16,7 @@ export { createRevisionBranchHandler } from "./branch/create-revision.js";
 export { mergeRevisionIntoSourceHandler } from "./branch/merge-revision.js";
 export { promoteRevisionToVariantHandler } from "./branch/promote-revision.js";
 export { markTranslationCaughtUpHandler } from "./branch/mark-translation-caught-up.js";
+export { archiveResumeBranchHandler } from "./branch/archive.js";
 export { saveResumeVersionHandler } from "./commit/save.js";
 export { getResumeCommitHandler } from "./commit/get.js";
 export { listResumeCommitsHandler } from "./commit/list.js";

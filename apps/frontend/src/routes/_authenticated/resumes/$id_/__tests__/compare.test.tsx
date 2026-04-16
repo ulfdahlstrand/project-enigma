@@ -31,6 +31,7 @@ vi.mock("../../../../../hooks/versioning", () => ({
   useResumeBranches: vi.fn(),
   useResumeBranchHistoryGraph: vi.fn(),
   useResumeCommitDiff: vi.fn(),
+  useArchiveResumeBranch: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 import {
@@ -69,8 +70,18 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Test data
 // ---------------------------------------------------------------------------
 
+const BRANCH_DEFAULTS = {
+  createdBy: null,
+  sourceBranchId: null,
+  sourceCommitId: null,
+  branchType: "variant" as const,
+  isStale: false,
+  isArchived: false,
+};
+
 const BRANCHES = [
   {
+    ...BRANCH_DEFAULTS,
     id: "branch-id-1",
     resumeId: "resume-id-1",
     name: "main",
@@ -78,10 +89,10 @@ const BRANCHES = [
     isMain: true,
     headCommitId: "commit-id-1",
     forkedFromCommitId: null,
-    createdBy: null,
     createdAt: "2024-06-01T10:00:00Z",
   },
   {
+    ...BRANCH_DEFAULTS,
     id: "branch-id-2",
     resumeId: "resume-id-1",
     name: "qwerty",
@@ -89,7 +100,6 @@ const BRANCHES = [
     isMain: false,
     headCommitId: "commit-id-2",
     forkedFromCommitId: "commit-id-1",
-    createdBy: null,
     createdAt: "2024-06-02T10:00:00Z",
   },
 ];

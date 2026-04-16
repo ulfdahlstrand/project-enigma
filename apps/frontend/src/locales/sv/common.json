@@ -413,6 +413,7 @@
       "tableHeaderLastSaved": "Senast sparad",
       "mainBadge": "Huvud",
       "createButton": "Skapa variant",
+      "addVariant": "Ny variant…",
       "createButtonDisabledTooltip": "Spara en version på meritförteckningssidan först",
       "noVersionsWarning": "Inga sparade versioner ännu. Gå tillbaka till meritförteckningen och klicka på \"Spara version\" innan du skapar en variant.",
       "createDialog": {
@@ -464,7 +465,27 @@
       "noSelectionHint": "Välj två versioner ovan för att se vad som ändrats mellan dem.",
       "branchGroupLabel": "Grenar",
       "commitGroupLabel": "Commits",
-      "emptyBranch": "ingen head-commit"
+      "emptyBranch": "ingen head-commit",
+      "moreActions": "Fler åtgärder",
+      "goToHistory": "Gå till historik",
+      "tree": {
+        "main": "huvud",
+        "archived": "arkiverad",
+        "language": "språk",
+        "expand": "Expandera",
+        "collapse": "Kollapsa",
+        "branchActions": "Grenåtgärder",
+        "archive": "Arkivera gren",
+        "unarchive": "Avarkivera gren",
+        "filterLabel": "Filtrera",
+        "filterVariant": "Variant",
+        "filterTranslation": "Översättning",
+        "filterRevision": "Revision",
+        "filterArchived": "Visa arkiverade",
+        "merged": "Sammanfogad",
+        "revisions": "Revisioner",
+        "noBranches": "Inga grenar matchar aktuellt filter"
+      }
     },
     "saveVersion": {
       "button": "Spara version",

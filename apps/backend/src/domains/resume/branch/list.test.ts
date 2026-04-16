@@ -37,6 +37,7 @@ const BRANCH_ROW_1 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 const BRANCH_ROW_2 = {
@@ -52,6 +53,7 @@ const BRANCH_ROW_2 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 const BRANCH_ROW_3 = {
@@ -67,6 +69,7 @@ const BRANCH_ROW_3 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -143,6 +146,7 @@ describe("listResumeBranches", () => {
       sourceBranchId: null,
       sourceCommitId: null,
       isStale: false,
+        isArchived: false,
     });
     expect(result[1]).toMatchObject({
       id: BRANCH_ID_2,
@@ -150,6 +154,7 @@ describe("listResumeBranches", () => {
       isMain: false,
       branchType: "variant",
       isStale: false,
+        isArchived: false,
     });
   });
 

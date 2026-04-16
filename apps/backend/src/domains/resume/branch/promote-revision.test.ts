@@ -31,6 +31,7 @@ const REVISION_BRANCH_ROW = {
   source_branch_id: "550e8400-e29b-41d4-a716-446655440031",
   source_commit_id: SOURCE_COMMIT_ID,
   employee_id: EMPLOYEE_ID,
+  is_archived: false,
 };
 
 const PROMOTED_BRANCH_ROW = {
@@ -109,6 +110,7 @@ describe("promoteRevisionToVariant", () => {
       sourceCommitId: null,
       name: "Startup Focus",
       isStale: false,
+        isArchived: false,
     });
   });
 
