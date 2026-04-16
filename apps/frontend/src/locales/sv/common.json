@@ -465,6 +465,8 @@
       "branchGroupLabel": "Grenar",
       "commitGroupLabel": "Commits",
       "emptyBranch": "ingen head-commit",
+      "moreActions": "Fler åtgärder",
+      "goToHistory": "Gå till historik",
       "tree": {
         "main": "huvud",
         "archived": "arkiverad",

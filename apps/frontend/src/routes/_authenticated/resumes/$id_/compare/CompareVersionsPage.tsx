@@ -14,7 +14,11 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
+import HistoryIcon from "@mui/icons-material/History";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import {
   useResumeBranchHistoryGraph,
@@ -134,6 +138,8 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
   const loading = branchesLoading || graphLoading;
   const bothSelected = Boolean(baseCommitId && headCommitId);
 
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+
   return (
     <>
       <PageHeader
@@ -142,6 +148,32 @@ export function CompareVersionsPage({ forcedRange = null }: CompareVersionsPageP
           { label: t("resume.pageTitle"), to: "/resumes" },
           { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
         ]}
+        actions={
+          <>
+            <IconButton
+              size="small"
+              aria-label={t("resume.compare.moreActions")}
+              onClick={(e) => setMenuAnchor(e.currentTarget)}
+            >
+              <MoreVertIcon />
+            </IconButton>
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={() => setMenuAnchor(null)}
+            >
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  void navigate({ to: "/resumes/$id/history", params: { id: resumeId } });
+                }}
+              >
+                <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
+                {t("resume.compare.goToHistory")}
+              </MenuItem>
+            </Menu>
+          </>
+        }
       />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

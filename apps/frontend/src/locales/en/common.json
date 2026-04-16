@@ -465,6 +465,8 @@
       "branchGroupLabel": "Branches",
       "commitGroupLabel": "Commits",
       "emptyBranch": "no head commit",
+      "moreActions": "More actions",
+      "goToHistory": "Go to history",
       "tree": {
         "main": "main",
         "archived": "archived",
