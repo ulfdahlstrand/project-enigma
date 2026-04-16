@@ -36,9 +36,20 @@ param sku string = 'Basic'
 @maxValue(365)
 param untaggedRetentionDays int = 7
 
-var retentionPolicySupported = sku != 'Basic'
+@description('Whether the registry data plane is reachable from the public internet. Prod should run Premium + private endpoint + Disabled.')
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param publicNetworkAccess string = 'Enabled'
 
-resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
+@description('Enable soft-delete for tagged manifests. Only supported on Premium SKU — gives an undo window for accidental deletes.')
+param enableTaggedSoftDelete bool = false
+
+var retentionPolicySupported = sku != 'Basic'
+var taggedSoftDeleteSupported = sku == 'Premium' && enableTaggedSoftDelete
+
+resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: name
   location: location
   tags: tags
@@ -47,11 +58,17 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = 
   }
   properties: {
     adminUserEnabled: false
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: publicNetworkAccess
     policies: retentionPolicySupported ? {
       retentionPolicy: {
         status: 'enabled'
         days: untaggedRetentionDays
+      }
+      softDeletePolicy: taggedSoftDeleteSupported ? {
+        status: 'enabled'
+        retentionDays: untaggedRetentionDays
+      } : {
+        status: 'disabled'
       }
     } : {}
   }

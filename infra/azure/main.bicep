@@ -121,8 +121,11 @@ module acr 'modules/acr.bicep' = {
   name: 'acr'
   scope: rg
   params: {
-    // ACR names are alphanumeric only (no dashes). Keep ≤50 chars.
-    name: 'acr${projectCode}${environmentName}'
+    // ACR names are globally unique, alphanumeric only (no dashes), ≤50 chars.
+    // The uniqueString suffix avoids collisions with other tenants deploying
+    // this template. 6 chars is enough entropy while keeping the final name
+    // short enough to read in the portal.
+    name: 'acr${projectCode}${environmentName}${substring(uniqueString(subscription().id, resourceGroupName), 0, 6)}'
     location: location
     tags: tags
     sku: acrSku
@@ -148,7 +151,7 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
     name: 'cae-${projectCode}-${environmentName}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    logAnalyticsWorkspaceName: logAnalytics.outputs.workspaceName
     infrastructureSubnetId: vnet.outputs.subnetId
     zoneRedundant: environmentName == 'prod'
   }
