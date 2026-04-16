@@ -58,6 +58,11 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
     }
     vnetConfiguration: {
       infrastructureSubnetId: infrastructureSubnetId
+      // TODO(#571): when the frontend moves to Static Web Apps with a linked
+      // backend, flip `internal` to `true` — SWA's linked-backend pattern
+      // expects an internal-only Container Apps environment fronted through
+      // SWA itself. Today's backend ingress goes directly to the env's public
+      // FQDN, so `internal: false` is still correct.
       internal: false
     }
     zoneRedundant: zoneRedundant

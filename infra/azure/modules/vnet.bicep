@@ -6,7 +6,7 @@
 // #560. Adding more subnets requires editing the VNet in place, so we
 // reserve the address ranges now even though only Container Apps uses its
 // subnet today. Reserving up-front avoids painful re-planning when the PG
-// (#566) and private-endpoint (#560 follow-up) features land.
+// (#566) and private-endpoint (#586) features land.
 //
 // Default address plan inside 10.0.0.0/16:
 //   - 10.0.0.0/23   → Container Apps  (Microsoft.App/environments)
