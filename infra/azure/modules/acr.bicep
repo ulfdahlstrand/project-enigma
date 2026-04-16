@@ -51,6 +51,11 @@ param publicNetworkAccess string = 'Enabled'
 @description('Enable soft-delete for tagged manifests. Only supported on Premium SKU — gives an undo window for accidental deletes.')
 param enableTaggedSoftDelete bool = false
 
+@description('Days a soft-deleted tagged manifest remains recoverable. Independent of untaggedRetentionDays — these policies have different risk profiles.')
+@minValue(1)
+@maxValue(90)
+param taggedSoftDeleteRetentionDays int = 30
+
 var retentionPolicySupported = sku != 'Basic'
 var taggedSoftDeleteSupported = sku == 'Premium' && enableTaggedSoftDelete
 
@@ -71,7 +76,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
       }
       softDeletePolicy: taggedSoftDeleteSupported ? {
         status: 'enabled'
-        retentionDays: untaggedRetentionDays
+        retentionDays: taggedSoftDeleteRetentionDays
       } : {
         status: 'disabled'
       }
