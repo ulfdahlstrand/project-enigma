@@ -37,6 +37,7 @@ const BRANCH_ROW_1 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 const BRANCH_ROW_2 = {
@@ -52,6 +53,7 @@ const BRANCH_ROW_2 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 const BRANCH_ROW_3 = {
@@ -67,6 +69,7 @@ const BRANCH_ROW_3 = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 // ---------------------------------------------------------------------------
