@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# Azure Developer CLI (azd) configuration.
+# See: https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/azd-schema
+#
+# Usage:
+#   azd env new staging           # create a new environment
+#   azd env select staging        # switch between environments
+#   azd provision                 # run infra/azure/main.bicep
+#   azd deploy                    # build + push + deploy all services
+#   azd up                        # provision + deploy in one go
+#
+# Service definitions are added progressively as the corresponding features
+# land (backend: #569, frontend: #571/#572).
+
+name: cv-tool
+metadata:
+  template: cv-tool@1.0.0
+
+infra:
+  provider: bicep
+  path: infra/azure
+  module: main
+
+# Services are added as later features land. Each service entry binds a
+# workspace directory to an Azure host (containerapp or staticwebapp) and
+# optionally a docker build context.
+services: {}
