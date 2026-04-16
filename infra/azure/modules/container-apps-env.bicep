@@ -31,17 +31,17 @@ param location string
 @description('Tags applied to the resource.')
 param tags object = {}
 
-@description('Resource ID of the Log Analytics workspace for log ingestion.')
-param logAnalyticsWorkspaceId string
+@description('Name of the Log Analytics workspace that backs log ingestion. Passed explicitly so we do not parse the resource ID.')
+param logAnalyticsWorkspaceName string
 
 @description('Resource ID of the subnet delegated to Microsoft.App/environments.')
 param infrastructureSubnetId string
 
-@description('Enable zone redundancy. Recommended for prod only.')
+@description('Enable zone redundancy. Recommended for prod only. Immutable once deployed.')
 param zoneRedundant bool = false
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
-  name: last(split(logAnalyticsWorkspaceId, '/'))
+  name: logAnalyticsWorkspaceName
 }
 
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {

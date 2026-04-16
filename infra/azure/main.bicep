@@ -148,7 +148,7 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
     name: 'cae-${projectCode}-${environmentName}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    logAnalyticsWorkspaceName: logAnalytics.outputs.workspaceName
     infrastructureSubnetId: vnet.outputs.subnetId
     zoneRedundant: environmentName == 'prod'
   }
