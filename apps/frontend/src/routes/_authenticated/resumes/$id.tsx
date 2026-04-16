@@ -142,6 +142,22 @@ export function ResumeDetailPage({
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
 
+  // Compute the "from" ref for the quick compare shortcut.
+  // Goal: diff the current branch against the main CV in the same language.
+  //   1. If on main branch itself → no meaningful base, fall back to empty compare page.
+  //   2. If main branch language matches → use main branch name as base.
+  //   3. Otherwise → find the translation of main that shares the current language.
+  //   4. Fallback → main branch name (cross-language diff).
+  const compareBaseRef = (() => {
+    const mainBranch = branches?.find((b) => b.isMain);
+    if (!mainBranch || !activeBranch || activeBranch.id === mainBranch.id) return null;
+    if (activeBranch.language === mainBranch.language) return mainBranch.name;
+    const sameLanguageTranslation = branches?.find(
+      (b) => b.sourceBranchId === mainBranch.id && b.language === activeBranch.language,
+    );
+    return sameLanguageTranslation?.name ?? mainBranch.name;
+  })();
+
   const activeBranchType = activeBranch?.branchType ?? null;
   const variantBranchId =
     activeBranchType === "variant"
@@ -500,6 +516,8 @@ export function ResumeDetailPage({
       resumeId={id}
       resumeTitle={resumeTitle}
       activeBranchId={activeBranchId}
+      activeBranchName={activeBranch?.name ?? null}
+      compareBaseRef={compareBaseRef}
       currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
