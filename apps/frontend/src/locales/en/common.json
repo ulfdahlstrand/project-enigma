@@ -539,18 +539,30 @@
     "revisionBanner": {
       "title": "Draft",
       "description": "This is a short-lived draft off \"{{sourceName}}\".",
-      "mergeButton": "Accept into {{sourceName}}",
-      "merging": "Accepting…",
-      "mergeConflictError": "Cannot accept — the source has new changes. Sync with the latest source or start a new draft.",
-      "mergeError": "Failed to accept. Please try again.",
-      "promoteButton": "Promote to version",
-      "promoteDialog": {
-        "title": "Promote to version",
+      "reviewButton": "Review & accept",
+      "keepEditingButton": "Keep editing",
+      "discardButton": "Discard",
+      "reviewDialog": {
+        "title": "Review & accept",
+        "description": "Accept this draft into \"{{sourceName}}\", or save it as a separate version.",
+        "acceptButton": "Accept into {{sourceName}}",
+        "accepting": "Accepting…",
+        "acceptConflictError": "Cannot accept — the source has new changes. Sync with the latest source or start a new draft.",
+        "acceptError": "Failed to accept. Please try again.",
+        "saveAsSeparate": "Save as separate version",
         "nameLabel": "Version name",
+        "save": "Save",
+        "saving": "Saving…",
+        "saveError": "Failed to save version. Please try again.",
+        "cancel": "Close"
+      },
+      "discardDialog": {
+        "title": "Discard draft?",
+        "description": "This will delete the draft permanently.",
         "cancel": "Cancel",
-        "promote": "Promote",
-        "promoting": "Promoting…",
-        "error": "Failed to promote. Please try again."
+        "confirm": "Discard",
+        "discarding": "Discarding…",
+        "error": "Failed to discard draft. Please try again."
       }
     },
     "countLabel_one": "1 resume",

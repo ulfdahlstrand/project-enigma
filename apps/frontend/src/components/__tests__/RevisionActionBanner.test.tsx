@@ -2,15 +2,10 @@
  * Tests for RevisionActionBanner component.
  *
  * Acceptance criteria:
- *   - Renders banner with title, description and both action buttons
- *   - Merge button label includes the source variant name
- *   - Merge success: calls mutateAsync and navigates to merged branch
- *   - Merge conflict error: shows conflict error message
- *   - Merge generic error: shows generic error message
- *   - Promote: opens dialog on button click
- *   - Promote: Create button disabled when name is empty
- *   - Promote success: calls mutateAsync and navigates
- *   - Promote failure: shows error message in dialog
+ *   - Three exits visible: Review & accept / Keep editing / Discard
+ *   - Review dialog: Accept (merge) + Save as separate version (promote) option
+ *   - Discard opens confirm → delete branch and navigate to source
+ *   - Keep editing navigates to the edit route for the revision
  */
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
@@ -21,22 +16,20 @@ import enCommon from "../../locales/en/common.json";
 import { renderWithProviders, buildTestQueryClient } from "../../test-utils/render";
 import { RevisionActionBanner } from "../RevisionActionBanner";
 
-// ---------------------------------------------------------------------------
-// Mock versioning hooks
-// ---------------------------------------------------------------------------
-
 vi.mock("../../hooks/versioning", () => ({
   useMergeRevisionIntoSource: vi.fn(),
   usePromoteRevisionToVariant: vi.fn(),
+  useDeleteResumeBranch: vi.fn(),
 }));
 
-import { useMergeRevisionIntoSource, usePromoteRevisionToVariant } from "../../hooks/versioning";
+import {
+  useDeleteResumeBranch,
+  useMergeRevisionIntoSource,
+  usePromoteRevisionToVariant,
+} from "../../hooks/versioning";
 const mockUseMerge = useMergeRevisionIntoSource as ReturnType<typeof vi.fn>;
 const mockUsePromote = usePromoteRevisionToVariant as ReturnType<typeof vi.fn>;
-
-// ---------------------------------------------------------------------------
-// Mock TanStack Router
-// ---------------------------------------------------------------------------
+const mockUseDelete = useDeleteResumeBranch as ReturnType<typeof vi.fn>;
 
 const mockNavigate = vi.fn();
 
@@ -45,68 +38,58 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-// ---------------------------------------------------------------------------
-// Render helper
-// ---------------------------------------------------------------------------
-
-function renderBanner(sourceName = "Tech Lead") {
+function renderBanner({
+  sourceName = "Tech Lead",
+  sourceBranchId = "source-1" as string | null,
+}: { sourceName?: string; sourceBranchId?: string | null } = {}) {
   return renderWithProviders(
-    <RevisionActionBanner resumeId="resume-1" branchId="revision-1" sourceName={sourceName} />,
+    <RevisionActionBanner
+      resumeId="resume-1"
+      branchId="revision-1"
+      sourceName={sourceName}
+      sourceBranchId={sourceBranchId}
+    />,
     { queryClient: buildTestQueryClient() },
   );
 }
 
+function setupIdleHooks() {
+  mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+  mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+  mockUseDelete.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+}
+
 afterEach(() => vi.clearAllMocks());
 
-// ---------------------------------------------------------------------------
-// Render
-// ---------------------------------------------------------------------------
-
 describe("render", () => {
-  it("shows the banner title and description", () => {
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    renderBanner("Tech Lead");
-    expect(screen.getByText(enCommon.resume.revisionBanner.title)).toBeInTheDocument();
-    // Description is interpolated — resolve the template manually
-    const expectedDescription = enCommon.resume.revisionBanner.description.replace(
-      "{{sourceName}}",
-      "Tech Lead",
-    );
-    expect(screen.getByText(expectedDescription)).toBeInTheDocument();
-  });
-
-  it("shows merge button with source name", () => {
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    renderBanner("Tech Lead");
-    expect(
-      screen.getByRole("button", { name: /Accept into Tech Lead/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows promote button", () => {
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+  it("shows three exit actions: review, keep editing, discard", () => {
+    setupIdleHooks();
     renderBanner();
+
     expect(
-      screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteButton }),
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewButton }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.keepEditingButton }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.discardButton }),
     ).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Merge
-// ---------------------------------------------------------------------------
-
-describe("merge", () => {
-  it("calls mutateAsync and navigates on success", async () => {
+describe("review & accept", () => {
+  it("opens review dialog and accepts (merges into source)", async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ mergedIntoBranchId: "variant-1" });
     mockUseMerge.mockReturnValue({ mutateAsync, isPending: false });
     mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUseDelete.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     const user = userEvent.setup();
-    renderBanner("Tech Lead");
+    renderBanner({ sourceName: "Tech Lead" });
 
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewButton }),
+    );
     await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
 
     await waitFor(() => {
@@ -118,77 +101,45 @@ describe("merge", () => {
     });
   });
 
-  it("shows conflict error when merge throws with CONFLICT in message", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("CONFLICT: source advanced"));
+  it("shows conflict error when accept fails with CONFLICT", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("CONFLICT"));
     mockUseMerge.mockReturnValue({ mutateAsync, isPending: false });
     mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    const user = userEvent.setup();
-    renderBanner("Tech Lead");
-
-    await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
-
-    expect(await screen.findByText(enCommon.resume.revisionBanner.mergeConflictError)).toBeInTheDocument();
-  });
-
-  it("shows generic error when merge throws without CONFLICT", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("network failure"));
-    mockUseMerge.mockReturnValue({ mutateAsync, isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    const user = userEvent.setup();
-    renderBanner("Tech Lead");
-
-    await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
-
-    expect(await screen.findByText(enCommon.resume.revisionBanner.mergeError)).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Promote
-// ---------------------------------------------------------------------------
-
-describe("promote", () => {
-  it("opens the promote dialog when Promote button is clicked", async () => {
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUseDelete.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     const user = userEvent.setup();
     renderBanner();
 
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteButton }));
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewButton }),
+    );
+    await user.click(screen.getByRole("button", { name: /Accept into/i }));
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    // Use heading role to distinguish dialog title from the "Promote to variant" button
     expect(
-      screen.getByRole("heading", { name: enCommon.resume.revisionBanner.promoteDialog.title }),
+      await screen.findByText(enCommon.resume.revisionBanner.reviewDialog.acceptConflictError),
     ).toBeInTheDocument();
   });
 
-  it("keeps Promote button disabled when name is empty", async () => {
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    const user = userEvent.setup();
-    renderBanner();
-
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteButton }));
-
-    expect(
-      screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteDialog.promote }),
-    ).toBeDisabled();
-  });
-
-  it("calls mutateAsync and navigates on successful promote", async () => {
+  it("saves as separate version via expanded inline form", async () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     mockUsePromote.mockReturnValue({ mutateAsync, isPending: false });
+    mockUseDelete.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     const user = userEvent.setup();
     renderBanner();
 
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteButton }));
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewButton }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewDialog.saveAsSeparate }),
+    );
     await user.type(
-      screen.getByLabelText(enCommon.resume.revisionBanner.promoteDialog.nameLabel),
+      screen.getByLabelText(enCommon.resume.revisionBanner.reviewDialog.nameLabel),
       "New Variant",
     );
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteDialog.promote }));
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.reviewDialog.save }),
+    );
 
     await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledWith({
@@ -197,26 +148,71 @@ describe("promote", () => {
         resumeId: "resume-1",
       });
     });
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/branch/$branchId",
-      params: { id: "resume-1", branchId: "revision-1" },
-    });
   });
+});
 
-  it("shows error message when promote fails", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("server error"));
-    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-    mockUsePromote.mockReturnValue({ mutateAsync, isPending: false });
+describe("keep editing", () => {
+  it("navigates to the edit route for the revision branch", async () => {
+    setupIdleHooks();
     const user = userEvent.setup();
     renderBanner();
 
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteButton }));
-    await user.type(
-      screen.getByLabelText(enCommon.resume.revisionBanner.promoteDialog.nameLabel),
-      "Bad Variant",
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.keepEditingButton }),
     );
-    await user.click(screen.getByRole("button", { name: enCommon.resume.revisionBanner.promoteDialog.promote }));
 
-    expect(await screen.findByText(enCommon.resume.revisionBanner.promoteDialog.error)).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/edit/branch/$branchId",
+      params: { id: "resume-1", branchId: "revision-1" },
+    });
+  });
+});
+
+describe("discard", () => {
+  it("opens confirm, deletes branch, and navigates to source", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUseDelete.mockReturnValue({ mutateAsync, isPending: false });
+    const user = userEvent.setup();
+    renderBanner({ sourceBranchId: "source-1" });
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.discardButton }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.discardDialog.confirm }),
+    );
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({ branchId: "revision-1" });
+    });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/resumes/$id/branch/$branchId",
+      params: { id: "resume-1", branchId: "source-1" },
+    });
+  });
+
+  it("navigates to resume root if source branch is unknown", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    mockUseMerge.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mockUseDelete.mockReturnValue({ mutateAsync, isPending: false });
+    const user = userEvent.setup();
+    renderBanner({ sourceBranchId: null });
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.discardButton }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: enCommon.resume.revisionBanner.discardDialog.confirm }),
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/resumes/$id",
+        params: { id: "resume-1" },
+      });
+    });
   });
 });

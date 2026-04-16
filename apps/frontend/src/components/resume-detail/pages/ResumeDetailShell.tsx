@@ -148,6 +148,7 @@ export function ResumeDetailShell({
           resumeId={id}
           branchId={activeBranchId}
           sourceName={sourceBranch?.name ?? ""}
+          sourceBranchId={sourceBranch?.id ?? null}
         />
       ) : null}
 

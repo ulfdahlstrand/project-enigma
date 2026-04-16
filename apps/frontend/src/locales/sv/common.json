@@ -539,18 +539,30 @@
     "revisionBanner": {
       "title": "Utkast",
       "description": "Det här är ett kortlivat utkast från \"{{sourceName}}\".",
-      "mergeButton": "Acceptera in i {{sourceName}}",
-      "merging": "Accepterar…",
-      "mergeConflictError": "Kan inte acceptera — källan har nya ändringar. Synka med senaste källan eller starta ett nytt utkast.",
-      "mergeError": "Det gick inte att acceptera. Försök igen.",
-      "promoteButton": "Gör till version",
-      "promoteDialog": {
-        "title": "Gör till version",
+      "reviewButton": "Granska & acceptera",
+      "keepEditingButton": "Fortsätt redigera",
+      "discardButton": "Kasta",
+      "reviewDialog": {
+        "title": "Granska & acceptera",
+        "description": "Acceptera det här utkastet in i \"{{sourceName}}\", eller spara som en separat version.",
+        "acceptButton": "Acceptera in i {{sourceName}}",
+        "accepting": "Accepterar…",
+        "acceptConflictError": "Kan inte acceptera — källan har nya ändringar. Synka med senaste källan eller starta ett nytt utkast.",
+        "acceptError": "Det gick inte att acceptera. Försök igen.",
+        "saveAsSeparate": "Spara som separat version",
         "nameLabel": "Versionsnamn",
+        "save": "Spara",
+        "saving": "Sparar…",
+        "saveError": "Det gick inte att spara versionen. Försök igen.",
+        "cancel": "Stäng"
+      },
+      "discardDialog": {
+        "title": "Kasta utkast?",
+        "description": "Utkastet tas bort permanent.",
         "cancel": "Avbryt",
-        "promote": "Gör om",
-        "promoting": "Gör om…",
-        "error": "Det gick inte att göra om. Försök igen."
+        "confirm": "Kasta",
+        "discarding": "Kastar…",
+        "error": "Det gick inte att kasta utkastet. Försök igen."
       }
     },
     "countLabel_one": "1 meritförteckning",
