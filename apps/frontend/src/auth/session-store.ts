@@ -1,3 +1,4 @@
+import { createStore } from "zustand";
 import type { CurrentSessionUser, GetCurrentSessionOutput } from "@cv-tool/contracts";
 
 const apiUrl: string = import.meta.env["VITE_API_URL"] ?? "";
@@ -9,25 +10,14 @@ export type AuthSessionSnapshot = {
   user: CurrentSessionUser | null;
 };
 
-let snapshot: AuthSessionSnapshot = {
+const initialSnapshot: AuthSessionSnapshot = {
   status: "loading",
   user: null,
 };
 
+const authSessionStore = createStore<AuthSessionSnapshot>(() => initialSnapshot);
+
 let inFlightRequest: Promise<AuthSessionSnapshot> | null = null;
-
-const listeners = new Set<() => void>();
-
-function emit() {
-  for (const listener of listeners) {
-    listener();
-  }
-}
-
-function setSnapshot(next: AuthSessionSnapshot) {
-  snapshot = next;
-  emit();
-}
 
 async function fetchCurrentSession(): Promise<AuthSessionSnapshot> {
   const res = await fetch(`${apiUrl}/auth/session`, {
@@ -52,8 +42,8 @@ async function fetchCurrentSession(): Promise<AuthSessionSnapshot> {
 }
 
 async function loadCurrentSession(force: boolean): Promise<AuthSessionSnapshot> {
-  if (!force && snapshot.status !== "loading") {
-    return snapshot;
+  if (!force && authSessionStore.getState().status !== "loading") {
+    return authSessionStore.getState();
   }
 
   if (!force && inFlightRequest) {
@@ -61,9 +51,9 @@ async function loadCurrentSession(force: boolean): Promise<AuthSessionSnapshot> 
   }
 
   inFlightRequest = fetchCurrentSession()
-    .catch(() => ({ status: "unauthenticated", user: null } as const))
+    .catch(() => ({ status: "unauthenticated", user: null }) as const)
     .then((next) => {
-      setSnapshot(next);
+      authSessionStore.setState(next, true);
       return next;
     })
     .finally(() => {
@@ -74,12 +64,11 @@ async function loadCurrentSession(force: boolean): Promise<AuthSessionSnapshot> 
 }
 
 export function getAuthSessionSnapshot(): AuthSessionSnapshot {
-  return snapshot;
+  return authSessionStore.getState();
 }
 
 export function subscribeAuthSession(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+  return authSessionStore.subscribe(listener);
 }
 
 export function ensureAuthSession(): Promise<AuthSessionSnapshot> {
@@ -92,10 +81,10 @@ export function refreshAuthSession(): Promise<AuthSessionSnapshot> {
 
 export function clearAuthSession(): void {
   inFlightRequest = null;
-  setSnapshot({ status: "unauthenticated", user: null });
+  authSessionStore.setState({ status: "unauthenticated", user: null }, true);
 }
 
 export function resetAuthSession(): void {
   inFlightRequest = null;
-  setSnapshot({ status: "loading", user: null });
+  authSessionStore.setState(initialSnapshot, true);
 }
