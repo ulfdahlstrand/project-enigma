@@ -1,0 +1,31 @@
+name: Infra lint
+
+# Narrow precursor to the full azd-provision workflow tracked in #574.
+# Fails PRs whenever Bicep stops compiling or parameter files go malformed.
+# No subscription access needed — we only transpile, never deploy.
+
+on:
+  pull_request:
+    branches: [main, dev, 'epic/**']
+    paths:
+      - 'infra/azure/**'
+      - '.github/workflows/infra-lint.yml'
+
+jobs:
+  bicep-lint:
+    name: Bicep lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bicep CLI
+        uses: azure/setup-bicep@v3
+
+      - name: Compile main.bicep
+        run: bicep build infra/azure/main.bicep --outfile /tmp/main.json
+
+      - name: Validate staging parameter file (ARM shape)
+        run: jq -e '.["$schema"] | test("deploymentParameters")' infra/azure/main.parameters.staging.json
+
+      - name: Validate prod parameter file (ARM shape)
+        run: jq -e '.["$schema"] | test("deploymentParameters")' infra/azure/main.parameters.prod.json
