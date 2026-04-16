@@ -413,6 +413,7 @@
       "tableHeaderLastSaved": "Senast sparad",
       "mainBadge": "Huvud",
       "createButton": "Skapa variant",
+      "addVariant": "Ny variant…",
       "createButtonDisabledTooltip": "Spara en version på meritförteckningssidan först",
       "noVersionsWarning": "Inga sparade versioner ännu. Gå tillbaka till meritförteckningen och klicka på \"Spara version\" innan du skapar en variant.",
       "createDialog": {

@@ -413,6 +413,7 @@
       "tableHeaderLastSaved": "Last saved",
       "mainBadge": "Main",
       "createButton": "Create variant",
+      "addVariant": "New variant…",
       "createButtonDisabledTooltip": "Save a version on the resume page first",
       "noVersionsWarning": "No saved versions yet. Go back to the resume and click \"Save version\" before creating a variant.",
       "createDialog": {

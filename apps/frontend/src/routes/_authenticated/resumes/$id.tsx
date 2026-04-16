@@ -3,7 +3,14 @@ import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tan
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { orpc } from "../../../orpc-client";
 import { useInlineResumeRevision } from "../../../hooks/inline-resume-revision";
@@ -270,6 +277,9 @@ export function ResumeDetailPage({
   const [showFullAssignments, setShowFullAssignments] = useState(true);
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [createVariantDialogOpen, setCreateVariantDialogOpen] = useState(false);
+  const [newVariantName, setNewVariantName] = useState("");
+  const [createVariantError, setCreateVariantError] = useState<string | null>(null);
   const wasInlineRevisionOpenRef = useRef(false);
   const previousSuggestionCountRef = useRef(0);
 
@@ -467,6 +477,24 @@ export function ResumeDetailPage({
     buildDraftPatch,
   });
 
+  async function handleCreateVariant() {
+    const name = newVariantName.trim();
+    const fromCommitId = branches?.find((b) => b.isMain)?.headCommitId ?? null;
+    if (!name || !fromCommitId || forkResumeBranch.isPending) return;
+    setCreateVariantError(null);
+    try {
+      const newBranch = await forkResumeBranch.mutateAsync({ fromCommitId, name, resumeId: id });
+      setCreateVariantDialogOpen(false);
+      setNewVariantName("");
+      await navigate({
+        to: "/resumes/$id/branch/$branchId",
+        params: { id, branchId: newBranch.id },
+      });
+    } catch {
+      setCreateVariantError(t("resume.variants.createDialog.error"));
+    }
+  }
+
   useEffect(() => {
     if (!isEditRoute || assistantMode !== "true" || inlineRevision.isOpen) return;
     if (urlSourceBranchId) return;
@@ -609,6 +637,12 @@ export function ResumeDetailPage({
                           })
                         }
                         isCurrentPage
+                        addLabel={t("resume.variants.addVariant")}
+                        onAdd={() => {
+                          setNewVariantName("");
+                          setCreateVariantError(null);
+                          setCreateVariantDialogOpen(true);
+                        }}
                       />
                     ),
                   },
@@ -748,6 +782,48 @@ export function ResumeDetailPage({
         onToggleAi={handleToggleAssistant}
       />
       <ResumeRevisionReviewDialog reviewDialog={inlineRevision.reviewDialog} />
+
+      <Dialog
+        open={createVariantDialogOpen}
+        onClose={() => !forkResumeBranch.isPending && setCreateVariantDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t("resume.variants.createDialog.title")}</DialogTitle>
+        <DialogContent>
+          {createVariantError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {createVariantError}
+            </Alert>
+          )}
+          <TextField
+            autoFocus
+            fullWidth
+            label={t("resume.variants.createDialog.nameLabel")}
+            value={newVariantName}
+            onChange={(e) => setNewVariantName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleCreateVariant(); }}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCreateVariantDialogOpen(false)}
+            disabled={forkResumeBranch.isPending}
+          >
+            {t("resume.variants.createDialog.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!newVariantName.trim() || forkResumeBranch.isPending}
+            onClick={() => void handleCreateVariant()}
+          >
+            {forkResumeBranch.isPending
+              ? t("resume.variants.createDialog.creating")
+              : t("resume.variants.createDialog.create")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
