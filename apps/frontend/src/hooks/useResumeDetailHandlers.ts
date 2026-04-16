@@ -25,7 +25,6 @@ interface UseResumeDetailHandlersInput {
   isEditRoute: boolean;
   activeBranchId: string | null;
   mainBranchId: string | null;
-  baseCommitId: string | null;
   currentViewedCommitId: string | null;
   navigate: ReturnType<typeof useNavigate>;
   inlineRevision: InlineRevisionHandle;
@@ -43,7 +42,6 @@ interface UseResumeDetailHandlersInput {
 
 export interface ResumeDetailHandlers {
   handleSave: () => Promise<void>;
-  handleSaveAsNewVersion: (name: string) => Promise<void>;
   handleCreateBranchFromCommit: (name: string) => Promise<void>;
   handleExitEditing: () => void;
   handleToggleAssistant: () => void;
@@ -56,7 +54,6 @@ export function useResumeDetailHandlers({
   isEditRoute,
   activeBranchId,
   mainBranchId,
-  baseCommitId,
   currentViewedCommitId,
   navigate,
   inlineRevision,
@@ -83,27 +80,6 @@ export function useResumeDetailHandlers({
     }
 
     await onSaveVersion({ branchId: mainBranchId, ...patch });
-  };
-
-  const handleSaveAsNewVersion = async (name: string): Promise<void> => {
-    if (!baseCommitId) throw new Error("Missing base commit");
-
-    const patch = buildDraftPatch();
-    const newBranch = await onForkBranch({ fromCommitId: baseCommitId, name, resumeId: id });
-    await onSaveVersion({ branchId: newBranch.id, ...patch });
-
-    if (isEditRoute) {
-      await navigate({
-        to: "/resumes/$id/edit/branch/$branchId",
-        params: { id, branchId: newBranch.id },
-      });
-      return;
-    }
-
-    await navigate({
-      to: "/resumes/$id/branch/$branchId",
-      params: { id, branchId: newBranch.id },
-    });
   };
 
   const handleCreateBranchFromCommit = async (name: string): Promise<void> => {
@@ -227,7 +203,6 @@ export function useResumeDetailHandlers({
 
   return {
     handleSave,
-    handleSaveAsNewVersion,
     handleCreateBranchFromCommit,
     handleExitEditing,
     handleToggleAssistant,
