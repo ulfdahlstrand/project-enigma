@@ -118,6 +118,30 @@ module acr 'modules/acr.bicep' = {
   }
 }
 
+module vnet 'modules/vnet.bicep' = {
+  name: 'vnet'
+  scope: rg
+  params: {
+    name: 'vnet-${projectCode}-${environmentName}'
+    location: location
+    tags: tags
+    containerAppsSubnetName: 'snet-cae-${environmentName}'
+  }
+}
+
+module containerAppsEnv 'modules/container-apps-env.bicep' = {
+  name: 'container-apps-env'
+  scope: rg
+  params: {
+    name: 'cae-${projectCode}-${environmentName}'
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    infrastructureSubnetId: vnet.outputs.subnetId
+    zoneRedundant: environmentName == 'prod'
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Outputs
 // -----------------------------------------------------------------------------
@@ -131,3 +155,5 @@ output logAnalyticsWorkspaceName string = logAnalytics.outputs.workspaceName
 output appInsightsConnectionString string = appInsights.outputs.connectionString
 output acrLoginServer string = acr.outputs.loginServer
 output acrId string = acr.outputs.registryId
+output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
+output containerAppsDefaultDomain string = containerAppsEnv.outputs.defaultDomain
