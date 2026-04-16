@@ -374,7 +374,7 @@ describe("StaleRevisionChip — revision branch", () => {
       }),
     });
     // i18next interpolation: "Revision of Main CV"
-    expect(screen.getByText(/Revision of Main CV/i)).toBeInTheDocument();
+    expect(screen.getByText(/Draft of Main CV/i)).toBeInTheDocument();
   });
 
   it("does NOT show revision chip when sourceBranch is null", () => {
@@ -385,7 +385,7 @@ describe("StaleRevisionChip — revision branch", () => {
         sourceBranch: null,
       }),
     });
-    expect(screen.queryByText(/Revision of/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Draft of/i)).not.toBeInTheDocument();
   });
 });
 
@@ -397,7 +397,7 @@ describe("StaleRevisionChip — clean main branch", () => {
   it("shows neither stale nor revision chip on a clean main branch", () => {
     renderStrip({ bundle: makeBundle() });
     expect(screen.queryByText(enCommon.resume.contextStrip.stale)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Revision of/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Draft of/i)).not.toBeInTheDocument();
   });
 });
 

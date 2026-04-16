@@ -81,7 +81,7 @@ describe("render", () => {
     mockUsePromote.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     renderBanner("Tech Lead");
     expect(
-      screen.getByRole("button", { name: /Merge into Tech Lead/i }),
+      screen.getByRole("button", { name: /Accept into Tech Lead/i }),
     ).toBeInTheDocument();
   });
 
@@ -107,7 +107,7 @@ describe("merge", () => {
     const user = userEvent.setup();
     renderBanner("Tech Lead");
 
-    await user.click(screen.getByRole("button", { name: /Merge into Tech Lead/i }));
+    await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
 
     await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledWith({ branchId: "revision-1", resumeId: "resume-1" });
@@ -125,7 +125,7 @@ describe("merge", () => {
     const user = userEvent.setup();
     renderBanner("Tech Lead");
 
-    await user.click(screen.getByRole("button", { name: /Merge into Tech Lead/i }));
+    await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
 
     expect(await screen.findByText(enCommon.resume.revisionBanner.mergeConflictError)).toBeInTheDocument();
   });
@@ -137,7 +137,7 @@ describe("merge", () => {
     const user = userEvent.setup();
     renderBanner("Tech Lead");
 
-    await user.click(screen.getByRole("button", { name: /Merge into Tech Lead/i }));
+    await user.click(screen.getByRole("button", { name: /Accept into Tech Lead/i }));
 
     expect(await screen.findByText(enCommon.resume.revisionBanner.mergeError)).toBeInTheDocument();
   });

@@ -423,7 +423,7 @@ describe("View controls", () => {
     await user.hover(await screen.findByTestId("tree-branch-branch-id-2"));
 
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish Variant");
-    expect(screen.getByRole("tooltip")).toHaveTextContent("1 commit");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("1 snapshot");
   });
 
   it("navigates when tree view is selected", async () => {
