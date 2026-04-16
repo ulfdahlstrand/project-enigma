@@ -8,6 +8,7 @@ import { ResumeHistoryDrawer } from "../../../components/resume-detail/ResumeHis
 import { ResumeLayoutContext } from "../../../contexts/ResumeLayoutContext";
 import { ResumeEditPage } from "../../../components/resume-detail/pages/ResumeEditPage";
 import { ResumePreviewPage } from "../../../components/resume-detail/pages/ResumePreviewPage";
+import { ResumeWorkbenchTabs } from "../../../components/resume-detail/ResumeWorkbenchTabs";
 import {
   getResumeQueryKey,
   type ResumeDetailPageBundle,
@@ -43,6 +44,7 @@ function ResumeDetailLayout() {
 
   return (
     <ResumeLayoutContext.Provider value={{ openHistory: () => setHistoryOpen(true) }}>
+      <ResumeWorkbenchTabs resumeId={id} activeBranchId={activeBranchId} />
       <Outlet />
       <ResumeHistoryDrawer
         open={historyOpen}

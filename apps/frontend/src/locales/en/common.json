@@ -559,7 +559,14 @@
     },
     "countLabel_one": "1 resume",
     "countLabel_other": "{{count}} resumes",
-    "searchPlaceholder": "Search resumes…"
+    "searchPlaceholder": "Search resumes…",
+    "workbenchTabs": {
+      "edit": "Edit",
+      "preview": "Preview",
+      "history": "History",
+      "compare": "Compare",
+      "variants": "Variants"
+    }
   },
   "assignment": {
     "pageTitle": "Assignments",
