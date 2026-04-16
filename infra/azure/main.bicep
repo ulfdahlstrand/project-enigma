@@ -65,6 +65,18 @@ param acrSku string = environmentName == 'prod' ? 'Standard' : 'Basic'
 @maxValue(365)
 param acrUntaggedRetentionDays int = 7
 
+@description('SKU for Key Vault. Standard is typical; Premium adds HSM-backed keys.')
+@allowed([
+  'standard'
+  'premium'
+])
+param keyVaultSkuName string = 'standard'
+
+@description('Days a soft-deleted Key Vault remains recoverable. Longer in prod for audit/recovery windows.')
+@minValue(7)
+@maxValue(90)
+param keyVaultSoftDeleteRetentionInDays int = 7
+
 // -----------------------------------------------------------------------------
 // Resource group (the one resource that lives above every module)
 // -----------------------------------------------------------------------------
@@ -142,6 +154,23 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
   }
 }
 
+module keyVault 'modules/key-vault.bicep' = {
+  name: 'key-vault'
+  scope: rg
+  params: {
+    // Key Vault names are globally unique. A 4-char hash keeps the overall
+    // length ≤24 and avoids collisions when the RG is redeployed.
+    name: 'kv-${projectCode}-${environmentName}-${substring(uniqueString(subscription().id, resourceGroupName), 0, 4)}'
+    location: location
+    tags: tags
+    skuName: keyVaultSkuName
+    softDeleteRetentionInDays: keyVaultSoftDeleteRetentionInDays
+    enablePurgeProtection: environmentName == 'prod'
+    // Populated in a later feature once the Container App managed identity exists.
+    secretsUserPrincipalId: ''
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Outputs
 // -----------------------------------------------------------------------------
@@ -157,3 +186,5 @@ output acrLoginServer string = acr.outputs.loginServer
 output acrId string = acr.outputs.registryId
 output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
 output containerAppsDefaultDomain string = containerAppsEnv.outputs.defaultDomain
+output keyVaultUri string = keyVault.outputs.vaultUri
+output keyVaultName string = keyVault.outputs.vaultName
