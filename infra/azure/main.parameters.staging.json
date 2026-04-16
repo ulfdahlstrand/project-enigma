@@ -10,6 +10,9 @@
     },
     "projectCode": {
       "value": "cvtool"
+    },
+    "logAnalyticsRetentionInDays": {
+      "value": 30
     }
   }
 }
