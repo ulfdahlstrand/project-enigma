@@ -52,6 +52,19 @@ param tags object = {
 @maxValue(730)
 param logAnalyticsRetentionInDays int = 30
 
+@description('SKU for Azure Container Registry. Basic is the cheapest; Standard/Premium enable retention policies.')
+@allowed([
+  'Basic'
+  'Standard'
+  'Premium'
+])
+param acrSku string = environmentName == 'prod' ? 'Standard' : 'Basic'
+
+@description('Days before untagged ACR manifests are eligible for cleanup. Only enforced on Standard/Premium SKUs.')
+@minValue(0)
+@maxValue(365)
+param acrUntaggedRetentionDays int = 7
+
 // -----------------------------------------------------------------------------
 // Resource group (the one resource that lives above every module)
 // -----------------------------------------------------------------------------
@@ -92,6 +105,19 @@ module appInsights 'modules/app-insights.bicep' = {
   }
 }
 
+module acr 'modules/acr.bicep' = {
+  name: 'acr'
+  scope: rg
+  params: {
+    // ACR names are alphanumeric only (no dashes). Keep ≤50 chars.
+    name: 'acr${projectCode}${environmentName}'
+    location: location
+    tags: tags
+    sku: acrSku
+    untaggedRetentionDays: acrUntaggedRetentionDays
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Outputs
 // -----------------------------------------------------------------------------
@@ -103,3 +129,5 @@ output environmentName string = environmentName
 output logAnalyticsWorkspaceId string = logAnalytics.outputs.workspaceId
 output logAnalyticsWorkspaceName string = logAnalytics.outputs.workspaceName
 output appInsightsConnectionString string = appInsights.outputs.connectionString
+output acrLoginServer string = acr.outputs.loginServer
+output acrId string = acr.outputs.registryId
