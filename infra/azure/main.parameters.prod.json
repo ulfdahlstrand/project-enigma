@@ -19,6 +19,9 @@
     },
     "keyVaultSoftDeleteRetentionInDays": {
       "value": 90
+    },
+    "postgresAdminPassword": {
+      "value": "${POSTGRES_ADMIN_PASSWORD}"
     }
   }
 }

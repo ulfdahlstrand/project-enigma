@@ -58,6 +58,10 @@ param keyVaultSkuName string = 'standard'
 @maxValue(90)
 param keyVaultSoftDeleteRetentionInDays int = 7
 
+@secure()
+@description('PostgreSQL administrator password. Seed via `azd env set POSTGRES_ADMIN_PASSWORD`; the Bicep run writes it to Key Vault after the server is provisioned so the Container App can consume it via secret reference. Must satisfy PG Flex complexity: ≥8 chars, 3 of 4 character classes.')
+param postgresAdminPassword string
+
 // -----------------------------------------------------------------------------
 // Resource group (the one resource that lives above every module)
 // -----------------------------------------------------------------------------
@@ -169,6 +173,65 @@ module keyVault 'modules/key-vault.bicep' = {
   }
 }
 
+module postgresPrivateDns 'modules/private-dns-zone.bicep' = {
+  name: 'postgres-private-dns'
+  scope: rg
+  params: {
+    zoneName: 'privatelink.postgres.database.azure.com'
+    vnetId: vnet.outputs.vnetId
+    tags: tags
+  }
+}
+
+module postgres 'modules/postgres.bicep' = {
+  name: 'postgres'
+  scope: rg
+  params: {
+    // PG Flex names are globally unique. A 4-char hash avoids collisions on
+    // redeploy; the `pg-` prefix + env suffix keeps it readable in the portal.
+    name: 'pg-${projectCode}-${environmentName}-${substring(uniqueString(subscription().id, resourceGroupName), 0, 4)}'
+    location: location
+    tags: tags
+    // Burstable is cheap and adequate for staging; GeneralPurpose unlocks
+    // zone-redundant HA in prod. Compute SKU must match the tier — Standard_B1ms
+    // for Burstable, Standard_D2ds_v5 for GP (the smallest GP SKU).
+    skuTier: environmentName == 'prod' ? 'GeneralPurpose' : 'Burstable'
+    skuName: environmentName == 'prod' ? 'Standard_D2ds_v5' : 'Standard_B1ms'
+    // 7 days for staging (default), 35 for prod (PITR maximum).
+    backupRetentionDays: environmentName == 'prod' ? 35 : 7
+    // HA requires GeneralPurpose/MemoryOptimized — enabled only in prod.
+    highAvailability: environmentName == 'prod'
+    delegatedSubnetId: vnet.outputs.postgresSubnetId
+    privateDnsZoneId: postgresPrivateDns.outputs.zoneId
+    administratorPassword: postgresAdminPassword
+  }
+}
+
+module postgresAdminPasswordSecret 'modules/key-vault-secret.bicep' = {
+  name: 'secret-postgres-admin-password'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.vaultName
+    secretName: 'postgres-admin-password'
+    secretValue: postgresAdminPassword
+    contentType: 'text/plain'
+  }
+}
+
+module postgresConnectionStringSecret 'modules/key-vault-secret.bicep' = {
+  name: 'secret-postgres-connection-string'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.vaultName
+    secretName: 'postgres-connection-string'
+    // URL-encoded? Password policy already disallows `@`, `/`, `:`, `?`, so
+    // raw concatenation is safe. sslmode=require matches server-side
+    // require_secure_transport enforced in modules/postgres.bicep.
+    secretValue: 'postgresql://${postgres.outputs.administratorLogin}:${postgresAdminPassword}@${postgres.outputs.fqdn}:5432/${postgres.outputs.databaseName}?sslmode=require'
+    contentType: 'application/x-postgresql-connection-string'
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Outputs
 // -----------------------------------------------------------------------------
@@ -186,3 +249,9 @@ output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentI
 output containerAppsDefaultDomain string = containerAppsEnv.outputs.defaultDomain
 output keyVaultUri string = keyVault.outputs.vaultUri
 output keyVaultName string = keyVault.outputs.vaultName
+output postgresServerFqdn string = postgres.outputs.fqdn
+output postgresDatabaseName string = postgres.outputs.databaseName
+// URIs (not values) of the KV secrets — safe to output. The Container App
+// (later feature) consumes these via `keyvaultref:` secret references.
+output postgresAdminPasswordSecretUri string = postgresAdminPasswordSecret.outputs.secretUriWithVersion
+output postgresConnectionStringSecretUri string = postgresConnectionStringSecret.outputs.secretUriWithVersion
