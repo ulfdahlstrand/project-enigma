@@ -1,7 +1,7 @@
 import { sortAssignments } from "@cv-tool/utils";
 import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState, parseAsBoolean } from "nuqs";
+import { useQueryState, parseAsBoolean, parseAsStringEnum } from "nuqs";
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
@@ -279,8 +279,16 @@ export function ResumeDetailPage({
     "showFull",
     parseAsBoolean.withDefault(true),
   );
-  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
-  const [showChatPanel, setShowChatPanel] = useState(false);
+  const [aiPanel, setAiPanel] = useQueryState(
+    "aiPanel",
+    parseAsStringEnum<"suggestions" | "chat" | "both">([
+      "suggestions",
+      "chat",
+      "both",
+    ]),
+  );
+  const showSuggestionsPanel = aiPanel === "suggestions" || aiPanel === "both";
+  const showChatPanel = aiPanel === "chat" || aiPanel === "both";
   const [createVariantDialogOpen, setCreateVariantDialogOpen] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
   const [createVariantError, setCreateVariantError] = useState<string | null>(null);
@@ -471,10 +479,8 @@ export function ResumeDetailPage({
     currentViewedCommitId,
     navigate,
     inlineRevision,
-    showSuggestionsPanel,
-    showChatPanel,
-    setShowSuggestionsPanel,
-    setShowChatPanel,
+    aiPanel,
+    setAiPanel,
     onSaveVersion: (input) => saveVersion.mutateAsync(input),
     onForkBranch: (input) => forkResumeBranch.mutateAsync(input),
     onUpdateResume: (patch) => updateResume.mutate(patch),
@@ -503,18 +509,16 @@ export function ResumeDetailPage({
     if (!isEditRoute || assistantMode !== "true" || inlineRevision.isOpen) return;
     if (urlSourceBranchId) return;
 
-    setShowSuggestionsPanel(true);
-    setShowChatPanel(true);
+    void setAiPanel("both");
     inlineRevision.open();
-  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, urlSourceBranchId]);
+  }, [assistantMode, inlineRevision, isEditRoute, mainBranchId, urlSourceBranchId, setAiPanel]);
 
   useEffect(() => {
     if (wasInlineRevisionOpenRef.current && !inlineRevision.isOpen) {
-      setShowSuggestionsPanel(false);
-      setShowChatPanel(false);
+      void setAiPanel(null);
     }
     wasInlineRevisionOpenRef.current = inlineRevision.isOpen;
-  }, [inlineRevision.isOpen]);
+  }, [inlineRevision.isOpen, setAiPanel]);
 
   useEffect(() => {
     const nextSuggestionCount = inlineRevision.suggestions.length;
@@ -526,11 +530,12 @@ export function ResumeDetailPage({
       !showSuggestionsPanel &&
       nextSuggestionCount > previousSuggestionCount
     ) {
-      setShowSuggestionsPanel(true);
+      // "chat" → "both", null → "suggestions"
+      void setAiPanel((current) => (current === "chat" ? "both" : "suggestions"));
     }
 
     previousSuggestionCountRef.current = nextSuggestionCount;
-  }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel]);
+  }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel, setAiPanel]);
 
   if (isLoading) return <LoadingState label={t("resume.detail.loading")} />;
 

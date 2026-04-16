@@ -14,6 +14,12 @@ interface InlineRevisionHandle {
   stage: string;
 }
 
+export type AiPanel = "suggestions" | "chat" | "both";
+
+export type SetAiPanel = (
+  next: AiPanel | null | ((current: AiPanel | null) => AiPanel | null),
+) => unknown;
+
 interface UseResumeDetailHandlersInput {
   id: string;
   isEditRoute: boolean;
@@ -23,10 +29,8 @@ interface UseResumeDetailHandlersInput {
   currentViewedCommitId: string | null;
   navigate: ReturnType<typeof useNavigate>;
   inlineRevision: InlineRevisionHandle;
-  showSuggestionsPanel: boolean;
-  showChatPanel: boolean;
-  setShowSuggestionsPanel: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowChatPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  aiPanel: AiPanel | null;
+  setAiPanel: SetAiPanel;
   onSaveVersion: (input: { branchId: string } & DraftPatch) => Promise<unknown>;
   onForkBranch: (input: {
     fromCommitId: string;
@@ -56,10 +60,8 @@ export function useResumeDetailHandlers({
   currentViewedCommitId,
   navigate,
   inlineRevision,
-  showSuggestionsPanel,
-  showChatPanel,
-  setShowSuggestionsPanel,
-  setShowChatPanel,
+  aiPanel,
+  setAiPanel,
   onSaveVersion,
   onForkBranch,
   onUpdateResume,
@@ -160,22 +162,24 @@ export function useResumeDetailHandlers({
     }
 
     if (!inlineRevision.isOpen) {
-      setShowSuggestionsPanel(false);
-      setShowChatPanel(true);
+      void setAiPanel("chat");
       void inlineRevision.open();
       return;
     }
 
-    if (showSuggestionsPanel) {
-      setShowChatPanel((current) => !current);
+    if (aiPanel === "suggestions") {
+      void setAiPanel("both");
       return;
     }
 
-    setShowChatPanel((current) => {
-      const next = !current;
-      if (!next) inlineRevision.close();
-      return next;
-    });
+    if (aiPanel === "both") {
+      void setAiPanel("suggestions");
+      return;
+    }
+
+    // aiPanel === "chat" or null → closing chat closes revision
+    void setAiPanel(null);
+    inlineRevision.close();
   };
 
   const handleToggleSuggestions = (): void => {
@@ -185,22 +189,24 @@ export function useResumeDetailHandlers({
     }
 
     if (!inlineRevision.isOpen) {
-      setShowSuggestionsPanel(true);
-      setShowChatPanel(false);
+      void setAiPanel("suggestions");
       void inlineRevision.open();
       return;
     }
 
-    if (showChatPanel) {
-      setShowSuggestionsPanel((current) => !current);
+    if (aiPanel === "chat") {
+      void setAiPanel("both");
       return;
     }
 
-    setShowSuggestionsPanel((current) => {
-      const next = !current;
-      if (!next) inlineRevision.close();
-      return next;
-    });
+    if (aiPanel === "both") {
+      void setAiPanel("chat");
+      return;
+    }
+
+    // aiPanel === "suggestions" or null → closing suggestions closes revision
+    void setAiPanel(null);
+    inlineRevision.close();
   };
 
   const handleCloseRevision = (): void => {
@@ -215,8 +221,7 @@ export function useResumeDetailHandlers({
       }
     }
 
-    setShowSuggestionsPanel(false);
-    setShowChatPanel(false);
+    void setAiPanel(null);
     inlineRevision.close();
   };
 
