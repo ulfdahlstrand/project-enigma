@@ -1,7 +1,4 @@
 import type { MutableRefObject, RefObject } from "react";
-import type {
-  RevisionWorkItems,
-} from "../../lib/ai-tools/registries/resume-tool-schemas";
 
 export type DraftPatch = {
   consultantTitle?: string | null;
@@ -74,9 +71,7 @@ export type UseInlineResumeRevisionParams = {
   isEditRoute: boolean;
   activeBranchId: string | null;
   activeBranchName: string;
-  activeBranchHeadCommitId: string | null;
   mainBranchId: string | null;
-  baseCommitId: string | null;
   resumeTitle: string;
   consultantTitle: string | null;
   presentation: string[];

@@ -98,8 +98,8 @@ export function ResumeDetailPage({
   const { id: idParam } = useParams({ strict: false });
   const id = idParam!;
   const isEditRoute = routeMode === "edit";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { assistant: assistantMode, sourceBranchId: urlSourceBranchId } =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     useSearch({ strict: false }) as any as {
       assistant?: "true";
       sourceBranchId?: string;
@@ -141,7 +141,6 @@ export function ResumeDetailPage({
 
   const mainBranchId = branches?.find((b) => b.isMain)?.id ?? resume?.mainBranchId ?? null;
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
-  const isBranchBackedMode = activeBranchId !== null && activeBranchId !== mainBranchId;
 
   const activeBranchType = activeBranch?.branchType ?? null;
   const variantBranchId =
@@ -242,8 +241,6 @@ export function ResumeDetailPage({
     },
   });
   const forkResumeBranch = useForkResumeBranch();
-
-  const { data: recentCommits = [] } = useResumeCommits(activeBranchId ?? mainBranchId ?? "");
 
   const [showFullAssignments, setShowFullAssignments] = useState(true);
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
@@ -374,9 +371,7 @@ export function ResumeDetailPage({
     isEditRoute,
     activeBranchId,
     activeBranchName,
-    activeBranchHeadCommitId: activeBranch?.headCommitId ?? null,
     mainBranchId,
-    baseCommitId,
     resumeTitle,
     consultantTitle,
     presentation,
@@ -428,7 +423,6 @@ export function ResumeDetailPage({
     handleExitEditing,
     handleToggleAssistant,
     handleToggleSuggestions,
-    handleCloseRevision,
   } = useResumeDetailHandlers({
     id,
     isEditRoute,

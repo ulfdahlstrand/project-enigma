@@ -14,7 +14,6 @@ import {
 import { ChallengeResultAlert, type ChallengeResult, type CopyState } from "./external-ai/ChallengeResultAlert";
 import {
   CreateAuthorizationCard,
-  DURATION_OPTIONS,
   type DurationOption,
 } from "./external-ai/CreateAuthorizationCard";
 

@@ -7,7 +7,6 @@
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
  */
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";

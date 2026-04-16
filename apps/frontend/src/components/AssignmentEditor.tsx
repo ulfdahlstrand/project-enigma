@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Box from "@mui/material/Box";
@@ -34,8 +34,6 @@ interface AssignmentEditorProps {
   assignments: AssignmentRow[];
   branchId: string;
   queryKey: readonly unknown[];
-  /** Canvas element (position:relative) used to portal AI FABs outside the paper. */
-  canvasEl?: HTMLElement | null;
   /** When set, immediately opens this assignment id in edit mode. */
   autoEditId?: string | null;
   /** Called after autoEditId has been consumed so the parent can clear it. */
@@ -73,7 +71,6 @@ export function AssignmentEditor({
   assignments,
   branchId,
   queryKey,
-  canvasEl,
   autoEditId,
   onAutoEditConsumed,
 }: AssignmentEditorProps) {
@@ -85,9 +82,6 @@ export function AssignmentEditor({
   const [saveError, setSaveError] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
-  const [cardTops, setCardTops] = useState<Map<string, number>>(new Map());
-
   useEffect(() => {
     if (!autoEditId) return;
     const target = assignments.find((a) => a.id === autoEditId || a.assignmentId === autoEditId);
@@ -96,16 +90,6 @@ export function AssignmentEditor({
     onAutoEditConsumed?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEditId, assignments]);
-
-  useLayoutEffect(() => {
-    if (!canvasEl) return;
-    const canvasTop = canvasEl.getBoundingClientRect().top;
-    const tops = new Map<string, number>();
-    cardRefs.current.forEach((el, id) => {
-      if (el) tops.set(id, el.getBoundingClientRect().top - canvasTop);
-    });
-    setCardTops(tops);
-  }, [canvasEl, assignments, editingId]);
 
   // Delete uses the assignment identity id (cascades across branches)
   const deleteMutation = useMutation({
@@ -196,9 +180,6 @@ export function AssignmentEditor({
         return (
           <Box
             key={a.id}
-            ref={(el: HTMLDivElement | null) => {
-              cardRefs.current.set(a.id, el);
-            }}
             sx={{ position: "relative" }}
           >
             {!isEditing && (

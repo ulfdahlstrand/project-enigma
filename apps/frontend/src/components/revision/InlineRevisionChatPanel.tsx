@@ -2,7 +2,6 @@ import { useState, type SyntheticEvent } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import AddIcon from "@mui/icons-material/Add";

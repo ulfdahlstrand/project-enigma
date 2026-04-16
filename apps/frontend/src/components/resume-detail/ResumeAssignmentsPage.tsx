@@ -30,7 +30,6 @@ interface ResumeAssignmentsPageProps {
   isEditing: boolean;
   isSnapshotMode: boolean;
   canCreateAssignment: boolean;
-  canvasEl: HTMLElement | null;
   newAssignmentId: string | null;
   onAutoEditConsumed: () => void;
   onCreateAssignment: () => void;
@@ -52,7 +51,6 @@ export function ResumeAssignmentsPage({
   isEditing,
   isSnapshotMode,
   canCreateAssignment,
-  canvasEl,
   newAssignmentId,
   onAutoEditConsumed,
   onCreateAssignment,
@@ -79,7 +77,6 @@ export function ResumeAssignmentsPage({
             assignments={assignments}
             branchId={activeBranchId!}
             queryKey={["listBranchAssignmentsFull", activeBranchId]}
-            canvasEl={canvasEl}
             autoEditId={newAssignmentId}
             onAutoEditConsumed={onAutoEditConsumed}
           />
