@@ -1,6 +1,7 @@
 import { sortAssignments } from "@cv-tool/utils";
 import { createFileRoute, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryState, parseAsBoolean } from "nuqs";
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
@@ -274,7 +275,10 @@ export function ResumeDetailPage({
   });
   const forkResumeBranch = useForkResumeBranch();
 
-  const [showFullAssignments, setShowFullAssignments] = useState(true);
+  const [showFullAssignments, setShowFullAssignments] = useQueryState(
+    "showFull",
+    parseAsBoolean.withDefault(true),
+  );
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [createVariantDialogOpen, setCreateVariantDialogOpen] = useState(false);
