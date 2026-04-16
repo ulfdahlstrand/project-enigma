@@ -69,6 +69,7 @@ const NEW_BRANCH_ROW = {
   branch_type: "variant" as const,
   source_branch_id: null,
   source_commit_id: null,
+  is_archived: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -79,11 +80,13 @@ function buildDbMock(opts: {
   commitRow?: unknown;
   newBranchRow?: unknown;
   employeeId?: string | null;
+  owningBranchRow?: unknown;
 } = {}) {
   const {
     commitRow = COMMIT_ROW,
     newBranchRow = NEW_BRANCH_ROW,
     employeeId = null,
+    owningBranchRow = undefined,
   } = opts;
 
   const resolvedCommit = commitRow === null ? undefined : commitRow;
@@ -99,6 +102,11 @@ function buildDbMock(opts: {
   const commitSelect = vi.fn().mockReturnValue({ where: commitWhere });
   const commitInnerJoin = vi.fn().mockReturnValue({ select: commitSelect });
 
+  // Owning branch lookup (resume_branches SELECT for language inheritance)
+  const owningBranchExecuteTakeFirst = vi.fn().mockResolvedValue(owningBranchRow);
+  const owningBranchWhere = vi.fn().mockReturnValue({ executeTakeFirst: owningBranchExecuteTakeFirst });
+  const owningBranchSelect = vi.fn().mockReturnValue({ where: owningBranchWhere });
+
   // Branch insert
   const branchInsertExecuteTakeFirstOrThrow = vi.fn().mockResolvedValue(newBranchRow);
   const branchInsertReturningAll = vi.fn().mockReturnValue({ executeTakeFirstOrThrow: branchInsertExecuteTakeFirstOrThrow });
@@ -111,6 +119,7 @@ function buildDbMock(opts: {
 
   const selectFrom = vi.fn().mockImplementation((table: string) => {
     if (table === "employees") return { select: empSelect };
+    if (table === "resume_branches") return { select: owningBranchSelect };
     return { innerJoin: commitInnerJoin };
   });
 
