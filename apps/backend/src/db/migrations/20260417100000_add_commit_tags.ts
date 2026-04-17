@@ -4,8 +4,8 @@ import type { Kysely } from "kysely";
 // Migration: add_commit_tags
 //
 // Introduces the commit_tags table for cross-resume translation links.
-// Each row pins two commits (source and target) across different-language
-// resumes as corresponding to each other.
+// Each row pins two commits (source → target) across different-language resumes.
+// Uniqueness is enforced per resume pair + kind so upsert replaces in-place.
 //
 // resumes.language already exists — no column added here.
 // ---------------------------------------------------------------------------
@@ -16,6 +16,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("id", "uuid", (col) =>
       col.primaryKey().defaultTo(db.fn("gen_random_uuid", []))
     )
+    .addColumn("source_resume_id", "uuid", (col) =>
+      col.notNull().references("resumes.id").onDelete("cascade")
+    )
+    .addColumn("target_resume_id", "uuid", (col) =>
+      col.notNull().references("resumes.id").onDelete("cascade")
+    )
     .addColumn("source_commit_id", "uuid", (col) =>
       col.notNull().references("resume_commits.id").onDelete("cascade")
     )
@@ -23,7 +29,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       col.notNull().references("resume_commits.id").onDelete("cascade")
     )
     .addColumn("kind", "varchar(32)", (col) =>
-      col.notNull().defaultTo('translation')
+      col.notNull().defaultTo("translation")
     )
     .addColumn("created_at", "timestamptz", (col) =>
       col.notNull().defaultTo(db.fn("now", []))
@@ -31,28 +37,28 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("created_by", "uuid", (col) =>
       col.references("employees.id").onDelete("set null")
     )
-    .addUniqueConstraint("commit_tags_unique_source_target_kind", [
-      "source_commit_id",
-      "target_commit_id",
+    .addUniqueConstraint("commit_tags_unique_source_target_resume_kind", [
+      "source_resume_id",
+      "target_resume_id",
       "kind",
     ])
     .execute();
 
   await db.schema
-    .createIndex("idx_commit_tags_source")
+    .createIndex("idx_commit_tags_source_resume")
     .on("commit_tags")
-    .column("source_commit_id")
+    .column("source_resume_id")
     .execute();
 
   await db.schema
-    .createIndex("idx_commit_tags_target")
+    .createIndex("idx_commit_tags_target_resume")
     .on("commit_tags")
-    .column("target_commit_id")
+    .column("target_resume_id")
     .execute();
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await db.schema.dropIndex("idx_commit_tags_target").execute();
-  await db.schema.dropIndex("idx_commit_tags_source").execute();
+  await db.schema.dropIndex("idx_commit_tags_target_resume").execute();
+  await db.schema.dropIndex("idx_commit_tags_source_resume").execute();
   await db.schema.dropTable("commit_tags").execute();
 }

@@ -56,11 +56,20 @@ export async function createCommitTag(
   const tag = await db
     .insertInto("commit_tags")
     .values({
+      source_resume_id: sourceCommit.resume_id,
+      target_resume_id: targetCommit.resume_id,
       source_commit_id: input.sourceCommitId,
       target_commit_id: input.targetCommitId,
       kind,
       created_by: ownerEmployeeId,
     })
+    .onConflict((oc) =>
+      oc.constraint("commit_tags_unique_source_target_resume_kind").doUpdateSet({
+        source_commit_id: input.sourceCommitId,
+        target_commit_id: input.targetCommitId,
+        created_by: userId,
+      })
+    )
     .returningAll()
     .executeTakeFirstOrThrow();
 

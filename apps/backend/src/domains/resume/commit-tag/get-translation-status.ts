@@ -33,11 +33,8 @@ export async function getTranslationStatus(
     throw new ORPCError("FORBIDDEN");
   }
 
-  // Find the latest tag between the two resumes (source → target direction)
-  const latestTag = await db
+  const tag = await db
     .selectFrom("commit_tags as ct")
-    .innerJoin("resume_commits as src_rc", "src_rc.id", "ct.source_commit_id")
-    .innerJoin("resume_commits as tgt_rc", "tgt_rc.id", "ct.target_commit_id")
     .select([
       "ct.id",
       "ct.source_commit_id",
@@ -46,17 +43,14 @@ export async function getTranslationStatus(
       "ct.created_at",
       "ct.created_by",
     ])
-    .where("src_rc.resume_id", "=", input.resumeId)
-    .where("tgt_rc.resume_id", "=", input.targetResumeId)
-    .orderBy("ct.created_at", "desc")
-    .limit(1)
+    .where("ct.source_resume_id", "=", input.resumeId)
+    .where("ct.target_resume_id", "=", input.targetResumeId)
     .executeTakeFirst();
 
-  if (!latestTag) {
+  if (!tag) {
     return { latestTag: null, isStale: false, sourceHeadCommitId: null };
   }
 
-  // Find the main branch head of the source resume to detect staleness
   const sourceBranch = await db
     .selectFrom("resume_branches as rb")
     .select(["rb.head_commit_id"])
@@ -65,16 +59,16 @@ export async function getTranslationStatus(
     .executeTakeFirst();
 
   const sourceHeadCommitId = sourceBranch?.head_commit_id ?? null;
-  const isStale = sourceHeadCommitId !== null && sourceHeadCommitId !== latestTag.source_commit_id;
+  const isStale = sourceHeadCommitId !== null && sourceHeadCommitId !== tag.source_commit_id;
 
   return {
     latestTag: {
-      id: latestTag.id,
-      sourceCommitId: latestTag.source_commit_id,
-      targetCommitId: latestTag.target_commit_id,
-      kind: latestTag.kind,
-      createdAt: latestTag.created_at,
-      createdBy: latestTag.created_by,
+      id: tag.id,
+      sourceCommitId: tag.source_commit_id,
+      targetCommitId: tag.target_commit_id,
+      kind: tag.kind,
+      createdAt: tag.created_at,
+      createdBy: tag.created_by,
     },
     isStale,
     sourceHeadCommitId,
