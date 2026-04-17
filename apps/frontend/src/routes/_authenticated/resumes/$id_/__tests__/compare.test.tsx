@@ -278,9 +278,13 @@ describe("Diff with changes", () => {
   });
 
   it("shows diff content when a group is expanded", async () => {
-    renderPage();
-    expect(await screen.findByText("title")).toBeInTheDocument();
-    expect((await screen.findAllByText(enCommon.resume.compare.statusModified)).length).toBeGreaterThan(0);
+    const { container } = renderPage();
+    // Editorial layout renders before/after via an inline word diff; text is
+    // split across multiple spans, so assert against the concatenated text.
+    await screen.findByText(enCommon.resume.compare.scalarsHeading);
+    expect(container.textContent).toMatch(/Old/);
+    expect(container.textContent).toMatch(/New/);
+    expect(container.textContent).toMatch(/Title/);
   });
 
   it("uses the summary diff view by default and lets the user switch to split view", async () => {
@@ -298,22 +302,31 @@ describe("Diff with changes", () => {
 
   it("renders added skill chip with the skill name", async () => {
     renderPage();
-    const addedChip = await screen.findByText(enCommon.resume.compare.statusAdded);
-    expect(addedChip).toBeInTheDocument();
     const skillNames = await screen.findAllByText("TypeScript");
     expect(skillNames.length).toBeGreaterThan(0);
+    // The added chip carries the translated status as its accessible label.
+    const addedChip = skillNames.find(
+      (node) => node.closest(`[aria-label="${enCommon.resume.compare.statusAdded}"]`) !== null,
+    );
+    expect(addedChip).toBeDefined();
   });
 
   it("renders removed skill chip", async () => {
     renderPage();
-    const removedChip = await screen.findByText(enCommon.resume.compare.statusRemoved);
-    expect(removedChip).toBeInTheDocument();
+    const skillNames = await screen.findAllByText("Java");
+    expect(skillNames.length).toBeGreaterThan(0);
+    const removedChip = skillNames.find(
+      (node) => node.closest(`[aria-label="${enCommon.resume.compare.statusRemoved}"]`) !== null,
+    );
+    expect(removedChip).toBeDefined();
   });
 
-  it("renders modified assignment chip", async () => {
-    renderPage();
-    const modifiedChips = await screen.findAllByText(enCommon.resume.compare.statusModified);
-    expect(modifiedChips.length).toBeGreaterThan(0);
+  it("renders modified assignment", async () => {
+    const { container } = renderPage();
+    await screen.findByText(enCommon.resume.compare.assignmentsHeading);
+    // Unified diff splits text across spans; assert against concatenated text.
+    expect(container.textContent).toMatch(/Senior/);
+    expect(container.textContent).toMatch(/Acme Corp/);
   });
 });
 

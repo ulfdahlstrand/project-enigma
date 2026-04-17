@@ -13,6 +13,7 @@ export type DiffGroupItem = {
   before: string;
   after: string;
   status: DiffStatus;
+  category?: string | null;
 };
 
 export type DiffGroup = {
@@ -83,6 +84,7 @@ export function buildDiffGroups(diff: Diff, t: (key: string) => string): DiffGro
       before: stringifySkillEntry(item.before),
       after: stringifySkillEntry(item.after),
       status: item.status as DiffStatus,
+      category: item.after?.category ?? item.before?.category ?? null,
     }));
 
   const assignmentItems: DiffGroupItem[] = diff.assignments
