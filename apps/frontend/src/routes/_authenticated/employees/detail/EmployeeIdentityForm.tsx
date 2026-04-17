@@ -40,13 +40,13 @@ export function EmployeeIdentityForm({
   const { t } = useTranslation("common");
 
   return (
-    <Box sx={{ width: 560, flexShrink: 0 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, mb: 3 }}>
+    <Box sx={{ flexShrink: 0, minWidth: 320, flex: "0 1 480px" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5 }}>
         <ConsultantAvatar
           name={employeeName}
           profileImageDataUrl={profileImageDataUrl}
-          size={120}
-          fontSize={36}
+          size={72}
+          fontSize={24}
         />
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <Button variant="outlined" component="label">
