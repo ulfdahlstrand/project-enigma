@@ -52,7 +52,6 @@ export async function createCommitTag(
   }
 
   const kind = input.kind ?? "translation";
-  const userId = user.id;
 
   const tag = await db
     .insertInto("commit_tags")
@@ -60,7 +59,7 @@ export async function createCommitTag(
       source_commit_id: input.sourceCommitId,
       target_commit_id: input.targetCommitId,
       kind,
-      created_by: userId,
+      created_by: ownerEmployeeId,
     })
     .returningAll()
     .executeTakeFirstOrThrow();

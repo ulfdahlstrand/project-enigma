@@ -124,7 +124,7 @@ export async function createTranslationResume(
         source_commit_id: sourceCommit.id,
         target_commit_id: rootCommit.id,
         kind: "translation",
-        created_by: user.id,
+        created_by: ownerEmployeeId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
