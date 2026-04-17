@@ -343,6 +343,7 @@ export function useResumeDetailPage({
         queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
         queryClient.invalidateQueries({ queryKey: ["getResume", id] }),
+        queryClient.invalidateQueries({ queryKey: ["getTranslationStatus"] }),
       ]);
     },
   });
