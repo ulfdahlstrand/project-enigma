@@ -15,18 +15,18 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import { accent, fg, font, ink, line } from "./compare-design";
 import {
   useResumeBranchHistoryGraph,
   useResumeBranches,
 } from "../../../../../hooks/versioning";
 import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
-import { PageContent } from "../../../../../components/layout/PageContent";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 import { CompareDiffGroupsCard } from "./CompareDiffGroupsCard";
-import { CompareRefChip } from "./CompareRefChip";
+import { CompareRefPicker } from "./CompareRefPicker";
+import { CompareSummaryStrip } from "./CompareSummaryStrip";
 import {
   compareByCreatedAtDesc,
   resolveCompareRefToCommitId,
@@ -34,6 +34,8 @@ import {
 } from "./compare-utils";
 
 export { parseCompareRange, resolveCompareRefToCommitId } from "./compare-utils";
+
+const TOTAL_DIFF_SECTIONS = 3;
 
 export function CompareVersionsPage() {
   const { t } = useTranslation("common");
@@ -75,6 +77,11 @@ export function CompareVersionsPage() {
   const baseCommitId = resolveCompareRefToCommitId(baseRef, branchOptions, commitOptions);
   const headCommitId = resolveCompareRefToCommitId(compareRef, branchOptions, commitOptions);
 
+  const baseCommit = commitOptions.find((commit) => commit.id === baseCommitId);
+  const headCommit = commitOptions.find((commit) => commit.id === headCommitId);
+  const baseCreatedAt = baseCommit?.createdAt ? new Date(baseCommit.createdAt) : null;
+  const headCreatedAt = headCommit?.createdAt ? new Date(headCommit.createdAt) : null;
+
   const {
     diffGroups,
     plusCount: totalPlusCount,
@@ -110,7 +117,7 @@ export function CompareVersionsPage() {
   const bothSelected = Boolean(baseCommitId && headCommitId);
 
   return (
-    <>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: ink[0] }}>
       <PageHeader
         title={t("resume.compare.pageTitle")}
         breadcrumbs={[
@@ -123,73 +130,123 @@ export function CompareVersionsPage() {
         activeBranchId={branchOptions.find((b) => b.name === compareRef)?.id ?? null}
         compareRef={compareRef || null}
       />
-      <PageContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {t("resume.compare.description")}
-        </Typography>
-
-        {loading ? (
-          <CircularProgress aria-label={t("resume.compare.loading")} />
-        ) : (
+      <Box
+        sx={{
+          flex: 1,
+          color: fg[2],
+          fontFamily: font.ui,
+          fontSize: "14px",
+          lineHeight: 1.5,
+          letterSpacing: "-0.005em",
+          px: { xs: "20px", md: "32px" },
+          py: { xs: "24px", md: "32px" },
+        }}
+      >
           <Box
+            component="p"
             sx={{
-              display: "flex",
-              gap: 1.5,
-              mb: 3,
-              flexWrap: "wrap",
-              alignItems: "center",
+              m: 0,
+              mb: "24px",
+              color: fg[3],
+              fontSize: "13px",
+              fontFamily: font.ui,
             }}
           >
-            <CompareRefChip
-              label={t("resume.compare.fromLabel")}
-              value={baseRef}
-              branches={branchOptions}
-              commits={commitOptions}
-              onSelect={handleBaseChange}
-            />
-            <IconButton
-              onClick={handleSwap}
-              aria-label={t("resume.compare.swapButton")}
-              size="small"
+            {t("resume.compare.description")}
+          </Box>
+
+          {loading ? (
+            <CircularProgress aria-label={t("resume.compare.loading")} />
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr auto 1fr" },
+                gap: "14px",
+                mb: "16px",
+                alignItems: "center",
+              }}
             >
-              <SwapHorizIcon fontSize="small" />
-            </IconButton>
-            <CompareRefChip
-              label={t("resume.compare.toLabel")}
-              value={compareRef}
-              branches={branchOptions}
-              commits={commitOptions}
-              onSelect={handleCompareChange}
-            />
-          </Box>
-        )}
+              <CompareRefPicker
+                label={t("resume.compare.fromLabel")}
+                value={baseRef}
+                branches={branchOptions}
+                commits={commitOptions}
+                onSelect={handleBaseChange}
+                align="left"
+              />
+              <IconButton
+                onClick={handleSwap}
+                aria-label={t("resume.compare.swapButton")}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  justifySelf: "center",
+                  border: `1px solid ${accent.line}`,
+                  color: accent.main,
+                  backgroundColor: accent.soft,
+                  "&:hover": {
+                    backgroundColor: accent.soft,
+                    borderColor: accent.main,
+                  },
+                }}
+              >
+                <ArrowForwardIcon fontSize="small" />
+              </IconButton>
+              <CompareRefPicker
+                label={t("resume.compare.toLabel")}
+                value={compareRef}
+                branches={branchOptions}
+                commits={commitOptions}
+                onSelect={handleCompareChange}
+                align="right"
+              />
+            </Box>
+          )}
 
-        {!bothSelected && !loading && (
-          <Typography variant="body2" color="text.disabled">
-            {t("resume.compare.noSelectionHint")}
-          </Typography>
-        )}
+          {!bothSelected && !loading && (
+            <Box
+              component="p"
+              sx={{
+                m: 0,
+                fontFamily: font.mono,
+                fontSize: "12px",
+                color: fg[5],
+                letterSpacing: "0.02em",
+              }}
+            >
+              {t("resume.compare.noSelectionHint")}
+            </Box>
+          )}
 
-        {diffLoading && <CircularProgress aria-label={t("resume.compare.loading")} />}
+          {diffLoading && <CircularProgress aria-label={t("resume.compare.loading")} />}
 
-        {diffError && <Alert severity="error">{t("resume.compare.error")}</Alert>}
+          {diffError && <Alert severity="error">{t("resume.compare.error")}</Alert>}
 
-        {diffHasChanges === false && (
-          <Alert severity="info">{t("resume.compare.noChanges")}</Alert>
-        )}
+          {diffHasChanges === false && (
+            <Alert severity="info">{t("resume.compare.noChanges")}</Alert>
+          )}
 
-        {diffHasChanges === true && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <CompareDiffGroupsCard
-              diffGroups={diffGroups}
-              totalPlusCount={totalPlusCount}
-              totalMinusCount={totalMinusCount}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-            />
-          </Box>
-        )}
-      </PageContent>
-    </>
+          {diffHasChanges === true && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <CompareSummaryStrip
+                plusCount={totalPlusCount}
+                minusCount={totalMinusCount}
+                affectedSections={diffGroups.length}
+                totalSections={TOTAL_DIFF_SECTIONS}
+                baseCreatedAt={baseCreatedAt}
+                headCreatedAt={headCreatedAt}
+              />
+              <CompareDiffGroupsCard
+                diffGroups={diffGroups}
+                totalPlusCount={totalPlusCount}
+                totalMinusCount={totalMinusCount}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+              />
+            </Box>
+          )}
+      </Box>
+    </Box>
   );
 }

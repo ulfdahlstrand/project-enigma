@@ -24,12 +24,15 @@ export interface CompareRefBranchOption {
   headCommitId: string | null;
   isMain: boolean;
   isArchived: boolean;
+  createdAt?: string | Date | null;
 }
 
 export interface CompareRefCommitOption {
   id: string;
   title: string | null;
   createdAt: string | Date | null;
+  parentCommitId?: string | null;
+  createdBy?: string | null;
 }
 
 interface CompareRefChipProps {

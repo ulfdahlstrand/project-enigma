@@ -464,6 +464,22 @@
       "emptyBranch": "no current snapshot",
       "moreActions": "More actions",
       "goToHistory": "Go to history",
+      "pickerUpdated": "Updated {{date}}",
+      "summary": {
+        "ariaLabel": "Diff summary",
+        "added": "Added",
+        "removed": "Removed",
+        "sectionsAffected": "Sections affected",
+        "sectionsOf": "of {{total}}",
+        "timeBetween": "Time between",
+        "changes": "changes",
+        "sameDay": "same day",
+        "days_one": "day",
+        "days_other": "days"
+      },
+      "skills": {
+        "uncategorised": "Uncategorised"
+      },
       "tree": {
         "main": "main",
         "archived": "archived",
@@ -481,6 +497,30 @@
         "merged": "Accepted",
         "revisions": "Drafts",
         "noBranches": "No versions match the current filter"
+      },
+      "refpicker": {
+        "tabBranches": "Versions",
+        "tabCommits": "Snapshots",
+        "tabRecent": "Recent",
+        "searchPlaceholder": "Search version, snapshot, author…",
+        "clearSearch": "Clear search",
+        "noResults": "No results for «{{query}}»",
+        "noRecent": "No recently used references",
+        "expandCommits": "Show snapshots",
+        "collapseCommits": "Hide snapshots",
+        "recentLabel": "Recently used",
+        "statusArchived": "archived",
+        "commitCount_one": "snapshot",
+        "commitCount_other": "snapshots",
+        "today": "today",
+        "yesterday": "yesterday",
+        "daysAgo_one": "{{count}} day ago",
+        "daysAgo_other": "{{count}} days ago",
+        "footerNav": "Navigate",
+        "footerSelect": "Select",
+        "footerClose": "Close",
+        "footerHintBranches": "Click ▸ for snapshots",
+        "footerHintCommits": "All snapshots, newest first"
       }
     },
     "saveVersion": {

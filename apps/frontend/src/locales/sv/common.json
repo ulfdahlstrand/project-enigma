@@ -464,6 +464,22 @@
       "emptyBranch": "ingen aktuell ögonblicksbild",
       "moreActions": "Fler åtgärder",
       "goToHistory": "Gå till historik",
+      "pickerUpdated": "Uppdaterad {{date}}",
+      "summary": {
+        "ariaLabel": "Sammanfattning av skillnader",
+        "added": "Tillagt",
+        "removed": "Borttaget",
+        "sectionsAffected": "Sektioner påverkade",
+        "sectionsOf": "av {{total}}",
+        "timeBetween": "Tid mellan",
+        "changes": "ändringar",
+        "sameDay": "samma dag",
+        "days_one": "dag",
+        "days_other": "dagar"
+      },
+      "skills": {
+        "uncategorised": "Övrigt"
+      },
       "tree": {
         "main": "huvud",
         "archived": "arkiverad",
@@ -481,6 +497,30 @@
         "merged": "Accepterad",
         "revisions": "Utkast",
         "noBranches": "Inga versioner matchar aktuellt filter"
+      },
+      "refpicker": {
+        "tabBranches": "Varianter",
+        "tabCommits": "Ögonblicksbilder",
+        "tabRecent": "Senaste",
+        "searchPlaceholder": "Sök variant, ögonblicksbild, författare…",
+        "clearSearch": "Rensa sökning",
+        "noResults": "Ingen träff för «{{query}}»",
+        "noRecent": "Inga nyligen använda referenser",
+        "expandCommits": "Visa ögonblicksbilder",
+        "collapseCommits": "Dölj ögonblicksbilder",
+        "recentLabel": "Nyligen använda",
+        "statusArchived": "arkiverad",
+        "commitCount_one": "ögonblicksbild",
+        "commitCount_other": "ögonblicksbilder",
+        "today": "idag",
+        "yesterday": "igår",
+        "daysAgo_one": "{{count}} dag sedan",
+        "daysAgo_other": "{{count}} dagar sedan",
+        "footerNav": "Navigera",
+        "footerSelect": "Välj",
+        "footerClose": "Stäng",
+        "footerHintBranches": "Klicka ▸ för ögonblicksbilder",
+        "footerHintCommits": "Alla ögonblicksbilder, nyast först"
       }
     },
     "saveVersion": {
