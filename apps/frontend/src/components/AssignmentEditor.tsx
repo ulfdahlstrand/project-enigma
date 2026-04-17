@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
-import EditIcon from "@mui/icons-material/Edit";
 import { orpc } from "../orpc-client";
 import {
   AssignmentRowEditor,
@@ -178,21 +176,7 @@ export function AssignmentEditor({
         const isEditing = editingId === a.id;
 
         return (
-          <Box
-            key={a.id}
-            sx={{ position: "relative" }}
-          >
-            {!isEditing && (
-              <IconButton
-                size="small"
-                onClick={() => startEdit(a)}
-                aria-label={t("resume.edit.assignment.editButton")}
-                sx={{ position: "absolute", top: 0, right: 0 }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            )}
-
+          <Box key={a.id}>
             {isEditing && draft ? (
               <AssignmentRowEditor
                 draft={draft}
@@ -208,7 +192,33 @@ export function AssignmentEditor({
                 onConfirmDelete={() => deleteMutation.mutate(a.assignmentId)}
               />
             ) : (
-              <AssignmentRowView assignment={a} />
+              <Box
+                component="button"
+                type="button"
+                onClick={() => startEdit(a)}
+                aria-label={t("resume.edit.assignment.editButton")}
+                sx={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "inherit",
+                  font: "inherit",
+                  color: "inherit",
+                  background: "transparent",
+                  border: 0,
+                  p: 1,
+                  m: -1,
+                  cursor: "pointer",
+                  borderRadius: 1,
+                  "&:hover": { bgcolor: "action.hover" },
+                  "&:focus-visible": {
+                    outline: "2px solid",
+                    outlineColor: "primary.main",
+                    outlineOffset: 2,
+                  },
+                }}
+              >
+                <AssignmentRowView assignment={a} />
+              </Box>
             )}
           </Box>
         );

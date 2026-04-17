@@ -122,6 +122,18 @@ describe("AssignmentEditor", () => {
     expect(roleInput).toBeInTheDocument();
   });
 
+  it("clicking the row body (not an edit icon) switches to edit mode", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    // Click on the visible role heading in read mode — the whole row should be
+    // an edit affordance, not just a tiny icon button.
+    await user.click(screen.getByText("Senior Developer"));
+
+    expect(screen.getByDisplayValue("Senior Developer")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Acme Corp")).toBeInTheDocument();
+  });
+
   it("pre-populates clientName field when editing", async () => {
     const user = userEvent.setup();
     renderEditor();
