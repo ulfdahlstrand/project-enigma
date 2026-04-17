@@ -102,6 +102,7 @@ export function ResumePreviewPage({
     <ResumeDetailActions
       resumeId={id}
       resumeTitle={resumeTitle}
+      resumeLanguage={language ?? null}
       activeBranchId={activeBranchId}
       activeBranchName={activeBranch?.name ?? null}
       compareBaseRef={compareBaseRef}

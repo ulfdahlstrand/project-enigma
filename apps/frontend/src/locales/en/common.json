@@ -276,6 +276,7 @@
       "editMenuLabel": "Open edit options",
       "moreActionsLabel": "More actions",
       "createBranchFromCommitMenuItem": "Duplicate as new version from this snapshot",
+      "createTranslationMenuItem": "Create translation",
       "deleteButton": "Delete",
       "deleteDialog": {
         "title": "Delete resume",
@@ -534,6 +535,22 @@
       "markCaughtUpButton": "Mark as up to date",
       "markingCaughtUp": "Updating…",
       "error": "Failed to mark as up to date. Please try again."
+    },
+    "translationStalenessBanner": {
+      "title": "Translation is out of date",
+      "description": "{{sourceName}} has new changes. Mark as updated when you have re-translated the changes.",
+      "markCaughtUp": "Mark as up to date"
+    },
+    "createTranslationDialog": {
+      "title": "Create translation",
+      "languageLabel": "Target language",
+      "language_sv": "Swedish",
+      "language_en": "English",
+      "titleLabel": "Resume title (optional)",
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating…",
+      "error": "Failed to create translation. Please try again."
     },
     "syncDialog": {
       "revision": {

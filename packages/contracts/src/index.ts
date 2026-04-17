@@ -207,6 +207,8 @@ export {
   deleteCommitTagOutputSchema,
   getTranslationStatusInputSchema,
   getTranslationStatusOutputSchema,
+  createTranslationResumeInputSchema,
+  createTranslationResumeOutputSchema,
 } from "./commit-tags.js";
 export type {
   CommitTag,
@@ -220,6 +222,8 @@ export type {
   DeleteCommitTagOutput,
   GetTranslationStatusInput,
   GetTranslationStatusOutput,
+  CreateTranslationResumeInput,
+  CreateTranslationResumeOutput,
 } from "./commit-tags.js";
 
 export {

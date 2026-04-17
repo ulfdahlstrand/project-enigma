@@ -20,7 +20,9 @@ import Typography from "@mui/material/Typography";
 import { PageHeader } from "../../layout/PageHeader";
 import { RevisionActionBanner } from "../../RevisionActionBanner";
 import { TranslationStaleBanner } from "../../TranslationStaleBanner";
+import { TranslationStalenessBanner } from "../TranslationStalenessBanner";
 import { ResumeContextStrip } from "../context-strip/ResumeContextStrip";
+import { useListCommitTags } from "../../../hooks/versioning";
 import { ResumeRevisionReviewDialog } from "../ResumeRevisionReviewDialog";
 import { ResumeCommandBar } from "../command-bar/ResumeCommandBar";
 import type { ResumeDetailPageBundle } from "./useResumeDetailPage";
@@ -71,6 +73,13 @@ export function ResumeDetailShell({
     draftHighlightedItems,
     highlightedItemsText,
   } = bundle;
+
+  const { data: commitTags } = useListCommitTags(id);
+  // Find the source resume for this resume (where this resume is the translation target)
+  const incomingTag = commitTags?.find((tag) => tag.target.resumeId === id);
+  const sourceResumeIdForBanner = incomingTag?.source.resumeId ?? null;
+  const sourceNameForBanner = incomingTag?.source.resumeTitle ?? "";
+  const targetHeadCommitId = activeBranch?.headCommitId ?? null;
 
   function handleAddVariant() {
     setNewVariantName("");
@@ -145,6 +154,14 @@ export function ResumeDetailShell({
           resumeId={id}
           branchId={activeBranchId}
           sourceName={sourceBranch?.name ?? ""}
+        />
+      ) : null}
+      {sourceResumeIdForBanner ? (
+        <TranslationStalenessBanner
+          sourceResumeId={sourceResumeIdForBanner}
+          targetResumeId={id}
+          targetHeadCommitId={targetHeadCommitId}
+          sourceName={sourceNameForBanner}
         />
       ) : null}
       {activeBranchType === "revision" && activeBranchId ? (

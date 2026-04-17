@@ -49,6 +49,7 @@ import {
   createCommitTagHandler,
   deleteCommitTagHandler,
   getTranslationStatusHandler,
+  createTranslationResumeHandler,
 } from "./domains/resume/index.js";
 import {
   listEducationHandler,
@@ -174,6 +175,7 @@ export const router = implement(contract).router({
   createCommitTag: createCommitTagHandler,
   deleteCommitTag: deleteCommitTagHandler,
   getTranslationStatus: getTranslationStatusHandler,
+  createTranslationResume: createTranslationResumeHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */
