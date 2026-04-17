@@ -15,12 +15,18 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import type { GraphBranch } from "./history-graph-utils";
+import { LanguageLinkBadge } from "./LanguageLinkBadge";
 
 interface HistoryBranchSidebarProps {
   /** Already-filtered branches. Grouping and rendering happens here; filtering does not. */
   branches: GraphBranch[];
   selectedBranchId: string;
+  /** Map from commit id → tags involving that commit. Used to render language-link badges. */
+  commitTags: Map<string, CommitTagWithLinkedResume[]>;
+  /** ID of the resume being viewed — used by LanguageLinkBadge to pick the "other side" of a tag. */
+  currentResumeId: string;
   onSelect: (branchId: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
 }
@@ -36,6 +42,9 @@ interface BranchRowProps {
   icon: React.ReactNode;
   primaryText: string;
   secondaryText?: string | undefined;
+  /** Tags whose source or target commit equals this branch's head commit. */
+  tagsOnHead?: CommitTagWithLinkedResume[] | undefined;
+  currentResumeId?: string | undefined;
   onSelect: (branchId: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
   expandable?: boolean;
@@ -50,6 +59,8 @@ function BranchRow({
   icon,
   primaryText,
   secondaryText,
+  tagsOnHead,
+  currentResumeId,
   onSelect,
   onArchive,
   expandable,
@@ -102,6 +113,13 @@ function BranchRow({
             </Typography>
           )}
         </Box>
+        {tagsOnHead && currentResumeId && tagsOnHead.length > 0 && (
+          <Box sx={{ display: "flex", gap: 0.25, flexShrink: 0, mr: 0.25 }}>
+            {tagsOnHead.map((tag) => (
+              <LanguageLinkBadge key={tag.id} tag={tag} currentResumeId={currentResumeId} />
+            ))}
+          </Box>
+        )}
         {!branch.isMain && (
           <IconButton
             size="small"
@@ -149,13 +167,15 @@ interface VariantGroupProps {
   variant: GraphBranch;
   translations: GraphBranch[];
   selectedBranchId: string;
+  commitTags: Map<string, CommitTagWithLinkedResume[]>;
+  currentResumeId: string;
   onSelect: (branchId: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
 }
 
-function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArchive }: VariantGroupProps) {
+function VariantGroup({ variant, translations, selectedBranchId, commitTags, currentResumeId, onSelect, onArchive }: VariantGroupProps) {
   const [expanded, setExpanded] = useState(false);
-  const allLanguages = [...new Set([variant.language, ...translations.map((t) => t.language)])];
+  const variantTags = variant.headCommitId ? commitTags.get(variant.headCommitId) : undefined;
 
   return (
     <>
@@ -165,7 +185,8 @@ function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArc
         indent={0}
         icon={<AccountTreeIcon sx={{ fontSize: 16 }} />}
         primaryText={variant.name}
-        secondaryText={allLanguages.map((l) => l.toUpperCase()).join(" / ")}
+        tagsOnHead={variantTags}
+        currentResumeId={currentResumeId}
         onSelect={onSelect}
         onArchive={onArchive}
         expandable={translations.length > 0}
@@ -181,8 +202,9 @@ function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArc
               selectedBranchId={selectedBranchId}
               indent={1.5}
               icon={<LanguageIcon sx={{ fontSize: 14 }} />}
-              primaryText={tr.language.toUpperCase()}
-              secondaryText={tr.name !== tr.language ? tr.name : undefined}
+              primaryText={tr.name}
+              tagsOnHead={tr.headCommitId ? commitTags.get(tr.headCommitId) : undefined}
+              currentResumeId={currentResumeId}
               onSelect={onSelect}
               onArchive={onArchive}
             />
@@ -200,6 +222,8 @@ function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArc
 export function HistoryBranchSidebar({
   branches,
   selectedBranchId,
+  commitTags,
+  currentResumeId,
   onSelect,
   onArchive,
 }: HistoryBranchSidebarProps) {
@@ -276,6 +300,8 @@ export function HistoryBranchSidebar({
                 variant={variant}
                 translations={translations}
                 selectedBranchId={selectedBranchId}
+                commitTags={commitTags}
+                currentResumeId={currentResumeId}
                 onSelect={onSelect}
                 onArchive={onArchive}
               />
@@ -295,8 +321,9 @@ export function HistoryBranchSidebar({
                     selectedBranchId={selectedBranchId}
                     indent={0}
                     icon={<LanguageIcon sx={{ fontSize: 14 }} />}
-                    primaryText={branch.language.toUpperCase()}
-                    secondaryText={branch.name}
+                    primaryText={branch.name}
+                    tagsOnHead={branch.headCommitId ? commitTags.get(branch.headCommitId) : undefined}
+                    currentResumeId={currentResumeId}
                     onSelect={onSelect}
                     onArchive={onArchive}
                   />

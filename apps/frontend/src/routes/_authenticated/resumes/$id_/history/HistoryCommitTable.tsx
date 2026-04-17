@@ -17,14 +17,19 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
+import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import type { GraphBranch, GraphCommit } from "./history-graph-utils";
 import { CommitDiffBadge } from "../../../../../components/CommitDiffBadge";
+import { LanguageLinkBadge } from "./LanguageLinkBadge";
 
 const DESCRIPTION_PREVIEW_LENGTH = 100;
 
 interface HistoryCommitTableProps {
   commits: GraphCommit[];
   selectedBranch: GraphBranch | undefined;
+  /** Map from commit id → tags involving that commit. Used to render language-link badges per row. */
+  commitTags?: Map<string, CommitTagWithLinkedResume[]>;
+  currentResumeId?: string;
   onViewCommit: (commitId: string) => void;
   onCompare?: (commitId: string) => void;
   onRevert?: (commit: GraphCommit) => void;
@@ -33,6 +38,8 @@ interface HistoryCommitTableProps {
 export function HistoryCommitTable({
   commits,
   selectedBranch,
+  commitTags,
+  currentResumeId,
   onViewCommit,
   onCompare,
   onRevert,
@@ -76,12 +83,16 @@ export function HistoryCommitTable({
                 <TableRow key={commit.id}>
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, flexDirection: "column" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                         <Typography variant="body2" fontWeight={500}>{title}</Typography>
                         {isHead && (
                           <Chip label={t("resume.history.headBadge")} color="primary" size="small" />
                         )}
                         <CommitDiffBadge commitId={commit.id} parentCommitId={commit.parentCommitId} />
+                        {commitTags && currentResumeId &&
+                          (commitTags.get(commit.id) ?? []).map((tag) => (
+                            <LanguageLinkBadge key={tag.id} tag={tag} currentResumeId={currentResumeId} />
+                          ))}
                       </Box>
                       {descriptionPreview && (
                         <Typography variant="caption" color="text.secondary">

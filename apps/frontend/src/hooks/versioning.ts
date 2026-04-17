@@ -25,6 +25,9 @@ export const resumeCommitDiffKey = (
   headCommitId: string
 ) => ["compareResumeCommits", baseCommitId, headCommitId] as const;
 
+export const commitTagsKey = (resumeId: string) =>
+  ["listCommitTags", resumeId] as const;
+
 // ---------------------------------------------------------------------------
 // Query hooks
 // ---------------------------------------------------------------------------
@@ -52,6 +55,15 @@ export function useResumeBranchHistoryGraph(resumeId: string) {
   return useQuery({
     queryKey: resumeBranchHistoryGraphKey(resumeId),
     queryFn: () => orpc.getResumeBranchHistoryGraph({ resumeId }),
+    enabled: Boolean(resumeId),
+  });
+}
+
+/** Lists cross-resume commit tags (translation links) involving this resume. */
+export function useListCommitTags(resumeId: string) {
+  return useQuery({
+    queryKey: commitTagsKey(resumeId),
+    queryFn: () => orpc.listCommitTags({ resumeId }),
     enabled: Boolean(resumeId),
   });
 }

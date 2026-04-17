@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -17,83 +16,65 @@ interface FilterBranchesArgs {
   activeFilters: Set<BranchFilterType>;
   activeLanguages: Set<string>;
   showArchived: boolean;
+  /**
+   * Branch IDs with at least one tagged commit reachable from the branch head.
+   * Drives the "translation" (Översättningar) filter in the tag-based model.
+   */
+  taggedBranchIds: Set<string>;
+  /**
+   * Map from branch id to the set of languages reachable via commit tags on
+   * that branch. Empty set (or missing entry) means no cross-language links.
+   */
+  branchTagLanguages: Map<string, Set<string>>;
 }
 
 /**
  * Returns the subset of branches that pass the active filters.
  *
- * - Archived: kept only if showArchived is true
- * - Type filter: variants are kept if any of (variant|translation) is active and
- *   — when "translation" is the only active type — the variant has ≥1 translation.
- *   Translations are kept if "translation" is active (or no type filter).
- *   Revisions are kept if "revision" is active (or no type filter).
- * - Language filter: variants match against covered languages (own + translations');
- *   translations/revisions match their own language.
+ * Tag-based semantics (see `.claude/contexts/one-resume-per-language-tag-linked.md`):
+ * - "translation" filter → branches where `taggedBranchIds.has(branch.id)`
+ * - Language filter → branches where `branchTagLanguages.get(branch.id)` includes the selected language
+ * - variant/revision filter → structural branch-type match (unchanged)
+ * - Archived toggle → hides archived branches unless showArchived is true
  */
 export function filterBranches({
   branches,
   activeFilters,
   activeLanguages,
   showArchived,
+  taggedBranchIds,
+  branchTagLanguages,
 }: FilterBranchesArgs): GraphBranch[] {
-  const typeWhitelist: BranchType[] =
-    activeFilters.size === 0
-      ? ["variant", "translation", "revision"]
-      : (["variant", "translation", "revision"] as BranchType[]).filter((type) =>
-          activeFilters.has(type),
-        );
-  const filterToTranslated = activeFilters.has("translation");
+  const noTypeFilter = activeFilters.size === 0;
+  const wantVariants = noTypeFilter || activeFilters.has("variant");
+  const wantTranslations = noTypeFilter || activeFilters.has("translation");
+  const wantRevisions = noTypeFilter || activeFilters.has("revision");
+  const translationOnly = activeFilters.has("translation") && !activeFilters.has("variant") && !activeFilters.has("revision");
 
-  // Index translations by variant id (unfiltered, for language coverage)
-  const allTranslationsByVariantId = new Map<string, GraphBranch[]>();
-  branches.forEach((b) => {
-    if (b.branchType === "translation" && b.sourceBranchId) {
-      const existing = allTranslationsByVariantId.get(b.sourceBranchId) ?? [];
-      allTranslationsByVariantId.set(b.sourceBranchId, [...existing, b]);
-    }
-  });
-
-  const visibleVariantIds = new Set<string>();
-
-  const visibleVariants = branches.filter((b) => {
-    if (b.branchType !== "variant") return false;
+  return branches.filter((b) => {
     if (!showArchived && b.isArchived) return false;
-    if (!typeWhitelist.includes("variant") && !filterToTranslated) return false;
 
-    const allTranslations = allTranslationsByVariantId.get(b.id) ?? [];
-    const coveredLanguages = [
-      ...new Set([b.language, ...allTranslations.map((tr) => tr.language)]),
-    ];
+    const isTagged = taggedBranchIds.has(b.id);
+    const branchLanguages = branchTagLanguages.get(b.id);
 
-    if (activeLanguages.size > 0 && !coveredLanguages.some((l) => activeLanguages.has(l))) {
-      return false;
+    // "translation" filter means "has cross-language tags" in the new model.
+    // When only "translation" is active, require isTagged.
+    if (translationOnly && !isTagged) return false;
+
+    // Language filter: branch must have a tag linking to a resume in the selected language.
+    if (activeLanguages.size > 0) {
+      if (!branchLanguages || ![...branchLanguages].some((l) => activeLanguages.has(l))) {
+        return false;
+      }
     }
-    if (filterToTranslated && allTranslations.length === 0) {
-      return false;
-    }
-    visibleVariantIds.add(b.id);
+
+    // Structural type filter — mirrors what still exists in the data model.
+    if (b.branchType === "variant" && !wantVariants && !wantTranslations) return false;
+    if (b.branchType === "translation" && !wantTranslations) return false;
+    if (b.branchType === "revision" && !wantRevisions) return false;
+
     return true;
   });
-
-  const visibleTranslations = branches.filter((b) => {
-    if (b.branchType !== "translation") return false;
-    if (!typeWhitelist.includes("translation")) return false;
-    if (!showArchived && b.isArchived) return false;
-    if (activeLanguages.size > 0 && !activeLanguages.has(b.language)) return false;
-    // Only keep translations whose parent variant is visible
-    if (b.sourceBranchId && !visibleVariantIds.has(b.sourceBranchId)) return false;
-    return true;
-  });
-
-  const visibleRevisions = branches.filter((b) => {
-    if (b.branchType !== "revision") return false;
-    if (!typeWhitelist.includes("revision")) return false;
-    if (!showArchived && b.isArchived) return false;
-    if (activeLanguages.size > 0 && !activeLanguages.has(b.language)) return false;
-    return true;
-  });
-
-  return [...visibleVariants, ...visibleTranslations, ...visibleRevisions];
 }
 
 interface FilterGraphDataArgs {
@@ -105,8 +86,6 @@ interface FilterGraphDataArgs {
 
 /**
  * Filters commits and edges to those reachable from any visible branch head.
- * Used so the graph only renders the lanes and commits relevant to the
- * currently-filtered branch set.
  */
 export function filterGraphData({
   commits,
@@ -128,31 +107,31 @@ export function filterGraphData({
 }
 
 interface HistoryBranchFiltersProps {
-  branches: GraphBranch[];
   activeFilters: Set<BranchFilterType>;
   activeLanguages: Set<string>;
   showArchived: boolean;
+  /** Languages available to filter by — derived by parent from commit tag link targets. */
+  availableLanguages: string[];
   onToggleFilter: (filter: BranchFilterType) => void;
   onToggleLanguage: (lang: string) => void;
   onToggleShowArchived: () => void;
 }
 
+/**
+ * Dumb filter UI. Owns only its local rendering — no data fetching, no
+ * derivation of available languages. Parent passes in `availableLanguages`,
+ * which it computes from the commit-tags map.
+ */
 export function HistoryBranchFilters({
-  branches,
   activeFilters,
   activeLanguages,
   showArchived,
+  availableLanguages,
   onToggleFilter,
   onToggleLanguage,
   onToggleShowArchived,
 }: HistoryBranchFiltersProps) {
   const { t } = useTranslation("common");
-
-  const allLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    branches.forEach((b) => langs.add(b.language));
-    return [...langs].sort();
-  }, [branches]);
 
   const typeFilterChips: Array<{ key: BranchType; label: string }> = [
     { key: "variant", label: t("resume.compare.tree.filterVariant") },
@@ -191,8 +170,8 @@ export function HistoryBranchFilters({
         icon={<ArchiveIcon />}
         onClick={onToggleShowArchived}
       />
-      {allLanguages.length > 1 &&
-        allLanguages.map((lang) => (
+      {availableLanguages.length > 0 &&
+        availableLanguages.map((lang) => (
           <Chip
             key={lang}
             label={lang.toUpperCase()}
