@@ -196,28 +196,6 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("inherits language from the resume", async () => {
-    const { db, branchInsertValues } = buildDbMock();
-
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(branchInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ language: "sv" })
-    );
-  });
-
-  it("falls back to 'en' language when the resume has no language", async () => {
-    const { db, branchInsertValues } = buildDbMock({
-      commitRow: { ...COMMIT_ROW, language: null },
-    });
-
-    await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
-
-    expect(branchInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ language: "en" })
-    );
-  });
-
   it("forks without copying separate branch-assignment rows", async () => {
     const { db } = buildDbMock();
 

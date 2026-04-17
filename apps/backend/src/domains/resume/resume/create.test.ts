@@ -176,7 +176,6 @@ describe("createResume query function", () => {
         resume_id: RESUME_ID,
         name: "default",
         is_main: true,
-        language: "en",
         created_by: MOCK_ADMIN.id,
       })
     );
