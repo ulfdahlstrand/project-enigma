@@ -34,3 +34,7 @@ export { listBranchAssignmentsHandler } from "./branch-assignment/list.js";
 export { listBranchAssignmentsFullHandler } from "./branch-assignment/list-full.js";
 export { createAssignmentHandler } from "./branch-assignment/create.js";
 export { deleteAssignmentHandler } from "./branch-assignment/delete.js";
+export { listCommitTagsHandler } from "./commit-tag/list.js";
+export { createCommitTagHandler } from "./commit-tag/create.js";
+export { deleteCommitTagHandler } from "./commit-tag/delete.js";
+export { getTranslationStatusHandler } from "./commit-tag/get-translation-status.js";

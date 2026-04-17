@@ -45,6 +45,10 @@ import {
   listBranchAssignmentsFullHandler,
   createAssignmentHandler,
   deleteAssignmentHandler,
+  listCommitTagsHandler,
+  createCommitTagHandler,
+  deleteCommitTagHandler,
+  getTranslationStatusHandler,
 } from "./domains/resume/index.js";
 import {
   listEducationHandler,
@@ -166,6 +170,10 @@ export const router = implement(contract).router({
   listAIConversations: listAIConversationsHandler,
   closeAIConversation: closeAIConversationHandler,
   resolveRevisionSuggestion: resolveRevisionSuggestionHandler,
+  listCommitTags: listCommitTagsHandler,
+  createCommitTag: createCommitTagHandler,
+  deleteCommitTag: deleteCommitTagHandler,
+  getTranslationStatus: getTranslationStatusHandler,
 });
 
 /** AppRouter type — re-exported for use in tests and future tooling. */
