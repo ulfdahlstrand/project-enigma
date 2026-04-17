@@ -49,7 +49,6 @@ export function ResumeEditPage({
     handleSave,
     handleCreateBranchFromCommit,
     handleExitEditing,
-    onEdit,
     onDeleteResume,
     deleteResumeIsPending,
     deleteResumeIsError,
@@ -121,17 +120,11 @@ export function ResumeEditPage({
       resumeTitle={resumeTitle}
       resumeLanguage={language ?? null}
       activeBranchId={activeBranchId}
-      activeBranchName={activeBranch?.name ?? null}
-      compareBaseRef={compareBaseRef}
       currentCommitId={currentViewedCommitId}
       isEditRoute={isEditRoute}
       isSnapshotMode={isSnapshotMode}
       isEditing={isEditing}
-      isSaving={updateResumeIsPending || saveVersionIsPending || forkBranchIsPending}
-      onSaveCurrent={() => void handleSave()}
       onCreateBranchFromCommit={handleCreateBranchFromCommit}
-      onEdit={onEdit}
-      onExitEdit={handleExitEditing}
       onDeleteResume={onDeleteResume}
       isDeletePending={deleteResumeIsPending}
       isDeleteError={deleteResumeIsError}

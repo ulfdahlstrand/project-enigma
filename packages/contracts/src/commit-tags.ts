@@ -37,6 +37,7 @@ export const commitTagWithLinkedResumeSchema = commitTagSchema.extend({
 
 export const listCommitTagsInputSchema = z.object({
   resumeId: z.string().uuid(),
+  branchId: z.string().uuid().optional(),
 });
 
 export const listCommitTagsOutputSchema = z.array(commitTagWithLinkedResumeSchema);

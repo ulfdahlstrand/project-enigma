@@ -12,12 +12,13 @@
  */
 import type { useNavigate } from "@tanstack/react-router";
 import Box from "@mui/material/Box";
+import type { ReactNode } from "react";
 
 import { VariantChip } from "./VariantChip";
 import { DraftStatusChip } from "./DraftStatusChip";
 import { StaleRevisionChip } from "./StaleRevisionChip";
 import { LanguageLinkBadge } from "../../../routes/_authenticated/resumes/$id_/history/LanguageLinkBadge";
-import { useListCommitTags, useGetTranslationStatus } from "../../../hooks/versioning";
+import { useListCommitTags } from "../../../hooks/versioning";
 import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import type { ResumeDetailPageBundle } from "../pages/useResumeDetailPage";
 
@@ -45,23 +46,26 @@ export interface ResumeContextStripProps {
     navigate: ReturnType<typeof useNavigate>;
   };
   onAddVariant: () => void;
+  saveAction?: ReactNode;
 }
 
-function StaleAwareLanguageBadge({ tag, currentResumeId }: { tag: CommitTagWithLinkedResume; currentResumeId: string }) {
-  const { data: status } = useGetTranslationStatus(tag.source.resumeId, tag.target.resumeId);
-
-  // Show stale when the CURRENT resume has new content the linked one hasn't incorporated.
-  // current=source: stale if source head moved past the tagged source commit (linked target needs updating)
-  // current=target: stale if target head moved past the tagged target commit (linked source needs to know)
+function StaleAwareLanguageBadge({
+  tag,
+  currentResumeId,
+  activeBranchHeadCommitId,
+}: {
+  tag: CommitTagWithLinkedResume;
+  currentResumeId: string;
+  activeBranchHeadCommitId: string | null;
+}) {
   const linkedIsTarget = tag.source.resumeId === currentResumeId;
-  const isStale = linkedIsTarget
-    ? (status?.sourceHeadCommitId != null && status.sourceHeadCommitId !== tag.sourceCommitId)
-    : (status?.targetHeadCommitId != null && status.targetHeadCommitId !== tag.targetCommitId);
+  const taggedCommit = linkedIsTarget ? tag.sourceCommitId : tag.targetCommitId;
+  const isStale = activeBranchHeadCommitId != null && activeBranchHeadCommitId !== taggedCommit;
 
   return <LanguageLinkBadge tag={tag} currentResumeId={currentResumeId} isStale={isStale} />;
 }
 
-export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripProps) {
+export function ResumeContextStrip({ bundle, onAddVariant, saveAction }: ResumeContextStripProps) {
   const {
     id,
     isEditRoute,
@@ -86,9 +90,8 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
 
   const showVariantChip = variantBranchId !== null && branches !== undefined;
 
-  const { data: commitTags } = useListCommitTags(id);
+  const { data: commitTags } = useListCommitTags(id, activeBranchId);
   const linkedTags = commitTags ?? [];
-
   return (
     <Box
       sx={{
@@ -119,8 +122,15 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
         />
       )}
 
+
+
       {linkedTags.map((tag) => (
-        <StaleAwareLanguageBadge key={tag.id} tag={tag} currentResumeId={id} />
+        <StaleAwareLanguageBadge
+          key={tag.id}
+          tag={tag}
+          currentResumeId={id}
+          activeBranchHeadCommitId={activeBranch?.headCommitId ?? null}
+        />
       ))}
 
       <DraftStatusChip
@@ -139,6 +149,11 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
         activeBranchType={activeBranchType}
         sourceBranch={sourceBranch}
       />
+      {saveAction && (
+        <Box sx={{ ml: "auto", flexShrink: 0 }}>
+          {saveAction}
+        </Box>
+      )}
     </Box>
   );
 }

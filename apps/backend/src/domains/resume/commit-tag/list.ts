@@ -2,7 +2,7 @@ import { implement } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
 import { contract } from "@cv-tool/contracts";
 import type { z } from "zod";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
@@ -31,6 +31,35 @@ export async function listCommitTags(
 
   if (ownerEmployeeId !== null && resume.employee_id !== ownerEmployeeId) {
     throw new ORPCError("FORBIDDEN");
+  }
+
+  // If a branchId is given, filter tags to ones whose relevant commit
+  // (source_commit_id when current resume is the source, target_commit_id when it's the target)
+  // is reachable from that branch's HEAD via the commit-parent graph.
+  let reachableCommitIds: Set<string> | null = null;
+  if (input.branchId) {
+    const branch = await db
+      .selectFrom("resume_branches as rb")
+      .select(["rb.head_commit_id"])
+      .where("rb.id", "=", input.branchId)
+      .where("rb.resume_id", "=", input.resumeId)
+      .executeTakeFirst();
+
+    if (branch?.head_commit_id) {
+      const reachable = await sql<{ commit_id: string }>`
+        WITH RECURSIVE reachable(commit_id) AS (
+          SELECT ${branch.head_commit_id}::uuid
+          UNION
+          SELECT rcp.parent_commit_id
+          FROM resume_commit_parents rcp
+          INNER JOIN reachable r ON rcp.commit_id = r.commit_id
+        )
+        SELECT commit_id FROM reachable
+      `.execute(db);
+      reachableCommitIds = new Set(reachable.rows.map((r) => r.commit_id));
+    } else {
+      reachableCommitIds = new Set();
+    }
   }
 
   const rows = await db
@@ -69,7 +98,15 @@ export async function listCommitTags(
     )
     .execute();
 
-  return rows.map((row) => ({
+  const filtered = reachableCommitIds
+    ? rows.filter((row) => {
+        const currentSideCommit =
+          row.source_resume_id === input.resumeId ? row.source_commit_id : row.target_commit_id;
+        return reachableCommitIds!.has(currentSideCommit);
+      })
+    : rows;
+
+  return filtered.map((row) => ({
     id: row.id,
     sourceCommitId: row.source_commit_id,
     targetCommitId: row.target_commit_id,

@@ -25,8 +25,8 @@ export const resumeCommitDiffKey = (
   headCommitId: string
 ) => ["compareResumeCommits", baseCommitId, headCommitId] as const;
 
-export const commitTagsKey = (resumeId: string) =>
-  ["listCommitTags", resumeId] as const;
+export const commitTagsKey = (resumeId: string, branchId?: string | null) =>
+  ["listCommitTags", resumeId, branchId ?? null] as const;
 
 export const translationStatusKey = (sourceResumeId: string, targetResumeId: string) =>
   ["getTranslationStatus", sourceResumeId, targetResumeId] as const;
@@ -62,11 +62,11 @@ export function useResumeBranchHistoryGraph(resumeId: string) {
   });
 }
 
-/** Lists cross-resume commit tags (translation links) involving this resume. */
-export function useListCommitTags(resumeId: string) {
+/** Lists cross-resume commit tags (translation links) involving this resume, optionally scoped to a branch. */
+export function useListCommitTags(resumeId: string, branchId?: string | null) {
   return useQuery({
-    queryKey: commitTagsKey(resumeId),
-    queryFn: () => orpc.listCommitTags({ resumeId }),
+    queryKey: commitTagsKey(resumeId, branchId),
+    queryFn: () => orpc.listCommitTags({ resumeId, ...(branchId ? { branchId } : {}) }),
     enabled: Boolean(resumeId),
   });
 }
@@ -299,8 +299,8 @@ export function useCreateCommitTag() {
     }) => orpc.createCommitTag({ sourceCommitId, targetCommitId, kind }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.targetResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.sourceResumeId] }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.targetResumeId] }),
         queryClient.invalidateQueries({ queryKey: ["getTranslationStatus"] }),
       ]);
     },
@@ -322,7 +322,7 @@ export function useCreateTranslationResume() {
     }) => orpc.createTranslationResume({ sourceResumeId, targetLanguage, name }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.sourceResumeId] }),
         queryClient.invalidateQueries({ queryKey: ["listResumes"] }),
         queryClient.invalidateQueries({ queryKey: ["getResume"] }),
       ]);

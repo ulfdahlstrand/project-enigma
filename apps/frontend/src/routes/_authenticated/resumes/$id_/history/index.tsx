@@ -36,6 +36,7 @@ import { RevertDialog } from "../../../../../components/RevertDialog";
 import type { GraphCommit } from "./history-graph-utils";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
+import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
 import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
@@ -269,6 +270,7 @@ export function VersionHistoryPage() {
           { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
         ]}
       />
+      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.history.description")}

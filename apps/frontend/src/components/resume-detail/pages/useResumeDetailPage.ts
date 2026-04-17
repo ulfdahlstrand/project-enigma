@@ -173,7 +173,6 @@ export interface ResumeDetailPageBundle {
   handleToggleAssistant: () => void;
   handleToggleSuggestions: () => void;
   handleCreateVariant: () => Promise<void>;
-  onEdit: () => void;
 
   // Zoom
   zoom: number;
@@ -609,17 +608,6 @@ export function useResumeDetailPage({
     previousSuggestionCountRef.current = nextSuggestionCount;
   }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel, setAiPanel]);
 
-  const onEdit = (): void => {
-    if (activeBranchId && activeBranchId !== mainBranchId) {
-      void navigate({
-        to: "/resumes/$id/edit/branch/$branchId",
-        params: { id, branchId: activeBranchId },
-      });
-      return;
-    }
-    void navigate({ to: "/resumes/$id/edit", params: { id } });
-  };
-
   return {
     id,
     isEditRoute,
@@ -708,7 +696,6 @@ export function useResumeDetailPage({
     handleToggleAssistant,
     handleToggleSuggestions,
     handleCreateVariant,
-    onEdit,
     zoom,
     minZoom,
     maxZoom,

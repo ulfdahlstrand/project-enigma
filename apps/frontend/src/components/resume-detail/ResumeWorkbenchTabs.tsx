@@ -35,16 +35,16 @@ function buildTabs(resumeId: string, activeBranchId: string | null): TabDef[] {
 
   return [
     {
-      key: "edit",
-      labelKey: "resume.workbenchTabs.edit",
-      href: editHref,
-      matchSegment: "/edit",
-    },
-    {
       key: "preview",
       labelKey: "resume.workbenchTabs.preview",
       href: `/resumes/${resumeId}`,
       matchSegment: "/preview",
+    },
+    {
+      key: "edit",
+      labelKey: "resume.workbenchTabs.edit",
+      href: editHref,
+      matchSegment: "/edit",
     },
     {
       key: "history",

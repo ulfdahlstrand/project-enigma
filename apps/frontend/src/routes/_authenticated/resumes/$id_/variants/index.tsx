@@ -35,6 +35,7 @@ import { useResumeBranches, useResumeCommits, useForkResumeBranch } from "../../
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
+import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/variants/")({
@@ -112,6 +113,7 @@ export function VariantsPage() {
           </Button>
         }
       />
+      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.variants.description")}
