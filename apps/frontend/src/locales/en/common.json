@@ -650,7 +650,7 @@
       "descriptionLabel": "Description",
       "startDateLabel": "Start date",
       "endDateLabel": "End date",
-      "technologiesLabel": "Technologies (comma-separated)",
+      "technologiesLabel": "Technologies",
       "keywordsLabel": "Keywords",
       "isCurrentLabel": "Currently active",
       "saveButton": "Save",

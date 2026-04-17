@@ -56,7 +56,7 @@ function buildDraft(a: AssignmentRow): AssignmentDraftState {
     endDate: toDateInput(a.endDate),
     isCurrent: a.isCurrent,
     description: a.description,
-    technologies: a.technologies.join(", "),
+    technologies: [...a.technologies],
     keywords: a.keywords ?? "",
   };
 }
@@ -142,10 +142,7 @@ export function AssignmentEditor({
     if (draft.description !== original.description) patch.description = draft.description;
     if (draft.isCurrent !== original.isCurrent) patch.isCurrent = draft.isCurrent;
 
-    const newTechs = draft.technologies
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const newTechs = draft.technologies.map((s) => s.trim()).filter(Boolean);
     if (JSON.stringify(newTechs) !== JSON.stringify(original.technologies)) {
       patch.technologies = newTechs;
     }

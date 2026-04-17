@@ -250,6 +250,39 @@ describe("AssignmentEditor", () => {
     expect(endDateInput).toBeDisabled();
   });
 
+  it("renders technologies as removable chips in edit mode", async () => {
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    // Both technologies should appear as chips (buttons with a delete affordance)
+    expect(screen.getByRole("button", { name: /TypeScript/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /React/ })).toBeInTheDocument();
+  });
+
+  it("adding a new technology chip saves it as a new tech entry", async () => {
+    mockUpdateAssignment.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    const techCombobox = screen.getByRole("combobox", {
+      name: new RegExp(enCommon.assignment.detail.technologiesLabel, "i"),
+    });
+    await user.click(techCombobox);
+    await user.keyboard("GraphQL{Enter}");
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.assignment.detail.saveButton })
+    );
+
+    await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
+    const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
+    expect(call.technologies).toEqual(["TypeScript", "React", "GraphQL"]);
+  });
+
   it("shows error alert when mutation fails", async () => {
     mockUpdateAssignment.mockRejectedValue(new Error("Network error"));
     const user = userEvent.setup();

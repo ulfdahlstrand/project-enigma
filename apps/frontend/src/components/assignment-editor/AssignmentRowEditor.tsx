@@ -8,11 +8,12 @@
  */
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import TextField from "@mui/material/TextField";
+import TextField, { type TextFieldProps } from "@mui/material/TextField";
 
 export interface AssignmentDraftState {
   role: string;
@@ -21,7 +22,7 @@ export interface AssignmentDraftState {
   endDate: string;
   isCurrent: boolean;
   description: string;
-  technologies: string;
+  technologies: string[];
   keywords: string;
 }
 
@@ -122,12 +123,20 @@ export function AssignmentRowEditor({
         fullWidth
       />
 
-      <TextField
-        label={t("assignment.detail.technologiesLabel")}
+      <Autocomplete
+        multiple
+        freeSolo
+        options={[] as string[]}
         value={draft.technologies}
-        onChange={(event) => onDraftChange("technologies", event.target.value)}
+        onChange={(_, value) => onDraftChange("technologies", value)}
         size="small"
         fullWidth
+        renderInput={(params) => (
+          <TextField
+            {...(params as TextFieldProps)}
+            label={t("assignment.detail.technologiesLabel")}
+          />
+        )}
       />
 
       <TextField

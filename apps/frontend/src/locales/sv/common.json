@@ -650,7 +650,7 @@
       "descriptionLabel": "Beskrivning",
       "startDateLabel": "Startdatum",
       "endDateLabel": "Slutdatum",
-      "technologiesLabel": "Teknologier (kommaseparerade)",
+      "technologiesLabel": "Teknologier",
       "keywordsLabel": "Nyckelord",
       "isCurrentLabel": "Pågående uppdrag",
       "saveButton": "Spara",
