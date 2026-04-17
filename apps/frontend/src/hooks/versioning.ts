@@ -25,8 +25,8 @@ export const resumeCommitDiffKey = (
   headCommitId: string
 ) => ["compareResumeCommits", baseCommitId, headCommitId] as const;
 
-export const commitTagsKey = (resumeId: string) =>
-  ["listCommitTags", resumeId] as const;
+export const commitTagsKey = (resumeId: string, branchId?: string | null) =>
+  ["listCommitTags", resumeId, branchId ?? null] as const;
 
 export const translationStatusKey = (sourceResumeId: string, targetResumeId: string) =>
   ["getTranslationStatus", sourceResumeId, targetResumeId] as const;
@@ -62,11 +62,11 @@ export function useResumeBranchHistoryGraph(resumeId: string) {
   });
 }
 
-/** Lists cross-resume commit tags (translation links) involving this resume. */
-export function useListCommitTags(resumeId: string) {
+/** Lists cross-resume commit tags (translation links) involving this resume, optionally scoped to a branch. */
+export function useListCommitTags(resumeId: string, branchId?: string | null) {
   return useQuery({
-    queryKey: commitTagsKey(resumeId),
-    queryFn: () => orpc.listCommitTags({ resumeId }),
+    queryKey: commitTagsKey(resumeId, branchId),
+    queryFn: () => orpc.listCommitTags({ resumeId, ...(branchId ? { branchId } : {}) }),
     enabled: Boolean(resumeId),
   });
 }
@@ -180,29 +180,6 @@ export function useDeleteResumeBranch() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
         queryClient.invalidateQueries({ queryKey: ["listResumeBranches"] }),
-      ]);
-    },
-  });
-}
-
-/** Creates a translation branch (language copy) off a variant. */
-export function useCreateTranslationBranch() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      sourceBranchId,
-      language,
-      name,
-    }: {
-      sourceBranchId: string;
-      language: string;
-      name?: string;
-      resumeId: string;
-    }) => orpc.createTranslationBranch({ sourceBranchId, language, name }),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
-        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
       ]);
     },
   });
@@ -322,8 +299,8 @@ export function useCreateCommitTag() {
     }) => orpc.createCommitTag({ sourceCommitId, targetCommitId, kind }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.targetResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.sourceResumeId] }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.targetResumeId] }),
         queryClient.invalidateQueries({ queryKey: ["getTranslationStatus"] }),
       ]);
     },
@@ -345,25 +322,9 @@ export function useCreateTranslationResume() {
     }) => orpc.createTranslationResume({ sourceResumeId, targetLanguage, name }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["listCommitTags", variables.sourceResumeId] }),
         queryClient.invalidateQueries({ queryKey: ["listResumes"] }),
         queryClient.invalidateQueries({ queryKey: ["getResume"] }),
-      ]);
-    },
-  });
-}
-
-/** Rebases a translation branch onto its source's current HEAD (destructive). */
-export function useRebaseTranslationOntoSource() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
-      orpc.rebaseTranslationOntoSource({ branchId }),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
-        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
-        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
       ]);
     },
   });

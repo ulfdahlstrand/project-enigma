@@ -36,6 +36,7 @@ import { RevertDialog } from "../../../../../components/RevertDialog";
 import type { GraphCommit } from "./history-graph-utils";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
+import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
 import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
@@ -73,7 +74,6 @@ export function VersionHistoryPage() {
   const [revertTarget, setRevertTarget] = useState<GraphCommit | null>(null);
   const [revertError, setRevertError] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<BranchFilterType>>(new Set());
-  const [activeLanguages, setActiveLanguages] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
 
   function toggleFilter(filter: BranchFilterType) {
@@ -81,15 +81,6 @@ export function VersionHistoryPage() {
       const next = new Set(prev);
       if (next.has(filter)) next.delete(filter);
       else next.add(filter);
-      return next;
-    });
-  }
-
-  function toggleLanguage(lang: string) {
-    setActiveLanguages((prev) => {
-      const next = new Set(prev);
-      if (next.has(lang)) next.delete(lang);
-      else next.add(lang);
       return next;
     });
   }
@@ -112,31 +103,16 @@ export function VersionHistoryPage() {
     return map;
   }, [tags]);
 
-  const { taggedBranchIds, branchTagLanguages, availableTagLanguages } = useMemo(() => {
+  const taggedBranchIds = useMemo(() => {
     const tagged = new Set<string>();
-    const langsByBranch = new Map<string, Set<string>>();
-    const allLangs = new Set<string>();
-
     branches.forEach((branch) => {
       if (!branch.headCommitId) return;
       const tagsForHead = commitTagsMap.get(branch.headCommitId) ?? [];
       if (tagsForHead.length === 0) return;
       tagged.add(branch.id);
-      const linked = new Set<string>();
-      tagsForHead.forEach((tag) => {
-        const linkedSide = tag.source.resumeId === resumeId ? tag.target : tag.source;
-        linked.add(linkedSide.language);
-        allLangs.add(linkedSide.language);
-      });
-      langsByBranch.set(branch.id, linked);
     });
-
-    return {
-      taggedBranchIds: tagged,
-      branchTagLanguages: langsByBranch,
-      availableTagLanguages: [...allLangs].sort(),
-    };
-  }, [branches, commitTagsMap, resumeId]);
+    return tagged;
+  }, [branches, commitTagsMap]);
 
   // Filtered views shared by sidebar and graph. Selection and commit-table
   // logic still works against the full branch/commit set so the selected
@@ -145,12 +121,10 @@ export function VersionHistoryPage() {
     () => filterBranches({
       branches,
       activeFilters,
-      activeLanguages,
       showArchived,
       taggedBranchIds,
-      branchTagLanguages,
     }),
-    [branches, activeFilters, activeLanguages, showArchived, taggedBranchIds, branchTagLanguages],
+    [branches, activeFilters, showArchived, taggedBranchIds],
   );
   const filteredGraph = useMemo(
     () => filterGraphData({ branches, commits: graphCommits, edges: graphEdges, filteredBranches }),
@@ -296,6 +270,7 @@ export function VersionHistoryPage() {
           { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
         ]}
       />
+      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.history.description")}
@@ -304,11 +279,8 @@ export function VersionHistoryPage() {
         <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
           <HistoryBranchFilters
             activeFilters={activeFilters}
-            activeLanguages={activeLanguages}
             showArchived={showArchived}
-            availableLanguages={availableTagLanguages}
             onToggleFilter={toggleFilter}
-            onToggleLanguage={toggleLanguage}
             onToggleShowArchived={() => setShowArchived((prev) => !prev)}
           />
 

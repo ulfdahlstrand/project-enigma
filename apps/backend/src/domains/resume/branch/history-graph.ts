@@ -107,33 +107,21 @@ export async function getResumeBranchHistoryGraph(
     (edge) => commitIds.has(edge.commit_id) && commitIds.has(edge.parent_commit_id),
   );
 
-  const headCommitIdByBranchId = new Map(branches.map((b) => [b.id, b.head_commit_id]));
-
   return {
-    branches: branches.map((branch) => {
-      const isStale =
-        branch.branch_type === "translation" &&
-        branch.source_branch_id !== null &&
-        branch.source_commit_id !== null &&
-        branch.source_commit_id !== (headCommitIdByBranchId.get(branch.source_branch_id) ?? null);
-
-      return {
-        id: branch.id,
-        resumeId: branch.resume_id,
-        name: branch.name,
-        language: branch.language,
-        isMain: branch.is_main,
-        headCommitId: branch.head_commit_id,
-        forkedFromCommitId: branch.forked_from_commit_id,
-        createdBy: branch.created_by,
-        createdAt: branch.created_at,
-        branchType: branch.branch_type,
-        sourceBranchId: branch.source_branch_id,
-        sourceCommitId: branch.source_commit_id,
-        isStale,
-        isArchived: branch.is_archived,
-      };
-    }),
+    branches: branches.map((branch) => ({
+      id: branch.id,
+      resumeId: branch.resume_id,
+      name: branch.name,
+      isMain: branch.is_main,
+      headCommitId: branch.head_commit_id,
+      forkedFromCommitId: branch.forked_from_commit_id,
+      createdBy: branch.created_by,
+      createdAt: branch.created_at,
+      branchType: branch.branch_type,
+      sourceBranchId: branch.source_branch_id,
+      sourceCommitId: branch.source_commit_id,
+      isArchived: branch.is_archived,
+    })),
     commits: commits.map((commit) => ({
       id: commit.id,
       resumeId: commit.resume_id,

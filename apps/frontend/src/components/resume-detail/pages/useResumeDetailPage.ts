@@ -173,7 +173,6 @@ export interface ResumeDetailPageBundle {
   handleToggleAssistant: () => void;
   handleToggleSuggestions: () => void;
   handleCreateVariant: () => Promise<void>;
-  onEdit: () => void;
 
   // Zoom
   zoom: number;
@@ -243,28 +242,17 @@ export function useResumeDetailPage({
   const activeBranchName = activeBranch?.name ?? t("resume.variants.mainBadge");
 
   // Compute the "from" ref for the quick compare shortcut.
-  // Goal: diff the current branch against the main CV in the same language.
+  // Goal: diff the current branch against the main branch.
   //   1. If on main branch itself → no meaningful base, fall back to empty compare page.
-  //   2. If main branch language matches → use main branch name as base.
-  //   3. Otherwise → find the translation of main that shares the current language.
-  //   4. Fallback → main branch name (cross-language diff).
+  //   2. Otherwise → use main branch name as base.
   const compareBaseRef = (() => {
     const mainBranch = branches?.find((b) => b.isMain);
     if (!mainBranch || !activeBranch || activeBranch.id === mainBranch.id) return null;
-    if (activeBranch.language === mainBranch.language) return mainBranch.name;
-    const sameLanguageTranslation = branches?.find(
-      (b) => b.sourceBranchId === mainBranch.id && b.language === activeBranch.language,
-    );
-    return sameLanguageTranslation?.name ?? mainBranch.name;
+    return mainBranch.name;
   })();
 
   const activeBranchType = activeBranch?.branchType ?? null;
-  const variantBranchId =
-    activeBranchType === "variant"
-      ? activeBranchId
-      : activeBranchType === "translation"
-        ? (activeBranch?.sourceBranchId ?? null)
-        : null;
+  const variantBranchId = activeBranchType === "variant" ? activeBranchId : null;
   const sourceBranch =
     activeBranchType === "revision" && activeBranch?.sourceBranchId
       ? (branches?.find((b) => b.id === activeBranch.sourceBranchId) ?? null)
@@ -354,6 +342,7 @@ export function useResumeDetailPage({
         queryClient.invalidateQueries({ queryKey: resumeBranchHistoryGraphKey(id) }),
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
         queryClient.invalidateQueries({ queryKey: ["getResume", id] }),
+        queryClient.invalidateQueries({ queryKey: ["getTranslationStatus"] }),
       ]);
     },
   });
@@ -412,7 +401,6 @@ export function useResumeDetailPage({
     branchResume: resume ?? null,
     liveBranchAssignments,
     fullEducation: education,
-    activeBranchLanguage: activeBranch?.language ?? null,
     sortedAssignmentsForFallback: sortedLiveAssignmentsForFallback,
   });
   const presentationText = presentation.join("\n\n");
@@ -619,17 +607,6 @@ export function useResumeDetailPage({
     previousSuggestionCountRef.current = nextSuggestionCount;
   }, [inlineRevision.isOpen, inlineRevision.suggestions.length, isEditRoute, showSuggestionsPanel, setAiPanel]);
 
-  const onEdit = (): void => {
-    if (activeBranchId && activeBranchId !== mainBranchId) {
-      void navigate({
-        to: "/resumes/$id/edit/branch/$branchId",
-        params: { id, branchId: activeBranchId },
-      });
-      return;
-    }
-    void navigate({ to: "/resumes/$id/edit", params: { id } });
-  };
-
   return {
     id,
     isEditRoute,
@@ -718,7 +695,6 @@ export function useResumeDetailPage({
     handleToggleAssistant,
     handleToggleSuggestions,
     handleCreateVariant,
-    onEdit,
     zoom,
     minZoom,
     maxZoom,

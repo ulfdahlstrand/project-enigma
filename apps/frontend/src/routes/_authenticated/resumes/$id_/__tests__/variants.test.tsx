@@ -49,6 +49,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({ id: "resume-id-1" }),
+    useRouterState: () => ({ location: { pathname: "/resumes/resume-id-1/variants" } }),
     Link: React.forwardRef(function MockLink(
       { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
       ref: React.Ref<HTMLAnchorElement>
@@ -179,17 +180,10 @@ describe("Branch list", () => {
     expect(badge).toBeInTheDocument();
   });
 
-  it("renders language chips", async () => {
-    renderPage();
-    const enChip = await screen.findByText("EN");
-    expect(enChip).toBeInTheDocument();
-  });
-
   it("renders table headers", async () => {
     renderPage();
     await screen.findByText("main");
     expect(screen.getByText(enCommon.resume.variants.tableHeaderName)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.resume.variants.tableHeaderLanguage)).toBeInTheDocument();
     expect(screen.getByText(enCommon.resume.variants.tableHeaderStatus)).toBeInTheDocument();
     expect(screen.getByText(enCommon.resume.variants.tableHeaderCreated)).toBeInTheDocument();
   });

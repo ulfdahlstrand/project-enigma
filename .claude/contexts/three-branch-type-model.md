@@ -1,6 +1,7 @@
 # Design: Three Branch Types — variant / translation / revision
 
-**Status:** Proposed
+**Status:** RETIRED — Superseded by one-resume-per-language-tag-linked model (see issue #646)
+**Retired:** 2026-04-17 (code cleanup step 1 complete; DB migration pending as step 2)
 **Date:** 2026-04-15
 **Replaces:** Leaf-level locale tables (`_locale`) — see `../../apps/frontend/.claude/contexts/leaf-language-locale-tables.md` for what was tried first and why we pivoted away.
 **Author context:** Conversation between Ulf and Claude, 2026-04-15 afternoon.

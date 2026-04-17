@@ -68,7 +68,6 @@ export async function archiveResumeBranch(
     id: updated.id,
     resumeId: updated.resume_id,
     name: updated.name,
-    language: updated.language,
     isMain: updated.is_main,
     headCommitId: updated.head_commit_id,
     forkedFromCommitId: updated.forked_from_commit_id,
@@ -77,7 +76,6 @@ export async function archiveResumeBranch(
     branchType: updated.branch_type,
     sourceBranchId: updated.source_branch_id,
     sourceCommitId: updated.source_commit_id,
-    isStale: false,
     isArchived: updated.is_archived,
   };
 }

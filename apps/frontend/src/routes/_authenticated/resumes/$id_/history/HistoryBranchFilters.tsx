@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import LanguageIcon from "@mui/icons-material/Language";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
@@ -14,36 +13,27 @@ export type BranchFilterType = BranchType | "archived";
 interface FilterBranchesArgs {
   branches: GraphBranch[];
   activeFilters: Set<BranchFilterType>;
-  activeLanguages: Set<string>;
   showArchived: boolean;
   /**
    * Branch IDs with at least one tagged commit reachable from the branch head.
    * Drives the "translation" (Översättningar) filter in the tag-based model.
    */
   taggedBranchIds: Set<string>;
-  /**
-   * Map from branch id to the set of languages reachable via commit tags on
-   * that branch. Empty set (or missing entry) means no cross-language links.
-   */
-  branchTagLanguages: Map<string, Set<string>>;
 }
 
 /**
  * Returns the subset of branches that pass the active filters.
  *
- * Tag-based semantics (see `.claude/contexts/one-resume-per-language-tag-linked.md`):
+ * Tag-based semantics:
  * - "translation" filter → branches where `taggedBranchIds.has(branch.id)`
- * - Language filter → branches where `branchTagLanguages.get(branch.id)` includes the selected language
- * - variant/revision filter → structural branch-type match (unchanged)
+ * - variant/revision filter → structural branch-type match
  * - Archived toggle → hides archived branches unless showArchived is true
  */
 export function filterBranches({
   branches,
   activeFilters,
-  activeLanguages,
   showArchived,
   taggedBranchIds,
-  branchTagLanguages,
 }: FilterBranchesArgs): GraphBranch[] {
   const noTypeFilter = activeFilters.size === 0;
   const wantVariants = noTypeFilter || activeFilters.has("variant");
@@ -55,22 +45,13 @@ export function filterBranches({
     if (!showArchived && b.isArchived) return false;
 
     const isTagged = taggedBranchIds.has(b.id);
-    const branchLanguages = branchTagLanguages.get(b.id);
 
     // "translation" filter means "has cross-language tags" in the new model.
     // When only "translation" is active, require isTagged.
     if (translationOnly && !isTagged) return false;
 
-    // Language filter: branch must have a tag linking to a resume in the selected language.
-    if (activeLanguages.size > 0) {
-      if (!branchLanguages || ![...branchLanguages].some((l) => activeLanguages.has(l))) {
-        return false;
-      }
-    }
-
-    // Structural type filter — mirrors what still exists in the data model.
+    // Structural type filter.
     if (b.branchType === "variant" && !wantVariants && !wantTranslations) return false;
-    if (b.branchType === "translation" && !wantTranslations) return false;
     if (b.branchType === "revision" && !wantRevisions) return false;
 
     return true;
@@ -108,27 +89,16 @@ export function filterGraphData({
 
 interface HistoryBranchFiltersProps {
   activeFilters: Set<BranchFilterType>;
-  activeLanguages: Set<string>;
   showArchived: boolean;
-  /** Languages available to filter by — derived by parent from commit tag link targets. */
-  availableLanguages: string[];
   onToggleFilter: (filter: BranchFilterType) => void;
-  onToggleLanguage: (lang: string) => void;
   onToggleShowArchived: () => void;
 }
 
-/**
- * Dumb filter UI. Owns only its local rendering — no data fetching, no
- * derivation of available languages. Parent passes in `availableLanguages`,
- * which it computes from the commit-tags map.
- */
+/** Dumb filter UI. */
 export function HistoryBranchFilters({
   activeFilters,
-  activeLanguages,
   showArchived,
-  availableLanguages,
   onToggleFilter,
-  onToggleLanguage,
   onToggleShowArchived,
 }: HistoryBranchFiltersProps) {
   const { t } = useTranslation("common");
@@ -170,19 +140,6 @@ export function HistoryBranchFilters({
         icon={<ArchiveIcon />}
         onClick={onToggleShowArchived}
       />
-      {availableLanguages.length > 0 &&
-        availableLanguages.map((lang) => (
-          <Chip
-            key={lang}
-            label={lang.toUpperCase()}
-            size="small"
-            clickable
-            icon={<LanguageIcon />}
-            variant={activeLanguages.has(lang) ? "filled" : "outlined"}
-            color={activeLanguages.has(lang) ? "secondary" : "default"}
-            onClick={() => onToggleLanguage(lang)}
-          />
-        ))}
     </Box>
   );
 }

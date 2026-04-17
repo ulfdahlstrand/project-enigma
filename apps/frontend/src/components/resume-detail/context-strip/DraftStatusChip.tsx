@@ -46,6 +46,8 @@ export function DraftStatusChip({
     highlightedItemsText,
   });
 
+  if (!isEditRoute && !unsaved) return null;
+
   const label = unsaved
     ? t("resume.contextStrip.draftUnsaved")
     : t("resume.contextStrip.draftSynced");

@@ -82,10 +82,7 @@ function mapAssignments(
 // Live-data path (no commitId supplied)
 //
 // Reads the HEAD commit tree of the supplied branch, falling back to the main
-// branch when no branchId is given. The branch's own `language` takes priority
-// over the resume's base language in the fallback chain so that translation
-// branches export in their own language even when the tree content lacks an
-// explicit language field.
+// branch when no branchId is given.
 // ---------------------------------------------------------------------------
 
 async function buildFromLive(
@@ -103,7 +100,6 @@ async function buildFromLive(
     )
     .select([
       "r.language",
-      "rb.language as branch_language",
       "rb.name as branch_name",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",
@@ -147,7 +143,7 @@ async function buildFromLive(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content?.consultantTitle ?? "",
-    language: resume.branch_language ?? content?.language ?? resume.language ?? "en",
+    language: content?.language ?? resume.language ?? "en",
     presentation: content?.presentation ?? [],
     summary: content?.summary ?? null,
     highlightedItems: content?.highlightedItems ?? [],
@@ -200,7 +196,7 @@ async function buildFromSnapshot(
     branchId
       ? db
           .selectFrom("resume_branches")
-          .select(["id", "name", "language"])
+          .select(["id", "name"])
           .where("id", "=", branchId)
           .executeTakeFirst()
       : Promise.resolve(undefined),
@@ -227,7 +223,7 @@ async function buildFromSnapshot(
     email: employee?.email,
     profileImageDataUrl: employee?.profile_image_data_url ?? null,
     consultantTitle: content.consultantTitle ?? "",
-    language: branch?.language ?? content.language,
+    language: content.language,
     presentation: content.presentation,
     summary: content.summary,
     highlightedItems: content.highlightedItems ?? [],

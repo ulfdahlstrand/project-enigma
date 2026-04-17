@@ -82,7 +82,7 @@ const SAFETY_GUIDANCE = [
   {
     key: "branch-first",
     title: "Work branch-first",
-    content: "Make edits on the appropriate branch type. For exploratory or isolated work, fork a revision branch from the variant's latest commit and work there. For language-specific content, use the matching translation branch. Do not restructure or delete content on a variant branch without explicit user instruction.",
+    content: "Make edits on the appropriate branch type. For exploratory or isolated work, fork a revision branch from the variant's latest commit and work there. Do not restructure or delete content on a variant branch without explicit user instruction.",
   },
   {
     key: "api-only",
@@ -94,7 +94,7 @@ const SAFETY_GUIDANCE = [
 const WORKFLOW_STEPS = [
   "If the user has not provided a resume ID or URL, call list_resumes to show them all available resumes, then ask which one to work on.",
   "Call get_resume with the resumeId to read the resume and its current snapshot content.",
-  "Call list_resume_branches to see available branches. Each branch has a branchType: 'variant' (the long-lived base branch for a version of the resume), 'translation' (a language copy of a variant — identified by its language field and sourceBranchId), or 'revision' (a short-lived working copy forked from a specific commit — identified by sourceBranchId and sourceCommitId). For general editing, prefer a variant branch or create a revision from it. For language-specific work, choose the matching translation branch. A translation with isStale: true means the source variant has changed since the translation was last updated.",
+  "Call list_resume_branches to see available branches. Each branch has a branchType: 'variant' (the long-lived base branch for a version of the resume) or 'revision' (a short-lived working copy forked from a specific commit — identified by sourceBranchId and sourceCommitId). For general editing, prefer a variant branch or create a revision from it.",
   "Call get_resume_branch to read the full current state of the chosen branch before making any edits.",
   "Apply narrow edits using the appropriate tool for the section. After editing, call save_resume_version to create a commit.",
   "Do not merge, publish, or finalize a branch unless the user explicitly asks for it.",
@@ -120,7 +120,6 @@ const ALLOWED_ROUTES = [
   { method: "GET", path: "/resumes/{resumeId}/branches/{branchId}", requiredScope: EXTERNAL_AI_RESUME_BRANCH_READ_SCOPE, purpose: "Read the current state of a specific branch without resolving its head commit separately." },
   { method: "GET", path: "/resume-branches/{branchId}/assignments", requiredScope: EXTERNAL_AI_BRANCH_ASSIGNMENT_READ_SCOPE, purpose: "List the full assignment entries currently present on a branch." },
   { method: "POST", path: "/resume-commits/{fromCommitId}/branches", requiredScope: EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE, purpose: "Create a new branch from an existing commit." },
-  { method: "POST", path: "/resume-branches/{sourceBranchId}/translations", requiredScope: EXTERNAL_AI_RESUME_BRANCH_WRITE_SCOPE, purpose: "Create a translation branch (language copy) of a variant branch. Pass language (e.g. 'en') and an optional name." },
   { method: "GET", path: "/resume-branches/{branchId}/commits", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "List commits on a branch." },
   { method: "GET", path: "/resume-commits/{commitId}", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Read a specific commit snapshot." },
   { method: "POST", path: "/resume-commits/compare", requiredScope: EXTERNAL_AI_RESUME_COMMIT_READ_SCOPE, purpose: "Compare two commits." },

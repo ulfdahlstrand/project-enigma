@@ -231,22 +231,9 @@ export function HistoryBranchSidebar({
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const { variantGroups, revisionBranches } = useMemo(() => {
-    // Group translation branches under their source variant for rendering.
-    // No filtering here — the input is already filtered.
-    const translationsByVariantId = new Map<string, GraphBranch[]>();
-    branches.forEach((b) => {
-      if (b.branchType === "translation" && b.sourceBranchId) {
-        const existing = translationsByVariantId.get(b.sourceBranchId) ?? [];
-        translationsByVariantId.set(b.sourceBranchId, [...existing, b]);
-      }
-    });
-
     const groups = branches
       .filter((b) => b.branchType === "variant")
-      .map((variant) => ({
-        variant,
-        translations: translationsByVariantId.get(variant.id) ?? [],
-      }));
+      .map((variant) => ({ variant, translations: [] as GraphBranch[] }));
 
     const revisions = branches.filter((b) => b.branchType === "revision");
 

@@ -62,7 +62,6 @@ export async function promoteRevisionToVariant(
     id: promoted.id,
     resumeId: promoted.resume_id,
     name: promoted.name,
-    language: promoted.language,
     isMain: promoted.is_main,
     headCommitId: promoted.head_commit_id,
     forkedFromCommitId: promoted.forked_from_commit_id,
@@ -71,7 +70,6 @@ export async function promoteRevisionToVariant(
     branchType: promoted.branch_type,
     sourceBranchId: promoted.source_branch_id,
     sourceCommitId: promoted.source_commit_id,
-    isStale: false,
     isArchived: promoted.is_archived,
   };
 }

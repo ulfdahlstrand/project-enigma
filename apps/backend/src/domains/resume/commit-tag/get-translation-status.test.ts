@@ -27,13 +27,15 @@ const LATEST_TAG = {
 };
 
 /**
- * Queues executeTakeFirst results: [sourceResume, latestTag, sourceBranch]
- * null = simulate not found for that slot.
+ * Queues executeTakeFirst results: [sourceResume, tag, sourceBranch, targetBranch]
+ * sourceBranch and targetBranch are fetched in parallel (Promise.all) so they
+ * consume two consecutive slots in the queue.
  */
 function makeMockDb(opts: {
   sourceResume?: { employee_id: string } | null;
   latestTag?: typeof LATEST_TAG | null;
   sourceHeadCommitId?: string | null;
+  targetHeadCommitId?: string | null;
 } = {}): Kysely<Database> {
   const sourceResume = opts.sourceResume === null
     ? undefined
@@ -43,25 +45,24 @@ function makeMockDb(opts: {
     ? undefined
     : (opts.latestTag ?? LATEST_TAG);
 
-  const headCommitId = opts.sourceHeadCommitId === undefined
+  const sourceHeadId = opts.sourceHeadCommitId === undefined
     ? SOURCE_COMMIT_ID
     : opts.sourceHeadCommitId;
 
-  const sourceBranch = headCommitId !== null
-    ? { head_commit_id: headCommitId }
-    : undefined;
+  const targetHeadId = opts.targetHeadCommitId === undefined
+    ? TARGET_COMMIT_ID
+    : opts.targetHeadCommitId;
 
-  const results = [sourceResume, latestTag, sourceBranch];
+  const sourceBranch = sourceHeadId !== null ? { head_commit_id: sourceHeadId } : undefined;
+  const targetBranch = targetHeadId !== null ? { head_commit_id: targetHeadId } : undefined;
+
+  const results = [sourceResume, latestTag, sourceBranch, targetBranch];
   let callIndex = 0;
 
   return {
     selectFrom: vi.fn().mockImplementation(() => ({
-      innerJoin: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
       executeTakeFirst: vi.fn().mockImplementation(() => Promise.resolve(results[callIndex++])),
     })),
   } as unknown as Kysely<Database>;
@@ -72,8 +73,8 @@ function makeMockDb(opts: {
 // ---------------------------------------------------------------------------
 
 describe("getTranslationStatus", () => {
-  it("returns not stale when source head equals tag source commit", async () => {
-    const db = makeMockDb({ sourceHeadCommitId: SOURCE_COMMIT_ID });
+  it("returns not stale when both heads match tag commits", async () => {
+    const db = makeMockDb();
     const result = await getTranslationStatus(db, MOCK_ADMIN, {
       resumeId: RESUME_ID,
       targetResumeId: TARGET_RESUME_ID,
@@ -82,6 +83,7 @@ describe("getTranslationStatus", () => {
     expect(result.isStale).toBe(false);
     expect(result.latestTag).toMatchObject({ id: TAG_ID });
     expect(result.sourceHeadCommitId).toBe(SOURCE_COMMIT_ID);
+    expect(result.targetHeadCommitId).toBe(TARGET_COMMIT_ID);
   });
 
   it("returns stale when source head has moved beyond tag source commit", async () => {
@@ -93,6 +95,16 @@ describe("getTranslationStatus", () => {
 
     expect(result.isStale).toBe(true);
     expect(result.sourceHeadCommitId).toBe(NEWER_HEAD_COMMIT_ID);
+  });
+
+  it("returns stale when target head has moved beyond tag target commit", async () => {
+    const db = makeMockDb({ targetHeadCommitId: NEWER_HEAD_COMMIT_ID });
+    const result = await getTranslationStatus(db, MOCK_ADMIN, {
+      resumeId: RESUME_ID,
+      targetResumeId: TARGET_RESUME_ID,
+    });
+
+    expect(result.isStale).toBe(true);
   });
 
   it("returns null tag and not stale when no tag exists yet", async () => {

@@ -35,6 +35,7 @@ import { useResumeBranches, useResumeCommits, useForkResumeBranch } from "../../
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
+import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/variants/")({
@@ -112,6 +113,7 @@ export function VariantsPage() {
           </Button>
         }
       />
+      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.variants.description")}
@@ -131,7 +133,6 @@ export function VariantsPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>{t("resume.variants.tableHeaderName")}</TableCell>
-                  <TableCell>{t("resume.variants.tableHeaderLanguage")}</TableCell>
                   <TableCell>{t("resume.variants.tableHeaderStatus")}</TableCell>
                   <TableCell>{t("resume.variants.tableHeaderCreated")}</TableCell>
                   <TableCell />
@@ -157,9 +158,6 @@ export function VariantsPage() {
                             />
                           )}
                         </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={branch.language.toUpperCase()} size="small" />
                       </TableCell>
                       <TableCell>
                         <Chip

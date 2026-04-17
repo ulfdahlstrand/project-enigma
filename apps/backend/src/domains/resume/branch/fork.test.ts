@@ -54,6 +54,7 @@ const COMMIT_ROW = {
   resume_id: RESUME_ID,
   employee_id: EMPLOYEE_ID_1,
   tree_id: DEFAULT_TREE_ID,
+  language: "sv",
 };
 
 const NEW_BRANCH_ROW = {
@@ -195,7 +196,7 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("inherits language from the source branch", async () => {
+  it("inherits language from the resume", async () => {
     const { db, branchInsertValues } = buildDbMock();
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
@@ -205,9 +206,10 @@ describe("forkResumeBranch", () => {
     );
   });
 
-  it("falls back to 'en' language when source branch has no language", async () => {
-    vi.mocked(readTreeContent).mockResolvedValueOnce({ ...DEFAULT_CONTENT, language: null as unknown as string } as never);
-    const { db, branchInsertValues } = buildDbMock();
+  it("falls back to 'en' language when the resume has no language", async () => {
+    const { db, branchInsertValues } = buildDbMock({
+      commitRow: { ...COMMIT_ROW, language: null },
+    });
 
     await forkResumeBranch(db, MOCK_ADMIN, { fromCommitId: COMMIT_ID, name: "Fork" });
 

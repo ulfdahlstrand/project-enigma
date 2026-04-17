@@ -121,6 +121,8 @@ export async function createTranslationResume(
     const tag = await trx
       .insertInto("commit_tags")
       .values({
+        source_resume_id: input.sourceResumeId,
+        target_resume_id: newResume.id,
         source_commit_id: sourceCommit.id,
         target_commit_id: rootCommit.id,
         kind: "translation",

@@ -1,10 +1,8 @@
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import CallSplitIcon from "@mui/icons-material/CallSplit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import TranslateIcon from "@mui/icons-material/Translate";
-import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
@@ -32,19 +30,11 @@ interface ResumeDetailActionsProps {
   resumeTitle: string;
   resumeLanguage: string | null;
   activeBranchId: string | null;
-  /** Name of the currently active branch (used to build the compare range URL). */
-  activeBranchName: string | null;
-  /** "From" ref for the quick compare shortcut — main branch or its same-language translation. */
-  compareBaseRef: string | null;
   currentCommitId: string | null;
   isEditRoute: boolean;
   isSnapshotMode: boolean;
   isEditing: boolean;
-  isSaving: boolean;
-  onSaveCurrent: () => void;
   onCreateBranchFromCommit: (name: string) => Promise<void>;
-  onEdit: () => void;
-  onExitEdit: () => void;
   onDeleteResume: () => void;
   isDeletePending: boolean;
   isDeleteError: boolean;
@@ -153,32 +143,16 @@ function ExportSplitButton({
   );
 }
 
-function EditButton({ onEdit }: { onEdit: () => void }) {
-  const { t } = useTranslation("common");
-
-  return (
-    <Button variant="contained" startIcon={<EditIcon />} onClick={onEdit}>
-      {t("resume.detail.editButton")}
-    </Button>
-  );
-}
-
 export function ResumeDetailActions({
   resumeId,
   resumeTitle,
   resumeLanguage,
   activeBranchId,
-  activeBranchName,
-  compareBaseRef,
   currentCommitId,
   isEditRoute,
   isSnapshotMode,
   isEditing,
-  isSaving,
-  onSaveCurrent,
   onCreateBranchFromCommit,
-  onEdit,
-  onExitEdit,
   onDeleteResume,
   isDeletePending,
   isDeleteError,
@@ -190,22 +164,8 @@ export function ResumeDetailActions({
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
   const [createBranchName, setCreateBranchName] = useState("");
   const [createBranchError, setCreateBranchError] = useState<string | null>(null);
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false);
   const [createTranslationDialogOpen, setCreateTranslationDialogOpen] = useState(false);
-
-  const openComparePage = () => {
-    if (compareBaseRef && activeBranchName) {
-      void navigate({
-        to: "/resumes/$id/compare",
-        params: { id: resumeId },
-        search: { baseRef: compareBaseRef, compareRef: activeBranchName },
-      });
-      return;
-    }
-    void navigate({
-      to: "/resumes/$id/compare",
-      params: { id: resumeId },
-    });
-  };
 
   const sharedMoreMenu = (
     <Menu
@@ -213,15 +173,6 @@ export function ResumeDetailActions({
       open={Boolean(moreActionsAnchorEl)}
       onClose={() => setMoreActionsAnchorEl(null)}
     >
-      <MenuItem
-        onClick={() => {
-          setMoreActionsAnchorEl(null);
-          openComparePage();
-        }}
-      >
-        <ViewAgendaIcon fontSize="small" sx={{ mr: 1 }} />
-        {t("revision.inline.compareButton")}
-      </MenuItem>
       {isSnapshotMode && currentCommitId && (
         <MenuItem
           onClick={() => {
@@ -262,28 +213,12 @@ export function ResumeDetailActions({
 
   return (
     <>
-      {isEditing ? (
-        <>
-          <Button
-            variant="contained"
-            onClick={onSaveCurrent}
-            disabled={isSaving}
-          >
-            {isSaving ? t("resume.edit.saving") : t("resume.edit.saveButton")}
-          </Button>
-          <Button variant="outlined" onClick={onExitEdit}>
-            {t("resume.edit.backButton")}
-          </Button>
-        </>
-      ) : (
-        <>
-          <ExportSplitButton
-            resumeId={resumeId}
-            commitId={currentCommitId}
-            branchId={activeBranchId}
-          />
-          {!isSnapshotMode ? <EditButton onEdit={onEdit} /> : null}
-        </>
+      {!isEditing && (
+        <ExportSplitButton
+          resumeId={resumeId}
+          commitId={currentCommitId}
+          branchId={activeBranchId}
+        />
       )}
       <IconButton
         aria-label={t("resume.detail.moreActionsLabel")}
@@ -317,21 +252,24 @@ export function ResumeDetailActions({
           </Button>
           <Button
             variant="contained"
-            disabled={!createBranchName.trim() || isSaving}
+            disabled={!createBranchName.trim() || isCreatingBranch}
             onClick={() => {
               void (async () => {
                 try {
                   setCreateBranchError(null);
+                  setIsCreatingBranch(true);
                   await onCreateBranchFromCommit(createBranchName.trim());
                   setCreateBranchDialogOpen(false);
                   setCreateBranchName("");
                 } catch {
                   setCreateBranchError(t("resume.variants.createDialog.error"));
+                } finally {
+                  setIsCreatingBranch(false);
                 }
               })();
             }}
           >
-            {isSaving
+            {isCreatingBranch
               ? t("resume.variants.createDialog.creating")
               : t("resume.variants.createDialog.create")}
           </Button>

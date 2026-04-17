@@ -7,7 +7,6 @@ import type { Database } from "../../../db/types.js";
 import { getDb } from "../../../db/client.js";
 import { requireAuth, type AuthUser, type AuthContext } from "../../../auth/require-auth.js";
 import { resolveEmployeeId } from "../../../auth/resolve-employee-id.js";
-import { readTreeContent } from "../lib/read-tree-content.js";
 import type { forkResumeBranchInputSchema, forkResumeBranchOutputSchema } from "@cv-tool/contracts";
 
 // ---------------------------------------------------------------------------
@@ -70,6 +69,7 @@ export async function forkResumeBranch(
       "rc.resume_id",
       "rc.tree_id",
       "r.employee_id",
+      "r.language",
     ])
     .where("rc.id", "=", input.fromCommitId)
     .executeTakeFirst();
@@ -86,17 +86,7 @@ export async function forkResumeBranch(
     throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
   }
 
-  // Determine language from the branch that owns this commit (head_commit_id match),
-  // falling back to reading it from the commit tree content.
-  const owningBranch = await db
-    .selectFrom("resume_branches")
-    .select(["language"])
-    .where("head_commit_id", "=", input.fromCommitId)
-    .executeTakeFirst();
-
-  const language = owningBranch?.language
-    ?? (await readTreeContent(db, commit.tree_id)).language
-    ?? "en";
+  const language = commit.language ?? "en";
 
   // Create the new branch atomically.
   // No initial commit is created — the branch starts empty (headCommitId = null)
@@ -122,7 +112,6 @@ export async function forkResumeBranch(
     id: newBranch.id,
     resumeId: newBranch.resume_id,
     name: newBranch.name,
-    language: newBranch.language,
     isMain: newBranch.is_main,
     headCommitId: newBranch.head_commit_id,
     forkedFromCommitId: newBranch.forked_from_commit_id,
@@ -131,7 +120,6 @@ export async function forkResumeBranch(
     branchType: newBranch.branch_type,
     sourceBranchId: newBranch.source_branch_id,
     sourceCommitId: newBranch.source_commit_id,
-    isStale: false,
     isArchived: newBranch.is_archived,
   };
 }

@@ -37,6 +37,7 @@ export const commitTagWithLinkedResumeSchema = commitTagSchema.extend({
 
 export const listCommitTagsInputSchema = z.object({
   resumeId: z.string().uuid(),
+  branchId: z.string().uuid().optional(),
 });
 
 export const listCommitTagsOutputSchema = z.array(commitTagWithLinkedResumeSchema);
@@ -78,6 +79,7 @@ export const getTranslationStatusOutputSchema = z.object({
   latestTag: commitTagSchema.nullable(),
   isStale: z.boolean(),
   sourceHeadCommitId: z.string().uuid().nullable(),
+  targetHeadCommitId: z.string().uuid().nullable(),
 });
 
 // ---------------------------------------------------------------------------

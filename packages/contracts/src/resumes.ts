@@ -82,14 +82,12 @@ export const getResumeBranchOutputSchema = resumeWithSkillsSchema.extend({
   mainBranchId: z.string().uuid().nullable().optional(),
   branchId: z.string().uuid(),
   branchName: z.string(),
-  branchLanguage: z.string(),
   isMainBranch: z.boolean(),
   headCommitId: z.string().uuid().nullable(),
   forkedFromCommitId: z.string().uuid().nullable(),
   branchType: branchTypeSchema,
   sourceBranchId: z.string().uuid().nullable(),
   sourceCommitId: z.string().uuid().nullable(),
-  isStale: z.boolean(),
 });
 
 // ---------------------------------------------------------------------------

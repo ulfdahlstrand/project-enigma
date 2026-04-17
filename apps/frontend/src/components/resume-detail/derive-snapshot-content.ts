@@ -121,7 +121,6 @@ interface DeriveInput {
   } | null | undefined;
   liveBranchAssignments: ResolvedAssignment[];
   fullEducation: EducationEntry[];
-  activeBranchLanguage: string | null | undefined;
   sortedAssignmentsForFallback: ResolvedAssignment[];
 }
 
@@ -142,7 +141,6 @@ export function resolveResumeContent(input: DeriveInput): ResolvedResumeContent 
     branchResume,
     liveBranchAssignments,
     fullEducation,
-    activeBranchLanguage,
     sortedAssignmentsForFallback,
   } = input;
 
@@ -175,7 +173,7 @@ export function resolveResumeContent(input: DeriveInput): ResolvedResumeContent 
         : liveBranchAssignments);
 
   const resumeTitle = snapshotContent?.title ?? branchResume?.title ?? "";
-  const language = snapshotContent?.language ?? activeBranchLanguage ?? branchResume?.language;
+  const language = snapshotContent?.language ?? branchResume?.language;
   const consultantTitle = snapshotContent?.consultantTitle ?? branchResume?.consultantTitle ?? null;
   const presentation = snapshotContent?.presentation ?? branchResume?.presentation ?? [];
   const summary = snapshotContent?.summary ?? branchResume?.summary ?? null;

@@ -50,6 +50,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useRouterState: () => ({ location: { pathname: "/resumes/resume-id-1/history" } }),
     useParams: () => ({ id: "resume-id-1" }),
     useSearch: () => mockSearch,
     Link: React.forwardRef(function MockLink(

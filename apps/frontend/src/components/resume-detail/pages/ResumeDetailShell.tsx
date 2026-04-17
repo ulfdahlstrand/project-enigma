@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -18,8 +19,8 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
 import { PageHeader } from "../../layout/PageHeader";
+import { ResumeWorkbenchTabs } from "../ResumeWorkbenchTabs";
 import { RevisionActionBanner } from "../../RevisionActionBanner";
-import { TranslationStaleBanner } from "../../TranslationStaleBanner";
 import { TranslationStalenessBanner } from "../TranslationStalenessBanner";
 import { ResumeContextStrip } from "../context-strip/ResumeContextStrip";
 import { useListCommitTags } from "../../../hooks/versioning";
@@ -61,6 +62,10 @@ export function ResumeDetailShell({
     setCreateVariantError,
     handleCreateVariant,
     forkBranchIsPending,
+    isEditing,
+    handleSave,
+    updateResumeIsPending,
+    saveVersionIsPending,
     language,
     activeBranchName,
     branches,
@@ -74,7 +79,7 @@ export function ResumeDetailShell({
     highlightedItemsText,
   } = bundle;
 
-  const { data: commitTags } = useListCommitTags(id);
+  const { data: commitTags } = useListCommitTags(id, activeBranchId);
   // Find the source resume for this resume (where this resume is the translation target)
   const incomingTag = commitTags?.find((tag) => tag.target.resumeId === id);
   const sourceResumeIdForBanner = incomingTag?.source.resumeId ?? null;
@@ -102,6 +107,7 @@ export function ResumeDetailShell({
     >
       <PageHeader
         title={resumeTitle}
+        chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
         breadcrumbs={[
           { label: t("nav.employees"), to: "/employees" },
           ...(resume?.employeeId
@@ -122,6 +128,7 @@ export function ResumeDetailShell({
         hideTitleBreadcrumb
         actions={toolbarActions}
       />
+      <ResumeWorkbenchTabs resumeId={id} activeBranchId={activeBranchId} />
 
       <ResumeContextStrip
         bundle={{
@@ -135,7 +142,6 @@ export function ResumeDetailShell({
           variantBranchId,
           sourceBranch,
           mergedCommitIds,
-          language,
           draftTitle,
           consultantTitle,
           draftPresentation,
@@ -147,15 +153,22 @@ export function ResumeDetailShell({
           navigate,
         }}
         onAddVariant={handleAddVariant}
+        saveAction={
+          isEditing ? (
+            <Button
+              variant="contained"
+              size="small"
+              disabled={updateResumeIsPending || saveVersionIsPending || forkBranchIsPending}
+              onClick={() => void handleSave()}
+            >
+              {updateResumeIsPending || saveVersionIsPending || forkBranchIsPending
+                ? t("resume.edit.saving")
+                : t("resume.edit.saveButton")}
+            </Button>
+          ) : undefined
+        }
       />
 
-      {activeBranchType === "translation" && activeBranch?.isStale && activeBranchId ? (
-        <TranslationStaleBanner
-          resumeId={id}
-          branchId={activeBranchId}
-          sourceName={sourceBranch?.name ?? ""}
-        />
-      ) : null}
       {sourceResumeIdForBanner ? (
         <TranslationStalenessBanner
           sourceResumeId={sourceResumeIdForBanner}
