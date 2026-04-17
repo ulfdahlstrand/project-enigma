@@ -48,6 +48,26 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, breadcrumbs, chip, centerContent, actions, hideTitleBreadcrumb = false }: PageHeaderProps) {
   const hasBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
+  const breadcrumbChildren = breadcrumbs?.map((item) => {
+    if ("node" in item) {
+      return React.isValidElement(item.node)
+        ? React.cloneElement(item.node, { key: item.key })
+        : <Box component="span" key={item.key}>{item.node}</Box>;
+    }
+
+    return (
+      <MuiLink
+        key={item.to}
+        component={Link}
+        to={item.to}
+        underline="hover"
+        color="inherit"
+        variant="caption"
+      >
+        {item.label}
+      </MuiLink>
+    );
+  });
 
   return (
     <Box
@@ -93,22 +113,7 @@ export function PageHeader({ title, breadcrumbs, chip, centerContent, actions, h
             aria-label="breadcrumb"
             sx={{ mt: 0.25, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap", alignItems: "center" } }}
           >
-            {breadcrumbs.map((item) =>
-              "node" in item ? (
-                <React.Fragment key={item.key}>{item.node}</React.Fragment>
-              ) : (
-                <MuiLink
-                  key={item.to}
-                  component={Link}
-                  to={item.to}
-                  underline="hover"
-                  color="inherit"
-                  variant="caption"
-                >
-                  {item.label}
-                </MuiLink>
-              )
-            )}
+            {breadcrumbChildren}
             {!hideTitleBreadcrumb && (
               <Typography variant="caption" color="text.primary">
                 {title}
