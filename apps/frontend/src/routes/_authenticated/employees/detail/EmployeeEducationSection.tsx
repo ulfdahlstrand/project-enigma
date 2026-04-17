@@ -79,8 +79,16 @@ export function EmployeeEducationSection({
         </Alert>
       )}
 
+      <Box
+        data-testid="education-grid"
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+          gap: 2,
+        }}
+      >
       {sections.map(({ type, label, entries }) => (
-        <Box key={type} sx={{ mb: 2.5 }}>
+        <Box key={type}>
           <Box
             sx={{
               display: "flex",
@@ -162,6 +170,7 @@ export function EmployeeEducationSection({
           )}
         </Box>
       ))}
+      </Box>
     </Box>
   );
 }
