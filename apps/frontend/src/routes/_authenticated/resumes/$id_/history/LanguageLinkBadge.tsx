@@ -1,13 +1,17 @@
 import type { MouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
 import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 
 interface LanguageLinkBadgeProps {
   tag: CommitTagWithLinkedResume;
   /** The current resume being viewed; used to pick the "other side" of the tag. */
   currentResumeId: string;
+  /** When true the badge shows a warning colour indicating the translation is out of sync. */
+  isStale?: boolean;
 }
 
 /**
@@ -19,7 +23,7 @@ interface LanguageLinkBadgeProps {
  *
  * Dumb component — no filter logic, no query; accepts tag data via props.
  */
-export function LanguageLinkBadge({ tag, currentResumeId }: LanguageLinkBadgeProps) {
+export function LanguageLinkBadge({ tag, currentResumeId, isStale = false }: LanguageLinkBadgeProps) {
   const navigate = useNavigate();
 
   const linkedSide =
@@ -34,7 +38,7 @@ export function LanguageLinkBadge({ tag, currentResumeId }: LanguageLinkBadgePro
     });
   }
 
-  return (
+  const chip = (
     <Chip
       data-testid="language-link-badge"
       data-linked-resume-id={linkedSide.resumeId}
@@ -42,9 +46,30 @@ export function LanguageLinkBadge({ tag, currentResumeId }: LanguageLinkBadgePro
       size="small"
       clickable
       label={linkedSide.language.toUpperCase()}
-      icon={<ArrowForwardIcon sx={{ fontSize: 12 }} />}
+      icon={
+        isStale
+          ? <WarningAmberIcon sx={{ fontSize: "12px !important" }} />
+          : <ArrowForwardIcon sx={{ fontSize: "12px !important" }} />
+      }
       onClick={handleClick}
-      sx={{ height: 20, fontSize: "0.6875rem", cursor: "pointer" }}
+      sx={{
+        height: 20,
+        fontSize: "0.6875rem",
+        cursor: "pointer",
+        ...(isStale && {
+          borderColor: "warning.main",
+          color: "warning.dark",
+          "& .MuiChip-icon": { color: "warning.main" },
+        }),
+      }}
     />
+  );
+
+  if (!isStale) return chip;
+
+  return (
+    <Tooltip title={`${linkedSide.language.toUpperCase()} translation is out of sync`} arrow>
+      <span>{chip}</span>
+    </Tooltip>
   );
 }

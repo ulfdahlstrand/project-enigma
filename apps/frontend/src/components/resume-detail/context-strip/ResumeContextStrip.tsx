@@ -17,7 +17,8 @@ import { VariantChip } from "./VariantChip";
 import { DraftStatusChip } from "./DraftStatusChip";
 import { StaleRevisionChip } from "./StaleRevisionChip";
 import { LanguageLinkBadge } from "../../../routes/_authenticated/resumes/$id_/history/LanguageLinkBadge";
-import { useListCommitTags } from "../../../hooks/versioning";
+import { useListCommitTags, useGetTranslationStatus } from "../../../hooks/versioning";
+import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import type { ResumeDetailPageBundle } from "../pages/useResumeDetailPage";
 
 export interface ResumeContextStripProps {
@@ -44,6 +45,11 @@ export interface ResumeContextStripProps {
     navigate: ReturnType<typeof useNavigate>;
   };
   onAddVariant: () => void;
+}
+
+function StaleAwareLanguageBadge({ tag, currentResumeId }: { tag: CommitTagWithLinkedResume; currentResumeId: string }) {
+  const { data: status } = useGetTranslationStatus(tag.source.resumeId, tag.target.resumeId);
+  return <LanguageLinkBadge tag={tag} currentResumeId={currentResumeId} isStale={status?.isStale ?? false} />;
 }
 
 export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripProps) {
@@ -105,7 +111,7 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
       )}
 
       {linkedTags.map((tag) => (
-        <LanguageLinkBadge key={tag.id} tag={tag} currentResumeId={id} />
+        <StaleAwareLanguageBadge key={tag.id} tag={tag} currentResumeId={id} />
       ))}
 
       <DraftStatusChip
