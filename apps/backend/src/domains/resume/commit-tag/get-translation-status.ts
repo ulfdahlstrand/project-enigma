@@ -51,15 +51,27 @@ export async function getTranslationStatus(
     return { latestTag: null, isStale: false, sourceHeadCommitId: null };
   }
 
-  const sourceBranch = await db
-    .selectFrom("resume_branches as rb")
-    .select(["rb.head_commit_id"])
-    .where("rb.resume_id", "=", input.resumeId)
-    .where("rb.is_main", "=", true)
-    .executeTakeFirst();
+  const [sourceBranch, targetBranch] = await Promise.all([
+    db
+      .selectFrom("resume_branches as rb")
+      .select(["rb.head_commit_id"])
+      .where("rb.resume_id", "=", input.resumeId)
+      .where("rb.is_main", "=", true)
+      .executeTakeFirst(),
+    db
+      .selectFrom("resume_branches as rb")
+      .select(["rb.head_commit_id"])
+      .where("rb.resume_id", "=", input.targetResumeId)
+      .where("rb.is_main", "=", true)
+      .executeTakeFirst(),
+  ]);
 
   const sourceHeadCommitId = sourceBranch?.head_commit_id ?? null;
-  const isStale = sourceHeadCommitId !== null && sourceHeadCommitId !== tag.source_commit_id;
+  const targetHeadCommitId = targetBranch?.head_commit_id ?? null;
+
+  const isStale =
+    (sourceHeadCommitId !== null && sourceHeadCommitId !== tag.source_commit_id) ||
+    (targetHeadCommitId !== null && targetHeadCommitId !== tag.target_commit_id);
 
   return {
     latestTag: {
