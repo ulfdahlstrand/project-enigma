@@ -18,6 +18,8 @@ const TAG_ID = "550e8400-e29b-41d4-a716-446655440071";
 
 const CREATED_TAG = {
   id: TAG_ID,
+  source_resume_id: RESUME_ID_1,
+  target_resume_id: RESUME_ID_2,
   source_commit_id: SOURCE_COMMIT_ID,
   target_commit_id: TARGET_COMMIT_ID,
   kind: "translation",
@@ -45,6 +47,11 @@ function makeMockDb(opts: {
   const results = [sourceCommit, targetCommit];
   let callIndex = 0;
 
+  const onConflictBuilder = {
+    constraint: vi.fn().mockReturnThis(),
+    doUpdateSet: vi.fn().mockReturnThis(),
+  };
+
   return {
     selectFrom: vi.fn().mockImplementation(() => ({
       innerJoin: vi.fn().mockReturnThis(),
@@ -54,8 +61,13 @@ function makeMockDb(opts: {
     })),
     insertInto: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnThis(),
-      returningAll: vi.fn().mockReturnThis(),
-      executeTakeFirstOrThrow: vi.fn().mockResolvedValue(createdTag),
+      onConflict: vi.fn().mockImplementation((cb: (oc: typeof onConflictBuilder) => unknown) => {
+        cb(onConflictBuilder);
+        return {
+          returningAll: vi.fn().mockReturnThis(),
+          executeTakeFirstOrThrow: vi.fn().mockResolvedValue(createdTag),
+        };
+      }),
     }),
   } as unknown as Kysely<Database>;
 }
@@ -65,7 +77,7 @@ function makeMockDb(opts: {
 // ---------------------------------------------------------------------------
 
 describe("createCommitTag", () => {
-  it("creates a tag and returns it", async () => {
+  it("upserts a tag and returns it", async () => {
     const db = makeMockDb();
     const result = await createCommitTag(db, MOCK_ADMIN, {
       sourceCommitId: SOURCE_COMMIT_ID,

@@ -35,29 +35,27 @@ export async function listCommitTags(
 
   const rows = await db
     .selectFrom("commit_tags as ct")
-    .innerJoin("resume_commits as src_rc", "src_rc.id", "ct.source_commit_id")
-    .innerJoin("resumes as src_r", "src_r.id", "src_rc.resume_id")
-    .innerJoin("resume_commits as tgt_rc", "tgt_rc.id", "ct.target_commit_id")
-    .innerJoin("resumes as tgt_r", "tgt_r.id", "tgt_rc.resume_id")
+    .innerJoin("resumes as src_r", "src_r.id", "ct.source_resume_id")
+    .innerJoin("resumes as tgt_r", "tgt_r.id", "ct.target_resume_id")
     .leftJoin("resume_branches as src_rb", (join) =>
-      join.onRef("src_rb.resume_id", "=", "src_rc.resume_id").on("src_rb.is_main", "=", true)
+      join.onRef("src_rb.resume_id", "=", "ct.source_resume_id").on("src_rb.is_main", "=", true)
     )
     .leftJoin("resume_branches as tgt_rb", (join) =>
-      join.onRef("tgt_rb.resume_id", "=", "tgt_rc.resume_id").on("tgt_rb.is_main", "=", true)
+      join.onRef("tgt_rb.resume_id", "=", "ct.target_resume_id").on("tgt_rb.is_main", "=", true)
     )
     .select([
       "ct.id",
+      "ct.source_resume_id",
+      "ct.target_resume_id",
       "ct.source_commit_id",
       "ct.target_commit_id",
       "ct.kind",
       "ct.created_at",
       "ct.created_by",
-      "src_rc.resume_id as source_resume_id",
       "src_r.title as source_resume_title",
       "src_r.language as source_language",
       "src_rb.id as source_branch_id",
       "src_rb.name as source_branch_name",
-      "tgt_rc.resume_id as target_resume_id",
       "tgt_r.title as target_resume_title",
       "tgt_r.language as target_language",
       "tgt_rb.id as target_branch_id",
@@ -65,8 +63,8 @@ export async function listCommitTags(
     ])
     .where((eb) =>
       eb.or([
-        eb("src_rc.resume_id", "=", input.resumeId),
-        eb("tgt_rc.resume_id", "=", input.resumeId),
+        eb("ct.source_resume_id", "=", input.resumeId),
+        eb("ct.target_resume_id", "=", input.resumeId),
       ])
     )
     .execute();

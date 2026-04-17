@@ -470,6 +470,8 @@ export type ExternalAIAccessTokenUpdate = Updateable<ExternalAIAccessTokenTable>
 
 export interface CommitTagTable {
   id: Generated<string>;
+  source_resume_id: string;
+  target_resume_id: string;
   source_commit_id: string;
   target_commit_id: string;
   kind: Generated<string>;

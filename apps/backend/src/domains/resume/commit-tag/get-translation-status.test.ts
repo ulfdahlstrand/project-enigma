@@ -56,12 +56,8 @@ function makeMockDb(opts: {
 
   return {
     selectFrom: vi.fn().mockImplementation(() => ({
-      innerJoin: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
       executeTakeFirst: vi.fn().mockImplementation(() => Promise.resolve(results[callIndex++])),
     })),
   } as unknown as Kysely<Database>;
