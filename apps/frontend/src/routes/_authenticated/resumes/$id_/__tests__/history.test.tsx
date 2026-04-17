@@ -319,10 +319,10 @@ describe("View controls", () => {
     mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
   });
 
-  it("renders the branch label in the sidebar header", async () => {
+  it("renders the filter bar above the split view", async () => {
     renderPage();
-    const sidebar = await screen.findByTestId("history-branch-sidebar");
-    expect(within(sidebar).getByText(enCommon.resume.history.branchLabel)).toBeInTheDocument();
+    expect(await screen.findByTestId("history-branch-filters")).toBeInTheDocument();
+    expect(screen.getByText(enCommon.resume.compare.tree.filterLabel)).toBeInTheDocument();
   });
 
   it("navigates when a branch is selected in the sidebar", async () => {

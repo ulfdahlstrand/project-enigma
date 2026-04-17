@@ -4,28 +4,27 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import FilterListIcon from "@mui/icons-material/FilterList";
 import LanguageIcon from "@mui/icons-material/Language";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import UnarchiveIcon from "@mui/icons-material/Unarchive";
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { BranchType } from "@cv-tool/contracts";
+import type { BranchFilterType } from "./HistoryBranchFilters";
 import type { GraphBranch } from "./history-graph-utils";
-
-type FilterType = BranchType | "archived";
 
 interface HistoryBranchSidebarProps {
   branches: GraphBranch[];
   selectedBranchId: string;
+  activeFilters: Set<BranchFilterType>;
+  activeLanguages: Set<string>;
+  showArchived: boolean;
   onSelect: (branchId: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
 }
@@ -205,38 +204,14 @@ function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArc
 export function HistoryBranchSidebar({
   branches,
   selectedBranchId,
+  activeFilters,
+  activeLanguages,
+  showArchived,
   onSelect,
   onArchive,
 }: HistoryBranchSidebarProps) {
   const { t } = useTranslation("common");
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<FilterType>>(new Set());
-  const [activeLanguages, setActiveLanguages] = useState<Set<string>>(new Set());
-  const [showArchived, setShowArchived] = useState(false);
-
-  const allLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    branches.forEach((b) => langs.add(b.language));
-    return [...langs].sort();
-  }, [branches]);
-
-  function toggleFilter(filter: FilterType) {
-    setActiveFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(filter)) next.delete(filter);
-      else next.add(filter);
-      return next;
-    });
-  }
-
-  function toggleLanguage(lang: string) {
-    setActiveLanguages((prev) => {
-      const next = new Set(prev);
-      if (next.has(lang)) next.delete(lang);
-      else next.add(lang);
-      return next;
-    });
-  }
 
   const { variantGroups, revisionBranches } = useMemo(() => {
     // Type filter resolves to a whitelist of branchTypes (empty activeFilters = all types)
@@ -318,12 +293,6 @@ export function HistoryBranchSidebar({
     }
   }
 
-  const typeFilterChips: Array<{ key: BranchType; label: string }> = [
-    { key: "variant", label: t("resume.compare.tree.filterVariant") },
-    { key: "translation", label: t("resume.compare.tree.filterTranslation") },
-    { key: "revision", label: t("resume.compare.tree.filterRevision") },
-  ];
-
   const isEmpty = variantGroups.length === 0 && revisionBranches.length === 0;
 
   return (
@@ -332,54 +301,6 @@ export function HistoryBranchSidebar({
       data-testid="history-branch-sidebar"
       sx={{ width: 220, flexShrink: 0, overflow: "hidden", maxHeight: "100%", display: "flex", flexDirection: "column" }}
     >
-      {/* Filter section */}
-      <Box sx={{ px: 1.5, pt: 1.5, pb: 1, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.75 }}>
-          <FilterListIcon fontSize="small" sx={{ color: "text.secondary", fontSize: 14 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            {t("resume.compare.tree.filterLabel")}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-          {typeFilterChips.map(({ key, label }) => (
-            <Chip
-              key={key}
-              label={label}
-              size="small"
-              clickable
-              variant={activeFilters.has(key) ? "filled" : "outlined"}
-              color={activeFilters.has(key) ? "primary" : "default"}
-              onClick={() => toggleFilter(key)}
-            />
-          ))}
-          <Chip
-            label={t("resume.compare.tree.filterArchived")}
-            size="small"
-            clickable
-            variant={showArchived ? "filled" : "outlined"}
-            color={showArchived ? "warning" : "default"}
-            icon={<ArchiveIcon />}
-            onClick={() => setShowArchived((prev) => !prev)}
-          />
-        </Box>
-        {allLanguages.length > 1 && (
-          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
-            {allLanguages.map((lang) => (
-              <Chip
-                key={lang}
-                label={lang.toUpperCase()}
-                size="small"
-                clickable
-                icon={<LanguageIcon />}
-                variant={activeLanguages.has(lang) ? "filled" : "outlined"}
-                color={activeLanguages.has(lang) ? "secondary" : "default"}
-                onClick={() => toggleLanguage(lang)}
-              />
-            ))}
-          </Box>
-        )}
-      </Box>
-
       {/* Branch tree */}
       <Box
         ref={listRef}

@@ -39,6 +39,7 @@ import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./h
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
 import { HistoryBranchSidebar } from "./HistoryBranchSidebar";
+import { HistoryBranchFilters, type BranchFilterType } from "./HistoryBranchFilters";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   validateSearch: z.object({
@@ -63,6 +64,27 @@ export function VersionHistoryPage() {
   const { mutate: archiveBranch, isError: isArchiveError } = useArchiveResumeBranch();
   const [revertTarget, setRevertTarget] = useState<GraphCommit | null>(null);
   const [revertError, setRevertError] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<BranchFilterType>>(new Set());
+  const [activeLanguages, setActiveLanguages] = useState<Set<string>>(new Set());
+  const [showArchived, setShowArchived] = useState(false);
+
+  function toggleFilter(filter: BranchFilterType) {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(filter)) next.delete(filter);
+      else next.add(filter);
+      return next;
+    });
+  }
+
+  function toggleLanguage(lang: string) {
+    setActiveLanguages((prev) => {
+      const next = new Set(prev);
+      if (next.has(lang)) next.delete(lang);
+      else next.add(lang);
+      return next;
+    });
+  }
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
@@ -212,38 +234,50 @@ export function VersionHistoryPage() {
           {t("resume.history.description")}
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={!canMergeSelectedBranch}
-            onClick={openMergeDialog}
-          >
-            {t("resume.history.mergeButton")}
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            disabled={!canDeleteSelectedBranch}
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            {t("resume.history.deleteBranchButton")}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => void handleOpenCompare()}
-          >
-            {t("resume.history.compareButton")}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleViewSelectedBranchInResume}
-          >
-            {t("resume.history.viewInResumeButton")}
-          </Button>
+        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+          <HistoryBranchFilters
+            branches={branches}
+            activeFilters={activeFilters}
+            activeLanguages={activeLanguages}
+            showArchived={showArchived}
+            onToggleFilter={toggleFilter}
+            onToggleLanguage={toggleLanguage}
+            onToggleShowArchived={() => setShowArchived((prev) => !prev)}
+          />
+
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={!canMergeSelectedBranch}
+              onClick={openMergeDialog}
+            >
+              {t("resume.history.mergeButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              disabled={!canDeleteSelectedBranch}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              {t("resume.history.deleteBranchButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => void handleOpenCompare()}
+            >
+              {t("resume.history.compareButton")}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleViewSelectedBranchInResume}
+            >
+              {t("resume.history.viewInResumeButton")}
+            </Button>
+          </Box>
         </Box>
 
         {isArchiveError && (
@@ -256,6 +290,9 @@ export function VersionHistoryPage() {
           <HistoryBranchSidebar
             branches={branches}
             selectedBranchId={selectedBranchId}
+            activeFilters={activeFilters}
+            activeLanguages={activeLanguages}
+            showArchived={showArchived}
             onSelect={(branchId) => void navigateToHistory(branchId)}
             onArchive={(branchId, isArchived) =>
               archiveBranch({ branchId, isArchived, resumeId })
