@@ -77,7 +77,6 @@ export async function archiveResumeBranch(
     branchType: updated.branch_type,
     sourceBranchId: updated.source_branch_id,
     sourceCommitId: updated.source_commit_id,
-    isStale: false,
     isArchived: updated.is_archived,
   };
 }

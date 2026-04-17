@@ -99,21 +99,15 @@ export const resumeBranchSchema = z.object({
   /** Classifies the branch as 'variant', 'translation', or 'revision'. */
   branchType: branchTypeSchema,
   /**
-   * For translation/revision branches: ID of the source variant.
+   * For revision branches: ID of the source variant.
    * NULL for variants.
    */
   sourceBranchId: z.string().uuid().nullable(),
   /**
-   * For translations: the source commit the translation is caught up to (mutable).
    * For revisions: the commit the revision diverged from (immutable).
    * NULL for variants.
    */
   sourceCommitId: z.string().uuid().nullable(),
-  /**
-   * True when this is a translation and source_commit_id differs from the
-   * source variant's head_commit_id. Always false for variants and revisions.
-   */
-  isStale: z.boolean(),
   /** True when the branch has been soft-archived (hidden by default). */
   isArchived: z.boolean(),
 });
@@ -324,23 +318,6 @@ export const getResumeBranchHistoryGraphOutputSchema = resumeBranchHistoryGraphS
 export type ResumeBranchHistoryGraph = z.infer<typeof resumeBranchHistoryGraphSchema>;
 
 // ---------------------------------------------------------------------------
-// createTranslationBranch schemas
-//
-// Creates a translation branch (child of a variant) for a target language.
-// ---------------------------------------------------------------------------
-
-export const createTranslationBranchInputSchema = z.object({
-  sourceBranchId: z.string().uuid(),
-  language: z.string().min(2),
-  name: z.string().min(1).optional(),
-});
-
-export const createTranslationBranchOutputSchema = resumeBranchSchema;
-
-export type CreateTranslationBranchInput = z.infer<typeof createTranslationBranchInputSchema>;
-export type CreateTranslationBranchOutput = z.infer<typeof createTranslationBranchOutputSchema>;
-
-// ---------------------------------------------------------------------------
 // createRevisionBranch schemas
 //
 // Creates a short-lived working branch off a variant.
@@ -391,22 +368,6 @@ export const promoteRevisionToVariantOutputSchema = resumeBranchSchema;
 
 export type PromoteRevisionToVariantInput = z.infer<typeof promoteRevisionToVariantInputSchema>;
 export type PromoteRevisionToVariantOutput = z.infer<typeof promoteRevisionToVariantOutputSchema>;
-
-// ---------------------------------------------------------------------------
-// markTranslationCaughtUp schemas
-//
-// Updates source_commit_id to the source variant's current HEAD, signalling
-// the translation is considered up-to-date with the source.
-// ---------------------------------------------------------------------------
-
-export const markTranslationCaughtUpInputSchema = z.object({
-  branchId: z.string().uuid(),
-});
-
-export const markTranslationCaughtUpOutputSchema = resumeBranchSchema;
-
-export type MarkTranslationCaughtUpInput = z.infer<typeof markTranslationCaughtUpInputSchema>;
-export type MarkTranslationCaughtUpOutput = z.infer<typeof markTranslationCaughtUpOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // Diff engine schemas
@@ -518,25 +479,6 @@ export const revertCommitOutputSchema = resumeCommitSchema;
 
 export type RevertCommitInput = z.infer<typeof revertCommitInputSchema>;
 export type RevertCommitOutput = z.infer<typeof revertCommitOutputSchema>;
-
-// ---------------------------------------------------------------------------
-// rebaseTranslationOntoSource schemas
-//
-// "Ful rebase" for translation branches: takes the source variant's current
-// HEAD content, creates a new commit on the translation branch with that
-// content, and advances source_commit_id. The translator must then re-translate
-// the changed sections. Destructive — overwrites translation content with
-// untranslated source content.
-// ---------------------------------------------------------------------------
-
-export const rebaseTranslationOntoSourceInputSchema = z.object({
-  branchId: z.string().uuid(),
-});
-
-export const rebaseTranslationOntoSourceOutputSchema = resumeBranchSchema;
-
-export type RebaseTranslationOntoSourceInput = z.infer<typeof rebaseTranslationOntoSourceInputSchema>;
-export type RebaseTranslationOntoSourceOutput = z.infer<typeof rebaseTranslationOntoSourceOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // rebaseRevisionOntoSource schemas

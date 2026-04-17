@@ -20,7 +20,6 @@ function branch(
     branchType: "variant",
     sourceBranchId: null,
     sourceCommitId: null,
-    isStale: false,
     isArchived: false,
     ...overrides,
   };

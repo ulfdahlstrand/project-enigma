@@ -136,7 +136,6 @@ function deriveBranchAssignments(
       branchType: "variant",
       sourceBranchId: null,
       sourceCommitId: null,
-      isStale: false,
       isArchived: false,
       isSynthetic: true,
     });

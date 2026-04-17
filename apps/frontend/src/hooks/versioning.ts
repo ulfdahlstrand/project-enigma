@@ -185,29 +185,6 @@ export function useDeleteResumeBranch() {
   });
 }
 
-/** Creates a translation branch (language copy) off a variant. */
-export function useCreateTranslationBranch() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      sourceBranchId,
-      language,
-      name,
-    }: {
-      sourceBranchId: string;
-      language: string;
-      name?: string;
-      resumeId: string;
-    }) => orpc.createTranslationBranch({ sourceBranchId, language, name }),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
-        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
-      ]);
-    },
-  });
-}
-
 /** Creates a short-lived revision branch off a variant. */
 export function useCreateRevisionBranch() {
   const queryClient = useQueryClient();
@@ -348,22 +325,6 @@ export function useCreateTranslationResume() {
         queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
         queryClient.invalidateQueries({ queryKey: ["listResumes"] }),
         queryClient.invalidateQueries({ queryKey: ["getResume"] }),
-      ]);
-    },
-  });
-}
-
-/** Rebases a translation branch onto its source's current HEAD (destructive). */
-export function useRebaseTranslationOntoSource() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ branchId }: { branchId: string; resumeId: string }) =>
-      orpc.rebaseTranslationOntoSource({ branchId }),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
-        queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
-        queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
       ]);
     },
   });

@@ -22,22 +22,16 @@ import {
   getResumeBranchHistoryGraphOutputSchema,
   compareResumeCommitsInputSchema,
   compareResumeCommitsOutputSchema,
-  createTranslationBranchInputSchema,
-  createTranslationBranchOutputSchema,
   createRevisionBranchInputSchema,
   createRevisionBranchOutputSchema,
   mergeRevisionIntoSourceInputSchema,
   mergeRevisionIntoSourceOutputSchema,
   promoteRevisionToVariantInputSchema,
   promoteRevisionToVariantOutputSchema,
-  markTranslationCaughtUpInputSchema,
-  markTranslationCaughtUpOutputSchema,
   archiveResumeBranchInputSchema,
   archiveResumeBranchOutputSchema,
   revertCommitInputSchema,
   revertCommitOutputSchema,
-  rebaseTranslationOntoSourceInputSchema,
-  rebaseTranslationOntoSourceOutputSchema,
   rebaseRevisionOntoSourceInputSchema,
   rebaseRevisionOntoSourceOutputSchema,
 } from "../../resume-versions.js";
@@ -87,10 +81,6 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-commits/compare" })
     .input(compareResumeCommitsInputSchema)
     .output(compareResumeCommitsOutputSchema),
-  createTranslationBranch: oc
-    .route({ method: "POST", path: "/resume-branches/{sourceBranchId}/translations" })
-    .input(createTranslationBranchInputSchema)
-    .output(createTranslationBranchOutputSchema),
   createRevisionBranch: oc
     .route({ method: "POST", path: "/resume-branches/{sourceBranchId}/revisions" })
     .input(createRevisionBranchInputSchema)
@@ -103,10 +93,6 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-branches/{branchId}/promote" })
     .input(promoteRevisionToVariantInputSchema)
     .output(promoteRevisionToVariantOutputSchema),
-  markTranslationCaughtUp: oc
-    .route({ method: "POST", path: "/resume-branches/{branchId}/mark-caught-up" })
-    .input(markTranslationCaughtUpInputSchema)
-    .output(markTranslationCaughtUpOutputSchema),
   archiveResumeBranch: oc
     .route({ method: "PATCH", path: "/resume-branches/{branchId}/archive" })
     .input(archiveResumeBranchInputSchema)
@@ -115,10 +101,6 @@ export const resumeVersionRoutes = {
     .route({ method: "POST", path: "/resume-branches/{branchId}/revert" })
     .input(revertCommitInputSchema)
     .output(revertCommitOutputSchema),
-  rebaseTranslationOntoSource: oc
-    .route({ method: "POST", path: "/resume-branches/{branchId}/rebase-translation" })
-    .input(rebaseTranslationOntoSourceInputSchema)
-    .output(rebaseTranslationOntoSourceOutputSchema),
   rebaseRevisionOntoSource: oc
     .route({ method: "POST", path: "/resume-branches/{branchId}/rebase" })
     .input(rebaseRevisionOntoSourceInputSchema)

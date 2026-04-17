@@ -498,62 +498,21 @@ function BranchTree({
   };
 
   const variantGroups = useMemo(() => {
-    const typeFilter: BranchType[] =
-      activeFilters.size === 0
-        ? ["variant", "translation", "revision"]
-        : (["variant", "translation", "revision"].filter((f) =>
-            activeFilters.has(f as FilterType),
-          ) as BranchType[]);
-
-    const filterToTranslated = activeFilters.has("translation");
-
-    // Pre-index all translations by sourceBranchId (unfiltered, for language computation)
-    const allTranslationsByVariantId = new Map<string, ResumeBranch[]>();
-    branches.forEach((b) => {
-      if (b.branchType === "translation" && b.sourceBranchId) {
-        const existing = allTranslationsByVariantId.get(b.sourceBranchId) ?? [];
-        allTranslationsByVariantId.set(b.sourceBranchId, [...existing, b]);
-      }
-    });
-
     const variants = branches.filter(
       (b) => b.branchType === "variant" && (showArchived || !b.isArchived),
     );
 
+    // Language filter: keep variant only if its own language matches
     return variants
-      .map((variant) => {
-        const allTranslations = allTranslationsByVariantId.get(variant.id) ?? [];
-        // All languages this variant covers: its own + all its translations
-        const coveredLanguages = [
-          ...new Set([variant.language, ...allTranslations.map((t) => t.language)]),
-        ];
-
-        // Language filter: keep variant if any covered language matches
-        if (activeLanguages.size > 0 && !coveredLanguages.some((l) => activeLanguages.has(l))) {
-          return null;
-        }
-
-        // Translation filter: only show variants that have at least one translation
-        if (filterToTranslated && allTranslations.length === 0) {
-          return null;
-        }
-
-        // Translations to render in the tree (respects type + language + archived filters)
-        const visibleTranslations = allTranslations.filter(
-          (t) =>
-            typeFilter.includes("translation") &&
-            (activeLanguages.size === 0 || activeLanguages.has(t.language)) &&
-            (showArchived || !t.isArchived),
-        );
-
-        return {
-          variant,
-          translations: visibleTranslations,
-          allLanguages: coveredLanguages,
-        };
-      })
-      .filter((g): g is NonNullable<typeof g> => g !== null);
-  }, [branches, showArchived, activeFilters, activeLanguages]);
+      .filter((variant) =>
+        activeLanguages.size === 0 || activeLanguages.has(variant.language),
+      )
+      .map((variant) => ({
+        variant,
+        translations: [] as ResumeBranch[],
+        allLanguages: [variant.language],
+      }));
+  }, [branches, showArchived, activeLanguages]);
 
   const revisionBranches = useMemo(
     () =>

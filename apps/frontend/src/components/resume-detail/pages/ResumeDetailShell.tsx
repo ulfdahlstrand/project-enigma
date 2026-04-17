@@ -19,7 +19,6 @@ import Typography from "@mui/material/Typography";
 
 import { PageHeader } from "../../layout/PageHeader";
 import { RevisionActionBanner } from "../../RevisionActionBanner";
-import { TranslationStaleBanner } from "../../TranslationStaleBanner";
 import { TranslationStalenessBanner } from "../TranslationStalenessBanner";
 import { ResumeContextStrip } from "../context-strip/ResumeContextStrip";
 import { useListCommitTags } from "../../../hooks/versioning";
@@ -149,13 +148,6 @@ export function ResumeDetailShell({
         onAddVariant={handleAddVariant}
       />
 
-      {activeBranchType === "translation" && activeBranch?.isStale && activeBranchId ? (
-        <TranslationStaleBanner
-          resumeId={id}
-          branchId={activeBranchId}
-          sourceName={sourceBranch?.name ?? ""}
-        />
-      ) : null}
       {sourceResumeIdForBanner ? (
         <TranslationStalenessBanner
           sourceResumeId={sourceResumeIdForBanner}

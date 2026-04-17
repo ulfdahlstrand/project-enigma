@@ -68,9 +68,8 @@ export function filterBranches({
       }
     }
 
-    // Structural type filter — mirrors what still exists in the data model.
+    // Structural type filter.
     if (b.branchType === "variant" && !wantVariants && !wantTranslations) return false;
-    if (b.branchType === "translation" && !wantTranslations) return false;
     if (b.branchType === "revision" && !wantRevisions) return false;
 
     return true;

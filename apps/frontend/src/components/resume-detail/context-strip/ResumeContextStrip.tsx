@@ -104,8 +104,6 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
 
       <LanguageChip
         resumeId={id}
-        currentBranchId={activeBranchId}
-        variantBranchId={variantBranchId}
         language={language}
         navigate={navigate}
       />
@@ -124,7 +122,6 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
 
       <StaleRevisionChip
         activeBranchType={activeBranchType}
-        activeBranchIsStale={activeBranch?.isStale ?? false}
         sourceBranch={sourceBranch}
       />
     </Box>

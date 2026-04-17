@@ -71,7 +71,6 @@ export async function promoteRevisionToVariant(
     branchType: promoted.branch_type,
     sourceBranchId: promoted.source_branch_id,
     sourceCommitId: promoted.source_commit_id,
-    isStale: false,
     isArchived: promoted.is_archived,
   };
 }

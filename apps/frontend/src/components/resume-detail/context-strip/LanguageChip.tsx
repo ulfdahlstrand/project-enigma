@@ -1,7 +1,6 @@
 /**
- * LanguageChip — shows the active language and lets the user switch languages
- * by delegating to the existing LanguageSwitcher in ghost mode, or renders a
- * plain ghost button when variantBranchId is unavailable.
+ * LanguageChip — shows the active language and lets the user navigate to
+ * linked resumes (translations) or create a new translation resume.
  *
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
@@ -14,7 +13,6 @@ import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { useCreateTranslationBranch, useResumeBranches } from "../../../hooks/versioning";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -24,27 +22,21 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import Alert from "@mui/material/Alert";
 import MuiMenuItem from "@mui/material/MenuItem";
+import { useListCommitTags, useCreateTranslationResume } from "../../../hooks/versioning";
+import type { LinkedResumeMeta } from "@cv-tool/contracts";
 
 const SUPPORTED_LANGUAGES = ["sv", "en"] as const;
 
 interface LanguageChipProps {
   resumeId: string;
-  currentBranchId: string | null;
-  variantBranchId: string | null;
   language: string | null | undefined;
   navigate: ReturnType<typeof useNavigate>;
 }
 
-export function LanguageChip({
-  resumeId,
-  currentBranchId,
-  variantBranchId,
-  language,
-  navigate,
-}: LanguageChipProps) {
+export function LanguageChip({ resumeId, language, navigate }: LanguageChipProps) {
   const { t } = useTranslation("common");
-  const { data: branches } = useResumeBranches(resumeId);
-  const createTranslationBranch = useCreateTranslationBranch();
+  const { data: commitTags } = useListCommitTags(resumeId);
+  const createTranslationResume = useCreateTranslationResume();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState("");
@@ -52,10 +44,9 @@ export function LanguageChip({
 
   const label = language?.toUpperCase() ?? "—";
 
-  const variantBranch = variantBranchId ? branches?.find((b) => b.id === variantBranchId) : null;
-  const translations = variantBranchId
-    ? (branches?.filter((b) => b.branchType === "translation" && b.sourceBranchId === variantBranchId) ?? [])
-    : [];
+  const linkedResumes: LinkedResumeMeta[] = (commitTags ?? []).map((tag) =>
+    tag.source.resumeId === resumeId ? tag.target : tag.source,
+  );
 
   function openCreateDialog() {
     setSelectedLang("");
@@ -65,32 +56,30 @@ export function LanguageChip({
   }
 
   async function handleCreate() {
-    if (!selectedLang || !variantBranchId || createTranslationBranch.isPending) return;
+    if (!selectedLang || createTranslationResume.isPending) return;
     setCreateError(null);
     try {
-      const newBranch = await createTranslationBranch.mutateAsync({
-        sourceBranchId: variantBranchId,
-        language: selectedLang,
-        resumeId,
+      const result = await createTranslationResume.mutateAsync({
+        sourceResumeId: resumeId,
+        targetLanguage: selectedLang,
       });
       setDialogOpen(false);
-      await navigate({
-        to: "/resumes/$id/branch/$branchId",
-        params: { id: resumeId, branchId: newBranch.id },
-      });
+      await navigate({ to: "/resumes/$id", params: { id: result.resumeId } });
     } catch {
       setCreateError(t("resume.languageSwitcher.createDialog.error"));
     }
   }
 
-  function navigateToBranch(branchId: string) {
-    if (branchId !== currentBranchId) {
+  function navigateToResume(linked: LinkedResumeMeta) {
+    setAnchor(null);
+    if (linked.branchId) {
       void navigate({
         to: "/resumes/$id/branch/$branchId",
-        params: { id: resumeId, branchId },
+        params: { id: linked.resumeId, branchId: linked.branchId },
       });
+    } else {
+      void navigate({ to: "/resumes/$id", params: { id: linked.resumeId } });
     }
-    setAnchor(null);
   }
 
   return (
@@ -141,33 +130,18 @@ export function LanguageChip({
           {t("resume.languageSwitcher.addTranslation")}
         </MenuItem>
         <Divider />
-        {variantBranch && (
+        {linkedResumes.map((linked) => (
           <MenuItem
+            key={linked.resumeId}
             dense
-            selected={currentBranchId === variantBranchId}
-            onClick={() => navigateToBranch(variantBranch.id)}
+            onClick={() => navigateToResume(linked)}
           >
-            {variantBranch.language || variantBranch.name}
-          </MenuItem>
-        )}
-        {translations.map((b) => (
-          <MenuItem
-            key={b.id}
-            dense
-            selected={b.id === currentBranchId}
-            onClick={() => navigateToBranch(b.id)}
-          >
-            {b.language || b.name}
+            {linked.language.toUpperCase()}
           </MenuItem>
         ))}
       </Menu>
 
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t("resume.languageSwitcher.createDialog.title")}</DialogTitle>
         <DialogContent>
           {createError && (
@@ -176,9 +150,7 @@ export function LanguageChip({
             </Alert>
           )}
           <FormControl fullWidth sx={{ mt: 1 }}>
-            <InputLabel>
-              {t("resume.languageSwitcher.createDialog.languageLabel")}
-            </InputLabel>
+            <InputLabel>{t("resume.languageSwitcher.createDialog.languageLabel")}</InputLabel>
             <Select
               autoFocus
               value={selectedLang}
@@ -199,10 +171,10 @@ export function LanguageChip({
           </Button>
           <Button
             variant="contained"
-            disabled={!selectedLang || createTranslationBranch.isPending}
+            disabled={!selectedLang || createTranslationResume.isPending}
             onClick={() => void handleCreate()}
           >
-            {createTranslationBranch.isPending
+            {createTranslationResume.isPending
               ? t("resume.languageSwitcher.createDialog.creating")
               : t("resume.languageSwitcher.createDialog.create")}
           </Button>

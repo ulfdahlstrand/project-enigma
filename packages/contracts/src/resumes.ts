@@ -89,7 +89,6 @@ export const getResumeBranchOutputSchema = resumeWithSkillsSchema.extend({
   branchType: branchTypeSchema,
   sourceBranchId: z.string().uuid().nullable(),
   sourceCommitId: z.string().uuid().nullable(),
-  isStale: z.boolean(),
 });
 
 // ---------------------------------------------------------------------------
