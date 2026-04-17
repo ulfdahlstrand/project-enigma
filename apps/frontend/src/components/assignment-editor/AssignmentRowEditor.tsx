@@ -23,7 +23,7 @@ export interface AssignmentDraftState {
   isCurrent: boolean;
   description: string;
   technologies: string[];
-  keywords: string;
+  keywords: string[];
 }
 
 interface AssignmentRowEditorProps {
@@ -139,12 +139,20 @@ export function AssignmentRowEditor({
         )}
       />
 
-      <TextField
-        label={t("assignment.new.keywordsLabel")}
+      <Autocomplete
+        multiple
+        freeSolo
+        options={[] as string[]}
         value={draft.keywords}
-        onChange={(event) => onDraftChange("keywords", event.target.value)}
+        onChange={(_, value) => onDraftChange("keywords", value)}
         size="small"
         fullWidth
+        renderInput={(params) => (
+          <TextField
+            {...(params as TextFieldProps)}
+            label={t("assignment.new.keywordsLabel")}
+          />
+        )}
       />
 
       {saveError && <Alert severity="error">{t("resume.edit.assignment.saveError")}</Alert>}

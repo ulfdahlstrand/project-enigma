@@ -283,6 +283,38 @@ describe("AssignmentEditor", () => {
     expect(call.technologies).toEqual(["TypeScript", "React", "GraphQL"]);
   });
 
+  it("renders existing keywords as chips in edit mode", async () => {
+    const user = userEvent.setup();
+    // A1 has keywords: "frontend"
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    expect(screen.getByRole("button", { name: /frontend/ })).toBeInTheDocument();
+  });
+
+  it("adding a new keyword chip saves as a comma-joined string", async () => {
+    mockUpdateAssignment.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    const keywordsCombobox = screen.getByRole("combobox", {
+      name: new RegExp(enCommon.assignment.new.keywordsLabel, "i"),
+    });
+    await user.click(keywordsCombobox);
+    await user.keyboard("typescript{Enter}");
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.assignment.detail.saveButton })
+    );
+
+    await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
+    const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
+    expect(call.keywords).toBe("frontend, typescript");
+  });
+
   it("shows error alert when mutation fails", async () => {
     mockUpdateAssignment.mockRejectedValue(new Error("Network error"));
     const user = userEvent.setup();

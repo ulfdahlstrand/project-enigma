@@ -48,6 +48,14 @@ function toDateInput(d: string | Date | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
+function parseKeywords(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function buildDraft(a: AssignmentRow): AssignmentDraftState {
   return {
     role: a.role,
@@ -57,7 +65,7 @@ function buildDraft(a: AssignmentRow): AssignmentDraftState {
     isCurrent: a.isCurrent,
     description: a.description,
     technologies: [...a.technologies],
-    keywords: a.keywords ?? "",
+    keywords: parseKeywords(a.keywords),
   };
 }
 
@@ -147,7 +155,8 @@ export function AssignmentEditor({
       patch.technologies = newTechs;
     }
 
-    const newKeywords = draft.keywords.trim() || null;
+    const cleanedKeywords = draft.keywords.map((s) => s.trim()).filter(Boolean);
+    const newKeywords = cleanedKeywords.length > 0 ? cleanedKeywords.join(", ") : null;
     if (newKeywords !== original.keywords) patch.keywords = newKeywords;
 
     const origStart = toDateInput(original.startDate);
