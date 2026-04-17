@@ -67,7 +67,7 @@ export async function createCommitTag(
       oc.constraint("commit_tags_unique_source_target_resume_kind").doUpdateSet({
         source_commit_id: input.sourceCommitId,
         target_commit_id: input.targetCommitId,
-        created_by: userId,
+        created_by: ownerEmployeeId,
       })
     )
     .returningAll()
