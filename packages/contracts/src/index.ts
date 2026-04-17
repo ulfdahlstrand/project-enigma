@@ -43,6 +43,7 @@ import {
 } from "./external-ai.js";
 import { aiRoutes } from "./domains/ai/routes.js";
 import { assignmentRoutes } from "./domains/assignments/routes.js";
+import { commitTagRoutes } from "./domains/commit-tags/routes.js";
 import { authRoutes } from "./domains/auth/routes.js";
 import { branchAssignmentRoutes } from "./domains/branch-assignments/routes.js";
 import { educationRoutes } from "./domains/education/routes.js";
@@ -193,6 +194,33 @@ export type {
   GetResumeBranchInput,
   GetResumeBranchOutput,
 } from "./resumes.js";
+
+export {
+  commitTagSchema,
+  commitTagWithLinkedResumeSchema,
+  linkedResumeMetaSchema,
+  listCommitTagsInputSchema,
+  listCommitTagsOutputSchema,
+  createCommitTagInputSchema,
+  createCommitTagOutputSchema,
+  deleteCommitTagInputSchema,
+  deleteCommitTagOutputSchema,
+  getTranslationStatusInputSchema,
+  getTranslationStatusOutputSchema,
+} from "./commit-tags.js";
+export type {
+  CommitTag,
+  CommitTagWithLinkedResume,
+  LinkedResumeMeta,
+  ListCommitTagsInput,
+  ListCommitTagsOutput,
+  CreateCommitTagInput,
+  CreateCommitTagOutput,
+  DeleteCommitTagInput,
+  DeleteCommitTagOutput,
+  GetTranslationStatusInput,
+  GetTranslationStatusOutput,
+} from "./commit-tags.js";
 
 export {
   assignmentSchema,
@@ -432,6 +460,7 @@ export const contract = oc.router({
   ...resumeVersionRoutes,
   ...branchAssignmentRoutes,
   ...aiRoutes,
+  ...commitTagRoutes,
 });
 
 /** Inferred contract type — used by the frontend to create a typed oRPC client. */
