@@ -42,7 +42,7 @@ const mockDeleteResumeBranch = orpc.deleteResumeBranch as ReturnType<typeof vi.f
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
-let mockSearch: { view?: "list" | "tree"; branchId?: string } = {};
+let mockSearch: { branchId?: string } = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
@@ -224,7 +224,7 @@ describe("Loading state", () => {
 
 describe("Empty state", () => {
   beforeEach(() => {
-    mockSearch = { view: "list" };
+    mockSearch = {};
     mockGetResumeBranchHistoryGraph.mockResolvedValue({
       ...GRAPH,
       commits: GRAPH.commits.filter((commit) => commit.id !== "commit-id-3"),
@@ -257,46 +257,47 @@ describe("Commit list", () => {
 
   it("renders the commit message for the first commit", async () => {
     renderPage();
-    const msg = await screen.findByText("Initial version");
-    expect(msg).toBeInTheDocument();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText("Initial version")).toBeInTheDocument();
   });
 
   it("renders the default message for commits without a message", async () => {
     renderPage();
-    const defaultMsg = await screen.findByText(enCommon.resume.history.defaultMessage);
-    expect(defaultMsg).toBeInTheDocument();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText(enCommon.resume.history.defaultMessage)).toBeInTheDocument();
   });
 
   it("renders table headers", async () => {
     renderPage();
-    await screen.findByText("Initial version");
-    expect(screen.getByText(enCommon.resume.history.tableHeaderMessage)).toBeInTheDocument();
-    expect(screen.getByText(enCommon.resume.history.tableHeaderSavedAt)).toBeInTheDocument();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText(enCommon.resume.history.tableHeaderMessage)).toBeInTheDocument();
+    expect(within(table).getByText(enCommon.resume.history.tableHeaderSavedAt)).toBeInTheDocument();
   });
 
   it("renders commits reachable from the selected branch head, including ancestors", async () => {
-    mockSearch = { view: "list" };
+    mockSearch = {};
     renderPage("branch-id-2");
 
-    expect(await screen.findByText("Swedish version")).toBeInTheDocument();
-    expect(screen.getByText("Initial version")).toBeInTheDocument();
-    expect(screen.queryByText("German version")).toBeNull();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText("Swedish version")).toBeInTheDocument();
+    expect(within(table).getByText("Initial version")).toBeInTheDocument();
+    expect(within(table).queryByText("German version")).toBeNull();
   });
 
   it("falls back to the main branch when the search branch is unknown", async () => {
-    mockSearch = { view: "list" };
+    mockSearch = {};
     renderPage("missing-branch");
 
-    expect(await screen.findByText("Initial version")).toBeInTheDocument();
-    expect(screen.queryByText("Swedish version")).toBeNull();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText("Initial version")).toBeInTheDocument();
+    expect(within(table).queryByText("Swedish version")).toBeNull();
   });
 
   it("renders commits with the newest saved version first", async () => {
     renderPage();
 
-    expect(await screen.findByText(enCommon.resume.history.defaultMessage)).toBeInTheDocument();
-
-    const commitMessages = screen.getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
+    const table = await screen.findByTestId("history-commit-table");
+    const commitMessages = within(table).getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
     expect(commitMessages[0]).toContain(enCommon.resume.history.defaultMessage);
     expect(commitMessages[1]).toContain("Initial version");
   });
@@ -305,10 +306,11 @@ describe("Commit list", () => {
     mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH_WITH_MERGE);
     renderPage();
 
-    expect(await screen.findByText("Merge Swedish variant")).toBeInTheDocument();
-    expect(screen.getByText("Swedish version")).toBeInTheDocument();
-    expect(screen.getByText("Initial version")).toBeInTheDocument();
-    expect(screen.queryByText("German version")).toBeNull();
+    const table = await screen.findByTestId("history-commit-table");
+    expect(within(table).getByText("Merge Swedish variant")).toBeInTheDocument();
+    expect(within(table).getByText("Swedish version")).toBeInTheDocument();
+    expect(within(table).getByText("Initial version")).toBeInTheDocument();
+    expect(within(table).queryByText("German version")).toBeNull();
   });
 });
 
@@ -317,34 +319,28 @@ describe("View controls", () => {
     mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
   });
 
-  it("renders the branch selector", async () => {
+  it("renders the branch label in the sidebar header", async () => {
     renderPage();
-    const labels = await screen.findAllByText(enCommon.resume.history.branchLabel);
-    expect(labels.length).toBeGreaterThan(0);
+    const sidebar = await screen.findByTestId("history-branch-sidebar");
+    expect(within(sidebar).getByText(enCommon.resume.history.branchLabel)).toBeInTheDocument();
   });
 
-  it("navigates when a different branch is selected", async () => {
+  it("navigates when a branch is selected in the sidebar", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "list" };
+    mockSearch = {};
     renderPage();
 
-    await screen.findByText("Initial version");
-
-    // Open the BranchTreePicker popover — button shows current branch "main (EN)"
-    await user.click(screen.getByRole("button", { name: /main \(EN\)/i }));
-
-    // Swedish Variant appears as a ListItemButton in the tree
-    await user.click(await screen.findByRole("button", { name: /Swedish Variant/i }));
+    const sidebar = await screen.findByTestId("history-branch-sidebar");
+    await user.click(within(sidebar).getByRole("option", { name: /Swedish Variant/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/history",
       params: { id: "resume-id-1" },
-      search: { view: "list", branchId: "branch-id-2" },
+      search: { branchId: "branch-id-2" },
     });
   });
 
-  it("renders the tree overview mode", async () => {
-    mockSearch = { view: "tree" };
+  it("renders the graph with all branches and commits", async () => {
     renderPage();
 
     expect(await screen.findByTestId("history-graph")).toBeInTheDocument();
@@ -359,7 +355,6 @@ describe("View controls", () => {
   });
 
   it("renders branch ancestry details in deterministic order", async () => {
-    mockSearch = { view: "tree" };
     renderPage();
 
     const mainBranch = await screen.findByTestId("tree-branch-branch-id-1");
@@ -369,15 +364,15 @@ describe("View controls", () => {
     expect(mainBranch).toHaveAttribute("aria-label", "main");
     expect(swedishBranch).toHaveAttribute("aria-label", "Swedish Variant");
     expect(germanBranch).toHaveAttribute("aria-label", "German Variant");
-    // Labels are always visible in the row column (not tooltip-only)
-    expect(screen.queryByText("Initial version")).toBeInTheDocument();
-    expect(screen.queryByText("Swedish version")).toBeInTheDocument();
-    expect(screen.queryByText("German version")).toBeInTheDocument();
+    // Labels are visible in the graph row column
+    const graph = screen.getByTestId("history-graph");
+    expect(within(graph).queryByText("Initial version")).toBeInTheDocument();
+    expect(within(graph).queryByText("Swedish version")).toBeInTheDocument();
+    expect(within(graph).queryByText("German version")).toBeInTheDocument();
   });
 
   it("renders the no-commits branch state in tree mode", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree" };
     renderPage("branch-id-4");
 
     const emptyBranch = await screen.findByTestId("tree-branch-branch-id-4");
@@ -387,7 +382,6 @@ describe("View controls", () => {
   });
 
   it("falls back to the first branch when no main branch exists", async () => {
-    mockSearch = { view: "tree" };
     mockGetResumeBranchHistoryGraph.mockResolvedValue({
       ...GRAPH,
       branches: GRAPH.branches.map((branch) => ({ ...branch, isMain: false })),
@@ -398,9 +392,8 @@ describe("View controls", () => {
     expect(firstBranch).toHaveAttribute("aria-label", "main");
   });
 
-  it("renders commit details only on hover in tree mode", async () => {
+  it("renders commit details only on hover in graph", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree" };
     renderPage();
 
     const swedishCommit = await screen.findByTestId("tree-commit-commit-id-3");
@@ -413,31 +406,71 @@ describe("View controls", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent(enCommon.resume.history.tableHeaderSavedAt);
   });
 
-  it("renders branch details only on hover in tree mode", async () => {
+  it("renders branch details on hover in graph", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree" };
     renderPage();
-
-    expect(screen.queryByText("Swedish Variant")).toBeNull();
 
     await user.hover(await screen.findByTestId("tree-branch-branch-id-2"));
 
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Swedish Variant");
     expect(screen.getByRole("tooltip")).toHaveTextContent("1 snapshot");
   });
+});
 
-  it("navigates when tree view is selected", async () => {
+// ---------------------------------------------------------------------------
+// Hybrid split view (#612)
+// ---------------------------------------------------------------------------
+
+describe("Hybrid split view", () => {
+  beforeEach(() => {
+    mockGetResumeBranchHistoryGraph.mockResolvedValue(GRAPH);
+  });
+
+  it("renders branch sidebar alongside the graph without a view toggle", async () => {
+    renderPage();
+    expect(await screen.findByTestId("history-branch-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("history-graph")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: enCommon.resume.history.listView })).toBeNull();
+    expect(screen.queryByRole("button", { name: enCommon.resume.history.treeView })).toBeNull();
+  });
+
+  it("renders all branches in the sidebar", async () => {
+    renderPage();
+    const sidebar = await screen.findByTestId("history-branch-sidebar");
+    expect(within(sidebar).getByText("main")).toBeInTheDocument();
+    expect(within(sidebar).getByText("Swedish Variant")).toBeInTheDocument();
+    expect(within(sidebar).getByText("German Variant")).toBeInTheDocument();
+    expect(within(sidebar).getByText("Empty Variant")).toBeInTheDocument();
+  });
+
+  it("renders the commit table panel alongside the graph for the selected branch", async () => {
+    renderPage();
+    expect(await screen.findByTestId("history-graph")).toBeInTheDocument();
+    expect(screen.getByTestId("history-commit-table")).toBeInTheDocument();
+  });
+
+  it("clicking a branch in the sidebar navigates to that branch", async () => {
     const user = userEvent.setup();
+    mockSearch = {};
     renderPage();
 
-    await screen.findByText("Initial version");
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.treeView }));
+    const sidebar = await screen.findByTestId("history-branch-sidebar");
+    await user.click(within(sidebar).getByRole("option", { name: /Swedish Variant/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/history",
       params: { id: "resume-id-1" },
-      search: { view: "tree", branchId: "branch-id-1" },
+      search: { branchId: "branch-id-2" },
     });
+  });
+
+  it("highlights the selected branch in the sidebar", async () => {
+    mockSearch = { branchId: "branch-id-2" };
+    renderPage();
+
+    const sidebar = await screen.findByTestId("history-branch-sidebar");
+    const selectedOption = within(sidebar).getByRole("option", { name: /Swedish Variant/i });
+    expect(selectedOption).toHaveAttribute("aria-selected", "true");
   });
 });
 
@@ -452,7 +485,7 @@ describe("Breadcrumb navigation", () => {
 
   it("renders a breadcrumb link back to the resumes list", async () => {
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
     const resumesLink = screen.getByRole("link", { name: enCommon.resume.pageTitle });
     expect(resumesLink).toBeInTheDocument();
   });
@@ -482,13 +515,13 @@ describe("UX improvements", () => {
 
   it("renders the description text", async () => {
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
     expect(screen.getByText(enCommon.resume.history.description)).toBeInTheDocument();
   });
 
   it("renders the View in resume button", async () => {
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
     const btn = screen.getByRole("button", { name: enCommon.resume.history.viewInResumeButton });
     expect(btn).toBeInTheDocument();
   });
@@ -496,7 +529,7 @@ describe("UX improvements", () => {
   it("navigates with branchId when View in resume is clicked", async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.viewInResumeButton }));
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/branch/$branchId",
@@ -508,7 +541,7 @@ describe("UX improvements", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-commit-table");
     await user.click(screen.getAllByRole("button", { name: enCommon.resume.history.commitActionsButton })[0]!);
     await user.click(screen.getByRole("menuitem", { name: enCommon.resume.history.viewCommitMenuItem }));
 
@@ -520,7 +553,7 @@ describe("UX improvements", () => {
 
   it("renders the Compare versions button", async () => {
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
     expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
   });
 
@@ -528,7 +561,7 @@ describe("UX improvements", () => {
     const user = userEvent.setup();
     renderPage("branch-id-2");
 
-    await screen.findByText("Swedish version");
+    await screen.findByTestId("history-commit-table");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.compareButton }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
@@ -540,7 +573,7 @@ describe("UX improvements", () => {
 
   it("disables merge and delete actions for the main branch", async () => {
     renderPage();
-    await screen.findByText("Initial version");
+    await screen.findByTestId("history-branch-sidebar");
 
     expect(screen.getByRole("button", { name: enCommon.resume.history.mergeButton })).toBeDisabled();
     expect(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton })).toBeDisabled();
@@ -548,16 +581,16 @@ describe("UX improvements", () => {
 
   it("opens merge dialog and merges selected branch into chosen target branch", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "list" };
+    mockSearch = {};
     renderPage("branch-id-2");
 
-    await screen.findByText("Swedish version");
+    await screen.findByTestId("history-commit-table");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeButton }));
 
     expect(screen.getByRole("heading", { name: enCommon.resume.history.mergeDialog.title })).toBeInTheDocument();
     const dialog = screen.getByRole("dialog", { name: enCommon.resume.history.mergeDialog.title });
     await user.click(within(dialog).getByRole("combobox"));
-    await user.click(screen.getByText("German Variant"));
+    await user.click(within(screen.getByRole("listbox")).getByText("German Variant"));
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeDialog.confirm }));
 
     expect(mockFinaliseResumeBranch).toHaveBeenCalledWith({
@@ -568,16 +601,16 @@ describe("UX improvements", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/history",
       params: { id: "resume-id-1" },
-      search: { view: "list", branchId: "branch-id-3" },
+      search: { branchId: "branch-id-3" },
     });
   });
 
   it("opens delete dialog and deletes the selected branch", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "list" };
+    mockSearch = {};
     renderPage("branch-id-2");
 
-    await screen.findByText("Swedish version");
+    await screen.findByTestId("history-commit-table");
     await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton }));
 
     expect(screen.getByRole("heading", { name: enCommon.resume.history.deleteDialog.title })).toBeInTheDocument();
@@ -587,20 +620,20 @@ describe("UX improvements", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/history",
       params: { id: "resume-id-1" },
-      search: { view: "list", branchId: "branch-id-1" },
+      search: { branchId: "branch-id-1" },
     });
   });
 
-  it("renders the head badge on the most recent commit in list view", async () => {
+  it("renders the head badge on the most recent commit", async () => {
     renderPage();
-    await screen.findByText("Initial version");
-    const headBadges = screen.getAllByText(enCommon.resume.history.headBadge);
+    const table = await screen.findByTestId("history-commit-table");
+    const headBadges = within(table).getAllByText(enCommon.resume.history.headBadge);
     expect(headBadges.length).toBeGreaterThan(0);
   });
 
-  it("opens an exact commit when clicking a commit in tree view", async () => {
+  it("opens an exact commit when clicking a commit in graph view", async () => {
     const user = userEvent.setup();
-    mockSearch = { view: "tree" };
+    mockSearch = {};
     renderPage();
 
     await user.click(await screen.findByTestId("tree-commit-commit-id-3"));
