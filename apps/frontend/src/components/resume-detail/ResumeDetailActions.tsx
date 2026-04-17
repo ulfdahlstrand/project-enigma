@@ -3,6 +3,7 @@ import CallSplitIcon from "@mui/icons-material/CallSplit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import TranslateIcon from "@mui/icons-material/Translate";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
@@ -24,10 +25,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { ResumeDeleteDialog } from "./ResumeDeleteDialog";
+import { CreateTranslationDialog } from "./CreateTranslationDialog";
 
 interface ResumeDetailActionsProps {
   resumeId: string;
   resumeTitle: string;
+  resumeLanguage: string | null;
   activeBranchId: string | null;
   /** Name of the currently active branch (used to build the compare range URL). */
   activeBranchName: string | null;
@@ -163,6 +166,7 @@ function EditButton({ onEdit }: { onEdit: () => void }) {
 export function ResumeDetailActions({
   resumeId,
   resumeTitle,
+  resumeLanguage,
   activeBranchId,
   activeBranchName,
   compareBaseRef,
@@ -186,6 +190,7 @@ export function ResumeDetailActions({
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
   const [createBranchName, setCreateBranchName] = useState("");
   const [createBranchError, setCreateBranchError] = useState<string | null>(null);
+  const [createTranslationDialogOpen, setCreateTranslationDialogOpen] = useState(false);
 
   const openComparePage = () => {
     if (compareBaseRef && activeBranchName) {
@@ -228,6 +233,17 @@ export function ResumeDetailActions({
         >
           <CallSplitIcon fontSize="small" sx={{ mr: 1 }} />
           {t("resume.detail.createBranchFromCommitMenuItem")}
+        </MenuItem>
+      )}
+      {!isSnapshotMode && (
+        <MenuItem
+          onClick={() => {
+            setMoreActionsAnchorEl(null);
+            setCreateTranslationDialogOpen(true);
+          }}
+        >
+          <TranslateIcon fontSize="small" sx={{ mr: 1 }} />
+          {t("resume.detail.createTranslationMenuItem")}
         </MenuItem>
       )}
       {!isSnapshotMode && (
@@ -329,6 +345,14 @@ export function ResumeDetailActions({
         isError={isDeleteError}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={onDeleteResume}
+      />
+
+      <CreateTranslationDialog
+        open={createTranslationDialogOpen}
+        sourceResumeId={resumeId}
+        sourceLanguage={resumeLanguage ?? "en"}
+        sourceTitle={resumeTitle}
+        onClose={() => setCreateTranslationDialogOpen(false)}
       />
     </>
   );

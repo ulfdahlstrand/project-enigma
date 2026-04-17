@@ -276,6 +276,7 @@
       "editMenuLabel": "Öppna redigeringsalternativ",
       "moreActionsLabel": "Fler åtgärder",
       "createBranchFromCommitMenuItem": "Duplicera som ny version från denna ögonblicksbild",
+      "createTranslationMenuItem": "Skapa översättning",
       "deleteButton": "Ta bort",
       "deleteDialog": {
         "title": "Ta bort meritförteckning",
@@ -534,6 +535,22 @@
       "markCaughtUpButton": "Markera som uppdaterad",
       "markingCaughtUp": "Uppdaterar…",
       "error": "Det gick inte att markera som uppdaterad. Försök igen."
+    },
+    "translationStalenessBanner": {
+      "title": "Översättningen är inaktuell",
+      "description": "{{sourceName}} har nya ändringar. Markera som uppdaterad när du har återöversatt ändringarna.",
+      "markCaughtUp": "Markera som uppdaterad"
+    },
+    "createTranslationDialog": {
+      "title": "Skapa översättning",
+      "languageLabel": "Målspråk",
+      "language_sv": "Svenska",
+      "language_en": "Engelska",
+      "titleLabel": "CV-titel (valfri)",
+      "cancel": "Avbryt",
+      "create": "Skapa",
+      "creating": "Skapar…",
+      "error": "Det gick inte att skapa översättningen. Försök igen."
     },
     "syncDialog": {
       "revision": {

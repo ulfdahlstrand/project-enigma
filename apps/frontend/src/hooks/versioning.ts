@@ -28,6 +28,9 @@ export const resumeCommitDiffKey = (
 export const commitTagsKey = (resumeId: string) =>
   ["listCommitTags", resumeId] as const;
 
+export const translationStatusKey = (sourceResumeId: string, targetResumeId: string) =>
+  ["getTranslationStatus", sourceResumeId, targetResumeId] as const;
+
 // ---------------------------------------------------------------------------
 // Query hooks
 // ---------------------------------------------------------------------------
@@ -65,6 +68,22 @@ export function useListCommitTags(resumeId: string) {
     queryKey: commitTagsKey(resumeId),
     queryFn: () => orpc.listCommitTags({ resumeId }),
     enabled: Boolean(resumeId),
+  });
+}
+
+/** Returns staleness status between a source and target resume. */
+export function useGetTranslationStatus(
+  sourceResumeId: string | null,
+  targetResumeId: string | null
+) {
+  return useQuery({
+    queryKey: translationStatusKey(sourceResumeId ?? "", targetResumeId ?? ""),
+    queryFn: () =>
+      orpc.getTranslationStatus({
+        resumeId: sourceResumeId!,
+        targetResumeId: targetResumeId!,
+      }),
+    enabled: Boolean(sourceResumeId) && Boolean(targetResumeId),
   });
 }
 
@@ -281,6 +300,54 @@ export function useRebaseRevisionOntoSource() {
         queryClient.invalidateQueries({ queryKey: resumeBranchesKey(variables.resumeId) }),
         queryClient.invalidateQueries({ queryKey: ["getResumeBranchHistoryGraph"] }),
         queryClient.invalidateQueries({ queryKey: resumeCommitsKey(variables.branchId) }),
+      ]);
+    },
+  });
+}
+
+/** Creates a new CommitTag linking two commits across different resumes. */
+export function useCreateCommitTag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceCommitId,
+      targetCommitId,
+      kind,
+    }: {
+      sourceCommitId: string;
+      targetCommitId: string;
+      kind?: string;
+      sourceResumeId: string;
+      targetResumeId: string;
+    }) => orpc.createCommitTag({ sourceCommitId, targetCommitId, kind }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
+        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.targetResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["getTranslationStatus"] }),
+      ]);
+    },
+  });
+}
+
+/** Creates a new resume as a translation of an existing one (clones content + initial tag). */
+export function useCreateTranslationResume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceResumeId,
+      targetLanguage,
+      name,
+    }: {
+      sourceResumeId: string;
+      targetLanguage: string;
+      name?: string;
+    }) => orpc.createTranslationResume({ sourceResumeId, targetLanguage, name }),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: commitTagsKey(variables.sourceResumeId) }),
+        queryClient.invalidateQueries({ queryKey: ["listResumes"] }),
+        queryClient.invalidateQueries({ queryKey: ["getResume"] }),
       ]);
     },
   });

@@ -27,6 +27,7 @@ describe("ResumeDetailActions", () => {
   const baseProps = {
     resumeId: "resume-id-1",
     resumeTitle: "Test Resume",
+    resumeLanguage: "sv",
     activeBranchId: "branch-id-1",
     activeBranchName: "main",
     compareBaseRef: null,

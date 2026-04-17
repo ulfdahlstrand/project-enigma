@@ -83,6 +83,21 @@ export const getTranslationStatusOutputSchema = z.object({
 // ---------------------------------------------------------------------------
 // Derived TypeScript types
 // ---------------------------------------------------------------------------
+// createTranslationResume
+// ---------------------------------------------------------------------------
+
+export const createTranslationResumeInputSchema = z.object({
+  sourceResumeId: z.string().uuid(),
+  targetLanguage: z.string().min(1),
+  name: z.string().min(1).optional(),
+});
+
+export const createTranslationResumeOutputSchema = z.object({
+  resumeId: z.string().uuid(),
+  commitTagId: z.string().uuid(),
+});
+
+// ---------------------------------------------------------------------------
 
 export type CommitTag = z.infer<typeof commitTagSchema>;
 export type LinkedResumeMeta = z.infer<typeof linkedResumeMetaSchema>;
@@ -95,3 +110,5 @@ export type DeleteCommitTagInput = z.infer<typeof deleteCommitTagInputSchema>;
 export type DeleteCommitTagOutput = z.infer<typeof deleteCommitTagOutputSchema>;
 export type GetTranslationStatusInput = z.infer<typeof getTranslationStatusInputSchema>;
 export type GetTranslationStatusOutput = z.infer<typeof getTranslationStatusOutputSchema>;
+export type CreateTranslationResumeInput = z.infer<typeof createTranslationResumeInputSchema>;
+export type CreateTranslationResumeOutput = z.infer<typeof createTranslationResumeOutputSchema>;

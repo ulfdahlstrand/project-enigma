@@ -8,6 +8,8 @@ import {
   deleteCommitTagOutputSchema,
   getTranslationStatusInputSchema,
   getTranslationStatusOutputSchema,
+  createTranslationResumeInputSchema,
+  createTranslationResumeOutputSchema,
 } from "../../commit-tags.js";
 
 export const commitTagRoutes = {
@@ -30,4 +32,9 @@ export const commitTagRoutes = {
     .route({ method: "GET", path: "/resumes/{resumeId}/translation-status/{targetResumeId}" })
     .input(getTranslationStatusInputSchema)
     .output(getTranslationStatusOutputSchema),
+
+  createTranslationResume: oc
+    .route({ method: "POST", path: "/resumes/create-translation" })
+    .input(createTranslationResumeInputSchema)
+    .output(createTranslationResumeOutputSchema),
 };

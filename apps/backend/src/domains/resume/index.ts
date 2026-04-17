@@ -38,3 +38,4 @@ export { listCommitTagsHandler } from "./commit-tag/list.js";
 export { createCommitTagHandler } from "./commit-tag/create.js";
 export { deleteCommitTagHandler } from "./commit-tag/delete.js";
 export { getTranslationStatusHandler } from "./commit-tag/get-translation-status.js";
+export { createTranslationResumeHandler } from "./commit-tag/create-translation-resume.js";
