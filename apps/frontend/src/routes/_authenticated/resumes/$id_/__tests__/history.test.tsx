@@ -25,6 +25,7 @@ import { VersionHistoryPage } from "../history/index";
 vi.mock("../../../../../orpc-client", () => ({
   orpc: {
     getResumeBranchHistoryGraph: vi.fn(),
+    listCommitTags: vi.fn(() => Promise.resolve([])),
     finaliseResumeBranch: vi.fn(),
     deleteResumeBranch: vi.fn(),
     archiveResumeBranch: vi.fn(),

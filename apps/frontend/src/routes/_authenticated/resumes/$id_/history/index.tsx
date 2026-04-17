@@ -27,9 +27,11 @@ import {
   useArchiveResumeBranch,
   useDeleteResumeBranch,
   useFinaliseResumeBranch,
+  useListCommitTags,
   useResumeBranchHistoryGraph,
   useRevertResumeCommit,
 } from "../../../../../hooks/versioning";
+import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import { RevertDialog } from "../../../../../components/RevertDialog";
 import type { GraphCommit } from "./history-graph-utils";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
@@ -63,6 +65,7 @@ export function VersionHistoryPage() {
   const { branchId: branchIdFromSearch } =
     useSearch({ strict: false }) as { branchId?: string };
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
+  const { data: commitTags } = useListCommitTags(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
   const revertCommit = useRevertResumeCommit();
@@ -94,13 +97,60 @@ export function VersionHistoryPage() {
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
   const graphEdges = graph?.edges ?? [];
+  const tags = commitTags ?? [];
+
+  // commitTagsMap: keyed by BOTH source and target commit id, so a branch
+  // whose head is either side of a tag shows up as "tagged".
+  const commitTagsMap = useMemo(() => {
+    const map = new Map<string, CommitTagWithLinkedResume[]>();
+    tags.forEach((tag) => {
+      [tag.sourceCommitId, tag.targetCommitId].forEach((commitId) => {
+        const existing = map.get(commitId) ?? [];
+        map.set(commitId, [...existing, tag]);
+      });
+    });
+    return map;
+  }, [tags]);
+
+  const { taggedBranchIds, branchTagLanguages, availableTagLanguages } = useMemo(() => {
+    const tagged = new Set<string>();
+    const langsByBranch = new Map<string, Set<string>>();
+    const allLangs = new Set<string>();
+
+    branches.forEach((branch) => {
+      if (!branch.headCommitId) return;
+      const tagsForHead = commitTagsMap.get(branch.headCommitId) ?? [];
+      if (tagsForHead.length === 0) return;
+      tagged.add(branch.id);
+      const linked = new Set<string>();
+      tagsForHead.forEach((tag) => {
+        const linkedSide = tag.source.resumeId === resumeId ? tag.target : tag.source;
+        linked.add(linkedSide.language);
+        allLangs.add(linkedSide.language);
+      });
+      langsByBranch.set(branch.id, linked);
+    });
+
+    return {
+      taggedBranchIds: tagged,
+      branchTagLanguages: langsByBranch,
+      availableTagLanguages: [...allLangs].sort(),
+    };
+  }, [branches, commitTagsMap, resumeId]);
 
   // Filtered views shared by sidebar and graph. Selection and commit-table
   // logic still works against the full branch/commit set so the selected
   // branch survives filter changes.
   const filteredBranches = useMemo(
-    () => filterBranches({ branches, activeFilters, activeLanguages, showArchived }),
-    [branches, activeFilters, activeLanguages, showArchived],
+    () => filterBranches({
+      branches,
+      activeFilters,
+      activeLanguages,
+      showArchived,
+      taggedBranchIds,
+      branchTagLanguages,
+    }),
+    [branches, activeFilters, activeLanguages, showArchived, taggedBranchIds, branchTagLanguages],
   );
   const filteredGraph = useMemo(
     () => filterGraphData({ branches, commits: graphCommits, edges: graphEdges, filteredBranches }),
@@ -253,10 +303,10 @@ export function VersionHistoryPage() {
 
         <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
           <HistoryBranchFilters
-            branches={branches}
             activeFilters={activeFilters}
             activeLanguages={activeLanguages}
             showArchived={showArchived}
+            availableLanguages={availableTagLanguages}
             onToggleFilter={toggleFilter}
             onToggleLanguage={toggleLanguage}
             onToggleShowArchived={() => setShowArchived((prev) => !prev)}
@@ -307,6 +357,8 @@ export function VersionHistoryPage() {
           <HistoryBranchSidebar
             branches={filteredBranches}
             selectedBranchId={selectedBranchId}
+            commitTags={commitTagsMap}
+            currentResumeId={resumeId}
             onSelect={(branchId) => void navigateToHistory(branchId)}
             onArchive={(branchId, isArchived) =>
               archiveBranch({ branchId, isArchived, resumeId })
@@ -327,6 +379,8 @@ export function VersionHistoryPage() {
             <HistoryCommitTable
               commits={commits}
               selectedBranch={selectedBranch}
+              commitTags={commitTagsMap}
+              currentResumeId={resumeId}
               onViewCommit={handleViewCommit}
               onCompare={handleCompareCommit}
               onRevert={handleRequestRevert}
