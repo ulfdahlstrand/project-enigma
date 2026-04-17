@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "swedencentral"
+    },
+    "projectCode": {
+      "value": "cvtool"
+    },
+    "logAnalyticsRetentionInDays": {
+      "value": 90
+    },
+    "keyVaultSkuName": {
+      "value": "premium"
+    },
+    "keyVaultSoftDeleteRetentionInDays": {
+      "value": 90
+    },
+    "postgresAdminPassword": {
+      "value": "${POSTGRES_ADMIN_PASSWORD}"
+    }
+  }
+}

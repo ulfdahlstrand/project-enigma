@@ -45,6 +45,9 @@ test-results/
 .flower/
 .claude/worktrees/
 
+# Azure Developer CLI (azd) — local environment state
+.azure/
+
 # Local tooling artefacts
 mempalace.yaml
 entities.json

@@ -13,3 +13,5 @@ documentation at once.
   Env var conventions and test DB safety.
 - [ci.md](./ci.md)
   CI pipeline and PR workflow.
+- [azure.md](./azure.md)
+  Azure deployment (Bicep + azd + GitHub Actions). See epic #560.
