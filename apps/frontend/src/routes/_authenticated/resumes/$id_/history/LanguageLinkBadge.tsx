@@ -2,6 +2,7 @@ import type { MouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Tooltip from "@mui/material/Tooltip";
 import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
@@ -45,21 +46,22 @@ export function LanguageLinkBadge({ tag, currentResumeId, isStale = false }: Lan
       data-linked-commit-id={linkedSide.commitId}
       size="small"
       clickable
-      label={linkedSide.language.toUpperCase()}
-      icon={
-        isStale
-          ? <WarningAmberIcon sx={{ fontSize: "12px !important" }} />
-          : <ArrowForwardIcon sx={{ fontSize: "12px !important" }} />
+      label={
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+          {isStale && <WarningAmberIcon sx={{ fontSize: 10, color: "warning.main" }} />}
+          <span>{linkedSide.language.toUpperCase()}</span>
+          <ArrowForwardIcon sx={{ fontSize: 10 }} />
+        </Box>
       }
       onClick={handleClick}
       sx={{
         height: 20,
         fontSize: "0.6875rem",
         cursor: "pointer",
+        "& .MuiChip-label": { px: 0.75 },
         ...(isStale && {
           borderColor: "warning.main",
           color: "warning.dark",
-          "& .MuiChip-icon": { color: "warning.main" },
         }),
       }}
     />
