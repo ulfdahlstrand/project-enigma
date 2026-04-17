@@ -465,6 +465,23 @@ export type ExternalAIAccessTokenUpdate = Updateable<ExternalAIAccessTokenTable>
 
 
 // ---------------------------------------------------------------------------
+// CommitTag — cross-resume translation links
+// ---------------------------------------------------------------------------
+
+export interface CommitTagTable {
+  id: Generated<string>;
+  source_commit_id: string;
+  target_commit_id: string;
+  kind: Generated<string>;
+  created_at: Generated<Date>;
+  created_by: string | null;
+}
+
+export type CommitTag = Selectable<CommitTagTable>;
+export type NewCommitTag = Insertable<CommitTagTable>;
+export type CommitTagUpdate = Updateable<CommitTagTable>;
+
+// ---------------------------------------------------------------------------
 // Git-inspired content model — tree layer
 // ---------------------------------------------------------------------------
 
@@ -616,6 +633,7 @@ export interface Database {
   external_ai_login_challenges: ExternalAILoginChallengeTable;
   external_ai_access_tokens: ExternalAIAccessTokenTable;
   user_sessions: UserSessionTable;
+  commit_tags: CommitTagTable;
   // Git-inspired content model
   resume_entry_types: ResumeEntryTypeTable;
   resume_trees: ResumeTreeTable;
