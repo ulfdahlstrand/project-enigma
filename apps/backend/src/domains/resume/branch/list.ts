@@ -107,7 +107,6 @@ export async function listResumeBranches(
     id: row.id,
     resumeId: row.resume_id,
     name: row.name,
-    language: row.language,
     isMain: row.is_main,
     headCommitId: row.head_commit_id,
     forkedFromCommitId: row.forked_from_commit_id,

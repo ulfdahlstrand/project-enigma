@@ -7,7 +7,6 @@ function branch(overrides: Partial<GraphBranch>): GraphBranch {
     id: "b1",
     resumeId: "r1",
     name: "main",
-    language: "sv",
     isMain: false,
     isArchived: false,
     headCommitId: "c1",

@@ -25,10 +25,10 @@ export async function createRevisionBranch(
     .select([
       "rb.id",
       "rb.resume_id",
-      "rb.language",
       "rb.head_commit_id",
       "rb.branch_type",
       "r.employee_id",
+      "r.language",
     ])
     .where("rb.id", "=", input.sourceBranchId)
     .executeTakeFirst();
@@ -70,7 +70,6 @@ export async function createRevisionBranch(
     id: newBranch.id,
     resumeId: newBranch.resume_id,
     name: newBranch.name,
-    language: newBranch.language,
     isMain: newBranch.is_main,
     headCommitId: newBranch.head_commit_id,
     forkedFromCommitId: newBranch.forked_from_commit_id,

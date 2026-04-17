@@ -68,7 +68,6 @@ export async function archiveResumeBranch(
     id: updated.id,
     resumeId: updated.resume_id,
     name: updated.name,
-    language: updated.language,
     isMain: updated.is_main,
     headCommitId: updated.head_commit_id,
     forkedFromCommitId: updated.forked_from_commit_id,

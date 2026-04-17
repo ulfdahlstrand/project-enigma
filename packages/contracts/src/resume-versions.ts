@@ -90,7 +90,6 @@ export const resumeBranchSchema = z.object({
   id: z.string().uuid(),
   resumeId: z.string().uuid(),
   name: z.string(),
-  language: z.string(),
   isMain: z.boolean(),
   headCommitId: z.string().uuid().nullable(),
   forkedFromCommitId: z.string().uuid().nullable(),

@@ -127,7 +127,6 @@ function deriveBranchAssignments(
       id: syntheticBranchId,
       resumeId: headCommit.resumeId,
       name: `Historical branch ${index + 1}`,
-      language: "und",
       isMain: false,
       headCommitId: headCommit.id,
       forkedFromCommitId,

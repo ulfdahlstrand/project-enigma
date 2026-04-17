@@ -133,7 +133,6 @@ export function VariantsPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>{t("resume.variants.tableHeaderName")}</TableCell>
-                  <TableCell>{t("resume.variants.tableHeaderLanguage")}</TableCell>
                   <TableCell>{t("resume.variants.tableHeaderStatus")}</TableCell>
                   <TableCell>{t("resume.variants.tableHeaderCreated")}</TableCell>
                   <TableCell />
@@ -159,9 +158,6 @@ export function VariantsPage() {
                             />
                           )}
                         </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={branch.language.toUpperCase()} size="small" />
                       </TableCell>
                       <TableCell>
                         <Chip

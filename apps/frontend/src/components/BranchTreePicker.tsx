@@ -211,10 +211,8 @@ function LanguageBranchNode({
           <LanguageIcon fontSize="small" sx={{ fontSize: 16, color: "text.secondary" }} />
         </ListItemIcon>
         <ListItemText
-          primary={branch.language.toUpperCase()}
-          secondary={branch.name !== branch.language ? branch.name : undefined}
+          primary={branch.name}
           primaryTypographyProps={{ variant: "body2", fontWeight: isSelected ? 600 : 400 }}
-          secondaryTypographyProps={{ variant: "caption", noWrap: true }}
         />
         {isMerged && (
           <Tooltip title={t("resume.compare.tree.merged")}>
@@ -279,8 +277,6 @@ interface VariantBranchGroupProps {
   variant: ResumeBranch;
   /** Filtered translations to render in the expand panel. */
   translations: ResumeBranch[];
-  /** All languages covered by this variant (own + all translations, for display). */
-  allLanguages: string[];
   selectedRef: string;
   onSelect: (ref: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
@@ -293,7 +289,6 @@ interface VariantBranchGroupProps {
 function VariantBranchGroup({
   variant,
   translations,
-  allLanguages,
   selectedRef,
   onSelect,
   onArchive,
@@ -348,9 +343,7 @@ function VariantBranchGroup({
         </ListItemIcon>
         <ListItemText
           primary={variant.name}
-          secondary={allLanguages.map((l) => l.toUpperCase()).join(" / ")}
           primaryTypographyProps={{ variant: "body2", fontWeight: isSelected ? 600 : 500 }}
-          secondaryTypographyProps={{ variant: "caption" }}
         />
         {variant.isMain && (
           <Chip
@@ -465,13 +458,6 @@ function BranchTree({
   const { t } = useTranslation("common");
   const [showArchived, setShowArchived] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<FilterType>>(new Set());
-  const [activeLanguages, setActiveLanguages] = useState<Set<string>>(new Set());
-
-  const allLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    branches.forEach((b) => langs.add(b.language));
-    return [...langs].sort();
-  }, [branches]);
 
   const toggleFilter = (filter: FilterType) => {
     setActiveFilters((prev) => {
@@ -485,34 +471,16 @@ function BranchTree({
     });
   };
 
-  const toggleLanguage = (lang: string) => {
-    setActiveLanguages((prev) => {
-      const next = new Set(prev);
-      if (next.has(lang)) {
-        next.delete(lang);
-      } else {
-        next.add(lang);
-      }
-      return next;
-    });
-  };
-
   const variantGroups = useMemo(() => {
     const variants = branches.filter(
       (b) => b.branchType === "variant" && (showArchived || !b.isArchived),
     );
 
-    // Language filter: keep variant only if its own language matches
-    return variants
-      .filter((variant) =>
-        activeLanguages.size === 0 || activeLanguages.has(variant.language),
-      )
-      .map((variant) => ({
-        variant,
-        translations: [] as ResumeBranch[],
-        allLanguages: [variant.language],
-      }));
-  }, [branches, showArchived, activeLanguages]);
+    return variants.map((variant) => ({
+      variant,
+      translations: [] as ResumeBranch[],
+    }));
+  }, [branches, showArchived]);
 
   const revisionBranches = useMemo(
     () =>
@@ -520,10 +488,9 @@ function BranchTree({
         (b) =>
           b.branchType === "revision" &&
           (showArchived || !b.isArchived) &&
-          (activeFilters.size === 0 || activeFilters.has("revision")) &&
-          (activeLanguages.size === 0 || activeLanguages.has(b.language)),
+          (activeFilters.size === 0 || activeFilters.has("revision")),
       ),
-    [branches, showArchived, activeFilters, activeLanguages],
+    [branches, showArchived, activeFilters],
   );
 
   const typeFilterChips: Array<{ key: FilterType; label: string }> = [
@@ -565,33 +532,15 @@ function BranchTree({
           />
         </Box>
 
-        {/* Language filter chips — only shown if there is more than one language */}
-        {allLanguages.length > 1 && (
-          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
-            {allLanguages.map((lang) => (
-              <Chip
-                key={lang}
-                label={lang.toUpperCase()}
-                size="small"
-                clickable
-                icon={<LanguageIcon />}
-                variant={activeLanguages.has(lang) ? "filled" : "outlined"}
-                color={activeLanguages.has(lang) ? "secondary" : "default"}
-                onClick={() => toggleLanguage(lang)}
-              />
-            ))}
-          </Box>
-        )}
       </Box>
 
       {/* Tree list */}
       <List dense disablePadding sx={{ overflowY: "auto", flex: 1 }}>
-        {variantGroups.map(({ variant, translations, allLanguages: variantLanguages }) => (
+        {variantGroups.map(({ variant, translations }) => (
           <VariantBranchGroup
             key={variant.id}
             variant={variant}
             translations={translations}
-            allLanguages={variantLanguages}
             selectedRef={selectedRef}
             onSelect={onSelect}
             onArchive={onArchive}
@@ -665,7 +614,7 @@ export function BranchTreePicker({
         : branches.find((b) => b.name === value);
 
     if (branch) {
-      return `${branch.name} (${branch.language.toUpperCase()})`;
+      return branch.name;
     }
 
     const commit = allCommits.find((c) => c.id === value);

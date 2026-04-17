@@ -57,6 +57,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => mockParams.current,
+    useRouterState: () => ({ location: { pathname: "/resumes/resume-id-1/compare" } }),
     Link: React.forwardRef(function MockLink(
       { children, to, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string },
       ref: React.Ref<HTMLAnchorElement>

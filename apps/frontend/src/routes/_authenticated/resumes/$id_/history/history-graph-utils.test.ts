@@ -12,7 +12,6 @@ function branch(
   return {
     resumeId: "resume-1",
     name: overrides.id,
-    language: "sv",
     isMain: false,
     headCommitId: null,
     forkedFromCommitId: null,

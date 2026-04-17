@@ -112,7 +112,6 @@ export async function getResumeBranchHistoryGraph(
       id: branch.id,
       resumeId: branch.resume_id,
       name: branch.name,
-      language: branch.language,
       isMain: branch.is_main,
       headCommitId: branch.head_commit_id,
       forkedFromCommitId: branch.forked_from_commit_id,

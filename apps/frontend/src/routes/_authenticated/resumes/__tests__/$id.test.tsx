@@ -161,7 +161,6 @@ const MAIN_BRANCH = {
   resumeId: TEST_RESUME_ID,
   name: "main",
   isMain: true,
-  language: "en",
   headCommitId: "commit-1",
   createdAt: "2024-01-01T00:00:00Z",
 };
@@ -171,7 +170,6 @@ const SWEDISH_BRANCH = {
   resumeId: TEST_RESUME_ID,
   name: "Swedish",
   isMain: false,
-  language: "sv",
   headCommitId: "commit-2",
   createdAt: "2024-02-01T00:00:00Z",
 };
@@ -186,7 +184,6 @@ beforeEach(() => {
     ...TEST_RESUME,
     branchId: SWEDISH_BRANCH.id,
     branchName: SWEDISH_BRANCH.name,
-    branchLanguage: SWEDISH_BRANCH.language,
     isMainBranch: false,
     headCommitId: SWEDISH_BRANCH.headCommitId,
     forkedFromCommitId: null,
@@ -240,14 +237,13 @@ describe("Resume detail rendering", () => {
     expect(chips.length).toBeGreaterThan(0);
   });
 
-  it("prefers the active branch language over the resume language", async () => {
+  it("shows the resume language when viewing a branch", async () => {
     mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, SWEDISH_BRANCH]);
     mockGetResumeBranch.mockResolvedValue({
       ...TEST_RESUME,
       language: "sv",
       branchId: SWEDISH_BRANCH.id,
       branchName: SWEDISH_BRANCH.name,
-      branchLanguage: "sv",
       isMainBranch: false,
       headCommitId: SWEDISH_BRANCH.headCommitId,
       forkedFromCommitId: null,
@@ -268,7 +264,6 @@ describe("Resume detail rendering", () => {
       presentation: ["Kort svensk presentation."],
       branchId: SWEDISH_BRANCH.id,
       branchName: SWEDISH_BRANCH.name,
-      branchLanguage: "sv",
       isMainBranch: false,
       headCommitId: SWEDISH_BRANCH.headCommitId,
       forkedFromCommitId: null,

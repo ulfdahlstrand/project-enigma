@@ -401,7 +401,6 @@ export function useResumeDetailPage({
     branchResume: resume ?? null,
     liveBranchAssignments,
     fullEducation: education,
-    activeBranchLanguage: activeBranch?.language ?? null,
     sortedAssignmentsForFallback: sortedLiveAssignmentsForFallback,
   });
   const presentationText = presentation.join("\n\n");

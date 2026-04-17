@@ -21,7 +21,6 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 export interface CompareRefBranchOption {
   id: string;
   name: string;
-  language: string;
   headCommitId: string | null;
   isMain: boolean;
   isArchived: boolean;
@@ -58,7 +57,7 @@ function commitShort(commit: CompareRefCommitOption): string {
 }
 
 function branchShort(branch: CompareRefBranchOption): string {
-  return `${branch.name} (${branch.language.toUpperCase()})`;
+  return branch.name;
 }
 
 export function CompareRefChip({

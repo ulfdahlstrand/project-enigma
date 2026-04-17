@@ -178,7 +178,6 @@ export async function rebaseRevisionOntoSource(
     id: updatedBranch.id,
     resumeId: updatedBranch.resume_id,
     name: updatedBranch.name,
-    language: updatedBranch.language,
     isMain: updatedBranch.is_main,
     headCommitId: updatedBranch.head_commit_id,
     forkedFromCommitId: updatedBranch.forked_from_commit_id,
