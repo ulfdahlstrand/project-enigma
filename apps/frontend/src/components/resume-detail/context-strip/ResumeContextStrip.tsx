@@ -50,12 +50,13 @@ export interface ResumeContextStripProps {
 function StaleAwareLanguageBadge({ tag, currentResumeId }: { tag: CommitTagWithLinkedResume; currentResumeId: string }) {
   const { data: status } = useGetTranslationStatus(tag.source.resumeId, tag.target.resumeId);
 
-  // The badge links to the side that is NOT the current resume.
-  // Only show stale if that linked side has diverged from its tagged commit.
+  // Show stale when the CURRENT resume has new content the linked one hasn't incorporated.
+  // current=source: stale if source head moved past the tagged source commit (linked target needs updating)
+  // current=target: stale if target head moved past the tagged target commit (linked source needs to know)
   const linkedIsTarget = tag.source.resumeId === currentResumeId;
   const isStale = linkedIsTarget
-    ? (status?.targetHeadCommitId != null && status.targetHeadCommitId !== tag.targetCommitId)
-    : (status?.sourceHeadCommitId != null && status.sourceHeadCommitId !== tag.sourceCommitId);
+    ? (status?.sourceHeadCommitId != null && status.sourceHeadCommitId !== tag.sourceCommitId)
+    : (status?.targetHeadCommitId != null && status.targetHeadCommitId !== tag.targetCommitId);
 
   return <LanguageLinkBadge tag={tag} currentResumeId={currentResumeId} isStale={isStale} />;
 }
