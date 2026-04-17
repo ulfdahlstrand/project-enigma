@@ -1,15 +1,19 @@
 /**
  * SkillsCategoryBlock — detail-view category block for SkillsEditor.
- * Renders the category header (title + edit/add/delete/sort actions) and
- * the skills themselves as chips. When the category is in "sort" mode,
- * skills render as draggable rows with save/cancel controls instead.
+ * Renders the category header (drag handle + title + edit/add/delete) and
+ * the skills themselves as sortable chips. Dragging a chip reorders skills
+ * within the category; dragging the header reorders categories.
+ *
+ * Drag-and-drop is provided by @dnd-kit via the parent SkillsEditor's
+ * DndContext. Each chip is rendered inside a per-category SortableContext.
  *
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
  */
 import { useTranslation } from "react-i18next";
+import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
@@ -21,7 +25,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import EditIcon from "@mui/icons-material/Edit";
-import SortIcon from "@mui/icons-material/Sort";
 import type { SkillRow } from "../SkillsEditor";
 
 interface MutationLike {
@@ -40,16 +43,12 @@ interface SkillsCategoryBlockProps {
   groupId: string;
   categoryName: string;
   catSkills: SkillRow[];
-  isSorting: boolean;
   isEditingGroup: boolean;
   editingSkillId: string | null;
   editName: string;
   addingToCategory: string | null;
   newSkillName: string;
   editGroupName: string;
-  draggingSkillId: string | null;
-  orderedSkills: SkillRow[];
-  isReordering: boolean;
   updateMutation: { isPending: boolean };
   addMutation: { isPending: boolean };
   deleteMutation: DeleteMutationLike;
@@ -66,12 +65,42 @@ interface SkillsCategoryBlockProps {
   onStartEditingGroup: (groupId: string, currentName: string) => void;
   onStopEditingGroup: () => void;
   onStartConfirmDelete: (groupId: string) => void;
-  onStartSorting: (groupId: string, skillIds: string[]) => void;
-  onStopSorting: (groupId: string) => void;
-  onDragStart: (skillId: string) => void;
-  onDragEnd: () => void;
-  onDrop: (skillId: string) => void;
-  onSaveSkillOrder: (groupId: string) => void;
+}
+
+interface SortableSkillChipProps {
+  skill: SkillRow;
+  onClick: () => void;
+  onDelete: () => void;
+}
+
+function SortableSkillChip({ skill, onClick, onDelete }: SortableSkillChipProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: skill.id });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        maxWidth: "100%",
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <Chip
+        label={skill.name}
+        size="small"
+        variant="outlined"
+        onClick={onClick}
+        onDelete={onDelete}
+        sx={{ fontSize: "0.75rem", cursor: "grab", maxWidth: "100%" }}
+      />
+    </Box>
+  );
 }
 
 export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
@@ -80,16 +109,12 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
     groupId,
     categoryName,
     catSkills,
-    isSorting,
     isEditingGroup,
     editingSkillId,
     editName,
     addingToCategory,
     newSkillName,
     editGroupName,
-    draggingSkillId,
-    orderedSkills,
-    isReordering,
     updateMutation,
     addMutation,
     deleteMutation,
@@ -106,13 +131,16 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
     onStartEditingGroup,
     onStopEditingGroup,
     onStartConfirmDelete,
-    onStartSorting,
-    onStopSorting,
-    onDragStart,
-    onDragEnd,
-    onDrop,
-    onSaveSkillOrder,
   } = props;
+
+  const {
+    attributes: groupAttributes,
+    listeners: groupListeners,
+    setNodeRef: setGroupNodeRef,
+    transform: groupTransform,
+    transition: groupTransition,
+    isDragging: isGroupDragging,
+  } = useSortable({ id: `group:${groupId}` });
 
   const commitGroupName = () => {
     const trimmed = editGroupName.trim();
@@ -124,8 +152,28 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
   };
 
   return (
-    <Box sx={{ mb: 2.5, minWidth: 0 }}>
+    <Box
+      ref={setGroupNodeRef}
+      sx={{
+        mb: 2.5,
+        minWidth: 0,
+        transform: CSS.Transform.toString(groupTransform),
+        transition: groupTransition,
+        opacity: isGroupDragging ? 0.5 : 1,
+      }}
+    >
       <Box sx={{ bgcolor: "action.hover", px: 1.5, py: 0.75, mb: 1, display: "flex", alignItems: "center", minWidth: 0, gap: 1 }}>
+        <Tooltip title={t("resume.edit.skillsDragCategoryTooltip")}>
+          <Box
+            component="span"
+            sx={{ display: "flex", alignItems: "center", cursor: "grab", color: "text.secondary" }}
+            {...groupAttributes}
+            {...groupListeners}
+            aria-label={t("resume.edit.skillsDragCategoryTooltip")}
+          >
+            <DragIndicatorIcon sx={{ fontSize: 16 }} />
+          </Box>
+        </Tooltip>
         {isEditingGroup ? (
           <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", flex: 1, minWidth: 0 }}>
             <TextField
@@ -164,7 +212,7 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
             size="small"
             onClick={() => onStartEditingGroup(groupId, categoryName)}
             sx={{ p: 0.25 }}
-            disabled={isEditingGroup || isSorting}
+            disabled={isEditingGroup}
           >
             <EditIcon sx={{ fontSize: 16 }} />
           </IconButton>
@@ -179,70 +227,8 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
             <DeleteOutlineIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
-        <Tooltip title={t("resume.edit.skillsSortWithinGroupTooltip")}>
-          <IconButton
-            size="small"
-            onClick={() => {
-              if (isSorting) {
-                onStopSorting(groupId);
-                return;
-              }
-              onStartSorting(groupId, catSkills.map((skill) => skill.id));
-            }}
-            sx={{ p: 0.25 }}
-          >
-            <SortIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
       </Box>
-      {isSorting ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          {orderedSkills.map((skill) => (
-            <Box
-              key={skill.id}
-              draggable
-              onDragStart={() => onDragStart(skill.id)}
-              onDragEnd={onDragEnd}
-              onDragOver={(event) => {
-                event.preventDefault();
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                onDrop(skill.id);
-              }}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1,
-                py: 0.75,
-                border: "1px solid",
-                borderColor: draggingSkillId === skill.id ? "primary.main" : "divider",
-                bgcolor: "background.paper",
-                cursor: "grab",
-              }}
-            >
-              <DragIndicatorIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {skill.name}
-              </Typography>
-            </Box>
-          ))}
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 0.5 }}>
-            <Button size="small" onClick={() => onStopSorting(groupId)}>
-              {t("resume.edit.skillCancelButton")}
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              disabled={isReordering}
-              onClick={() => onSaveSkillOrder(groupId)}
-            >
-              {t("resume.edit.skillSaveButton")}
-            </Button>
-          </Box>
-        </Box>
-      ) : (
+      <SortableContext items={catSkills.map((skill) => skill.id)} strategy={horizontalListSortingStrategy}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
           {catSkills.map((skill) => {
             if (editingSkillId === skill.id) {
@@ -275,16 +261,12 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
             }
 
             return (
-              <Box key={skill.id} sx={{ display: "flex", alignItems: "center", maxWidth: "100%" }}>
-                <Chip
-                  label={skill.name}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onStartEditing(skill)}
-                  onDelete={() => deleteMutation.mutate(skill.id)}
-                  sx={{ fontSize: "0.75rem", cursor: "pointer", maxWidth: "100%" }}
-                />
-              </Box>
+              <SortableSkillChip
+                key={skill.id}
+                skill={skill}
+                onClick={() => onStartEditing(skill)}
+                onDelete={() => deleteMutation.mutate(skill.id)}
+              />
             );
           })}
           {addingToCategory === groupId && (
@@ -315,7 +297,7 @@ export function SkillsCategoryBlock(props: SkillsCategoryBlockProps) {
             </Box>
           )}
         </Box>
-      )}
+      </SortableContext>
     </Box>
   );
 }

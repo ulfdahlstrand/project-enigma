@@ -122,6 +122,18 @@ describe("AssignmentEditor", () => {
     expect(roleInput).toBeInTheDocument();
   });
 
+  it("clicking the row body (not an edit icon) switches to edit mode", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    // Click on the visible role heading in read mode — the whole row should be
+    // an edit affordance, not just a tiny icon button.
+    await user.click(screen.getByText("Senior Developer"));
+
+    expect(screen.getByDisplayValue("Senior Developer")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Acme Corp")).toBeInTheDocument();
+  });
+
   it("pre-populates clientName field when editing", async () => {
     const user = userEvent.setup();
     renderEditor();
@@ -236,6 +248,71 @@ describe("AssignmentEditor", () => {
       new RegExp(enCommon.assignment.detail.endDateLabel, "i")
     );
     expect(endDateInput).toBeDisabled();
+  });
+
+  it("renders technologies as removable chips in edit mode", async () => {
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    // Both technologies should appear as chips (buttons with a delete affordance)
+    expect(screen.getByRole("button", { name: /TypeScript/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /React/ })).toBeInTheDocument();
+  });
+
+  it("adding a new technology chip saves it as a new tech entry", async () => {
+    mockUpdateAssignment.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    const techCombobox = screen.getByRole("combobox", {
+      name: new RegExp(enCommon.assignment.detail.technologiesLabel, "i"),
+    });
+    await user.click(techCombobox);
+    await user.keyboard("GraphQL{Enter}");
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.assignment.detail.saveButton })
+    );
+
+    await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
+    const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
+    expect(call.technologies).toEqual(["TypeScript", "React", "GraphQL"]);
+  });
+
+  it("renders existing keywords as chips in edit mode", async () => {
+    const user = userEvent.setup();
+    // A1 has keywords: "frontend"
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    expect(screen.getByRole("button", { name: /frontend/ })).toBeInTheDocument();
+  });
+
+  it("adding a new keyword chip saves as a comma-joined string", async () => {
+    mockUpdateAssignment.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderEditor([A1]);
+
+    await user.click(screen.getByText("Senior Developer"));
+
+    const keywordsCombobox = screen.getByRole("combobox", {
+      name: new RegExp(enCommon.assignment.new.keywordsLabel, "i"),
+    });
+    await user.click(keywordsCombobox);
+    await user.keyboard("typescript{Enter}");
+
+    await user.click(
+      screen.getByRole("button", { name: enCommon.assignment.detail.saveButton })
+    );
+
+    await waitFor(() => expect(mockUpdateAssignment).toHaveBeenCalledOnce());
+    const call = mockUpdateAssignment.mock.calls[0]![0] as Record<string, unknown>;
+    expect(call.keywords).toBe("frontend, typescript");
   });
 
   it("shows error alert when mutation fails", async () => {

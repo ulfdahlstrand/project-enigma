@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
-import EditIcon from "@mui/icons-material/Edit";
 import { orpc } from "../orpc-client";
 import {
   AssignmentRowEditor,
@@ -50,6 +48,14 @@ function toDateInput(d: string | Date | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
+function parseKeywords(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function buildDraft(a: AssignmentRow): AssignmentDraftState {
   return {
     role: a.role,
@@ -58,8 +64,8 @@ function buildDraft(a: AssignmentRow): AssignmentDraftState {
     endDate: toDateInput(a.endDate),
     isCurrent: a.isCurrent,
     description: a.description,
-    technologies: a.technologies.join(", "),
-    keywords: a.keywords ?? "",
+    technologies: [...a.technologies],
+    keywords: parseKeywords(a.keywords),
   };
 }
 
@@ -144,15 +150,13 @@ export function AssignmentEditor({
     if (draft.description !== original.description) patch.description = draft.description;
     if (draft.isCurrent !== original.isCurrent) patch.isCurrent = draft.isCurrent;
 
-    const newTechs = draft.technologies
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const newTechs = draft.technologies.map((s) => s.trim()).filter(Boolean);
     if (JSON.stringify(newTechs) !== JSON.stringify(original.technologies)) {
       patch.technologies = newTechs;
     }
 
-    const newKeywords = draft.keywords.trim() || null;
+    const cleanedKeywords = draft.keywords.map((s) => s.trim()).filter(Boolean);
+    const newKeywords = cleanedKeywords.length > 0 ? cleanedKeywords.join(", ") : null;
     if (newKeywords !== original.keywords) patch.keywords = newKeywords;
 
     const origStart = toDateInput(original.startDate);
@@ -178,21 +182,7 @@ export function AssignmentEditor({
         const isEditing = editingId === a.id;
 
         return (
-          <Box
-            key={a.id}
-            sx={{ position: "relative" }}
-          >
-            {!isEditing && (
-              <IconButton
-                size="small"
-                onClick={() => startEdit(a)}
-                aria-label={t("resume.edit.assignment.editButton")}
-                sx={{ position: "absolute", top: 0, right: 0 }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            )}
-
+          <Box key={a.id}>
             {isEditing && draft ? (
               <AssignmentRowEditor
                 draft={draft}
@@ -208,7 +198,33 @@ export function AssignmentEditor({
                 onConfirmDelete={() => deleteMutation.mutate(a.assignmentId)}
               />
             ) : (
-              <AssignmentRowView assignment={a} />
+              <Box
+                component="button"
+                type="button"
+                onClick={() => startEdit(a)}
+                aria-label={t("resume.edit.assignment.editButton")}
+                sx={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "inherit",
+                  font: "inherit",
+                  color: "inherit",
+                  background: "transparent",
+                  border: 0,
+                  p: 1,
+                  m: -1,
+                  cursor: "pointer",
+                  borderRadius: 1,
+                  "&:hover": { bgcolor: "action.hover" },
+                  "&:focus-visible": {
+                    outline: "2px solid",
+                    outlineColor: "primary.main",
+                    outlineOffset: 2,
+                  },
+                }}
+              >
+                <AssignmentRowView assignment={a} />
+              </Box>
             )}
           </Box>
         );

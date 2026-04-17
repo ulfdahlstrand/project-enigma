@@ -1,23 +1,33 @@
 /**
- * SkillsEditor — editable version of the skills page, visually matching
- * SkillsPageContent (two-column gray-header category blocks).
- *
- * Toggle between:
- *   - Detail view  (chips + inline add/edit/delete per skill)
- *   - List view    (numbered category list with up/down reordering)
+ * SkillsEditor — editable skills page with drag-and-drop reordering via
+ * @dnd-kit. Skills are draggable chips (reordered within their category)
+ * and each category header is a drag handle (reordered across categories).
  *
  * Styling: MUI sx prop only
  * i18n: useTranslation("common")
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useSkillsEditor } from "../hooks/useSkillsEditor";
 import { SkillsAddCategoryForm } from "./SkillsAddCategoryForm";
 import { SkillsCategoryBlock } from "./skills/SkillsCategoryBlock";
 import { SkillsDeleteCategoryDialog } from "./skills/SkillsDeleteCategoryDialog";
-import { SkillsListView } from "./skills/SkillsListView";
 
 export interface SkillRow {
   id: string;
@@ -40,8 +50,6 @@ interface SkillsEditorProps {
   skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
-  view?: "detail" | "list";
-  onViewChange?: (v: "detail" | "list") => void;
   addingCategory?: boolean;
   onAddingCategoryChange?: (open: boolean) => void;
 }
@@ -52,8 +60,6 @@ export function SkillsEditor({
   skillGroups,
   skills,
   queryKey,
-  view: externalView,
-  onViewChange,
   addingCategory: externalAddingCategory,
   onAddingCategoryChange,
 }: SkillsEditorProps) {
@@ -64,17 +70,17 @@ export function SkillsEditor({
     skillGroups,
     skills,
     queryKey,
-    view: externalView,
-    onViewChange,
     addingCategory: externalAddingCategory,
     onAddingCategoryChange,
   });
-  const [sortingGroupId, setSortingGroupId] = useState<string | null>(null);
-  const [draggingSkillId, setDraggingSkillId] = useState<string | null>(null);
-  const [draftSkillOrder, setDraftSkillOrder] = useState<Record<string, string[]>>({});
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const startEditingGroup = (groupId: string, currentName: string) => {
     setEditingGroupId(groupId);
@@ -83,124 +89,87 @@ export function SkillsEditor({
 
   const stopEditingGroup = () => setEditingGroupId(null);
 
-  const startSorting = (groupId: string, skillIds: string[]) => {
-    setSortingGroupId(groupId);
-    setDraftSkillOrder((current) => ({ ...current, [groupId]: skillIds }));
-  };
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
-  const stopSorting = (groupId: string) => {
-    setSortingGroupId(null);
-    setDraftSkillOrder((current) => {
-      const next = { ...current };
-      delete next[groupId];
-      return next;
-    });
-  };
+    if (activeId.startsWith("group:") && overId.startsWith("group:")) {
+      const fromIndex = editor.sortedCategories.findIndex(
+        (group) => `group:${group.id}` === activeId,
+      );
+      const toIndex = editor.sortedCategories.findIndex(
+        (group) => `group:${group.id}` === overId,
+      );
+      if (fromIndex === -1 || toIndex === -1) return;
+      const direction = toIndex > fromIndex ? "down" : "up";
+      const steps = Math.abs(toIndex - fromIndex);
+      void moveCategoryStepwise(fromIndex, direction, steps);
+      return;
+    }
 
-  const handleDrop = (groupId: string, targetSkillId: string, catSkills: SkillRow[]) => {
-    if (!draggingSkillId || draggingSkillId === targetSkillId) return;
-    const currentOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate) => candidate.id);
-    const nextOrder = currentOrder.filter((id) => id !== draggingSkillId);
-    const dropIndex = nextOrder.indexOf(targetSkillId);
-    nextOrder.splice(dropIndex, 0, draggingSkillId);
-    setDraftSkillOrder((current) => ({ ...current, [groupId]: nextOrder }));
-  };
-
-  const saveSkillOrder = (groupId: string, catSkills: SkillRow[]) => {
-    const nextOrder = draftSkillOrder[groupId] ?? catSkills.map((candidate) => candidate.id);
-    void editor.reorderSkills(groupId, nextOrder).then(() => stopSorting(groupId));
-  };
-
-  const buildCategoryBlock = (groupId: string, categoryName: string, catSkills: SkillRow[]) => {
-    const orderedSkillIds = draftSkillOrder[groupId] ?? catSkills.map((skill) => skill.id);
-    const orderedSkills = orderedSkillIds
-      .map((skillId) => catSkills.find((skill) => skill.id === skillId))
-      .filter((skill): skill is SkillRow => Boolean(skill));
-
-    return (
-      <SkillsCategoryBlock
-        key={groupId}
-        groupId={groupId}
-        categoryName={categoryName}
-        catSkills={catSkills}
-        isSorting={sortingGroupId === groupId}
-        isEditingGroup={editingGroupId === groupId}
-        editingSkillId={editor.editingSkillId}
-        editName={editor.editName}
-        addingToCategory={editor.addingToCategory}
-        newSkillName={editor.newSkillName}
-        editGroupName={editGroupName}
-        draggingSkillId={draggingSkillId}
-        orderedSkills={orderedSkills}
-        isReordering={editor.isReordering}
-        updateMutation={editor.updateMutation}
-        addMutation={editor.addMutation}
-        deleteMutation={editor.deleteMutation}
-        updateGroupMutation={editor.updateGroupMutation}
-        onEditGroupNameChange={setEditGroupName}
-        onEditNameChange={editor.setEditName}
-        onNewSkillNameChange={editor.setNewSkillName}
-        onCommitEdit={editor.commitEdit}
-        onCancelEdit={() => editor.setEditingSkillId(null)}
-        onStartAddingToCategory={editor.startAddingToCategory}
-        onCancelAdding={() => editor.setAddingToCategory(null)}
-        onCommitAddToCategory={editor.commitAddToCategory}
-        onStartEditing={editor.startEditing}
-        onStartEditingGroup={startEditingGroup}
-        onStopEditingGroup={stopEditingGroup}
-        onStartConfirmDelete={setConfirmDeleteGroupId}
-        onStartSorting={startSorting}
-        onStopSorting={stopSorting}
-        onDragStart={setDraggingSkillId}
-        onDragEnd={() => setDraggingSkillId(null)}
-        onDrop={(targetSkillId) => handleDrop(groupId, targetSkillId, catSkills)}
-        onSaveSkillOrder={() => saveSkillOrder(groupId, catSkills)}
-      />
+    // Skill-level drop: find which category owns both skills
+    const group = editor.sortedCategories.find((candidate) =>
+      candidate.skills.some((skill) => skill.id === activeId) &&
+      candidate.skills.some((skill) => skill.id === overId),
     );
+    if (!group) return;
+
+    const currentOrder = group.skills.map((skill) => skill.id);
+    const fromIndex = currentOrder.indexOf(activeId);
+    const toIndex = currentOrder.indexOf(overId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const nextOrder = [...currentOrder];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, activeId);
+    void editor.reorderSkills(group.id, nextOrder);
   };
 
-  if (editor.view === "list") {
-    return (
-      <>
-        <SkillsListView
-          sortedCategories={editor.sortedCategories}
-          isReordering={editor.isReordering}
-          editingGroupId={editingGroupId}
-          editGroupName={editGroupName}
-          updateGroupMutation={editor.updateGroupMutation}
-          addingCategory={editor.addingCategory}
-          newCategoryName={editor.newCategoryName}
-          newCategorySkillName={editor.newCategorySkillName}
-          addMutationPending={editor.addMutation.isPending}
-          onEditGroupNameChange={setEditGroupName}
-          onStartEditingGroup={startEditingGroup}
-          onStopEditingGroup={stopEditingGroup}
-          onStartConfirmDelete={setConfirmDeleteGroupId}
-          onMoveCategory={(index, direction) => void editor.handleMoveCategory(index, direction)}
-          onCategoryNameChange={editor.setNewCategoryName}
-          onSkillNameChange={editor.setNewCategorySkillName}
-          onCommitAddCategory={editor.commitAddCategory}
-          onCancelAddCategory={() => editor.setAddingCategory(false)}
-          onStartAddingCategory={() => {
-            editor.setAddingCategory(true);
-            editor.setNewCategoryName("");
-            editor.setNewCategorySkillName("");
-          }}
-        />
-        <SkillsDeleteCategoryDialog
-          open={confirmDeleteGroupId !== null}
-          isDeleting={editor.deleteGroupMutation.isPending}
-          onCancel={() => setConfirmDeleteGroupId(null)}
-          onConfirm={() => {
-            if (!confirmDeleteGroupId) return;
-            editor.deleteGroupMutation.mutate(confirmDeleteGroupId, {
-              onSuccess: () => setConfirmDeleteGroupId(null),
-            });
-          }}
-        />
-      </>
-    );
-  }
+  const moveCategoryStepwise = async (
+    startIndex: number,
+    direction: "up" | "down",
+    steps: number,
+  ) => {
+    let index = startIndex;
+    for (let step = 0; step < steps; step += 1) {
+      await editor.handleMoveCategory(index, direction);
+      index = direction === "down" ? index + 1 : index - 1;
+    }
+  };
+
+  const buildCategoryBlock = (groupId: string, categoryName: string, catSkills: SkillRow[]) => (
+    <SkillsCategoryBlock
+      key={groupId}
+      groupId={groupId}
+      categoryName={categoryName}
+      catSkills={catSkills}
+      isEditingGroup={editingGroupId === groupId}
+      editingSkillId={editor.editingSkillId}
+      editName={editor.editName}
+      addingToCategory={editor.addingToCategory}
+      newSkillName={editor.newSkillName}
+      editGroupName={editGroupName}
+      updateMutation={editor.updateMutation}
+      addMutation={editor.addMutation}
+      deleteMutation={editor.deleteMutation}
+      updateGroupMutation={editor.updateGroupMutation}
+      onEditGroupNameChange={setEditGroupName}
+      onEditNameChange={editor.setEditName}
+      onNewSkillNameChange={editor.setNewSkillName}
+      onCommitEdit={editor.commitEdit}
+      onCancelEdit={() => editor.setEditingSkillId(null)}
+      onStartAddingToCategory={editor.startAddingToCategory}
+      onCancelAdding={() => editor.setAddingToCategory(null)}
+      onCommitAddToCategory={editor.commitAddToCategory}
+      onStartEditing={editor.startEditing}
+      onStartEditingGroup={startEditingGroup}
+      onStopEditingGroup={stopEditingGroup}
+      onStartConfirmDelete={setConfirmDeleteGroupId}
+    />
+  );
+
+  const groupSortableIds = editor.sortedCategories.map((group) => `group:${group.id}`);
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -209,18 +178,22 @@ export function SkillsEditor({
           {t("resume.detail.noSkills")}
         </Typography>
       ) : (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start", mb: 2 }}>
-          <Box sx={{ minWidth: 0 }}>
-            {editor.leftCategories.map((group) =>
-              buildCategoryBlock(group.id, group.category, group.skills),
-            )}
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            {editor.rightCategories.map((group) =>
-              buildCategoryBlock(group.id, group.category, group.skills),
-            )}
-          </Box>
-        </Box>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={groupSortableIds} strategy={verticalListSortingStrategy}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, alignItems: "start", mb: 2 }}>
+              <Box sx={{ minWidth: 0 }}>
+                {editor.leftCategories.map((group) =>
+                  buildCategoryBlock(group.id, group.category, group.skills),
+                )}
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                {editor.rightCategories.map((group) =>
+                  buildCategoryBlock(group.id, group.category, group.skills),
+                )}
+              </Box>
+            </Box>
+          </SortableContext>
+        </DndContext>
       )}
       <SkillsAddCategoryForm
         adding={editor.addingCategory}

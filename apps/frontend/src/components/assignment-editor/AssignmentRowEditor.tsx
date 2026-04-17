@@ -8,11 +8,27 @@
  */
 import { useTranslation } from "react-i18next";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import TextField from "@mui/material/TextField";
+import TextField, { type TextFieldProps } from "@mui/material/TextField";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
+function parseDraftDate(value: string): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDraftDate(value: Date | null): string {
+  if (!value || Number.isNaN(value.getTime())) return "";
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export interface AssignmentDraftState {
   role: string;
@@ -21,8 +37,8 @@ export interface AssignmentDraftState {
   endDate: string;
   isCurrent: boolean;
   description: string;
-  technologies: string;
-  keywords: string;
+  technologies: string[];
+  keywords: string[];
 }
 
 interface AssignmentRowEditorProps {
@@ -78,23 +94,25 @@ export function AssignmentRowEditor({
       </Box>
 
       <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-        <TextField
+        <DatePicker
           label={t("assignment.detail.startDateLabel")}
-          type="date"
-          value={draft.startDate}
-          onChange={(event) => onDraftChange("startDate", event.target.value)}
-          size="small"
-          InputLabelProps={{ shrink: true }}
+          value={parseDraftDate(draft.startDate)}
+          onChange={(value) => onDraftChange("startDate", formatDraftDate(value))}
+          {...(draft.isCurrent || !parseDraftDate(draft.endDate)
+            ? {}
+            : { maxDate: parseDraftDate(draft.endDate)! })}
+          slotProps={{ textField: { size: "small", fullWidth: true } }}
           sx={{ flex: 1 }}
         />
-        <TextField
+        <DatePicker
           label={t("assignment.detail.endDateLabel")}
-          type="date"
-          value={draft.endDate}
-          onChange={(event) => onDraftChange("endDate", event.target.value)}
-          size="small"
-          InputLabelProps={{ shrink: true }}
+          value={parseDraftDate(draft.endDate)}
+          onChange={(value) => onDraftChange("endDate", formatDraftDate(value))}
+          {...(parseDraftDate(draft.startDate)
+            ? { minDate: parseDraftDate(draft.startDate)! }
+            : {})}
           disabled={draft.isCurrent}
+          slotProps={{ textField: { size: "small", fullWidth: true } }}
           sx={{ flex: 1 }}
         />
         <FormControlLabel
@@ -122,20 +140,36 @@ export function AssignmentRowEditor({
         fullWidth
       />
 
-      <TextField
-        label={t("assignment.detail.technologiesLabel")}
+      <Autocomplete
+        multiple
+        freeSolo
+        options={[] as string[]}
         value={draft.technologies}
-        onChange={(event) => onDraftChange("technologies", event.target.value)}
+        onChange={(_, value) => onDraftChange("technologies", value)}
         size="small"
         fullWidth
+        renderInput={(params) => (
+          <TextField
+            {...(params as TextFieldProps)}
+            label={t("assignment.detail.technologiesLabel")}
+          />
+        )}
       />
 
-      <TextField
-        label={t("assignment.new.keywordsLabel")}
+      <Autocomplete
+        multiple
+        freeSolo
+        options={[] as string[]}
         value={draft.keywords}
-        onChange={(event) => onDraftChange("keywords", event.target.value)}
+        onChange={(_, value) => onDraftChange("keywords", value)}
         size="small"
         fullWidth
+        renderInput={(params) => (
+          <TextField
+            {...(params as TextFieldProps)}
+            label={t("assignment.new.keywordsLabel")}
+          />
+        )}
       />
 
       {saveError && <Alert severity="error">{t("resume.edit.assignment.saveError")}</Alert>}
