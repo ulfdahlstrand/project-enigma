@@ -78,6 +78,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     useParams: () => ({ id: TEST_RESUME_ID }),
     useSearch: () => ({}),
     useNavigate: () => mockNavigate,
+    useRouterState: () => ({ location: { pathname: `/resumes/${TEST_RESUME_ID}` } }),
     Outlet: () => null,
     Link: React.forwardRef(function MockLink(
       {
@@ -330,28 +331,6 @@ describe("Skills list", () => {
 describe("Navigation", () => {
   beforeEach(() => {
     mockGetResume.mockResolvedValue(TEST_RESUME);
-  });
-
-  it("renders an Edit button when data is loaded", async () => {
-    renderPage();
-    await screen.findAllByText(TEST_RESUME.title);
-    const editBtn = screen.getByRole("button", {
-      name: enCommon.resume.detail.editButton,
-    });
-    expect(editBtn).toBeInTheDocument();
-  });
-
-  it("navigates to the edit page when Edit is clicked", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findAllByText(TEST_RESUME.title);
-
-    await user.click(screen.getByRole("button", { name: enCommon.resume.detail.editButton }));
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/edit",
-      params: { id: TEST_RESUME_ID },
-    });
   });
 
   it("renders a breadcrumb link to /resumes", async () => {

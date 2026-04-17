@@ -279,9 +279,9 @@ describe("LanguageLinkBadge", () => {
 // ---------------------------------------------------------------------------
 
 describe("DraftStatusChip", () => {
-  it("shows Synced when isEditRoute is false", () => {
+  it("hides the chip when isEditRoute is false and there are no unsaved changes", () => {
     renderStrip({ bundle: makeBundle({ isEditRoute: false }) });
-    expect(screen.getByText(enCommon.resume.contextStrip.draftSynced)).toBeInTheDocument();
+    expect(screen.queryByText(enCommon.resume.contextStrip.draftSynced)).toBeNull();
   });
 
   it("shows Unsaved changes when isEditRoute is true and draftTitle differs from consultantTitle", () => {
@@ -399,10 +399,10 @@ describe("ResumeContextStrip layout", () => {
   });
 
   it("renders all chip sections together", () => {
-    renderStrip({ bundle: makeBundle({ isEditRoute: false }) });
+    renderStrip({ bundle: makeBundle({ isEditRoute: true }) });
     // Variant chip button
     expect(screen.getByRole("button", { name: /Main CV/i })).toBeInTheDocument();
-    // Draft status
+    // Draft status (only visible in edit mode)
     expect(screen.getByText(enCommon.resume.contextStrip.draftSynced)).toBeInTheDocument();
   });
 });
