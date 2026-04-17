@@ -33,10 +33,8 @@ describe("filterBranches — tag-based semantics", () => {
     const result = filterBranches({
       branches: ALL_BRANCHES,
       activeFilters: new Set(),
-      activeLanguages: new Set(),
       showArchived: false,
       taggedBranchIds: new Set(),
-      branchTagLanguages: new Map(),
     });
     expect(result.map((b) => b.id)).toEqual(["v1", "v2", "r1"]);
   });
@@ -45,10 +43,8 @@ describe("filterBranches — tag-based semantics", () => {
     const result = filterBranches({
       branches: ALL_BRANCHES,
       activeFilters: new Set(),
-      activeLanguages: new Set(),
       showArchived: true,
       taggedBranchIds: new Set(),
-      branchTagLanguages: new Map(),
     });
     expect(result.map((b) => b.id)).toContain("a1");
   });
@@ -57,25 +53,8 @@ describe("filterBranches — tag-based semantics", () => {
     const result = filterBranches({
       branches: ALL_BRANCHES,
       activeFilters: new Set(["translation"]),
-      activeLanguages: new Set(),
       showArchived: false,
       taggedBranchIds: new Set(["v1"]),
-      branchTagLanguages: new Map([["v1", new Set(["en"])]]),
-    });
-    expect(result.map((b) => b.id)).toEqual(["v1"]);
-  });
-
-  it("language filter shows only branches whose tags link to that language", () => {
-    const result = filterBranches({
-      branches: ALL_BRANCHES,
-      activeFilters: new Set(),
-      activeLanguages: new Set(["en"]),
-      showArchived: false,
-      taggedBranchIds: new Set(["v1", "v2"]),
-      branchTagLanguages: new Map([
-        ["v1", new Set(["en"])],
-        ["v2", new Set(["de"])],
-      ]),
     });
     expect(result.map((b) => b.id)).toEqual(["v1"]);
   });
@@ -84,10 +63,8 @@ describe("filterBranches — tag-based semantics", () => {
     const result = filterBranches({
       branches: ALL_BRANCHES,
       activeFilters: new Set(["variant"]),
-      activeLanguages: new Set(),
       showArchived: false,
       taggedBranchIds: new Set(),
-      branchTagLanguages: new Map(),
     });
     expect(result.map((b) => b.id)).toEqual(["v1", "v2"]);
   });
@@ -96,10 +73,8 @@ describe("filterBranches — tag-based semantics", () => {
     const result = filterBranches({
       branches: ALL_BRANCHES,
       activeFilters: new Set(["revision"]),
-      activeLanguages: new Set(),
       showArchived: false,
       taggedBranchIds: new Set(),
-      branchTagLanguages: new Map(),
     });
     expect(result.map((b) => b.id)).toEqual(["r1"]);
   });
