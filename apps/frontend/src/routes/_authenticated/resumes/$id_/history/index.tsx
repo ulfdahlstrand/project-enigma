@@ -1,20 +1,18 @@
 /**
  * /resumes/$id/history — Version History page.
  *
- * Lists commits for a selected branch and lets the user toggle to a
- * resume-wide branch overview mode.
+ * Hybrid split-view: branch sidebar (left) + branch graph (center) + commit detail panel (right).
  *
  * Data: useResumeBranchHistoryGraph(resumeId) from hooks/versioning
  * i18n: useTranslation("common") — no plain string literals as JSX children
  * Styling: MUI sx prop only
  */
 import { z } from "zod";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -34,17 +32,22 @@ import {
 } from "../../../../../hooks/versioning";
 import { RevertDialog } from "../../../../../components/RevertDialog";
 import type { GraphCommit } from "./history-graph-utils";
-import { BranchTreePicker } from "../../../../../components/BranchTreePicker";
 import { PageHeader } from "../../../../../components/layout/PageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
 import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./history-graph-utils";
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
+import { HistoryBranchSidebar } from "./HistoryBranchSidebar";
+import {
+  HistoryBranchFilters,
+  filterBranches,
+  filterGraphData,
+  type BranchFilterType,
+} from "./HistoryBranchFilters";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   validateSearch: z.object({
-    view: z.enum(["list", "tree"]).optional(),
     branchId: z.string().optional(),
   }),
   component: HistoryIndexRoute,
@@ -57,19 +60,52 @@ export function VersionHistoryPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mergeTargetBranchId, setMergeTargetBranchId] = useState("");
   const { id: resumeId } = useParams({ strict: false }) as { id: string };
-  const { view: viewFromSearch, branchId: branchIdFromSearch } =
-    useSearch({ strict: false }) as { view?: "list" | "tree"; branchId?: string };
+  const { branchId: branchIdFromSearch } =
+    useSearch({ strict: false }) as { branchId?: string };
   const { data: graph, isLoading, isError } = useResumeBranchHistoryGraph(resumeId);
   const finaliseResumeBranch = useFinaliseResumeBranch();
   const deleteResumeBranch = useDeleteResumeBranch();
   const revertCommit = useRevertResumeCommit();
-  const { mutate: archiveBranch } = useArchiveResumeBranch();
+  const { mutate: archiveBranch, isError: isArchiveError } = useArchiveResumeBranch();
   const [revertTarget, setRevertTarget] = useState<GraphCommit | null>(null);
   const [revertError, setRevertError] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<BranchFilterType>>(new Set());
+  const [activeLanguages, setActiveLanguages] = useState<Set<string>>(new Set());
+  const [showArchived, setShowArchived] = useState(false);
+
+  function toggleFilter(filter: BranchFilterType) {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(filter)) next.delete(filter);
+      else next.add(filter);
+      return next;
+    });
+  }
+
+  function toggleLanguage(lang: string) {
+    setActiveLanguages((prev) => {
+      const next = new Set(prev);
+      if (next.has(lang)) next.delete(lang);
+      else next.add(lang);
+      return next;
+    });
+  }
 
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
   const graphEdges = graph?.edges ?? [];
+
+  // Filtered views shared by sidebar and graph. Selection and commit-table
+  // logic still works against the full branch/commit set so the selected
+  // branch survives filter changes.
+  const filteredBranches = useMemo(
+    () => filterBranches({ branches, activeFilters, activeLanguages, showArchived }),
+    [branches, activeFilters, activeLanguages, showArchived],
+  );
+  const filteredGraph = useMemo(
+    () => filterGraphData({ branches, commits: graphCommits, edges: graphEdges, filteredBranches }),
+    [branches, graphCommits, graphEdges, filteredBranches],
+  );
 
   const selectedBranch =
     branches.find((branch) => branch.id === branchIdFromSearch) ??
@@ -79,7 +115,6 @@ export function VersionHistoryPage() {
   const mainBranchId = branches.find((branch) => branch.isMain)?.id ?? "";
   const selectedBranchId = selectedBranch?.id ?? mainBranchId;
   const mergedCommitIds = getReachableCommitIds(mainBranch?.headCommitId ?? null, graphEdges);
-  const selectedView = viewFromSearch ?? "list";
   const commits = sortByCreatedAt(
     getReachableCommits(selectedBranch?.headCommitId ?? null, graphCommits, graphEdges),
   ).reverse();
@@ -89,11 +124,11 @@ export function VersionHistoryPage() {
   );
   const canDeleteSelectedBranch = Boolean(selectedBranch && !selectedBranch.isMain);
 
-  function navigateToHistory(branchId: string | undefined, view: "list" | "tree") {
+  function navigateToHistory(branchId: string | undefined) {
     return navigate({
       to: "/resumes/$id/history",
       params: { id: resumeId },
-      search: branchId ? { view, branchId } : { view },
+      search: branchId ? { branchId } : {},
     });
   }
 
@@ -115,7 +150,7 @@ export function VersionHistoryPage() {
     });
 
     setMergeDialogOpen(false);
-    await navigateToHistory(mergeTargetBranchId, selectedView);
+    await navigateToHistory(mergeTargetBranchId);
   }
 
   async function handleDeleteSelectedBranch() {
@@ -125,7 +160,7 @@ export function VersionHistoryPage() {
 
     await deleteResumeBranch.mutateAsync({ branchId: selectedBranchId });
     setDeleteDialogOpen(false);
-    await navigateToHistory(mainBranchId || undefined, selectedView);
+    await navigateToHistory(mainBranchId || undefined);
   }
 
   async function handleOpenCompare() {
@@ -216,42 +251,18 @@ export function VersionHistoryPage() {
           {t("resume.history.description")}
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "flex-end", flexWrap: "wrap" }}>
-            <BranchTreePicker
-              label={t("resume.history.branchLabel")}
-              value={selectedBranchId}
-              branches={branches}
-              onSelect={(branchId) => void navigateToHistory(branchId, selectedView)}
-              onArchive={(branchId, isArchived) =>
-                archiveBranch({ branchId, isArchived, resumeId })
-              }
-              showCommits={false}
-              valueField="id"
-              mergedCommitIds={mergedCommitIds}
-            />
+        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+          <HistoryBranchFilters
+            branches={branches}
+            activeFilters={activeFilters}
+            activeLanguages={activeLanguages}
+            showArchived={showArchived}
+            onToggleFilter={toggleFilter}
+            onToggleLanguage={toggleLanguage}
+            onToggleShowArchived={() => setShowArchived((prev) => !prev)}
+          />
 
-            <ButtonGroup variant="outlined" size="small">
-              <Button
-                variant={selectedView === "list" ? "contained" : "outlined"}
-                onClick={() =>
-                  void navigateToHistory(selectedBranchId || undefined, "list")
-                }
-              >
-                {t("resume.history.listView")}
-              </Button>
-              <Button
-                variant={selectedView === "tree" ? "contained" : "outlined"}
-                onClick={() =>
-                  void navigateToHistory(selectedBranchId || undefined, "tree")
-                }
-              >
-                {t("resume.history.treeView")}
-              </Button>
-            </ButtonGroup>
-          </Box>
-
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Button
               variant="outlined"
               size="small"
@@ -286,23 +297,42 @@ export function VersionHistoryPage() {
           </Box>
         </Box>
 
-        {selectedView === "tree" ? (
-          <HistoryBranchGraph
-            branches={branches}
-            graphCommits={graphCommits}
-            graphEdges={graphEdges}
-            selectedBranchId={selectedBranchId}
-            onViewCommit={handleViewCommit}
-          />
-        ) : (
-          <HistoryCommitTable
-            commits={commits}
-            selectedBranch={selectedBranch}
-            onViewCommit={handleViewCommit}
-            onCompare={handleCompareCommit}
-            onRevert={handleRequestRevert}
-          />
+        {isArchiveError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t("resume.history.archiveError", { defaultValue: "Failed to update version. Please try again." })}
+          </Alert>
         )}
+
+        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", minHeight: 0 }}>
+          <HistoryBranchSidebar
+            branches={filteredBranches}
+            selectedBranchId={selectedBranchId}
+            onSelect={(branchId) => void navigateToHistory(branchId)}
+            onArchive={(branchId, isArchived) =>
+              archiveBranch({ branchId, isArchived, resumeId })
+            }
+          />
+
+          <Box sx={{ flex: 1, minWidth: 0, overflow: "auto", maxWidth: "50%" }}>
+            <HistoryBranchGraph
+              branches={filteredBranches}
+              graphCommits={filteredGraph.commits}
+              graphEdges={filteredGraph.edges}
+              selectedBranchId={selectedBranchId}
+              onViewCommit={handleViewCommit}
+            />
+          </Box>
+
+          <Box sx={{ flex: 1, minWidth: 0, maxWidth: "50%" }}>
+            <HistoryCommitTable
+              commits={commits}
+              selectedBranch={selectedBranch}
+              onViewCommit={handleViewCommit}
+              onCompare={handleCompareCommit}
+              onRevert={handleRequestRevert}
+            />
+          </Box>
+        </Box>
 
         <Dialog
           open={mergeDialogOpen}
@@ -411,4 +441,3 @@ export function VersionHistoryPage() {
 function HistoryIndexRoute() {
   return <VersionHistoryPage />;
 }
-

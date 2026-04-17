@@ -53,7 +53,7 @@ export function HistoryCommitTable({
 
   return (
     <>
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} data-testid="history-commit-table">
         <Table aria-label={t("resume.history.pageTitle")}>
           <TableHead>
             <TableRow>
