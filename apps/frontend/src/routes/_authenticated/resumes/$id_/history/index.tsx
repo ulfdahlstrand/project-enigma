@@ -262,7 +262,7 @@ export function VersionHistoryPage() {
             }
           />
 
-          <Box sx={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+          <Box sx={{ flex: 1, minWidth: 0, overflow: "auto", maxWidth: "50%" }}>
             <HistoryBranchGraph
               branches={branches}
               graphCommits={graphCommits}
@@ -272,7 +272,7 @@ export function VersionHistoryPage() {
             />
           </Box>
 
-          <Box sx={{ width: 380, flexShrink: 0 }}>
+          <Box sx={{ flex: 1, minWidth: 0, maxWidth: "50%" }}>
             <HistoryCommitTable
               commits={commits}
               selectedBranch={selectedBranch}
