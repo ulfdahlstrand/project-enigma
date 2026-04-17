@@ -84,7 +84,6 @@ export async function createTranslationResume(
       .values({
         resume_id: newResume.id,
         name: "default",
-        language: input.targetLanguage,
         is_main: true,
         head_commit_id: null,
         forked_from_commit_id: null,

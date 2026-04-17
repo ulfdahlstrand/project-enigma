@@ -128,7 +128,7 @@ export function ResumeDetailShell({
         hideTitleBreadcrumb
         actions={toolbarActions}
       />
-      <ResumeWorkbenchTabs resumeId={id} activeBranchId={activeBranchId} />
+      <ResumeWorkbenchTabs resumeId={id} activeBranchId={activeBranchId} compareRef={activeBranchName} />
 
       <ResumeContextStrip
         bundle={{

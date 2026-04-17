@@ -16,8 +16,10 @@ import { useTranslation } from "react-i18next";
 
 export interface ResumeWorkbenchTabsProps {
   resumeId: string;
-  /** The active branch id, used to build the Edit tab's branch-aware href. */
+  /** The active branch id, used to build the Edit/Preview/History tab hrefs. */
   activeBranchId: string | null;
+  /** The active branch name, used to pre-populate ?compareRef on the Compare tab. */
+  compareRef?: string | null;
 }
 
 type TabDef = {
@@ -27,17 +29,27 @@ type TabDef = {
   matchSegment: string;
 };
 
-function buildTabs(resumeId: string, activeBranchId: string | null): TabDef[] {
+function buildTabs(resumeId: string, activeBranchId: string | null, compareRef?: string | null): TabDef[] {
+  const previewHref =
+    activeBranchId !== null
+      ? `/resumes/${resumeId}/branch/${activeBranchId}`
+      : `/resumes/${resumeId}`;
+
   const editHref =
     activeBranchId !== null
       ? `/resumes/${resumeId}/edit/branch/${activeBranchId}`
       : `/resumes/${resumeId}/edit`;
 
+  const historyHref =
+    activeBranchId !== null
+      ? `/resumes/${resumeId}/history?branchId=${activeBranchId}`
+      : `/resumes/${resumeId}/history`;
+
   return [
     {
       key: "preview",
       labelKey: "resume.workbenchTabs.preview",
-      href: `/resumes/${resumeId}`,
+      href: previewHref,
       matchSegment: "/preview",
     },
     {
@@ -49,13 +61,15 @@ function buildTabs(resumeId: string, activeBranchId: string | null): TabDef[] {
     {
       key: "history",
       labelKey: "resume.workbenchTabs.history",
-      href: `/resumes/${resumeId}/history`,
+      href: historyHref,
       matchSegment: "/history",
     },
     {
       key: "compare",
       labelKey: "resume.workbenchTabs.compare",
-      href: `/resumes/${resumeId}/compare`,
+      href: compareRef
+        ? `/resumes/${resumeId}/compare?compareRef=${encodeURIComponent(compareRef)}`
+        : `/resumes/${resumeId}/compare`,
       matchSegment: "/compare",
     },
     {
@@ -84,11 +98,12 @@ function resolveActiveTab(pathname: string, resumeId: string): string {
 export function ResumeWorkbenchTabs({
   resumeId,
   activeBranchId,
+  compareRef,
 }: ResumeWorkbenchTabsProps) {
   const { t } = useTranslation("common");
   const { location } = useRouterState();
   const activeKey = resolveActiveTab(location.pathname, resumeId);
-  const tabs = buildTabs(resumeId, activeBranchId);
+  const tabs = buildTabs(resumeId, activeBranchId, compareRef);
 
   return (
     <Tabs

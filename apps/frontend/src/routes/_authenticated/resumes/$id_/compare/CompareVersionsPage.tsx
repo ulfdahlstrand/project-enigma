@@ -118,7 +118,11 @@ export function CompareVersionsPage() {
           { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
         ]}
       />
-      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
+      <ResumeWorkbenchTabs
+        resumeId={resumeId}
+        activeBranchId={branchOptions.find((b) => b.name === compareRef)?.id ?? null}
+        compareRef={compareRef || null}
+      />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.compare.description")}

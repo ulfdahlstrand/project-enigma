@@ -69,7 +69,6 @@ export async function forkResumeBranch(
       "rc.resume_id",
       "rc.tree_id",
       "r.employee_id",
-      "r.language",
     ])
     .where("rc.id", "=", input.fromCommitId)
     .executeTakeFirst();
@@ -86,8 +85,6 @@ export async function forkResumeBranch(
     throw new ORPCError("BAD_REQUEST", { message: "Commit uses a legacy format without a tree" });
   }
 
-  const language = commit.language ?? "en";
-
   // Create the new branch atomically.
   // No initial commit is created — the branch starts empty (headCommitId = null)
   // and the fork point is tracked via forkedFromCommitId.
@@ -96,7 +93,6 @@ export async function forkResumeBranch(
     .values({
       resume_id: commit.resume_id,
       name: normaliseRevisionBranchName(input.name),
-      language,
       is_main: false,
       head_commit_id: null,
       forked_from_commit_id: input.fromCommitId,

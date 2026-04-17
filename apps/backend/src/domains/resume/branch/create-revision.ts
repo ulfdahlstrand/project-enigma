@@ -28,7 +28,6 @@ export async function createRevisionBranch(
       "rb.head_commit_id",
       "rb.branch_type",
       "r.employee_id",
-      "r.language",
     ])
     .where("rb.id", "=", input.sourceBranchId)
     .executeTakeFirst();
@@ -52,7 +51,6 @@ export async function createRevisionBranch(
     .values({
       resume_id: sourceBranch.resume_id,
       name: input.name,
-      language: sourceBranch.language,
       is_main: false,
       // Revision starts at the source's current HEAD — user sees the full CV and edits from there
       head_commit_id: sourceBranch.head_commit_id,

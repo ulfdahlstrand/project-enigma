@@ -60,7 +60,6 @@ export async function importCv(db: Kysely<Database>, input: ImportCvInput) {
       .values({
         resume_id: resumeId,
         name: "default",
-        language,
         is_main: true,
       })
       .execute();

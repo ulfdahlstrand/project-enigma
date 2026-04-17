@@ -109,7 +109,6 @@ describe("createRevisionBranch", () => {
         // Revision starts at source HEAD so the user sees a full CV immediately
         head_commit_id: HEAD_COMMIT_ID,
         forked_from_commit_id: HEAD_COMMIT_ID,
-        language: "sv",
         name: "2026 rebrand",
       }),
     );
@@ -122,19 +121,6 @@ describe("createRevisionBranch", () => {
       headCommitId: HEAD_COMMIT_ID,
         isArchived: false,
     });
-  });
-
-  it("inherits language from the source variant", async () => {
-    const { db, insertValues } = buildDbMock();
-
-    await createRevisionBranch(db, MOCK_ADMIN, {
-      sourceBranchId: SOURCE_BRANCH_ID,
-      name: "my revision",
-    });
-
-    expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ language: "sv" }),
-    );
   });
 
   it("throws NOT_FOUND when source branch does not exist", async () => {
