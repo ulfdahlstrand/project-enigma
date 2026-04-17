@@ -17,6 +17,8 @@
 import { MsalProvider } from "@azure/msal-react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
@@ -37,14 +39,16 @@ function ThemedApp() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <QueryClientProvider client={queryClient}>
-        <NuqsAdapter>
-          <AIAssistantProvider>
-            <RouterProvider router={router} />
-            <AIAssistantDrawer />
-          </AIAssistantProvider>
-        </NuqsAdapter>
-      </QueryClientProvider>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <QueryClientProvider client={queryClient}>
+          <NuqsAdapter>
+            <AIAssistantProvider>
+              <RouterProvider router={router} />
+              <AIAssistantDrawer />
+            </AIAssistantProvider>
+          </NuqsAdapter>
+        </QueryClientProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

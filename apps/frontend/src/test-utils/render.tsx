@@ -26,6 +26,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { theme } from "../lib/theme";
 import enCommon from "../locales/en/common.json";
@@ -91,13 +93,15 @@ export function renderWithProviders(
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <QueryClientProvider client={queryClient}>
-          <NuqsTestingAdapter>
-            <AIAssistantProvider>
-              <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
-            </AIAssistantProvider>
-          </NuqsTestingAdapter>
-        </QueryClientProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <QueryClientProvider client={queryClient}>
+            <NuqsTestingAdapter>
+              <AIAssistantProvider>
+                <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
+              </AIAssistantProvider>
+            </NuqsTestingAdapter>
+          </QueryClientProvider>
+        </LocalizationProvider>
       </ThemeProvider>
     );
   }

@@ -14,6 +14,21 @@ import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import TextField, { type TextFieldProps } from "@mui/material/TextField";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
+function parseDraftDate(value: string): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDraftDate(value: Date | null): string {
+  if (!value || Number.isNaN(value.getTime())) return "";
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export interface AssignmentDraftState {
   role: string;
@@ -79,23 +94,25 @@ export function AssignmentRowEditor({
       </Box>
 
       <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-        <TextField
+        <DatePicker
           label={t("assignment.detail.startDateLabel")}
-          type="date"
-          value={draft.startDate}
-          onChange={(event) => onDraftChange("startDate", event.target.value)}
-          size="small"
-          InputLabelProps={{ shrink: true }}
+          value={parseDraftDate(draft.startDate)}
+          onChange={(value) => onDraftChange("startDate", formatDraftDate(value))}
+          {...(draft.isCurrent || !parseDraftDate(draft.endDate)
+            ? {}
+            : { maxDate: parseDraftDate(draft.endDate)! })}
+          slotProps={{ textField: { size: "small", fullWidth: true } }}
           sx={{ flex: 1 }}
         />
-        <TextField
+        <DatePicker
           label={t("assignment.detail.endDateLabel")}
-          type="date"
-          value={draft.endDate}
-          onChange={(event) => onDraftChange("endDate", event.target.value)}
-          size="small"
-          InputLabelProps={{ shrink: true }}
+          value={parseDraftDate(draft.endDate)}
+          onChange={(value) => onDraftChange("endDate", formatDraftDate(value))}
+          {...(parseDraftDate(draft.startDate)
+            ? { minDate: parseDraftDate(draft.startDate)! }
+            : {})}
           disabled={draft.isCurrent}
+          slotProps={{ textField: { size: "small", fullWidth: true } }}
           sx={{ flex: 1 }}
         />
         <FormControlLabel
