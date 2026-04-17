@@ -83,6 +83,7 @@ describe("getTranslationStatus", () => {
     expect(result.isStale).toBe(false);
     expect(result.latestTag).toMatchObject({ id: TAG_ID });
     expect(result.sourceHeadCommitId).toBe(SOURCE_COMMIT_ID);
+    expect(result.targetHeadCommitId).toBe(TARGET_COMMIT_ID);
   });
 
   it("returns stale when source head has moved beyond tag source commit", async () => {

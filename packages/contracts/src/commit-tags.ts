@@ -78,6 +78,7 @@ export const getTranslationStatusOutputSchema = z.object({
   latestTag: commitTagSchema.nullable(),
   isStale: z.boolean(),
   sourceHeadCommitId: z.string().uuid().nullable(),
+  targetHeadCommitId: z.string().uuid().nullable(),
 });
 
 // ---------------------------------------------------------------------------

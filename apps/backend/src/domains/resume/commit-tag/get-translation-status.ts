@@ -84,6 +84,7 @@ export async function getTranslationStatus(
     },
     isStale,
     sourceHeadCommitId,
+    targetHeadCommitId,
   };
 }
 
