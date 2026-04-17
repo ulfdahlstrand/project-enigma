@@ -270,7 +270,11 @@ export function VersionHistoryPage() {
           { label: t("resume.detail.pageTitle"), to: `/resumes/${resumeId}` },
         ]}
       />
-      <ResumeWorkbenchTabs resumeId={resumeId} activeBranchId={null} />
+      <ResumeWorkbenchTabs
+        resumeId={resumeId}
+        activeBranchId={branchIdFromSearch ?? null}
+        compareRef={branches.find((b) => b.id === branchIdFromSearch)?.name ?? null}
+      />
       <PageContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t("resume.history.description")}

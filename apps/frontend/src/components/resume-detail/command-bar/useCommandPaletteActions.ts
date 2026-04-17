@@ -101,7 +101,11 @@ export function useCommandPaletteActions({
       group: navigationGroup,
       disabled: false,
       onSelect: () => {
-        void navigate({ to: "/resumes/$id/history", params: { id } });
+        void navigate({
+          to: "/resumes/$id/history",
+          params: { id },
+          search: activeBranchId ? { branchId: activeBranchId } : {},
+        });
         onClose();
       },
     },

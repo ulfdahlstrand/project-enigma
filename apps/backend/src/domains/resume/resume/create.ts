@@ -63,7 +63,6 @@ export async function createResume(
       .values({
         resume_id: newResume.id,
         name: "default",
-        language,
         is_main: true,
         head_commit_id: null,
         forked_from_commit_id: null,

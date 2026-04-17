@@ -183,7 +183,6 @@ export interface ResumeBranchTable {
   id: Generated<string>;
   resume_id: string;
   name: string;
-  language: string;
   is_main: Generated<boolean>;
   /** Latest commit on this branch. NULL for a freshly created empty branch. */
   head_commit_id: string | null;

@@ -67,7 +67,6 @@ export async function rebaseRevisionOntoSource(
       "rb.id",
       "rb.resume_id",
       "rb.name",
-      "rb.language",
       "rb.is_main",
       "rb.head_commit_id",
       "rb.forked_from_commit_id",

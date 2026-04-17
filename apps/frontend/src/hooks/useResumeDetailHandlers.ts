@@ -99,7 +99,7 @@ export function useResumeDetailHandlers({
 
   const handleExitEditing = (): void => {
     if (isEditRoute) {
-      if (activeBranchId && activeBranchId !== mainBranchId) {
+      if (activeBranchId) {
         void navigate({
           to: "/resumes/$id/branch/$branchId",
           params: { id, branchId: activeBranchId },
