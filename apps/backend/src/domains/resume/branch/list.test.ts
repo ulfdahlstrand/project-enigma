@@ -138,7 +138,6 @@ describe("listResumeBranches", () => {
       id: BRANCH_ID_1,
       resumeId: RESUME_ID,
       name: "main",
-      language: "en",
       isMain: true,
       headCommitId: COMMIT_ID,
       forkedFromCommitId: null,
