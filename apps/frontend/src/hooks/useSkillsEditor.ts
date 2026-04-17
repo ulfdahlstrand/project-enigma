@@ -120,8 +120,6 @@ interface UseSkillsEditorParams {
   skillGroups: SkillGroupRow[];
   skills: SkillRow[];
   queryKey: readonly unknown[];
-  view?: "detail" | "list" | undefined;
-  onViewChange?: ((v: "detail" | "list") => void) | undefined;
   addingCategory?: boolean | undefined;
   onAddingCategoryChange?: ((open: boolean) => void) | undefined;
 }
@@ -132,19 +130,10 @@ export function useSkillsEditor({
   skillGroups,
   skills,
   queryKey,
-  view: externalView,
-  onViewChange,
   addingCategory: externalAddingCategory,
   onAddingCategoryChange,
 }: UseSkillsEditorParams) {
   const queryClient = useQueryClient();
-
-  const [internalView, setInternalView] = useState<"detail" | "list">("detail");
-  const view = externalView ?? internalView;
-  const setView = (v: "detail" | "list") => {
-    setInternalView(v);
-    onViewChange?.(v);
-  };
 
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -417,7 +406,6 @@ export function useSkillsEditor({
   };
 
   return {
-    view, setView,
     editingSkillId, setEditingSkillId,
     editName, setEditName,
     addingToCategory, setAddingToCategory,
