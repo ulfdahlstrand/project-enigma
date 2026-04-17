@@ -37,7 +37,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     FROM resume_commits src_rc, resume_commits tgt_rc
     WHERE src_rc.id = ct.source_commit_id
       AND tgt_rc.id = ct.target_commit_id
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   // 3. Make columns NOT NULL now that they are filled.
   await db.schema
@@ -58,7 +58,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       FROM commit_tags
       ORDER BY source_resume_id, target_resume_id, kind, created_at DESC
     )
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   // 5. Drop old commit-pair unique constraint and indexes.
   await db.schema
@@ -72,14 +72,14 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     ALTER TABLE commit_tags
     DROP CONSTRAINT IF EXISTS commit_tags_unique_source_target_kind
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   // 6. Add new resume-pair unique constraint and indexes.
   await sql`
     ALTER TABLE commit_tags
     ADD CONSTRAINT commit_tags_unique_source_target_resume_kind
     UNIQUE (source_resume_id, target_resume_id, kind)
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   await db.schema
     .createIndex("idx_commit_tags_source_resume")
@@ -101,13 +101,13 @@ export async function down(db: Kysely<unknown>): Promise<void> {
   await sql`
     ALTER TABLE commit_tags
     DROP CONSTRAINT IF EXISTS commit_tags_unique_source_target_resume_kind
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   await sql`
     ALTER TABLE commit_tags
     ADD CONSTRAINT commit_tags_unique_source_target_kind
     UNIQUE (source_commit_id, target_commit_id, kind)
-  `.execute(db as Parameters<typeof sql.execute>[0]);
+  `.execute(db);
 
   await db.schema
     .createIndex("idx_commit_tags_source")

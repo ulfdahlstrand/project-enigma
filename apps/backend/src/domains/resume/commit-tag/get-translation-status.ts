@@ -48,7 +48,7 @@ export async function getTranslationStatus(
     .executeTakeFirst();
 
   if (!tag) {
-    return { latestTag: null, isStale: false, sourceHeadCommitId: null };
+    return { latestTag: null, isStale: false, sourceHeadCommitId: null, targetHeadCommitId: null };
   }
 
   const [sourceBranch, targetBranch] = await Promise.all([
