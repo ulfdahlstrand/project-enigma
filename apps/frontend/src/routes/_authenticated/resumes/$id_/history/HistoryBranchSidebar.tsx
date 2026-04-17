@@ -15,16 +15,12 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import type { BranchType } from "@cv-tool/contracts";
-import type { BranchFilterType } from "./HistoryBranchFilters";
 import type { GraphBranch } from "./history-graph-utils";
 
 interface HistoryBranchSidebarProps {
+  /** Already-filtered branches. Grouping and rendering happens here; filtering does not. */
   branches: GraphBranch[];
   selectedBranchId: string;
-  activeFilters: Set<BranchFilterType>;
-  activeLanguages: Set<string>;
-  showArchived: boolean;
   onSelect: (branchId: string) => void;
   onArchive: (branchId: string, isArchived: boolean) => void;
 }
@@ -204,9 +200,6 @@ function VariantGroup({ variant, translations, selectedBranchId, onSelect, onArc
 export function HistoryBranchSidebar({
   branches,
   selectedBranchId,
-  activeFilters,
-  activeLanguages,
-  showArchived,
   onSelect,
   onArchive,
 }: HistoryBranchSidebarProps) {
@@ -214,67 +207,27 @@ export function HistoryBranchSidebar({
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const { variantGroups, revisionBranches } = useMemo(() => {
-    // Type filter resolves to a whitelist of branchTypes (empty activeFilters = all types)
-    const typeWhitelist: BranchType[] =
-      activeFilters.size === 0
-        ? ["variant", "translation", "revision"]
-        : (["variant", "translation", "revision"] as BranchType[]).filter((type) =>
-            activeFilters.has(type),
-          );
-    const filterToTranslated = activeFilters.has("translation");
-
-    // Index translations by variant id (unfiltered, for language coverage)
-    const allTranslationsByVariantId = new Map<string, GraphBranch[]>();
+    // Group translation branches under their source variant for rendering.
+    // No filtering here — the input is already filtered.
+    const translationsByVariantId = new Map<string, GraphBranch[]>();
     branches.forEach((b) => {
       if (b.branchType === "translation" && b.sourceBranchId) {
-        const existing = allTranslationsByVariantId.get(b.sourceBranchId) ?? [];
-        allTranslationsByVariantId.set(b.sourceBranchId, [...existing, b]);
+        const existing = translationsByVariantId.get(b.sourceBranchId) ?? [];
+        translationsByVariantId.set(b.sourceBranchId, [...existing, b]);
       }
     });
 
-    const variants = branches.filter(
-      (b) => b.branchType === "variant" && (showArchived || !b.isArchived),
-    );
+    const groups = branches
+      .filter((b) => b.branchType === "variant")
+      .map((variant) => ({
+        variant,
+        translations: translationsByVariantId.get(variant.id) ?? [],
+      }));
 
-    const groups = variants
-      .map((variant) => {
-        const allTranslations = allTranslationsByVariantId.get(variant.id) ?? [];
-        const coveredLanguages = [
-          ...new Set([variant.language, ...allTranslations.map((tr) => tr.language)]),
-        ];
-
-        // Language filter: variant is kept if any covered language matches
-        if (activeLanguages.size > 0 && !coveredLanguages.some((l) => activeLanguages.has(l))) {
-          return null;
-        }
-
-        // Translation filter: only show variants that have at least one translation
-        if (filterToTranslated && allTranslations.length === 0) {
-          return null;
-        }
-
-        // Translations shown in the tree respect type, language, and archived filters
-        const visibleTranslations = allTranslations.filter(
-          (tr) =>
-            typeWhitelist.includes("translation") &&
-            (activeLanguages.size === 0 || activeLanguages.has(tr.language)) &&
-            (showArchived || !tr.isArchived),
-        );
-
-        return { variant, translations: visibleTranslations };
-      })
-      .filter((g): g is NonNullable<typeof g> => g !== null);
-
-    const revisions = branches.filter(
-      (b) =>
-        b.branchType === "revision" &&
-        (showArchived || !b.isArchived) &&
-        (activeFilters.size === 0 || activeFilters.has("revision")) &&
-        (activeLanguages.size === 0 || activeLanguages.has(b.language)),
-    );
+    const revisions = branches.filter((b) => b.branchType === "revision");
 
     return { variantGroups: groups, revisionBranches: revisions };
-  }, [branches, showArchived, activeFilters, activeLanguages]);
+  }, [branches]);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const items = listRef.current?.querySelectorAll<HTMLElement>("[role='option']");

@@ -8,7 +8,7 @@
  * Styling: MUI sx prop only
  */
 import { z } from "zod";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
@@ -39,7 +39,12 @@ import { getReachableCommitIds, getReachableCommits, sortByCreatedAt } from "./h
 import { HistoryCommitTable } from "./HistoryCommitTable";
 import { HistoryBranchGraph } from "./HistoryBranchGraph";
 import { HistoryBranchSidebar } from "./HistoryBranchSidebar";
-import { HistoryBranchFilters, type BranchFilterType } from "./HistoryBranchFilters";
+import {
+  HistoryBranchFilters,
+  filterBranches,
+  filterGraphData,
+  type BranchFilterType,
+} from "./HistoryBranchFilters";
 
 export const Route = createFileRoute("/_authenticated/resumes/$id_/history/")({
   validateSearch: z.object({
@@ -89,6 +94,18 @@ export function VersionHistoryPage() {
   const branches = graph?.branches ?? [];
   const graphCommits = graph?.commits ?? [];
   const graphEdges = graph?.edges ?? [];
+
+  // Filtered views shared by sidebar and graph. Selection and commit-table
+  // logic still works against the full branch/commit set so the selected
+  // branch survives filter changes.
+  const filteredBranches = useMemo(
+    () => filterBranches({ branches, activeFilters, activeLanguages, showArchived }),
+    [branches, activeFilters, activeLanguages, showArchived],
+  );
+  const filteredGraph = useMemo(
+    () => filterGraphData({ branches, commits: graphCommits, edges: graphEdges, filteredBranches }),
+    [branches, graphCommits, graphEdges, filteredBranches],
+  );
 
   const selectedBranch =
     branches.find((branch) => branch.id === branchIdFromSearch) ??
@@ -288,11 +305,8 @@ export function VersionHistoryPage() {
 
         <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", minHeight: 0 }}>
           <HistoryBranchSidebar
-            branches={branches}
+            branches={filteredBranches}
             selectedBranchId={selectedBranchId}
-            activeFilters={activeFilters}
-            activeLanguages={activeLanguages}
-            showArchived={showArchived}
             onSelect={(branchId) => void navigateToHistory(branchId)}
             onArchive={(branchId, isArchived) =>
               archiveBranch({ branchId, isArchived, resumeId })
@@ -301,9 +315,9 @@ export function VersionHistoryPage() {
 
           <Box sx={{ flex: 1, minWidth: 0, overflow: "auto", maxWidth: "50%" }}>
             <HistoryBranchGraph
-              branches={branches}
-              graphCommits={graphCommits}
-              graphEdges={graphEdges}
+              branches={filteredBranches}
+              graphCommits={filteredGraph.commits}
+              graphEdges={filteredGraph.edges}
               selectedBranchId={selectedBranchId}
               onViewCommit={handleViewCommit}
             />

@@ -7,9 +7,125 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import type { BranchType } from "@cv-tool/contracts";
-import type { GraphBranch } from "./history-graph-utils";
+import type { GraphBranch, GraphCommit, GraphEdge } from "./history-graph-utils";
+import { getReachableCommitIds } from "./history-graph-utils";
 
 export type BranchFilterType = BranchType | "archived";
+
+interface FilterBranchesArgs {
+  branches: GraphBranch[];
+  activeFilters: Set<BranchFilterType>;
+  activeLanguages: Set<string>;
+  showArchived: boolean;
+}
+
+/**
+ * Returns the subset of branches that pass the active filters.
+ *
+ * - Archived: kept only if showArchived is true
+ * - Type filter: variants are kept if any of (variant|translation) is active and
+ *   — when "translation" is the only active type — the variant has ≥1 translation.
+ *   Translations are kept if "translation" is active (or no type filter).
+ *   Revisions are kept if "revision" is active (or no type filter).
+ * - Language filter: variants match against covered languages (own + translations');
+ *   translations/revisions match their own language.
+ */
+export function filterBranches({
+  branches,
+  activeFilters,
+  activeLanguages,
+  showArchived,
+}: FilterBranchesArgs): GraphBranch[] {
+  const typeWhitelist: BranchType[] =
+    activeFilters.size === 0
+      ? ["variant", "translation", "revision"]
+      : (["variant", "translation", "revision"] as BranchType[]).filter((type) =>
+          activeFilters.has(type),
+        );
+  const filterToTranslated = activeFilters.has("translation");
+
+  // Index translations by variant id (unfiltered, for language coverage)
+  const allTranslationsByVariantId = new Map<string, GraphBranch[]>();
+  branches.forEach((b) => {
+    if (b.branchType === "translation" && b.sourceBranchId) {
+      const existing = allTranslationsByVariantId.get(b.sourceBranchId) ?? [];
+      allTranslationsByVariantId.set(b.sourceBranchId, [...existing, b]);
+    }
+  });
+
+  const visibleVariantIds = new Set<string>();
+
+  const visibleVariants = branches.filter((b) => {
+    if (b.branchType !== "variant") return false;
+    if (!showArchived && b.isArchived) return false;
+    if (!typeWhitelist.includes("variant") && !filterToTranslated) return false;
+
+    const allTranslations = allTranslationsByVariantId.get(b.id) ?? [];
+    const coveredLanguages = [
+      ...new Set([b.language, ...allTranslations.map((tr) => tr.language)]),
+    ];
+
+    if (activeLanguages.size > 0 && !coveredLanguages.some((l) => activeLanguages.has(l))) {
+      return false;
+    }
+    if (filterToTranslated && allTranslations.length === 0) {
+      return false;
+    }
+    visibleVariantIds.add(b.id);
+    return true;
+  });
+
+  const visibleTranslations = branches.filter((b) => {
+    if (b.branchType !== "translation") return false;
+    if (!typeWhitelist.includes("translation")) return false;
+    if (!showArchived && b.isArchived) return false;
+    if (activeLanguages.size > 0 && !activeLanguages.has(b.language)) return false;
+    // Only keep translations whose parent variant is visible
+    if (b.sourceBranchId && !visibleVariantIds.has(b.sourceBranchId)) return false;
+    return true;
+  });
+
+  const visibleRevisions = branches.filter((b) => {
+    if (b.branchType !== "revision") return false;
+    if (!typeWhitelist.includes("revision")) return false;
+    if (!showArchived && b.isArchived) return false;
+    if (activeLanguages.size > 0 && !activeLanguages.has(b.language)) return false;
+    return true;
+  });
+
+  return [...visibleVariants, ...visibleTranslations, ...visibleRevisions];
+}
+
+interface FilterGraphDataArgs {
+  branches: GraphBranch[];
+  commits: GraphCommit[];
+  edges: GraphEdge[];
+  filteredBranches: GraphBranch[];
+}
+
+/**
+ * Filters commits and edges to those reachable from any visible branch head.
+ * Used so the graph only renders the lanes and commits relevant to the
+ * currently-filtered branch set.
+ */
+export function filterGraphData({
+  commits,
+  edges,
+  filteredBranches,
+}: FilterGraphDataArgs): { commits: GraphCommit[]; edges: GraphEdge[] } {
+  const visibleCommitIds = new Set<string>();
+  filteredBranches.forEach((branch) => {
+    const reachable = getReachableCommitIds(branch.headCommitId ?? null, edges);
+    reachable.forEach((id) => visibleCommitIds.add(id));
+  });
+
+  return {
+    commits: commits.filter((c) => visibleCommitIds.has(c.id)),
+    edges: edges.filter(
+      (e) => visibleCommitIds.has(e.commitId) && visibleCommitIds.has(e.parentCommitId),
+    ),
+  };
+}
 
 interface HistoryBranchFiltersProps {
   branches: GraphBranch[];
