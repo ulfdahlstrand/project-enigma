@@ -238,48 +238,68 @@ export function HistoryBranchSidebar({
     });
   }
 
-  function passesFilters(branch: GraphBranch): boolean {
-    if (!showArchived && branch.isArchived) return false;
-    if (activeFilters.size > 0 && !activeFilters.has(branch.branchType as FilterType)) return false;
-    if (activeLanguages.size > 0 && !activeLanguages.has(branch.language)) return false;
-    return true;
-  }
-
   const { variantGroups, revisionBranches } = useMemo(() => {
-    const translationsByVariantId = new Map<string, GraphBranch[]>();
+    // Type filter resolves to a whitelist of branchTypes (empty activeFilters = all types)
+    const typeWhitelist: BranchType[] =
+      activeFilters.size === 0
+        ? ["variant", "translation", "revision"]
+        : (["variant", "translation", "revision"] as BranchType[]).filter((type) =>
+            activeFilters.has(type),
+          );
+    const filterToTranslated = activeFilters.has("translation");
+
+    // Index translations by variant id (unfiltered, for language coverage)
+    const allTranslationsByVariantId = new Map<string, GraphBranch[]>();
     branches.forEach((b) => {
       if (b.branchType === "translation" && b.sourceBranchId) {
-        const existing = translationsByVariantId.get(b.sourceBranchId) ?? [];
-        translationsByVariantId.set(b.sourceBranchId, [...existing, b]);
+        const existing = allTranslationsByVariantId.get(b.sourceBranchId) ?? [];
+        allTranslationsByVariantId.set(b.sourceBranchId, [...existing, b]);
       }
     });
 
     const variants = branches.filter(
-      (b) => b.branchType === "variant" && passesFilters(b),
+      (b) => b.branchType === "variant" && (showArchived || !b.isArchived),
     );
 
     const groups = variants
       .map((variant) => {
-        const allTr = translationsByVariantId.get(variant.id) ?? [];
-        const visibleTr = allTr.filter(
-          (tr) =>
-            (activeFilters.size === 0 || activeFilters.has("translation")) &&
-            passesFilters(tr),
-        );
-        const coveredLangs = [...new Set([variant.language, ...allTr.map((tr) => tr.language)])];
-        if (activeLanguages.size > 0 && !coveredLangs.some((l) => activeLanguages.has(l))) {
+        const allTranslations = allTranslationsByVariantId.get(variant.id) ?? [];
+        const coveredLanguages = [
+          ...new Set([variant.language, ...allTranslations.map((tr) => tr.language)]),
+        ];
+
+        // Language filter: variant is kept if any covered language matches
+        if (activeLanguages.size > 0 && !coveredLanguages.some((l) => activeLanguages.has(l))) {
           return null;
         }
-        return { variant, translations: visibleTr };
+
+        // Translation filter: only show variants that have at least one translation
+        if (filterToTranslated && allTranslations.length === 0) {
+          return null;
+        }
+
+        // Translations shown in the tree respect type, language, and archived filters
+        const visibleTranslations = allTranslations.filter(
+          (tr) =>
+            typeWhitelist.includes("translation") &&
+            (activeLanguages.size === 0 || activeLanguages.has(tr.language)) &&
+            (showArchived || !tr.isArchived),
+        );
+
+        return { variant, translations: visibleTranslations };
       })
       .filter((g): g is NonNullable<typeof g> => g !== null);
 
     const revisions = branches.filter(
-      (b) => b.branchType === "revision" && passesFilters(b),
+      (b) =>
+        b.branchType === "revision" &&
+        (showArchived || !b.isArchived) &&
+        (activeFilters.size === 0 || activeFilters.has("revision")) &&
+        (activeLanguages.size === 0 || activeLanguages.has(b.language)),
     );
 
     return { variantGroups: groups, revisionBranches: revisions };
-  }, [branches, showArchived, activeFilters, activeLanguages]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [branches, showArchived, activeFilters, activeLanguages]);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const items = listRef.current?.querySelectorAll<HTMLElement>("[role='option']");
