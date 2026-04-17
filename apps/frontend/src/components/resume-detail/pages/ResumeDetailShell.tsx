@@ -134,7 +134,6 @@ export function ResumeDetailShell({
           variantBranchId,
           sourceBranch,
           mergedCommitIds,
-          language,
           draftTitle,
           consultantTitle,
           draftPresentation,

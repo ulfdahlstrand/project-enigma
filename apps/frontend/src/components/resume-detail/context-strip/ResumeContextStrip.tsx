@@ -3,7 +3,7 @@
  * workspace. Consolidates four scattered pieces of context into one place:
  *
  *   1. VariantChip    — active variant name + dropdown to switch / add variants
- *   2. LanguageChip   — active language + dropdown to switch / add translations
+ *   2. LanguageLinkBadge(s) — one link per linked resume (cross-language translation)
  *   3. DraftStatusChip — "Synced" or "Unsaved changes" based on edit-mode draft state
  *   4. StaleRevisionChip — informational pill for stale translations or revisions
  *
@@ -14,9 +14,10 @@ import type { useNavigate } from "@tanstack/react-router";
 import Box from "@mui/material/Box";
 
 import { VariantChip } from "./VariantChip";
-import { LanguageChip } from "./LanguageChip";
 import { DraftStatusChip } from "./DraftStatusChip";
 import { StaleRevisionChip } from "./StaleRevisionChip";
+import { LanguageLinkBadge } from "../../../routes/_authenticated/resumes/$id_/history/LanguageLinkBadge";
+import { useListCommitTags } from "../../../hooks/versioning";
 import type { ResumeDetailPageBundle } from "../pages/useResumeDetailPage";
 
 export interface ResumeContextStripProps {
@@ -31,7 +32,6 @@ export interface ResumeContextStripProps {
     variantBranchId: ResumeDetailPageBundle["variantBranchId"];
     sourceBranch: ResumeDetailPageBundle["sourceBranch"];
     mergedCommitIds: ResumeDetailPageBundle["mergedCommitIds"];
-    language: ResumeDetailPageBundle["language"];
     // Draft fields
     draftTitle: ResumeDetailPageBundle["draftTitle"];
     consultantTitle: ResumeDetailPageBundle["consultantTitle"];
@@ -58,7 +58,6 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
     variantBranchId,
     sourceBranch,
     mergedCommitIds,
-    language,
     draftTitle,
     consultantTitle,
     draftPresentation,
@@ -71,6 +70,9 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
   } = bundle;
 
   const showVariantChip = variantBranchId !== null && branches !== undefined;
+
+  const { data: commitTags } = useListCommitTags(id);
+  const linkedTags = commitTags ?? [];
 
   return (
     <Box
@@ -102,11 +104,9 @@ export function ResumeContextStrip({ bundle, onAddVariant }: ResumeContextStripP
         />
       )}
 
-      <LanguageChip
-        resumeId={id}
-        language={language}
-        navigate={navigate}
-      />
+      {linkedTags.map((tag) => (
+        <LanguageLinkBadge key={tag.id} tag={tag} currentResumeId={id} />
+      ))}
 
       <DraftStatusChip
         isEditRoute={isEditRoute}

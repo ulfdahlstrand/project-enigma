@@ -43,11 +43,13 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 vi.mock("../../../../orpc-client", () => ({
   orpc: {
     listResumeBranches: vi.fn(),
+    listCommitTags: vi.fn(),
   },
 }));
 
 import { orpc } from "../../../../orpc-client";
 const mockListResumeBranches = orpc.listResumeBranches as ReturnType<typeof vi.fn>;
+const mockListCommitTags = orpc.listCommitTags as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Test data helpers
@@ -67,7 +69,6 @@ const MAIN_BRANCH = {
   sourceBranchId: null,
   sourceCommitId: null,
   isArchived: false,
-  isStale: false,
   createdBy: null,
   createdAt: "2024-01-01T00:00:00Z",
 };
@@ -84,7 +85,6 @@ const VARIANT_BRANCH = {
   sourceBranchId: null,
   sourceCommitId: null,
   isArchived: false,
-  isStale: false,
   createdBy: null,
   createdAt: "2024-02-01T00:00:00Z",
 };
@@ -101,14 +101,8 @@ const TRANSLATION_BRANCH = {
   sourceBranchId: MAIN_BRANCH.id,
   sourceCommitId: null,
   isArchived: false,
-  isStale: false,
   createdBy: null,
   createdAt: "2024-03-01T00:00:00Z",
-};
-
-const STALE_TRANSLATION_BRANCH = {
-  ...TRANSLATION_BRANCH,
-  isStale: true,
 };
 
 const REVISION_BRANCH = {
@@ -123,7 +117,6 @@ const REVISION_BRANCH = {
   sourceBranchId: MAIN_BRANCH.id,
   sourceCommitId: null,
   isArchived: false,
-  isStale: false,
   createdBy: null,
   createdAt: "2024-04-01T00:00:00Z",
 };
@@ -140,7 +133,6 @@ function makeBundle(overrides: Partial<ResumeContextStripProps["bundle"]> = {}):
     variantBranchId: MAIN_BRANCH.id,
     sourceBranch: null,
     mergedCommitIds: new Set<string>(),
-    language: "en",
     // Draft state — default to "synced" (draft equals current)
     draftTitle: "Jane Doe",
     consultantTitle: "Jane Doe",
@@ -165,6 +157,7 @@ function renderStrip(props: Partial<ResumeContextStripProps> = {}) {
 
 beforeEach(() => {
   mockListResumeBranches.mockResolvedValue([MAIN_BRANCH, VARIANT_BRANCH]);
+  mockListCommitTags.mockResolvedValue([]);
   mockNavigate.mockReset();
 });
 
@@ -238,24 +231,46 @@ describe("VariantChip", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Language chip renders current language label
+// 2. Language link badges (one per linked commit-tag)
 // ---------------------------------------------------------------------------
 
-describe("LanguageChip", () => {
-  it("renders the active branch language", () => {
-    renderStrip({ bundle: makeBundle({ language: "en" }) });
-    expect(screen.getByRole("button", { name: /en/i })).toBeInTheDocument();
+describe("LanguageLinkBadge", () => {
+  it("renders no badges when the resume has no commit tags", async () => {
+    mockListCommitTags.mockResolvedValue([]);
+    renderStrip({ bundle: makeBundle() });
+    expect(screen.queryAllByTestId("language-link-badge")).toHaveLength(0);
   });
 
-  it("renders sv language when on a Swedish branch", () => {
-    renderStrip({
-      bundle: makeBundle({
-        activeBranch: STALE_TRANSLATION_BRANCH,
-        activeBranchType: "translation",
-        language: "sv",
-      }),
-    });
-    expect(screen.getByRole("button", { name: /sv/i })).toBeInTheDocument();
+  it("renders one badge per linked commit-tag", async () => {
+    mockListCommitTags.mockResolvedValue([
+      {
+        id: "tag-1",
+        sourceCommitId: "commit-1",
+        targetCommitId: "commit-sv",
+        kind: "translation",
+        createdAt: "2024-01-01T00:00:00Z",
+        createdBy: null,
+        source: {
+          resumeId: RESUME_ID,
+          resumeTitle: "Main",
+          language: "en",
+          commitId: "commit-1",
+          branchId: MAIN_BRANCH.id,
+          branchName: "Main CV",
+        },
+        target: {
+          resumeId: "other-resume",
+          resumeTitle: "Swedish",
+          language: "sv",
+          commitId: "commit-sv",
+          branchId: "branch-sv-remote",
+          branchName: "Swedish Main",
+        },
+      },
+    ]);
+    renderStrip({ bundle: makeBundle() });
+    const badges = await screen.findAllByTestId("language-link-badge");
+    expect(badges).toHaveLength(1);
   });
 });
 
@@ -332,34 +347,6 @@ describe("DraftStatusChip", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 6. Stale chip
-// ---------------------------------------------------------------------------
-
-describe("StaleRevisionChip — stale translation", () => {
-  it("shows the stale label when branch is a stale translation", () => {
-    renderStrip({
-      bundle: makeBundle({
-        activeBranch: STALE_TRANSLATION_BRANCH,
-        activeBranchType: "translation",
-        activeBranchId: STALE_TRANSLATION_BRANCH.id,
-      }),
-    });
-    expect(screen.getByText(enCommon.resume.contextStrip.stale)).toBeInTheDocument();
-  });
-
-  it("does NOT show stale label when translation is not stale", () => {
-    renderStrip({
-      bundle: makeBundle({
-        activeBranch: TRANSLATION_BRANCH,
-        activeBranchType: "translation",
-        activeBranchId: TRANSLATION_BRANCH.id,
-      }),
-    });
-    expect(screen.queryByText(enCommon.resume.contextStrip.stale)).not.toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // 7. Revision chip
 // ---------------------------------------------------------------------------
 
@@ -394,9 +381,8 @@ describe("StaleRevisionChip — revision branch", () => {
 // ---------------------------------------------------------------------------
 
 describe("StaleRevisionChip — clean main branch", () => {
-  it("shows neither stale nor revision chip on a clean main branch", () => {
+  it("shows no revision chip on a clean main branch", () => {
     renderStrip({ bundle: makeBundle() });
-    expect(screen.queryByText(enCommon.resume.contextStrip.stale)).not.toBeInTheDocument();
     expect(screen.queryByText(/Draft of/i)).not.toBeInTheDocument();
   });
 });
@@ -413,11 +399,9 @@ describe("ResumeContextStrip layout", () => {
   });
 
   it("renders all chip sections together", () => {
-    renderStrip({ bundle: makeBundle({ isEditRoute: false, language: "en" }) });
+    renderStrip({ bundle: makeBundle({ isEditRoute: false }) });
     // Variant chip button
     expect(screen.getByRole("button", { name: /Main CV/i })).toBeInTheDocument();
-    // Language chip button
-    expect(screen.getByRole("button", { name: /en/i })).toBeInTheDocument();
     // Draft status
     expect(screen.getByText(enCommon.resume.contextStrip.draftSynced)).toBeInTheDocument();
   });
