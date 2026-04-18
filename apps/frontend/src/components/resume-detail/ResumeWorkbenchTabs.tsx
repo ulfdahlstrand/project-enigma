@@ -1,24 +1,19 @@
 /**
- * ResumeWorkbenchTabs — horizontal tab bar for navigating between the five
- * resume workbench destinations (Edit, Preview, History, Compare, Variants).
+ * ResumeWorkbenchTabs — horizontal lens-tab bar for navigating between the
+ * five resume workbench destinations.
  *
- * Placed inside ResumeDetailLayout so it is visible on every child route under
- * `/resumes/$id`. Active tab is derived from the current pathname — no local
- * state needed.
- *
- * Styling: MUI sx prop only.
- * i18n: useTranslation("common") — keys under resume.workbenchTabs.*
+ * Styling matches the editorial dark design exactly: ink background, accent
+ * underline indicator, Inter Tight UI font.
  */
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
+import Box from "@mui/material/Box";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { accent, fg, font, ink, line } from "../../routes/_authenticated/resumes/$id_/compare/compare-design";
+import { DiffIcon, EditIcon, EyeIcon, HistoryIcon, LayersIcon } from "../Icons";
 
 export interface ResumeWorkbenchTabsProps {
   resumeId: string;
-  /** The active branch id, used to build the Edit/Preview/History tab hrefs. */
   activeBranchId: string | null;
-  /** The active branch name, used to pre-populate ?compareRef on the Compare tab. */
   compareRef?: string | null;
 }
 
@@ -26,7 +21,7 @@ type TabDef = {
   key: string;
   labelKey: string;
   href: string;
-  matchSegment: string;
+  icon: React.ReactElement;
 };
 
 function buildTabs(resumeId: string, activeBranchId: string | null, compareRef?: string | null): TabDef[] {
@@ -50,19 +45,19 @@ function buildTabs(resumeId: string, activeBranchId: string | null, compareRef?:
       key: "preview",
       labelKey: "resume.workbenchTabs.preview",
       href: previewHref,
-      matchSegment: "/preview",
+      icon: <EyeIcon size={14} />,
     },
     {
       key: "edit",
       labelKey: "resume.workbenchTabs.edit",
       href: editHref,
-      matchSegment: "/edit",
+      icon: <EditIcon size={14} />,
     },
     {
       key: "history",
       labelKey: "resume.workbenchTabs.history",
       href: historyHref,
-      matchSegment: "/history",
+      icon: <HistoryIcon size={14} />,
     },
     {
       key: "compare",
@@ -70,28 +65,25 @@ function buildTabs(resumeId: string, activeBranchId: string | null, compareRef?:
       href: compareRef
         ? `/resumes/${resumeId}/compare?compareRef=${encodeURIComponent(compareRef)}`
         : `/resumes/${resumeId}/compare`,
-      matchSegment: "/compare",
+      icon: <DiffIcon size={14} />,
     },
     {
       key: "variants",
       labelKey: "resume.workbenchTabs.variants",
       href: `/resumes/${resumeId}/variants`,
-      matchSegment: "/variants",
+      icon: <LayersIcon size={14} />,
     },
   ];
 }
 
 function resolveActiveTab(pathname: string, resumeId: string): string {
   const base = `/resumes/${resumeId}`;
-  const relative = pathname.startsWith(base)
-    ? pathname.slice(base.length)
-    : pathname;
+  const relative = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
 
   if (relative.startsWith("/edit")) return "edit";
   if (relative.startsWith("/history")) return "history";
   if (relative.startsWith("/compare")) return "compare";
   if (relative.startsWith("/variants")) return "variants";
-  // Everything else (root, /branch/:id, /commit/:id) is Preview
   return "preview";
 }
 
@@ -106,38 +98,69 @@ export function ResumeWorkbenchTabs({
   const tabs = buildTabs(resumeId, activeBranchId, compareRef);
 
   return (
-    <Tabs
-      value={activeKey}
-      variant="scrollable"
-      scrollButtons="auto"
-      allowScrollButtonsMobile
+    <Box
+      component="nav"
+      role="tablist"
+      aria-label="Resume workbench"
       sx={{
-        bgcolor: "background.paper",
-        borderBottom: "1px solid",
-        borderColor: "divider",
-        minHeight: 40,
+        display: "flex",
+        gap: "2px",
+        px: "20px",
+        background: ink[0],
+        borderBottom: `1px solid ${line[1]}`,
+        overflowX: "auto",
+        scrollbarWidth: "none",
         flexShrink: 0,
-        "& .MuiTab-root": {
-          minHeight: 40,
-          py: 0,
-          fontSize: "0.8125rem",
-          textTransform: "none",
-          fontWeight: 400,
-          "&.Mui-selected": {
-            fontWeight: 600,
-          },
-        },
+        "&::-webkit-scrollbar": { display: "none" },
       }}
     >
-      {tabs.map((tab) => (
-        <Tab
-          key={tab.key}
-          value={tab.key}
-          label={t(tab.labelKey)}
-          component={Link}
-          to={tab.href}
-        />
-      ))}
-    </Tabs>
+      {tabs.map((tab) => {
+        const isActive = tab.key === activeKey;
+        return (
+          <Box
+            key={tab.key}
+            component={Link}
+            to={tab.href}
+            role="tab"
+            aria-selected={isActive}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px 14px 14px",
+              fontSize: "13px",
+              fontFamily: font.ui,
+              fontWeight: 400,
+              color: isActive ? fg[1] : fg[4],
+              position: "relative",
+              transition: "color 120ms",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              textDecoration: "none",
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              "&:hover": { color: isActive ? fg[1] : fg[2] },
+              "& svg": { opacity: 0.7, flexShrink: 0 },
+              ...(isActive && {
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  left: "10px",
+                  right: "10px",
+                  bottom: "-1px",
+                  height: "2px",
+                  background: accent.main,
+                  borderRadius: "2px 2px 0 0",
+                },
+              }),
+            }}
+          >
+            {tab.icon}
+            {t(tab.labelKey)}
+          </Box>
+        );
+      })}
+    </Box>
   );
 }

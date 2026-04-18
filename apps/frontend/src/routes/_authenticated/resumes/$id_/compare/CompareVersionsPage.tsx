@@ -22,7 +22,7 @@ import {
   useResumeBranches,
 } from "../../../../../hooks/versioning";
 import { useCommitDiff } from "../../../../../hooks/useCommitDiff";
-import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { ResumePageHeader } from "../../../../../components/resume-detail/ResumePageHeader";
 import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 import { CompareDiffGroupsCard } from "./CompareDiffGroupsCard";
 import { CompareRefPicker } from "./CompareRefPicker";
@@ -118,7 +118,7 @@ export function CompareVersionsPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: ink[0] }}>
-      <PageHeader
+      <ResumePageHeader
         title={t("resume.compare.pageTitle")}
         breadcrumbs={[
           { label: t("resume.pageTitle"), to: "/resumes" },

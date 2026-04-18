@@ -24,8 +24,7 @@ import {
 import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import { RevertDialog } from "../../../../../components/RevertDialog";
 import type { GraphCommit } from "./history-graph-utils";
-import { PageHeader } from "../../../../../components/layout/PageHeader";
-import { PageContent } from "../../../../../components/layout/PageContent";
+import { ResumePageHeader } from "../../../../../components/resume-detail/ResumePageHeader";
 import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
 import { sortByCreatedAt, getReachableCommitIds } from "./history-graph-utils";
@@ -209,8 +208,8 @@ export function VersionHistoryPage() {
   const mergeCount = mergeCommitIds.size;
 
   return (
-    <>
-      <PageHeader
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: ink[0] }}>
+      <ResumePageHeader
         title={t("resume.history.pageTitle")}
         breadcrumbs={[
           { label: t("resume.pageTitle"), to: "/resumes" },
@@ -222,7 +221,16 @@ export function VersionHistoryPage() {
         activeBranchId={branchIdFromSearch ?? null}
         compareRef={branches.find((b) => b.id === branchIdFromSearch)?.name ?? null}
       />
-      <PageContent>
+      <Box
+        sx={{
+          flex: 1,
+          color: fg[2],
+          fontFamily: font.ui,
+          fontSize: "14px",
+          px: { xs: "20px", md: "32px" },
+          py: { xs: "24px", md: "32px" },
+        }}
+      >
         {isArchiveError && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {t("resume.history.archiveError", { defaultValue: "Failed to update version. Please try again." })}
@@ -240,7 +248,6 @@ export function VersionHistoryPage() {
           />
 
           <Box sx={{ flex: 1, minWidth: 0, paddingLeft: "24px", overflowX: "auto" }}>
-            {/* Event count */}
             <Box
               sx={{
                 fontFamily: font.ui,
@@ -257,7 +264,6 @@ export function VersionHistoryPage() {
 
             <Box
               sx={{
-                background: ink[0],
                 border: `1px solid ${line[1]}`,
                 borderRadius: "10px",
                 overflow: "hidden",
@@ -289,8 +295,8 @@ export function VersionHistoryPage() {
           onClose={() => { if (!revertCommit.isPending) setRevertTarget(null); }}
           onConfirm={handleConfirmRevert}
         />
-      </PageContent>
-    </>
+      </Box>
+    </Box>
   );
 }
 
