@@ -67,6 +67,8 @@ export interface InlineGraphData {
   laneSegments: LaneRange[][];
   laneCount: number;
   svgWidth: number;
+  /** Branch name keyed by lane index — used by the row action menu. */
+  branchNameByLaneIndex: Map<number, string>;
 }
 
 // -----------------------------------------------------------------------------
@@ -79,7 +81,7 @@ export function computeInlineGraphData(
   edges: GraphEdge[],
 ): InlineGraphData {
   if (commits.length === 0) {
-    return { rows: [], laneSegments: [], laneCount: 0, svgWidth: SVG_MIN_WIDTH };
+    return { rows: [], laneSegments: [], laneCount: 0, svgWidth: SVG_MIN_WIDTH, branchNameByLaneIndex: new Map() };
   }
 
   // Reuse the proven canvas layout — same lane ordering + synthetic-branch handling.
@@ -238,5 +240,13 @@ export function computeInlineGraphData(
 
   const svgWidth = Math.max(SVG_MIN_WIDTH, LANE_LEFT + laneCount * LANE_GAP + 12);
 
-  return { rows, laneSegments, laneCount, svgWidth };
+  const branchNameByLaneIndex = new Map<number, string>();
+  for (const branch of orderedBranches) {
+    const laneIdx = branchIndexById.get(branch.id);
+    if (laneIdx != null && !branchNameByLaneIndex.has(laneIdx)) {
+      branchNameByLaneIndex.set(laneIdx, branch.name);
+    }
+  }
+
+  return { rows, laneSegments, laneCount, svgWidth, branchNameByLaneIndex };
 }

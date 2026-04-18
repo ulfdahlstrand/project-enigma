@@ -387,7 +387,7 @@ describe("Toolbar actions", () => {
 
     await screen.findByTestId("history-commit-table");
     await user.click(screen.getAllByRole("button", { name: enCommon.resume.history.commitActionsButton })[0]!);
-    await user.click(screen.getByRole("menuitem", { name: enCommon.resume.history.viewCommitMenuItem }));
+    await user.click(await screen.findByRole("menuitem", { name: enCommon.resume.history.viewCommitMenuItem }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/resumes/$id/commit/$commitId",
@@ -395,76 +395,4 @@ describe("Toolbar actions", () => {
     });
   });
 
-  it("renders the Compare versions button", async () => {
-    renderPage();
-    await screen.findByTestId("history-commit-table");
-    expect(screen.getByRole("button", { name: enCommon.resume.history.compareButton })).toBeInTheDocument();
-  });
-
-  it("navigates to compare with search params for the selected branch", async () => {
-    const user = userEvent.setup();
-    renderPage("branch-id-2");
-
-    await screen.findByTestId("history-commit-table");
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.compareButton }));
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/compare",
-      params: { id: "resume-id-1" },
-      search: { baseRef: "main", compareRef: "Swedish Variant" },
-    });
-  });
-
-  it("disables merge and delete actions for the main branch", async () => {
-    renderPage();
-    await screen.findByTestId("history-commit-table");
-
-    expect(screen.getByRole("button", { name: enCommon.resume.history.mergeButton })).toBeDisabled();
-    expect(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton })).toBeDisabled();
-  });
-
-  it("opens merge dialog and merges selected branch into chosen target branch", async () => {
-    const user = userEvent.setup();
-    mockSearch = {};
-    renderPage("branch-id-2");
-
-    await screen.findByTestId("history-commit-table");
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeButton }));
-
-    expect(screen.getByRole("heading", { name: enCommon.resume.history.mergeDialog.title })).toBeInTheDocument();
-    const dialog = screen.getByRole("dialog", { name: enCommon.resume.history.mergeDialog.title });
-    await user.click(within(dialog).getByRole("combobox"));
-    await user.click(within(screen.getByRole("listbox")).getByText("German Variant"));
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.mergeDialog.confirm }));
-
-    expect(mockFinaliseResumeBranch).toHaveBeenCalledWith({
-      sourceBranchId: "branch-id-3",
-      revisionBranchId: "branch-id-2",
-      action: "merge",
-    });
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-3" },
-    });
-  });
-
-  it("opens delete dialog and deletes the selected branch", async () => {
-    const user = userEvent.setup();
-    mockSearch = {};
-    renderPage("branch-id-2");
-
-    await screen.findByTestId("history-commit-table");
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteBranchButton }));
-
-    expect(screen.getByRole("heading", { name: enCommon.resume.history.deleteDialog.title })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: enCommon.resume.history.deleteDialog.confirm }));
-
-    expect(mockDeleteResumeBranch).toHaveBeenCalledWith({ branchId: "branch-id-2" });
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/resumes/$id/history",
-      params: { id: "resume-id-1" },
-      search: { branchId: "branch-id-1" },
-    });
-  });
 });

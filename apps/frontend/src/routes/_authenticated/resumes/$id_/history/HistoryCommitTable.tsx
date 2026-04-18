@@ -9,8 +9,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import type { CommitTagWithLinkedResume } from "@cv-tool/contracts";
 import { accent, fg, font, ink, lilac, line } from "../compare/compare-design";
@@ -18,7 +16,8 @@ import { CommitDiffBadge } from "../../../../../components/CommitDiffBadge";
 import type { GraphBranch, GraphCommit } from "./history-graph-utils";
 import { HistoryInlineGraphCell } from "./HistoryInlineGraphCell";
 import type { InlineGraphData } from "./history-inline-graph";
-import { formatCommitTimestamp } from "./history-graph-utils";
+import { RowMenu } from "./RowMenu";
+import { RelativeTime } from "../../../../../components/RelativeTime";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -33,6 +32,7 @@ interface HistoryCommitTableProps {
   mergeCommitIds: Set<string>;
   onViewCommit: (commitId: string) => void;
   onCompare?: (commitId: string) => void;
+  onCompareWithParent?: (commitId: string, parentCommitId: string) => void;
   onRevert?: (commit: GraphCommit) => void;
 }
 
@@ -101,7 +101,7 @@ interface CommitRowProps {
   isMerge: boolean;
   active: boolean;
   onSelect: () => void;
-  onOpenMenu: (el: HTMLElement, commitId: string) => void;
+  onOpenMenu: (el: HTMLElement, commit: GraphCommit) => void;
 }
 
 function CommitRow({
@@ -222,7 +222,7 @@ function CommitRow({
             letterSpacing: "0.02em",
           }}
         >
-          {formatCommitTimestamp(commit.createdAt)}
+          <RelativeTime date={commit.createdAt} />
         </Box>
       </Box>
 
@@ -255,7 +255,7 @@ function CommitRow({
           aria-label={t("resume.history.commitActionsButton")}
           onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
-            onOpenMenu(e.currentTarget, commit.id);
+            onOpenMenu(e.currentTarget, commit);
           }}
           sx={{
             width: 24,
@@ -280,6 +280,18 @@ function CommitRow({
 }
 
 // ---------------------------------------------------------------------------
+// Menu state
+// ---------------------------------------------------------------------------
+
+interface MenuState {
+  commit: GraphCommit;
+  laneIndex: number;
+  branchName: string | null;
+  isHead: boolean;
+  anchorEl: HTMLElement;
+}
+
+// ---------------------------------------------------------------------------
 // HistoryCommitTable
 // ---------------------------------------------------------------------------
 
@@ -288,19 +300,25 @@ export function HistoryCommitTable({
   inlineGraphData,
   selectedBranch,
   mergeCommitIds,
+  currentResumeId,
   onViewCommit,
   onCompare,
+  onCompareWithParent,
   onRevert,
 }: HistoryCommitTableProps) {
   const { t } = useTranslation("common");
-  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
-  const [menuCommitId, setMenuCommitId] = useState<string | null>(null);
   const [activeCommitId, setActiveCommitId] = useState<string | null>(null);
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
 
-  const closeMenu = () => {
-    setMenuAnchorEl(null);
-    setMenuCommitId(null);
-  };
+  const closeMenu = () => setMenuState(null);
+
+  function handleOpenMenu(el: HTMLElement, commit: GraphCommit) {
+    const row = inlineGraphData.rows.find((row) => row.commit.id === commit.id);
+    const laneIndex = row?.laneIndex ?? 0;
+    const branchName = inlineGraphData.branchNameByLaneIndex.get(laneIndex) ?? null;
+    const isHead = selectedBranch?.headCommitId === commit.id;
+    setMenuState({ commit, laneIndex, branchName, isHead, anchorEl: el });
+  }
 
   if (rows.length === 0) {
     return (
@@ -356,46 +374,31 @@ export function HistoryCommitTable({
               isMerge={mergeCommitIds.has(commit.id)}
               active={activeCommitId === commit.id}
               onSelect={() => setActiveCommitId(commit.id)}
-              onOpenMenu={(el, id) => {
-                setMenuAnchorEl(el);
-                setMenuCommitId(id);
-              }}
+              onOpenMenu={handleOpenMenu}
             />
           ))}
         </Box>
       </Box>
 
-      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={closeMenu}>
-        <MenuItem
-          onClick={() => {
-            if (menuCommitId) onViewCommit(menuCommitId);
-            closeMenu();
-          }}
-        >
-          {t("resume.history.viewCommitMenuItem")}
-        </MenuItem>
-        {onCompare && (
-          <MenuItem
-            onClick={() => {
-              if (menuCommitId) onCompare(menuCommitId);
-              closeMenu();
-            }}
-          >
-            {t("resume.history.compareWithCurrentMenuItem")}
-          </MenuItem>
-        )}
-        {onRevert && (
-          <MenuItem
-            onClick={() => {
-              const commit = rows.find((r) => r.commit.id === menuCommitId)?.commit;
-              if (commit) onRevert(commit);
-              closeMenu();
-            }}
-          >
-            {t("resume.history.restoreSnapshotMenuItem")}
-          </MenuItem>
-        )}
-      </Menu>
+      {menuState && (
+        <RowMenu
+          commit={menuState.commit}
+          laneIndex={menuState.laneIndex}
+          branchName={menuState.branchName}
+          isHead={menuState.isHead}
+          anchorEl={menuState.anchorEl}
+          resumeId={currentResumeId ?? ""}
+          onClose={closeMenu}
+          onViewCommit={() => onViewCommit(menuState.commit.id)}
+          onCompare={onCompare ? () => onCompare(menuState.commit.id) : () => {}}
+          onCompareWithParent={
+            onCompareWithParent && menuState.commit.parentCommitId
+              ? () => onCompareWithParent(menuState.commit.id, menuState.commit.parentCommitId!)
+              : null
+          }
+          onRevert={onRevert ? () => onRevert(menuState.commit) : () => {}}
+        />
+      )}
     </>
   );
 }
