@@ -28,7 +28,7 @@ import TableRow from "@mui/material/TableRow";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { orpc } from "../../../orpc-client";
 import RouterButton from "../../../components/RouterButton";
-import { PageHeader } from "../../../components/layout/PageHeader";
+import { ResumePageHeader } from "../../../components/resume-detail/ResumePageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
 import { LoadingState, ErrorState, EmptyState } from "../../../components/feedback";
 
@@ -82,17 +82,13 @@ function ResumeListPage() {
 
   return (
     <>
-      <PageHeader
+      <ResumePageHeader
         title={t("resume.pageTitle")}
         breadcrumbs={[
           { label: t("nav.employees"), to: "/employees" },
           ...(employeeId ? [{ label: employee?.name ?? "…", to: `/employees/${employeeId}` }] : []),
         ]}
-        chip={
-          resumes && resumes.length > 0 ? (
-            <Chip label={t("resume.countLabel", { count })} size="small" variant="outlined" />
-          ) : undefined
-        }
+        chip={resumes && resumes.length > 0 ? t("resume.countLabel", { count }) : undefined}
         actions={
           employeeId ? (
             <RouterButton variant="contained" to="/resumes/new" search={{ employeeId }}>

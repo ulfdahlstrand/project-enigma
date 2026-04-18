@@ -10,7 +10,6 @@ import type { ReactNode } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -18,7 +17,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-import { PageHeader } from "../../layout/PageHeader";
+import { ResumePageHeader } from "../ResumePageHeader";
 import { ResumeWorkbenchTabs } from "../ResumeWorkbenchTabs";
 import { RevisionActionBanner } from "../../RevisionActionBanner";
 import { TranslationStalenessBanner } from "../TranslationStalenessBanner";
@@ -105,9 +104,9 @@ export function ResumeDetailShell({
         overflowX: "clip",
       }}
     >
-      <PageHeader
+      <ResumePageHeader
         title={resumeTitle}
-        chip={language ? <Chip label={language.toUpperCase()} size="small" /> : undefined}
+        chip={language?.toUpperCase()}
         breadcrumbs={[
           { label: t("nav.employees"), to: "/employees" },
           ...(resume?.employeeId
@@ -116,16 +115,7 @@ export function ResumeDetailShell({
                 { label: t("nav.resumes"), to: `/resumes?employeeId=${resume.employeeId}` },
               ]
             : []),
-          {
-            node: (
-              <Typography variant="caption" color="text.primary">
-                {resumeTitle}
-              </Typography>
-            ),
-            key: "resume-title",
-          },
         ]}
-        hideTitleBreadcrumb
         actions={toolbarActions}
       />
       <ResumeWorkbenchTabs resumeId={id} activeBranchId={activeBranchId} compareRef={activeBranchName} />

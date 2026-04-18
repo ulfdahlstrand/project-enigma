@@ -16,7 +16,7 @@ import Typography from "@mui/material/Typography";
 import { useSearch } from "@tanstack/react-router";
 import { orpc } from "../../../orpc-client";
 import { LIST_RESUMES_QUERY_KEY } from ".";
-import { PageHeader } from "../../../components/layout/PageHeader";
+import { ResumePageHeader } from "../../../components/resume-detail/ResumePageHeader";
 import { PageContent } from "../../../components/layout/PageContent";
 
 
@@ -75,7 +75,7 @@ function NewResumePage() {
 
   return (
     <>
-      <PageHeader
+      <ResumePageHeader
         title={t("resume.new.pageTitle")}
         breadcrumbs={[
           { label: t("nav.employees"), to: "/employees" },

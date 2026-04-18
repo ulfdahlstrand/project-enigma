@@ -32,7 +32,7 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useResumeBranches, useResumeCommits, useForkResumeBranch } from "../../../../../hooks/versioning";
-import { PageHeader } from "../../../../../components/layout/PageHeader";
+import { ResumePageHeader } from "../../../../../components/resume-detail/ResumePageHeader";
 import { PageContent } from "../../../../../components/layout/PageContent";
 import { LoadingState, ErrorState } from "../../../../../components/feedback";
 import { ResumeWorkbenchTabs } from "../../../../../components/resume-detail/ResumeWorkbenchTabs";
@@ -96,7 +96,7 @@ export function VariantsPage() {
 
   return (
     <>
-      <PageHeader
+      <ResumePageHeader
         title={t("resume.variants.pageTitle")}
         breadcrumbs={[
           { label: t("resume.pageTitle"), to: "/resumes" },

@@ -14,76 +14,14 @@ import { accent, danger, fg, font, ink, line } from "../compare/compare-design";
 import { laneColor } from "./history-inline-graph";
 import type { GraphCommit } from "./history-graph-utils";
 import { RelativeTime } from "../../../../../components/RelativeTime";
-
-// ---------------------------------------------------------------------------
-// SVG icons (stroke-based, 13×13 at 24-unit viewBox)
-// ---------------------------------------------------------------------------
-
-const ICON = {
-  width: 13,
-  height: 13,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.75,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
-
-function EyeIcon() {
-  return (
-    <svg {...ICON}>
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function DiffIcon() {
-  return (
-    <svg {...ICON}>
-      <path d="M12 3v18M5 8h4M5 16h4M15 8h4M15 16h4" />
-    </svg>
-  );
-}
-
-function BranchIcon() {
-  return (
-    <svg {...ICON}>
-      <circle cx="6" cy="6" r="2" />
-      <circle cx="6" cy="18" r="2" />
-      <circle cx="18" cy="6" r="2" />
-      <path d="M6 8v8M8 6h6a2 2 0 0 1 2 2v8" />
-    </svg>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg {...ICON}>
-      <rect x="9" y="9" width="11" height="11" rx="2" />
-      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg {...ICON}>
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  );
-}
-
-function RewindIcon() {
-  return (
-    <svg {...ICON}>
-      <path d="M1 4v6h6" />
-      <path d="M3.5 15a9 9 0 1 0 .3-4.5" />
-    </svg>
-  );
-}
+import {
+  BranchIcon,
+  CopyIcon,
+  DiffIcon,
+  EyeIcon,
+  LinkIcon,
+  RewindIcon,
+} from "../../../../../components/Icons";
 
 // ---------------------------------------------------------------------------
 // Internal sub-components
