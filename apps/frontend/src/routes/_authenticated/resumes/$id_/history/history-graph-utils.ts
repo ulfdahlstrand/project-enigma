@@ -1,15 +1,6 @@
-import {
-  TREE_BRANCH_GAP,
-  TREE_COMMIT_GAP,
-  TREE_HEADER_HEIGHT,
-  TREE_NODE_OUTER_RADIUS,
-  TREE_PADDING_Y,
-  TREE_ROW_PADDING_LEFT,
-} from "./history-graph-constants";
-import type { GraphCommit, GraphEdge } from "./history-graph-types";
+import type { GraphEdge } from "./history-graph-types";
 
-// Re-export types, constants, and layout computation from their focused modules
-// so existing consumers continue to import from this module.
+// Re-export types and layout computation so existing consumers keep working.
 export type {
   GraphBranch,
   GraphCommit,
@@ -17,22 +8,10 @@ export type {
   GraphLayout,
   GraphLayoutBranch,
 } from "./history-graph-types";
-export {
-  TREE_BRANCH_COLORS_DARK,
-  TREE_BRANCH_COLORS_LIGHT,
-  TREE_BRANCH_GAP,
-  TREE_COMMIT_GAP,
-  TREE_HEADER_HEIGHT,
-  TREE_NODE_GAP_RADIUS,
-  TREE_NODE_INNER_RADIUS,
-  TREE_NODE_OUTER_RADIUS,
-  TREE_PADDING_Y,
-  TREE_ROW_PADDING_LEFT,
-} from "./history-graph-constants";
 export { computeGraphLayout } from "./history-graph-layout";
 
 // ---------------------------------------------------------------------------
-// Small utility functions
+// Utility functions
 // ---------------------------------------------------------------------------
 
 export function sortByCreatedAt<T extends { createdAt: string | Date }>(items: T[]): T[] {
@@ -82,36 +61,3 @@ export function getReachableCommitIds(
   return reachable;
 }
 
-export function getReachableCommits(
-  headCommitId: string | null,
-  graphCommits: GraphCommit[],
-  graphEdges: GraphEdge[],
-): GraphCommit[] {
-  if (headCommitId && !graphCommits.some((commit) => commit.id === headCommitId)) {
-    return [];
-  }
-
-  const reachableCommitIds = getReachableCommitIds(headCommitId, graphEdges);
-  return graphCommits.filter((commit) => reachableCommitIds.has(commit.id));
-}
-
-export function shouldRenderBranchLane(branchCommits: GraphCommit[]): boolean {
-  return branchCommits.length > 0;
-}
-
-export function getBranchX(branchIndexById: Map<string, number>, branchId: string): number {
-  return (
-    TREE_ROW_PADDING_LEFT +
-    (branchIndexById.get(branchId) ?? 0) * TREE_BRANCH_GAP +
-    TREE_NODE_OUTER_RADIUS
-  );
-}
-
-export function getCommitY(commitIndexById: Map<string, number>, commitId: string): number {
-  return (
-    TREE_HEADER_HEIGHT +
-    TREE_PADDING_Y +
-    (commitIndexById.get(commitId) ?? 0) * TREE_COMMIT_GAP +
-    TREE_NODE_OUTER_RADIUS
-  );
-}
